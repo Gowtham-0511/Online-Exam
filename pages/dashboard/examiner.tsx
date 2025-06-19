@@ -2,18 +2,32 @@ import { useState } from "react";
 import { db } from "../../lib/firebase";
 import { doc, setDoc } from "firebase/firestore";
 import { useSession } from "next-auth/react";
+import { useRouter } from "next/router";
 
 export default function ExaminerDashboard() {
     const [title, setTitle] = useState("");
     const [language, setLanguage] = useState("python");
     const [duration, setDuration] = useState(10);
-    const [question, setQuestion] = useState("");
     const [isLoading, setIsLoading] = useState(false);
     const [showSuccess, setShowSuccess] = useState(false);
     const { data: session } = useSession();
+    const [questions, setQuestions] = useState([
+        { id: "q1", question: "", expectedOutput: "" }
+    ]);
+    const router = useRouter();
+
+    type Question = {
+        id: string;
+        question: string;
+        expectedOutput: string;
+    };
+
 
     const handleCreateExam = async () => {
-        if (!title || !question) {
+        // Check if title exists and at least one question has content
+        const hasValidQuestions = questions.some(q => q.question.trim() !== "");
+
+        if (!title || !hasValidQuestions) {
             // Show custom error alert
             const errorAlert = document.getElementById('error-alert');
             if (errorAlert) {
@@ -36,9 +50,9 @@ export default function ExaminerDashboard() {
                 title,
                 language,
                 duration,
-                question,
                 createdBy: session?.user?.email,
                 createdAt: new Date().toISOString(),
+                questions: questions.filter(q => q.question.trim() !== ""),
             });
 
             // Show success animation
@@ -48,7 +62,7 @@ export default function ExaminerDashboard() {
                 setTitle("");
                 setLanguage("python");
                 setDuration(10);
-                setQuestion("");
+                setQuestions([{ id: "q1", question: "", expectedOutput: "" }]);
             }, 2000);
 
         } catch (error) {
@@ -65,43 +79,70 @@ export default function ExaminerDashboard() {
         { value: "java", label: "Java", icon: "☕", color: "from-red-400 to-orange-500" },
     ];
 
+    const addQuestion = () => {
+        setQuestions([...questions, { id: `q${questions.length + 1}`, question: "", expectedOutput: "" }]);
+    };
+
+    const removeQuestion = (index: number) => {
+        if (questions.length > 1) {
+            setQuestions(questions.filter((_, i) => i !== index));
+        }
+    };
+
     const selectedLanguage = languageOptions.find(lang => lang.value === language);
 
+    const updateQuestion = (
+        index: number,
+        field: keyof Question,
+        value: string
+    ) => {
+        const updated = [...questions];
+        updated[index][field] = value;
+        setQuestions(updated);
+    };
+
+
+    // Check if form is valid for submission
+    const isFormValid = title.trim() !== "" && questions.some(q => q.question.trim() !== "");
+
+    const handleViewSubmissions = () => {
+        router.push('/dashboard/examiner-submissions');
+    };
+
     return (
-        <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 relative overflow-hidden">
-            {/* Background decorative elements */}
-            <div className="absolute inset-0 pointer-events-none">
-                <div className="absolute top-32 left-20 w-72 h-72 bg-blue-200/20 rounded-full blur-3xl animate-pulse"></div>
-                <div className="absolute bottom-20 right-20 w-96 h-96 bg-indigo-200/15 rounded-full blur-3xl animate-pulse delay-1000"></div>
-                <div className="absolute top-1/3 right-1/3 w-40 h-40 bg-slate-200/25 rounded-full blur-2xl animate-pulse delay-500"></div>
+        <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/50 relative overflow-hidden">
+            {/* Floating Background Elements */}
+            <div className="absolute inset-0 pointer-events-none overflow-hidden">
+                <div className="absolute -top-40 -right-40 w-80 h-80 bg-gradient-to-br from-blue-100 to-indigo-100 rounded-full opacity-60 blur-3xl animate-pulse"></div>
+                <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-gradient-to-tr from-violet-100 to-purple-100 rounded-full opacity-50 blur-3xl animate-pulse delay-1000"></div>
+                <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-60 h-60 bg-gradient-to-r from-emerald-100 to-teal-100 rounded-full opacity-40 blur-2xl animate-pulse delay-500"></div>
             </div>
 
-            {/* Navigation Bar */}
-            <nav className="relative z-10 bg-white/80 backdrop-blur-lg border-b border-white/20 shadow-sm">
-                <div className="max-w-7xl mx-auto px-6 py-4">
+            {/* Navigation */}
+            <nav className="relative z-10 bg-white/70 backdrop-blur-xl border-b border-white/50 shadow-sm">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4">
                     <div className="flex items-center justify-between">
-                        <div className="flex items-center space-x-3">
-                            <div className="w-10 h-10 bg-gradient-to-r from-green-500 to-emerald-600 rounded-xl flex items-center justify-center shadow-lg">
-                                <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <div className="flex items-center space-x-4">
+                            <div className="w-12 h-12 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-2xl flex items-center justify-center shadow-lg shadow-emerald-500/20">
+                                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                                 </svg>
                             </div>
                             <div>
-                                <span className="text-xl font-bold bg-gradient-to-r from-slate-800 to-slate-600 bg-clip-text text-transparent">
-                                    ExamHub
-                                </span>
-                                <div className="text-xs text-slate-500">Examiner Portal</div>
+                                <h1 className="text-2xl font-bold bg-gradient-to-r from-slate-800 to-slate-600 bg-clip-text text-transparent">
+                                    ExamCraft
+                                </h1>
+                                <p className="text-xs text-slate-500 font-medium">Examiner Portal</p>
                             </div>
                         </div>
 
                         <div className="flex items-center space-x-4">
-                            <div className="hidden sm:flex items-center space-x-2 bg-emerald-100 text-emerald-700 rounded-full px-4 py-2">
-                                <span>👨‍🏫</span>
-                                <span className="text-sm font-medium">Examiner</span>
+                            <div className="hidden sm:flex items-center space-x-2 bg-emerald-50 border border-emerald-200 text-emerald-700 rounded-full px-4 py-2">
+                                <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></div>
+                                <span className="text-sm font-medium">Active</span>
                             </div>
-                            <div className="flex items-center space-x-2 text-sm text-slate-600">
-                                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                                <span className="hidden sm:inline">Online</span>
+                            <div className="w-10 h-10 bg-gradient-to-br from-violet-500 to-purple-600 rounded-full flex items-center justify-center text-white font-semibold text-sm shadow-lg">
+                                DS
                             </div>
                         </div>
                     </div>
@@ -109,231 +150,246 @@ export default function ExaminerDashboard() {
             </nav>
 
             {/* Main Content */}
-            <main className="relative z-10 max-w-4xl mx-auto px-6 py-12">
-                {/* Header Section */}
-                <div className="text-center mb-12">
-                    <div className="inline-flex items-center space-x-2 bg-green-100 text-green-700 px-4 py-2 rounded-full text-sm font-medium mb-4">
-                        <span>✨</span>
-                        <span>Create New Exam</span>
+            <main className="relative z-10 max-w-6xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
+                {/* Header */}
+                <div className="text-center mb-10">
+                    <div className="inline-flex items-center space-x-2 bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200 text-emerald-700 px-4 py-2 rounded-full text-sm font-medium mb-6">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                        </svg>
+                        <span>Create Assessment</span>
                     </div>
 
-                    <h1 className="text-4xl sm:text-5xl font-bold mb-4">
+                    <h2 className="text-4xl sm:text-5xl font-bold mb-4">
                         <span className="bg-gradient-to-r from-slate-800 via-slate-700 to-slate-600 bg-clip-text text-transparent">
-                            Design Your Assessment
+                            Design Your Exam
                         </span>
-                    </h1>
+                    </h2>
 
-                    <p className="text-slate-600 text-lg max-w-2xl mx-auto">
-                        Create engaging exams with our intuitive builder. Set up questions, configure settings, and launch assessments in minutes.
+                    <p className="text-slate-600 text-lg max-w-2xl mx-auto leading-relaxed">
+                        Create comprehensive assessments with our intuitive builder. Configure settings, add questions, and launch in minutes.
                     </p>
                 </div>
 
-                {/* Quick Stats */}
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-12">
-                    <div className="bg-white/80 backdrop-blur-lg border border-white/20 rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300">
-                        <div className="flex items-center space-x-3">
-                            <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
-                                <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                                </svg>
-                            </div>
-                            <div>
-                                <p className="text-2xl font-bold text-slate-800">24</p>
-                                <p className="text-sm text-slate-500">Exams Created</p>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className="bg-white/80 backdrop-blur-lg border border-white/20 rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300">
-                        <div className="flex items-center space-x-3">
-                            <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center">
-                                <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-                                </svg>
-                            </div>
-                            <div>
-                                <p className="text-2xl font-bold text-slate-800">156</p>
-                                <p className="text-sm text-slate-500">Total Students</p>
+                {/* Stats Cards */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-10">
+                    {[
+                        { icon: "📋", value: "24", label: "Exams Created", color: "from-blue-500 to-indigo-600" },
+                        { icon: "👥", value: "156", label: "Total Students", color: "from-emerald-500 to-teal-600" },
+                        { icon: "📊", value: "89%", label: "Completion Rate", color: "from-violet-500 to-purple-600" }
+                    ].map((stat, index) => (
+                        <div key={index} className="group bg-white/70 backdrop-blur-sm border border-white/50 rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
+                            <div className="flex items-center space-x-4">
+                                <div className={`w-14 h-14 bg-gradient-to-br ${stat.color} rounded-2xl flex items-center justify-center text-white text-xl shadow-lg`}>
+                                    {stat.icon}
+                                </div>
+                                <div>
+                                    <p className="text-2xl font-bold text-slate-800">{stat.value}</p>
+                                    <p className="text-sm text-slate-600 font-medium">{stat.label}</p>
+                                </div>
                             </div>
                         </div>
-                    </div>
-
-                    <div className="bg-white/80 backdrop-blur-lg border border-white/20 rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300">
-                        <div className="flex items-center space-x-3">
-                            <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center">
-                                <svg className="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                                </svg>
-                            </div>
-                            <div>
-                                <p className="text-2xl font-bold text-slate-800">89%</p>
-                                <p className="text-sm text-slate-500">Completion Rate</p>
-                            </div>
-                        </div>
-                    </div>
+                    ))}
                 </div>
 
-                {/* Exam Creation Form */}
-                <div className="bg-white/80 backdrop-blur-lg border border-white/20 rounded-3xl shadow-2xl shadow-green-500/10 p-8 relative overflow-hidden">
-                    {/* Decorative elements */}
-                    <div className="absolute top-0 right-0 w-40 h-40 bg-gradient-to-br from-green-500/10 to-emerald-500/10 rounded-full blur-2xl"></div>
-                    <div className="absolute bottom-0 left-0 w-32 h-32 bg-gradient-to-tr from-blue-500/10 to-indigo-500/10 rounded-full blur-xl"></div>
+                {/* Form Card */}
+                <div className="bg-white/70 backdrop-blur-xl border border-white/50 rounded-3xl shadow-2xl p-6 sm:p-8 relative overflow-hidden">
+                    {/* Background Decoration */}
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-emerald-100/50 to-teal-100/50 rounded-full blur-2xl"></div>
+                    <div className="absolute bottom-0 left-0 w-24 h-24 bg-gradient-to-tr from-violet-100/50 to-purple-100/50 rounded-full blur-xl"></div>
 
-                    <div className="relative z-10 space-y-8">
+                    <div className="relative z-10">
                         {/* Form Header */}
-                        <div className="text-center">
-                            <div className="w-16 h-16 bg-gradient-to-r from-green-500 to-emerald-600 rounded-2xl mx-auto mb-4 flex items-center justify-center shadow-xl">
-                                <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                                </svg>
+                        <div className="text-center mb-8">
+                            <div className={`w-16 h-16 bg-gradient-to-br ${selectedLanguage?.color || 'from-emerald-500 to-teal-600'} rounded-2xl mx-auto mb-4 flex items-center justify-center shadow-lg`}>
+                                <span className="text-2xl">{selectedLanguage?.icon || '📝'}</span>
                             </div>
-                            <h2 className="text-2xl font-bold text-slate-800 mb-2">Exam Details</h2>
-                            <p className="text-slate-600">Fill in the information below to create your exam</p>
+                            <h3 className="text-2xl font-bold text-slate-800 mb-2">Exam Configuration</h3>
+                            <p className="text-slate-600">Fill in the details below to create your assessment</p>
                         </div>
 
-                        {/* Form Fields */}
-                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                            {/* Left Column */}
-                            <div className="space-y-6">
-                                {/* Exam Title */}
-                                <div>
-                                    <label className="block text-sm font-semibold text-slate-700 mb-3">
-                                        Exam Title *
-                                    </label>
-                                    <div className="relative">
-                                        <input
-                                            type="text"
-                                            value={title}
-                                            onChange={(e) => setTitle(e.target.value)}
-                                            placeholder="e.g., Python Advanced Programming Assessment"
-                                            className="w-full px-4 py-4 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-green-200/50 focus:border-green-400 transition-all duration-200 text-slate-800 placeholder-slate-400"
-                                            disabled={isLoading}
-                                        />
-                                        <div className="absolute inset-y-0 right-0 flex items-center pr-4">
-                                            <svg className="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
-                                            </svg>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* Programming Language */}
-                                <div>
-                                    <label className="block text-sm font-semibold text-slate-700 mb-3">
-                                        Programming Language
-                                    </label>
-                                    <div className="relative">
-                                        <select
-                                            value={language}
-                                            onChange={(e) => setLanguage(e.target.value)}
-                                            className="w-full px-4 py-4 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-green-200/50 focus:border-green-400 transition-all duration-200 text-slate-800 appearance-none cursor-pointer"
-                                            disabled={isLoading}
-                                        >
-                                            {languageOptions.map((lang) => (
-                                                <option key={lang.value} value={lang.value}>
-                                                    {lang.icon} {lang.label}
-                                                </option>
-                                            ))}
-                                        </select>
-                                        <div className="absolute inset-y-0 right-0 flex items-center pr-4 pointer-events-none">
-                                            <svg className="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                                            </svg>
-                                        </div>
-                                    </div>
-                                    {selectedLanguage && (
-                                        <div className="mt-3 flex items-center space-x-2">
-                                            <div className={`w-3 h-3 rounded-full bg-gradient-to-r ${selectedLanguage.color}`}></div>
-                                            <span className="text-sm text-slate-600">
-                                                {selectedLanguage.icon} {selectedLanguage.label} selected
-                                            </span>
-                                        </div>
-                                    )}
-                                </div>
-
-                                {/* Duration */}
-                                <div>
-                                    <label className="block text-sm font-semibold text-slate-700 mb-3">
-                                        Duration (minutes)
-                                    </label>
-                                    <div className="relative">
-                                        <input
-                                            type="number"
-                                            min={1}
-                                            max={300}
-                                            value={duration}
-                                            onChange={(e) => setDuration(Number(e.target.value))}
-                                            className="w-full px-4 py-4 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-green-200/50 focus:border-green-400 transition-all duration-200 text-slate-800"
-                                            disabled={isLoading}
-                                        />
-                                        <div className="absolute inset-y-0 right-0 flex items-center pr-4">
-                                            <svg className="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                            </svg>
-                                        </div>
-                                    </div>
-                                    <div className="mt-2 flex items-center space-x-2 text-sm text-slate-500">
-                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        {/* Basic Settings */}
+                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+                            {/* Title */}
+                            <div>
+                                <label className="block text-sm font-semibold text-slate-700 mb-3">
+                                    Exam Title <span className="text-red-500">*</span>
+                                </label>
+                                <div className="relative">
+                                    <input
+                                        type="text"
+                                        value={title}
+                                        onChange={(e) => setTitle(e.target.value)}
+                                        placeholder="e.g., Advanced Python Programming Assessment"
+                                        className="w-full px-4 py-4 bg-white/80 border border-slate-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-emerald-200/50 focus:border-emerald-400 transition-all duration-200 text-slate-800 placeholder-slate-400"
+                                        disabled={isLoading}
+                                    />
+                                    <div className="absolute inset-y-0 right-0 flex items-center pr-4">
+                                        <svg className="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
                                         </svg>
-                                        <span>Recommended: 60-120 minutes for comprehensive assessments</span>
                                     </div>
                                 </div>
                             </div>
 
-                            {/* Right Column */}
-                            <div className="space-y-6">
-                                {/* Exam Question */}
-                                <div>
-                                    <label className="block text-sm font-semibold text-slate-700 mb-3">
-                                        Exam Question *
-                                    </label>
-                                    <div className="relative">
-                                        <textarea
-                                            value={question}
-                                            onChange={(e) => setQuestion(e.target.value)}
-                                            placeholder="Describe the problem statement, requirements, and expected deliverables in detail..."
-                                            rows={12}
-                                            className="w-full px-4 py-4 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-green-200/50 focus:border-green-400 transition-all duration-200 text-slate-800 placeholder-slate-400 resize-none"
-                                            disabled={isLoading}
-                                        />
-                                        <div className="absolute bottom-3 right-3">
-                                            <span className="text-xs text-slate-400">
-                                                {question.length}/1000
-                                            </span>
-                                        </div>
-                                    </div>
-                                    <div className="mt-2 flex items-center space-x-2 text-sm text-slate-500">
-                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                            {/* Language */}
+                            <div>
+                                <label className="block text-sm font-semibold text-slate-700 mb-3">
+                                    Programming Language
+                                </label>
+                                <div className="relative">
+                                    <select
+                                        value={language}
+                                        onChange={(e) => setLanguage(e.target.value)}
+                                        className="w-full px-4 py-4 bg-white/80 border border-slate-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-emerald-200/50 focus:border-emerald-400 transition-all duration-200 text-slate-800 appearance-none cursor-pointer"
+                                        disabled={isLoading}
+                                    >
+                                        {languageOptions.map((lang) => (
+                                            <option key={lang.value} value={lang.value}>
+                                                {lang.icon} {lang.label}
+                                            </option>
+                                        ))}
+                                    </select>
+                                    <div className="absolute inset-y-0 right-0 flex items-center pr-4 pointer-events-none">
+                                        <svg className="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                                         </svg>
-                                        <span>Include clear instructions, sample inputs/outputs, and evaluation criteria</span>
                                     </div>
                                 </div>
+                                {selectedLanguage && (
+                                    <div className="mt-3 inline-flex items-center space-x-2 bg-slate-50 rounded-full px-3 py-1">
+                                        <div className={`w-2 h-2 rounded-full bg-gradient-to-r ${selectedLanguage.color}`}></div>
+                                        <span className="text-sm text-slate-600 font-medium">
+                                            {selectedLanguage.label}
+                                        </span>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Duration */}
+                            <div>
+                                <label className="block text-sm font-semibold text-slate-700 mb-3">
+                                    Duration (minutes)
+                                </label>
+                                <div className="relative">
+                                    <input
+                                        type="number"
+                                        min={1}
+                                        max={300}
+                                        value={duration}
+                                        onChange={(e) => setDuration(Number(e.target.value))}
+                                        className="w-full px-4 py-4 bg-white/80 border border-slate-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-emerald-200/50 focus:border-emerald-400 transition-all duration-200 text-slate-800"
+                                        disabled={isLoading}
+                                    />
+                                    <div className="absolute inset-y-0 right-0 flex items-center pr-4">
+                                        <svg className="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                        </svg>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Questions Section */}
+                        <div className="mb-8">
+                            <div className="flex items-center justify-between mb-6">
+                                <div>
+                                    <h4 className="text-xl font-semibold text-slate-800 mb-1">Exam Questions</h4>
+                                    <p className="text-sm text-slate-600">Add all your questions below. At least one question is required.</p>
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={addQuestion}
+                                    className="inline-flex items-center space-x-2 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-700 px-4 py-2 rounded-lg transition-colors duration-200 text-sm font-medium"
+                                    disabled={isLoading}
+                                >
+                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                                    </svg>
+                                    <span>Add Question</span>
+                                </button>
+                            </div>
+
+                            <div className="space-y-4">
+                                {questions.map((q, i) => (
+                                    <div key={q.id} className="bg-slate-50/80 border border-slate-200 rounded-xl p-6">
+                                        <div className="flex items-center justify-between mb-4">
+                                            <label className="text-sm font-semibold text-slate-700 flex items-center space-x-2">
+                                                <div className="w-6 h-6 bg-emerald-500 text-white rounded-full flex items-center justify-center text-xs font-bold">
+                                                    {i + 1}
+                                                </div>
+                                                <span>Question {i + 1}</span>
+                                            </label>
+                                            {questions.length > 1 && (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => removeQuestion(i)}
+                                                    className="text-red-500 hover:text-red-700 hover:bg-red-50 p-2 rounded-lg transition-colors duration-200"
+                                                    disabled={isLoading}
+                                                >
+                                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                    </svg>
+                                                </button>
+                                            )}
+                                        </div>
+                                        <div className="space-y-4">
+                                            <div>
+                                                <label className="block text-xs font-medium text-slate-600 mb-2">
+                                                    Question Description *
+                                                </label>
+                                                <textarea
+                                                    value={q.question}
+                                                    onChange={(e) => updateQuestion(i, "question", e.target.value)}
+                                                    placeholder="Enter your question here... Describe the problem statement, requirements, and expected deliverables."
+                                                    rows={4}
+                                                    className="w-full px-4 py-3 bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-200 focus:border-emerald-400 transition-all duration-200 text-slate-800 placeholder-slate-400 resize-none"
+                                                    disabled={isLoading}
+                                                />
+                                                <div className="mt-1 text-xs text-slate-400">
+                                                    {q.question.length}/1000 characters
+                                                </div>
+                                            </div>
+                                            <div>
+                                                <label className="block text-xs font-medium text-slate-600 mb-2">
+                                                    Expected Output (Optional)
+                                                </label>
+                                                <textarea
+                                                    value={q.expectedOutput}
+                                                    onChange={(e) => updateQuestion(i, "expectedOutput", e.target.value)}
+                                                    placeholder="Describe the expected output or solution format (optional)..."
+                                                    rows={2}
+                                                    className="w-full px-4 py-3 bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-200 focus:border-emerald-400 transition-all duration-200 text-slate-800 placeholder-slate-400 resize-none"
+                                                    disabled={isLoading}
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
                             </div>
                         </div>
 
                         {/* Action Buttons */}
-                        <div className="flex flex-col sm:flex-row gap-4 pt-6">
+                        <div className="flex flex-col sm:flex-row gap-4">
                             <button
                                 onClick={handleCreateExam}
-                                disabled={isLoading || !title || !question}
-                                className="flex-1 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 disabled:from-slate-400 disabled:to-slate-500 text-white font-semibold py-4 px-6 rounded-xl transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98] shadow-lg hover:shadow-xl focus:outline-none focus:ring-4 focus:ring-green-200/50 flex items-center justify-center space-x-3"
+                                disabled={isLoading || !isFormValid}
+                                className="flex-1 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 disabled:from-slate-400 disabled:to-slate-500 text-white font-semibold py-4 px-6 rounded-xl transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98] shadow-lg hover:shadow-xl focus:outline-none focus:ring-4 focus:ring-emerald-200/50 flex items-center justify-center space-x-3"
                             >
                                 {isLoading ? (
                                     <>
-                                        <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                        <svg className="animate-spin w-5 h-5" fill="none" viewBox="0 0 24 24">
                                             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                                             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                                         </svg>
-                                        <span>Creating Exam...</span>
+                                        <span>Creating...</span>
                                     </>
                                 ) : showSuccess ? (
                                     <>
                                         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                                         </svg>
-                                        <span>Exam Created!</span>
+                                        <span>Created!</span>
                                     </>
                                 ) : (
                                     <>
@@ -345,47 +401,47 @@ export default function ExaminerDashboard() {
                                 )}
                             </button>
 
-                            <a
-                                href="/dashboard/examiner-submissions"
-                                className="flex-1 sm:flex-none bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-semibold py-4 px-6 rounded-xl transition-all duration-200 shadow-sm hover:shadow-md focus:outline-none focus:ring-4 focus:ring-slate-200/50 flex items-center justify-center space-x-3"
+                            <button
+                                onClick={handleViewSubmissions}
+                                className="sm:flex-none bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 font-semibold py-4 px-6 rounded-xl transition-all duration-200 shadow-sm hover:shadow-md focus:outline-none focus:ring-4 focus:ring-slate-200/50 flex items-center justify-center space-x-3"
                             >
                                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
                                 </svg>
                                 <span>View Submissions</span>
-                            </a>
+                            </button>
                         </div>
                     </div>
                 </div>
             </main>
 
-            {/* Success Animation Overlay */}
+            {/* Success Modal */}
             {showSuccess && (
-                <div className="fixed inset-0 bg-black/20 backdrop-blur-sm z-50 flex items-center justify-center">
-                    <div className="bg-white rounded-2xl p-8 shadow-2xl transform animate-bounce">
+                <div className="fixed inset-0 bg-black/20 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                    <div className="bg-white rounded-3xl p-8 shadow-2xl transform animate-bounce max-w-sm w-full">
                         <div className="text-center">
-                            <div className="w-16 h-16 bg-green-500 rounded-full mx-auto mb-4 flex items-center justify-center">
+                            <div className="w-16 h-16 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-full mx-auto mb-4 flex items-center justify-center shadow-lg">
                                 <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                                 </svg>
                             </div>
-                            <h3 className="text-xl font-bold text-slate-800 mb-2">Exam Created Successfully!</h3>
-                            <p className="text-slate-600">Your exam is now ready for students</p>
+                            <h3 className="text-xl font-bold text-slate-800 mb-2">Success!</h3>
+                            <p className="text-slate-600">Your exam has been created successfully</p>
                         </div>
                     </div>
                 </div>
             )}
 
-            {/* Error Alert */}
+            {/* Error Alert (hidden by default) */}
             <div
                 id="error-alert"
-                className="fixed top-4 right-4 bg-red-500 text-white px-6 py-3 rounded-xl shadow-lg opacity-0 translate-y-2 transition-all duration-300 z-50"
+                className="fixed top-4 right-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg shadow-lg z-50 opacity-0 translate-y-2 transition-all duration-300"
             >
                 <div className="flex items-center space-x-2">
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
-                    <span className="font-medium">Please fill in all required fields</span>
+                    <span className="font-medium">Please fill in the exam title and at least one question.</span>
                 </div>
             </div>
         </div>

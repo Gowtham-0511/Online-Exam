@@ -18,6 +18,14 @@ export default function ExamPage() {
     const { data: session } = useSession();
     const [output, setOutput] = useState("");
     const [running, setRunning] = useState(false);
+    const [answers, setAnswers] = useState<string[]>([]);
+
+    type ExamQuestion = {
+        id: string;
+        question: string;
+        expectedOutput: string;
+    };
+
 
     // Load exam from Firestore
     useEffect(() => {
@@ -37,6 +45,12 @@ export default function ExamPage() {
 
         fetchExam();
     }, [examId]);
+
+    useEffect(() => {
+        if (exam?.questions) {
+            setAnswers(new Array(exam.questions.length).fill(""));
+        }
+    }, [exam]);
 
     // Timer
     useEffect(() => {
@@ -109,6 +123,7 @@ export default function ExamPage() {
             answer: code,
             submittedAt: serverTimestamp(),
             disqualified: disqualifiedFlag,
+            answers: answers,
         });
 
         const pdfBytes = await generateAnswerPdf({
@@ -148,6 +163,12 @@ export default function ExamPage() {
             </div>
         );
     }
+
+    const updateAnswer = (index: number, code: string) => {
+        const updated = [...answers];
+        updated[index] = code;
+        setAnswers(updated);
+    };
 
     const getTimeColor = () => {
         if (timeLeft > 300) return "text-green-600"; // > 5 minutes
@@ -222,7 +243,16 @@ export default function ExamPage() {
                         <div className="p-6 overflow-y-auto h-full">
                             <div className="prose prose-slate max-w-none">
                                 <div className="bg-gradient-to-r from-amber-50 to-yellow-50 border border-amber-200 rounded-xl p-4 text-slate-700 whitespace-pre-wrap">
-                                    {exam.question}
+                                    {(exam.questions as ExamQuestion[]).map((q, i) => (
+                                        <div key={q.id} className="mb-8">
+                                            <h3 className="text-lg font-semibold mb-2">Q{i + 1}. {q.question}</h3>
+                                            <textarea
+                                                value={answers[i]}
+                                                onChange={(e) => updateAnswer(i, e.target.value)}
+                                                className="w-full border p-2 font-mono h-40"
+                                            />
+                                        </div>
+                                    ))}
                                 </div>
                             </div>
                         </div>

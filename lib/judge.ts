@@ -1,4 +1,3 @@
-// lib/judge.ts
 import axios from "axios";
 
 const JUDGE0_API = "https://judge0-ce.p.rapidapi.com/submissions";
