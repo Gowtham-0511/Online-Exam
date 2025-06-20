@@ -20,6 +20,7 @@ export default function ExamPage() {
     const [running, setRunning] = useState(false);
     const [answers, setAnswers] = useState<string[]>([]);
     const [activeQuestionIndex, setActiveQuestionIndex] = useState(0);
+    const [sqlResult, setSqlResult] = useState<{ columns: string[]; rows: any[][] } | null>(null);
 
     type ExamQuestion = {
         id: string;
@@ -83,8 +84,17 @@ export default function ExamPage() {
             if (document.fullscreenElement) {
                 alert("You switched tabs. You're disqualified.");
                 setDisqualified(true);
-                // Pass true to force disqualification
-                handleSubmit(true);
+
+                if (examId && session?.user?.email) {
+                    const submissionRef = doc(db, "submissions", `${examId}_${session.user.email}`);
+                    setDoc(submissionRef, { disqualified: true }, { merge: true });
+                }
+                setOutput("You have been disqualified for switching tabs.");
+                setTimeLeft(0);
+                setRunning(false);
+
+                handleSubmitWithDisqualification(true);
+                router.push("/dashboard/attender");
             }
         };
 
@@ -92,8 +102,8 @@ export default function ExamPage() {
             if (!document.fullscreenElement) {
                 alert("Fullscreen exited. Disqualified.");
                 setDisqualified(true);
-                // Pass true to force disqualification
-                handleSubmit(true);
+
+                handleSubmitWithDisqualification(true);
             }
         };
 
@@ -109,55 +119,137 @@ export default function ExamPage() {
     const formatTime = (s: number) =>
         `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
 
-    const handleSubmit = async (forceDisqualified = false) => {
+    const handleSubmit = async () => {
         if (!exam || !session) return;
+
+        console.log(isDisqualified, "isDisqualified");
 
         const email = session.user?.email || "unknown";
         const userName = session.user?.name || "Anonymous";
         const examIdStr = examId?.toString() || "unknown";
-        const disqualifiedFlag = forceDisqualified || isDisqualified;
+        const disqualifiedFlag = isDisqualified;
         const timestamp = new Date().toISOString();
+        router.push("/dashboard/attender");
 
-        try {
-            // Submit to Firebase first, before navigation
-            await setDoc(doc(db, "submissions", `${examIdStr}_${email}`), {
-                email,
-                examId: examIdStr,
-                answer: code,
-                submittedAt: serverTimestamp(),
-                disqualified: disqualifiedFlag,
-                answers: answers,
-            });
+        await setDoc(doc(db, "submissions", `${examIdStr}_${email}`), {
+            email,
+            examId: examIdStr,
+            answer: code,
+            submittedAt: serverTimestamp(),
+            disqualified: isDisqualified,
+            answers: answers,
+        });
 
-            const pdfBytes = await generateAnswerPdf({
-                studentName: userName,
-                examTitle: exam.title,
-                codeAnswer: code,
-            });
-            const blob = new Blob([pdfBytes], { type: "application/pdf" });
+        const pdfBytes = await generateAnswerPdf({
+            studentName: userName,
+            examTitle: exam.title,
+            codeAnswer: code,
+        });
+        const blob = new Blob([pdfBytes], { type: "application/pdf" });
 
-            alert("✅ Exam submitted and emailed.");
-        } catch (error) {
-            console.error("Error submitting exam:", error);
-            alert("Error submitting exam. Please try again.");
-        } finally {
-            router.push("/dashboard/attender");
-        }
+        alert("✅ Exam submitted and emailed.");
+        router.push("/dashboard/attender");
     };
 
-    const handleRunCode = async () => {
+    const handleSubmitWithDisqualification = async (disqualifiedFlag = isDisqualified) => {
+        if (!exam || !session) return;
+
+        console.log(disqualifiedFlag, "disqualifiedFlag");
+
+        const email = session.user?.email || "unknown";
+        const userName = session.user?.name || "Anonymous";
+        const examIdStr = examId?.toString() || "unknown";
+        const timestamp = new Date().toISOString();
+
+        await setDoc(doc(db, "submissions", `${examIdStr}_${email}`), {
+            email,
+            examId: examIdStr,
+            answer: code,
+            submittedAt: serverTimestamp(),
+            disqualified: disqualifiedFlag,
+            answers: answers,
+        });
+
+        const pdfBytes = await generateAnswerPdf({
+            studentName: userName,
+            examTitle: exam.title,
+            codeAnswer: code,
+        });
+        const blob = new Blob([pdfBytes], { type: "application/pdf" });
+
+        alert("✅ Exam submitted and emailed.");
+        router.push("/dashboard/attender");
+    };
+
+    const handleRun = async () => {
+
         setRunning(true);
         setOutput("Running...");
 
         try {
-            const result = await runCode(exam.language, code);
-            setOutput(result || "No output");
+            if (exam.language === "sql") handleRunSql();
+            else if (exam.language === "python") handleRunPython();
+            else alert("Unsupported language");
+
         } catch (err: any) {
             setOutput("Error running code.");
         }
 
         setRunning(false);
+
+
     };
+
+    const handleRunPython = async () => {
+        setRunning(true);
+        setOutput("Running Python...");
+
+        try {
+            const res = await fetch("/api/run-python", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ code }),
+            });
+
+            const data = await res.json();
+            setOutput(data.output || "No output.");
+        } catch (err) {
+            setOutput("Error while running Python.");
+        }
+
+        setRunning(false);
+    };
+
+    const handleRunSql = async () => {
+        setRunning(true);
+        setOutput("Running...");
+
+        try {
+            const res = await fetch("/api/run-sql", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ query: code }),
+            });
+
+            const data = await res.json();
+            if (data.error) {
+                setOutput("❌ Error:\n" + data.error);
+                setSqlResult(null);
+            } else {
+                setOutput("");
+                setSqlResult({
+                    columns: data.columns,
+                    rows: data.rows,
+                });
+            }
+
+        } catch (e) {
+            setOutput("❌ Server error.");
+        }
+
+        setRunning(false);
+    };
+
 
     if (!exam) {
         return (
@@ -284,7 +376,7 @@ export default function ExamPage() {
 
                                 {/* Submit Button */}
                                 <button
-                                    onClick={() => handleSubmit(false)}
+                                    onClick={handleSubmit}
                                     className="group relative overflow-hidden bg-gradient-to-r from-emerald-500 to-green-600 text-white px-8 py-3 rounded-2xl font-semibold shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:scale-105 hover:-translate-y-1"
                                 >
                                     <div className="absolute inset-0 bg-gradient-to-r from-emerald-600 to-green-700 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
@@ -354,8 +446,8 @@ export default function ExamPage() {
                                             key={index}
                                             onClick={() => setActiveQuestionIndex(index)}
                                             className={`relative flex items-center gap-2 px-4 py-2 rounded-xl font-medium text-sm transition-all duration-200 ${activeQuestionIndex === index
-                                                    ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-lg scale-105'
-                                                    : 'bg-white/60 text-gray-700 hover:bg-white/80 border border-gray-200/50'
+                                                ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-lg scale-105'
+                                                : 'bg-white/60 text-gray-700 hover:bg-white/80 border border-gray-200/50'
                                                 }`}
                                         >
                                             <span className="font-bold">{index + 1}</span>
@@ -419,38 +511,41 @@ export default function ExamPage() {
                         </div>
 
                         {/* Code Editor Panel */}
-                        <div className="bg-white/70 backdrop-blur-xl rounded-3xl shadow-2xl border border-white/20 overflow-hidden flex flex-col">
-                            <div className="bg-gradient-to-r from-purple-50/80 to-blue-50/80 px-8 py-6 border-b border-gray-200/50">
-                                <div className="flex items-center justify-between">
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-blue-600 rounded-2xl flex items-center justify-center shadow-lg">
-                                            <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <div className="bg-white/70 backdrop-blur-xl rounded-3xl shadow-2xl border border-white/20 overflow-hidden flex flex-col w-full max-w-full mx-auto">
+                            {/* Header Section */}
+                            <div className="bg-gradient-to-r from-purple-50/80 to-blue-50/80 px-4 sm:px-6 lg:px-8 py-4 lg:py-6 border-b border-gray-200/50">
+                                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                                    {/* Title Section */}
+                                    <div className="flex items-center gap-3 flex-shrink-0">
+                                        <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-purple-500 to-blue-600 rounded-xl sm:rounded-2xl flex items-center justify-center shadow-lg">
+                                            <svg className="w-4 h-4 sm:w-5 sm:h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
                                             </svg>
                                         </div>
-                                        <div>
-                                            <h2 className="text-2xl font-bold bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent">
+                                        <div className="min-w-0 flex-1">
+                                            <h2 className="text-lg sm:text-xl lg:text-2xl font-bold bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent truncate">
                                                 Code Editor
                                             </h2>
-                                            <p className="text-gray-500 text-sm mt-1">Write and test your solution</p>
+                                            <p className="text-gray-500 text-xs sm:text-sm mt-1 hidden sm:block">Write and test your solution</p>
                                         </div>
                                     </div>
 
+                                    {/* Run Button */}
                                     <button
-                                        onClick={handleRunCode}
+                                        onClick={handleRun}
                                         disabled={running}
-                                        className="group relative overflow-hidden bg-gradient-to-r from-green-500 to-emerald-600 text-white px-6 py-3 rounded-2xl font-semibold shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+                                        className="group relative overflow-hidden bg-gradient-to-r from-green-500 to-emerald-600 text-white px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl font-semibold shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none w-full sm:w-auto text-sm sm:text-base"
                                     >
                                         <div className="absolute inset-0 bg-gradient-to-r from-green-600 to-emerald-700 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                                        <div className="relative flex items-center gap-2">
+                                        <div className="relative flex items-center justify-center gap-2">
                                             {running ? (
                                                 <>
-                                                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                                                    <div className="w-3 h-3 sm:w-4 sm:h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
                                                     <span>Running...</span>
                                                 </>
                                             ) : (
                                                 <>
-                                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <svg className="w-3 h-3 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                         <polygon points="5,3 19,12 5,21" strokeWidth={2} />
                                                     </svg>
                                                     <span>Run Code</span>
@@ -461,40 +556,72 @@ export default function ExamPage() {
                                 </div>
                             </div>
 
-                            <div className="flex-1 overflow-hidden bg-gray-50/30">
+                            {/* Code Editor Section */}
+                            <div className="flex-1 overflow-hidden bg-gray-50/30 min-h-[200px] sm:min-h-[300px] lg:min-h-[400px]">
                                 <CodeEditor language={exam.language} value={code} onChange={setCode} />
                             </div>
 
                             {/* Enhanced Output Panel */}
-                            <div className="border-t border-gray-200/50 bg-gradient-to-r from-gray-900 via-gray-800 to-gray-900">
-                                <div className="px-6 py-4 bg-gray-800/90 backdrop-blur-sm flex items-center justify-between">
-                                    <div className="flex items-center gap-3">
-                                        <div className="flex gap-2">
-                                            <div className="w-3 h-3 rounded-full bg-red-500 shadow-lg"></div>
-                                            <div className="w-3 h-3 rounded-full bg-yellow-500 shadow-lg"></div>
-                                            <div className="w-3 h-3 rounded-full bg-green-500 shadow-lg"></div>
+                            <div className="border-t border-gray-200/50 bg-gradient-to-r from-gray-900 via-gray-800 to-gray-900 flex-shrink-0">
+                                {/* Console Header */}
+                                <div className="px-4 sm:px-6 py-3 sm:py-4 bg-gray-800/90 backdrop-blur-sm flex items-center justify-between">
+                                    <div className="flex items-center gap-2 sm:gap-3">
+                                        <div className="flex gap-1.5 sm:gap-2">
+                                            <div className="w-2 h-2 sm:w-3 sm:h-3 rounded-full bg-red-500 shadow-lg"></div>
+                                            <div className="w-2 h-2 sm:w-3 sm:h-3 rounded-full bg-yellow-500 shadow-lg"></div>
+                                            <div className="w-2 h-2 sm:w-3 sm:h-3 rounded-full bg-green-500 shadow-lg"></div>
                                         </div>
-                                        <span className="text-gray-300 font-semibold">Console Output</span>
+                                        <span className="text-gray-300 font-semibold text-sm sm:text-base">Console Output</span>
                                     </div>
                                     {output && (
                                         <button
                                             onClick={() => setOutput("")}
-                                            className="text-gray-400 hover:text-white transition-colors p-1 rounded"
+                                            className="text-gray-400 hover:text-white transition-colors p-1 rounded touch-manipulation"
+                                            aria-label="Clear output"
                                         >
-                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <svg className="w-3 h-3 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                                             </svg>
                                         </button>
                                     )}
                                 </div>
-                                <div className="p-6 h-32 overflow-y-auto custom-scrollbar">
-                                    <pre className="text-green-300 font-mono text-sm whitespace-pre-wrap leading-relaxed">
-                                        {output || (
-                                            <span className="text-gray-500 italic">
-                                                Click 'Run Code' to see output here...
-                                            </span>
-                                        )}
-                                    </pre>
+
+                                {/* Console Output */}
+                                <div className="p-3 sm:p-4 lg:p-6 h-24 sm:h-28 lg:h-32 overflow-y-auto custom-scrollbar">
+                                    {sqlResult ? (
+                                        <div className="overflow-x-auto">
+                                            <table className="min-w-full border border-gray-600 text-green-300 text-xs sm:text-sm font-mono">
+                                                <thead className="bg-gray-800 text-gray-300">
+                                                    <tr>
+                                                        {sqlResult.columns.map((col, index) => (
+                                                            <th key={index} className="border border-gray-600 p-2 text-left font-semibold">
+                                                                {col}
+                                                            </th>
+                                                        ))}
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {sqlResult.rows.map((row, rowIndex) => (
+                                                        <tr key={rowIndex} className="hover:bg-gray-700/50">
+                                                            {row.map((cell, cellIndex) => (
+                                                                <td key={cellIndex} className="border border-gray-700 p-2">
+                                                                    {String(cell)}
+                                                                </td>
+                                                            ))}
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    ) : (
+                                        <pre className="text-green-300 font-mono text-xs sm:text-sm whitespace-pre-wrap leading-relaxed break-words">
+                                            {output || (
+                                                <span className="text-gray-500 italic text-xs sm:text-sm">
+                                                    Click 'Run Code' to see output here...
+                                                </span>
+                                            )}
+                                        </pre>
+                                    )}
                                 </div>
                             </div>
                         </div>
