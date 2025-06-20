@@ -14,7 +14,6 @@
     "date-fns": "^4.1.0",
     "file-saver": "^2.0.5",
     "firebase": "^11.9.1",
-    "msnodesqlv8": "^4.5.0",
     "mssql": "^11.0.1",
     "next": "15.3.4",
     "next-auth": "^4.24.11",
