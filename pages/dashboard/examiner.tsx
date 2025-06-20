@@ -137,12 +137,14 @@ export default function ExaminerDashboard() {
                         </div>
 
                         <div className="flex items-center space-x-4">
-                            <div className="hidden sm:flex items-center space-x-2 bg-emerald-50 border border-emerald-200 text-emerald-700 rounded-full px-4 py-2">
+                            {/* <div className="hidden sm:flex items-center space-x-2 bg-emerald-50 border border-emerald-200 text-emerald-700 rounded-full px-4 py-2">
                                 <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></div>
                                 <span className="text-sm font-medium">Active</span>
-                            </div>
-                            <div className="w-10 h-10 bg-gradient-to-br from-violet-500 to-purple-600 rounded-full flex items-center justify-center text-white font-semibold text-sm shadow-lg">
-                                DS
+                            </div> */}
+                            <div 
+                                className=" bg-gradient-to-br from-violet-500 to-purple-600 rounded-full p-2 flex items-center justify-center text-white font-semibold text-sm shadow-lg"
+                            >
+                                {session?.user?.name}
                             </div>
                         </div>
                     </div>
@@ -169,27 +171,6 @@ export default function ExaminerDashboard() {
                     <p className="text-slate-600 text-lg max-w-2xl mx-auto leading-relaxed">
                         Create comprehensive assessments with our intuitive builder. Configure settings, add questions, and launch in minutes.
                     </p>
-                </div>
-
-                {/* Stats Cards */}
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-10">
-                    {[
-                        { icon: "📋", value: "24", label: "Exams Created", color: "from-blue-500 to-indigo-600" },
-                        { icon: "👥", value: "156", label: "Total Students", color: "from-emerald-500 to-teal-600" },
-                        { icon: "📊", value: "89%", label: "Completion Rate", color: "from-violet-500 to-purple-600" }
-                    ].map((stat, index) => (
-                        <div key={index} className="group bg-white/70 backdrop-blur-sm border border-white/50 rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
-                            <div className="flex items-center space-x-4">
-                                <div className={`w-14 h-14 bg-gradient-to-br ${stat.color} rounded-2xl flex items-center justify-center text-white text-xl shadow-lg`}>
-                                    {stat.icon}
-                                </div>
-                                <div>
-                                    <p className="text-2xl font-bold text-slate-800">{stat.value}</p>
-                                    <p className="text-sm text-slate-600 font-medium">{stat.label}</p>
-                                </div>
-                            </div>
-                        </div>
-                    ))}
                 </div>
 
                 {/* Form Card */}
@@ -220,7 +201,7 @@ export default function ExaminerDashboard() {
                                         type="text"
                                         value={title}
                                         onChange={(e) => setTitle(e.target.value)}
-                                        placeholder="e.g., Advanced Python Programming Assessment"
+                                        placeholder="e.g., Python Programming Assessment"
                                         className="w-full px-4 py-4 bg-white/80 border border-slate-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-emerald-200/50 focus:border-emerald-400 transition-all duration-200 text-slate-800 placeholder-slate-400"
                                         disabled={isLoading}
                                     />
