@@ -21,11 +21,31 @@ export default function ExamPage() {
     const [answers, setAnswers] = useState<string[]>([]);
     const [activeQuestionIndex, setActiveQuestionIndex] = useState(0);
     const [sqlResult, setSqlResult] = useState<{ columns: string[]; rows: any[][] } | null>(null);
+    const [shuffledQuestions, setShuffledQuestions] = useState<any[]>([]);
 
     type ExamQuestion = {
         id: string;
         question: string;
         expectedOutput: string;
+    };
+
+    const shuffleArrayWithSeed = (array: any, seed: any) => {
+        // Simple seeded random number generator
+        const seededRandom = (seed: number) => {
+            const x = Math.sin(seed) * 10000;
+            return x - Math.floor(x);
+        };
+
+        const shuffled = [...array];
+        let currentSeed = seed;
+
+        for (let i = shuffled.length - 1; i > 0; i--) {
+            currentSeed = (currentSeed * 9301 + 49297) % 233280;
+            const j = Math.floor(seededRandom(currentSeed) * (i + 1));
+            [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+        }
+
+        return shuffled;
     };
 
     // Load exam from Firestore
@@ -36,7 +56,10 @@ export default function ExamPage() {
             const snap = await getDoc(ref);
             if (snap.exists()) {
                 const data = snap.data();
-                setExam(data);
+                const seed = examId.toString().split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+                const shuffled = shuffleArrayWithSeed(data.questions || [], seed);
+                setExam({ ...data, questions: shuffled });
+                setShuffledQuestions(shuffled);
                 setTimeLeft(data.duration * 60);
             } else {
                 alert("Exam not found");
@@ -129,6 +152,14 @@ export default function ExamPage() {
         const examIdStr = examId?.toString() || "unknown";
         const disqualifiedFlag = isDisqualified;
         const timestamp = new Date().toISOString();
+
+        // Map shuffled answers back to original question order for consistency
+        const answersWithQuestionIds = answers.map((answer, index) => ({
+            questionId: shuffledQuestions[index]?.id || index,
+            answer: answer,
+            originalIndex: index // Keep track of shuffled order
+        }));
+
         router.push("/dashboard/attender");
 
         await setDoc(doc(db, "submissions", `${examIdStr}_${email}`), {
@@ -138,6 +169,7 @@ export default function ExamPage() {
             submittedAt: serverTimestamp(),
             disqualified: isDisqualified,
             answers: answers,
+            answersWithQuestionIds: answersWithQuestionIds, // Add this for better tracking
         });
 
         const pdfBytes = await generateAnswerPdf({
@@ -161,6 +193,13 @@ export default function ExamPage() {
         const examIdStr = examId?.toString() || "unknown";
         const timestamp = new Date().toISOString();
 
+        // Map shuffled answers back to original question order
+        const answersWithQuestionIds = answers.map((answer, index) => ({
+            questionId: shuffledQuestions[index]?.id || index,
+            answer: answer,
+            originalIndex: index
+        }));
+
         await setDoc(doc(db, "submissions", `${examIdStr}_${email}`), {
             email,
             examId: examIdStr,
@@ -168,6 +207,7 @@ export default function ExamPage() {
             submittedAt: serverTimestamp(),
             disqualified: disqualifiedFlag,
             answers: answers,
+            answersWithQuestionIds: answersWithQuestionIds,
         });
 
         const pdfBytes = await generateAnswerPdf({
