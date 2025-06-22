@@ -146,8 +146,8 @@ export default function ExaminerSubmissions() {
                                         {/* Status */}
                                         <div className="col-span-2">
                                             <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${s.disqualified
-                                                    ? 'bg-red-100 text-red-800 border border-red-200'
-                                                    : 'bg-green-100 text-green-800 border border-green-200'
+                                                ? 'bg-red-100 text-red-800 border border-red-200'
+                                                : 'bg-green-100 text-green-800 border border-green-200'
                                                 }`}>
                                                 <div className={`w-1.5 h-1.5 rounded-full mr-1.5 ${s.disqualified ? 'bg-red-500' : 'bg-green-500'
                                                     }`}></div>
@@ -158,7 +158,7 @@ export default function ExaminerSubmissions() {
                                         {/* Actions */}
                                         <div className="col-span-3">
                                             <button
-                                                onClick={() => downloadAsFile(s.answer, `${s.examId}-${s.email}.txt`)}
+                                                onClick={() => downloadAsFile(s)}
                                                 className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-500 to-indigo-500 text-white text-sm font-medium rounded-lg hover:from-blue-600 hover:to-indigo-600 transition-all duration-200 shadow-sm hover:shadow-md transform hover:scale-105"
                                             >
                                                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -178,8 +178,68 @@ export default function ExaminerSubmissions() {
     );
 }
 
-function downloadAsFile(code: string, filename: string) {
-    const blob = new Blob([code], { type: "text/plain;charset=utf-8" });
+function downloadAsFile(submission: { examId: string; email: string; submittedAt: { seconds: number; }; disqualified: any; answersWithQuestionIds: string | any[]; answers: any[]; answer: any; }) {
+    const examId = submission.examId || '';
+    const email = submission.email || 'unknown';
+
+    // Determine file extension based on exam ID
+    const isPython = examId.toLowerCase().includes('python');
+    const fileExtension = isPython ? '.py' : '.sql';
+    const filename = `${examId}-${email}${fileExtension}`;
+
+    let content = '';
+
+    // Add header as comment
+    const commentChar = isPython ? '#' : '--';
+    content += `${commentChar} ========================================\n`;
+    content += `${commentChar} EXAM SUBMISSION\n`;
+    content += `${commentChar} ========================================\n`;
+    content += `${commentChar} Exam ID: ${submission.examId || 'N/A'}\n`;
+    content += `${commentChar} Candidate: ${submission.email || 'N/A'}\n`;
+    content += `${commentChar} Submitted: ${submission.submittedAt?.seconds
+        ? new Date(submission.submittedAt.seconds * 1000).toLocaleString()
+        : 'N/A'}\n`;
+    content += `${commentChar} Status: ${submission.disqualified ? 'Disqualified' : 'Qualified'}\n`;
+    content += `${commentChar} ========================================\n\n`;
+
+    // Process answers based on available data structure
+    if (submission.answersWithQuestionIds && submission.answersWithQuestionIds.length > 0) {
+        // Sort by originalIndex to maintain question order
+        const sortedAnswers = [...submission.answersWithQuestionIds].sort((a, b) =>
+            (a.originalIndex || 0) - (b.originalIndex || 0)
+        );
+
+        sortedAnswers.forEach((item, index) => {
+            content += `${commentChar} Question ${index + 1} (ID: ${item.questionId || 'N/A'})\n`;
+            content += `${commentChar} ${'-'.repeat(40)}\n`;
+            content += `${item.answer || 'No answer provided'}\n\n`;
+
+            if (index < sortedAnswers.length - 1) {
+                content += `${commentChar} ${'~'.repeat(50)}\n\n`;
+            }
+        });
+    } else if (submission.answers && submission.answers.length > 0) {
+        // Handle simple answers array
+        submission.answers.forEach((answer, index) => {
+            content += `${commentChar} Answer ${index + 1}\n`;
+            content += `${commentChar} ${'-'.repeat(20)}\n`;
+            content += `${answer || 'No answer provided'}\n\n`;
+
+            if (index < submission.answers.length - 1) {
+                content += `${commentChar} ${'~'.repeat(50)}\n\n`;
+            }
+        });
+    } else if (submission.answer) {
+        // Handle single answer field
+        content += `${commentChar} Answer\n`;
+        content += `${commentChar} ${'-'.repeat(10)}\n`;
+        content += `${submission.answer}\n\n`;
+    } else {
+        content += `${commentChar} No answers found in submission\n`;
+    }
+
+    // Create and download the file
+    const blob = new Blob([content], { type: "text/plain;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;

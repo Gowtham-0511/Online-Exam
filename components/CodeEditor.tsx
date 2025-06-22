@@ -1,30 +1,34 @@
-// components/CodeEditor.tsx
-import { useRef } from "react";
 import Editor from "@monaco-editor/react";
 
-type Props = {
-    language: "python" | "sql";
+interface Props {
+    language: string;
     value: string;
-    onChange: (val: string) => void;
-};
+    onChange: (value: string) => void;
+    theme?: "light" | "vs-dark";
+}
 
-export default function CodeEditor({ language, value, onChange }: Props) {
-    const editorRef = useRef(null);
-
+export default function CodeEditor({
+    language,
+    value,
+    onChange,
+    theme = "light"
+}: Props) {
     return (
-        <div className="h-[400px] border rounded-lg overflow-hidden">
-            <Editor
-                height="100%"
-                defaultLanguage={language}
-                defaultValue={value}
-                value={value}
-                onChange={(value) => onChange(value || "")}
-                theme="vs-dark"
-                options={{
-                    fontSize: 14,
-                    minimap: { enabled: false },
-                }}
-            />
-        </div>
+        <Editor
+            height="100%"
+            defaultLanguage={language}
+            defaultValue={value}
+            value={value}
+            onChange={(value) => onChange(value || "")}
+            theme={theme}
+            options={{
+                fontSize: 14,
+                minimap: { enabled: false },
+                automaticLayout: true,
+                wordWrap: "on",
+                tabSize: 2,
+                scrollBeyondLastLine: false
+            }}
+        />
     );
 }
