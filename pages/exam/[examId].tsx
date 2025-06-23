@@ -391,46 +391,46 @@ export default function ExamPage() {
     }) => {
         const currentTime = Date.now();
 
-        // Keystroke pattern analysis
-        if (keystrokePattern.lastKeyTime > 0) {
-            const interval = currentTime - keystrokePattern.lastKeyTime;
-            const newIntervals = [...keystrokePattern.intervals, interval].slice(-10); // Keep last 10 intervals
+        // // Keystroke pattern analysis
+        // if (keystrokePattern.lastKeyTime > 0) {
+        //     const interval = currentTime - keystrokePattern.lastKeyTime;
+        //     const newIntervals = [...keystrokePattern.intervals, interval].slice(-10); // Keep last 10 intervals
 
-            // Detect suspicious patterns
-            const averageInterval = newIntervals.reduce((sum, int) => sum + int, 0) / newIntervals.length;
-            const isRobotic = newIntervals.length >= 5 &&
-                newIntervals.every(int => Math.abs(int - averageInterval) < 20); // Very consistent timing
+        //     // Detect suspicious patterns
+        //     const averageInterval = newIntervals.reduce((sum, int) => sum + int, 0) / newIntervals.length;
+        //     const isRobotic = newIntervals.length >= 5 &&
+        //         newIntervals.every(int => Math.abs(int - averageInterval) < 20); // Very consistent timing
 
-            const isTooFast = interval < 50; // Unrealistically fast typing
+        //     const isTooFast = interval < 50; // Unrealistically fast typing
 
-            if (isRobotic || isTooFast) {
-                const newSuspiciousCount = keystrokePattern.suspiciousCount + 1;
-                setKeystrokePattern(prev => ({
-                    ...prev,
-                    intervals: newIntervals,
-                    suspiciousCount: newSuspiciousCount,
-                    lastKeyTime: currentTime
-                }));
+        //     if (isRobotic || isTooFast) {
+        //         const newSuspiciousCount = keystrokePattern.suspiciousCount + 1;
+        //         setKeystrokePattern(prev => ({
+        //             ...prev,
+        //             intervals: newIntervals,
+        //             suspiciousCount: newSuspiciousCount,
+        //             lastKeyTime: currentTime
+        //         }));
 
-                if (newSuspiciousCount >= 15) {
-                    handleDisqualification("Suspicious keystroke patterns detected - possible automation");
-                    return;
-                } else if (newSuspiciousCount % 5 === 0) {
-                    toast.error(`⌨️ Unusual typing pattern detected. Warning ${Math.floor(newSuspiciousCount / 5)}/3`);
-                }
-            } else {
-                setKeystrokePattern(prev => ({
-                    ...prev,
-                    intervals: newIntervals,
-                    lastKeyTime: currentTime
-                }));
-            }
-        } else {
-            setKeystrokePattern(prev => ({
-                ...prev,
-                lastKeyTime: currentTime
-            }));
-        }
+        //         if (newSuspiciousCount >= 15) {
+        //             handleDisqualification("Suspicious keystroke patterns detected - possible automation");
+        //             return;
+        //         } else if (newSuspiciousCount % 5 === 0) {
+        //             toast.error(`⌨️ Unusual typing pattern detected. Warning ${Math.floor(newSuspiciousCount / 5)}/3`);
+        //         }
+        //     } else {
+        //         setKeystrokePattern(prev => ({
+        //             ...prev,
+        //             intervals: newIntervals,
+        //             lastKeyTime: currentTime
+        //         }));
+        //     }
+        // } else {
+        //     setKeystrokePattern(prev => ({
+        //         ...prev,
+        //         lastKeyTime: currentTime
+        //     }));
+        // }
 
         // Existing forbidden key detection
         const isForbiddenKey =

@@ -1,6 +1,6 @@
 import { useRouter } from "next/router";
 import { useSession } from "next-auth/react";
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import Head from "next/head";
 
 export default function AttenderDashboard() {
@@ -12,9 +12,6 @@ export default function AttenderDashboard() {
     const [showAlert, setShowAlert] = useState(false);
     const [alertMessage, setAlertMessage] = useState("");
     const [alertType, setAlertType] = useState<'error' | 'success' | 'warning'>('error');
-    const [isHighContrast, setIsHighContrast] = useState(false);
-    const examIdInputRef = useRef<HTMLInputElement>(null);
-    const startButtonRef = useRef<HTMLButtonElement>(null);
 
     interface ExamValidationError {
         field: string;
@@ -30,35 +27,6 @@ export default function AttenderDashboard() {
         basic: /^[a-zA-Z0-9-_]{3,50}$/,
         advanced: /^[a-zA-Z][a-zA-Z0-9-_]{2,49}$/
     };
-
-    useEffect(() => {
-        // Focus on exam ID input when component mounts
-        if (examIdInputRef.current) {
-            examIdInputRef.current.focus();
-        }
-
-        // Keyboard navigation handler
-        const handleKeyDown = (e: KeyboardEvent) => {
-            // Skip to main content with Alt+M
-            if (e.altKey && e.key === 'm') {
-                e.preventDefault();
-                const mainContent = document.getElementById('main-content');
-                if (mainContent) {
-                    mainContent.focus();
-                    mainContent.scrollIntoView({ behavior: 'smooth' });
-                }
-            }
-
-            // Toggle high contrast with Alt+C
-            if (e.altKey && e.key === 'c') {
-                e.preventDefault();
-                setIsHighContrast(prev => !prev);
-            }
-        };
-
-        document.addEventListener('keydown', handleKeyDown);
-        return () => document.removeEventListener('keydown', handleKeyDown);
-    }, []);
 
     const validateExamId = (examId: string): ExamValidationResult => {
         const errors: ExamValidationError[] = [];
@@ -140,13 +108,6 @@ export default function AttenderDashboard() {
         }
     };
 
-    const handleKeyPress = (e: React.KeyboardEvent) => {
-        if (e.key === 'Enter' && !isLoading) {
-            e.preventDefault();
-            handleStartExam();
-        }
-    };
-
     // const handleStartExam = async () => {
     //     if (!examId.trim()) {
     //         const alertDiv = document.getElementById('custom-alert');
@@ -181,90 +142,39 @@ export default function AttenderDashboard() {
                     <div className="absolute top-1/2 left-1/3 w-32 h-32 bg-blue-300/20 rounded-full blur-2xl animate-pulse delay-500"></div>
                 </div>
 
-                <div className="sr-only">
-                    <a
-                        href="#main-content"
-                        className="absolute top-0 left-0 bg-blue-600 text-white px-4 py-2 transform -translate-y-full focus:translate-y-0 transition-transform duration-200 z-50"
-                        onFocus={(e) => e.target.classList.remove('-translate-y-full')}
-                        onBlur={(e) => e.target.classList.add('-translate-y-full')}
-                    >
-                        Skip to main content
-                    </a>
-                    <a
-                        href="#exam-id-input"
-                        className="absolute top-0 left-32 bg-blue-600 text-white px-4 py-2 transform -translate-y-full focus:translate-y-0 transition-transform duration-200 z-50"
-                        onFocus={(e) => e.target.classList.remove('-translate-y-full')}
-                        onBlur={(e) => e.target.classList.add('-translate-y-full')}
-                    >
-                        Skip to exam ID input
-                    </a>
-                </div>
-
                 {/* Navigation Bar */}
-                <nav
-                    className={`relative z-10 border-b shadow-sm ${isHighContrast
-                        ? 'bg-black text-white border-white'
-                        : 'bg-white/90 backdrop-blur-lg border-sky-200/30'
-                        }`}
-                    role="navigation"
-                    aria-label="Main navigation"
-                >
+                <nav className="relative z-10 bg-white/90 backdrop-blur-lg border-b border-sky-200/30 shadow-sm">
                     <div className="max-w-7xl mx-auto px-6 py-4">
                         <div className="flex items-center justify-between">
                             <div className="flex items-center space-x-3">
-                                <div
-                                    className={`w-10 h-10 rounded-xl flex items-center justify-center shadow-lg ${isHighContrast
-                                        ? 'bg-white text-black'
-                                        : 'bg-gradient-to-r from-sky-400 to-blue-500'
-                                        }`}
-                                    role="img"
-                                    aria-label="ExamHub logo"
-                                >
-                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <div className="w-10 h-10 bg-gradient-to-r from-sky-400 to-blue-500 rounded-xl flex items-center justify-center shadow-lg">
+                                    <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                                     </svg>
                                 </div>
-                                <div>
-                                    <h1 className={`text-xl font-bold ${isHighContrast
-                                        ? 'text-white'
-                                        : 'bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent'
-                                        }`}>
-                                        ExamHub
-                                    </h1>
-                                    <p className={`text-xs font-medium ${isHighContrast ? 'text-gray-300' : 'text-slate-500'
-                                        }`}>
-                                        Attender Portal
-                                    </p>
-                                </div>
+                                <span className="text-xl font-bold bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent">
+                                    ExamHub
+                                    <p className="text-xs text-slate-500 font-medium">Attender Portal</p>
+                                </span>
                             </div>
                         </div>
                     </div>
                 </nav>
 
                 {/* Main Content */}
-                <main
-                    id="main-content"
-                    className="relative z-10 max-w-6xl mx-auto px-6 py-12"
-                    role="main"
-                    aria-label="Exam dashboard main content"
-                    tabIndex={-1}
-                >
+                <main className="relative z-10 max-w-6xl mx-auto px-6 py-12">
                     <div className="text-center mb-12">
-                        <h1 className={`text-4xl sm:text-5xl font-bold mb-4 ${isHighContrast
-                            ? 'text-white'
-                            : 'bg-gradient-to-r from-gray-800 via-gray-700 to-gray-600 bg-clip-text text-transparent'
-                            }`}>
-                            <span>Welcome Back!</span>
+                        <h1 className="text-4xl sm:text-5xl font-bold mb-4">
+                            <span className="bg-gradient-to-r from-gray-800 via-gray-700 to-gray-600 bg-clip-text text-transparent">
+                                Welcome Back!
+                            </span>
                         </h1>
 
-                        <div className={`flex items-center justify-center space-x-2 ${isHighContrast ? 'text-white' : 'text-gray-600'
-                            }`}>
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                        <div className="flex items-center justify-center space-x-2 text-gray-600">
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                             </svg>
-                            <span className="font-medium" aria-label={`Logged in as ${session?.user?.name}`}>
-                                {session?.user?.name}
-                            </span>
+                            <span className="font-medium">{session?.user?.name}</span>
                         </div>
                     </div>
 
@@ -287,48 +197,35 @@ export default function AttenderDashboard() {
 
                                 <div className="space-y-6">
                                     <div>
-                                        <label
-                                            htmlFor="exam-id-input"
-                                            className={`block text-sm font-semibold mb-3 ${isHighContrast ? 'text-white' : 'text-gray-700'
-                                                }`}
-                                        >
-                                            Exam ID
-                                            <span className="text-red-500 ml-1" aria-label="required">*</span>
+                                        <label className="block text-sm font-semibold text-gray-700 mb-3">
+                                            Exam ID *
                                         </label>
                                         <div className="relative">
                                             <input
-                                                id="exam-id-input"
-                                                ref={examIdInputRef}
                                                 type="text"
                                                 value={examId}
                                                 onChange={(e) => {
                                                     setExamId(e.target.value);
+                                                    // Clear errors when user starts typing
                                                     if (errors.length > 0) {
                                                         setErrors([]);
                                                     }
                                                 }}
                                                 onBlur={() => {
+                                                    // Validate on blur
                                                     const validation = validateExamId(examId);
                                                     setErrors(validation.errors);
                                                 }}
-                                                onKeyPress={handleKeyPress}
                                                 placeholder="e.g. python-101, math-advanced-2024"
-                                                className={`w-full px-4 py-4 border rounded-xl focus:outline-none focus:ring-4 transition-all duration-200 placeholder-gray-400 ${isHighContrast
-                                                    ? `bg-black text-white border-white focus:ring-white/50 ${errors.length > 0 ? 'border-red-300' : 'border-white'
-                                                    }`
-                                                    : `bg-blue-50/50 text-gray-800 ${errors.length > 0
-                                                        ? 'border-red-300 focus:ring-red-200/50 focus:border-red-400'
-                                                        : 'border-sky-200 focus:ring-sky-200/50 focus:border-sky-400'
-                                                    }`
+                                                className={`w-full px-4 py-4 bg-blue-50/50 border rounded-xl focus:outline-none focus:ring-4 transition-all duration-200 text-gray-800 placeholder-gray-400 ${errors.length > 0
+                                                    ? 'border-red-300 focus:ring-red-200/50 focus:border-red-400'
+                                                    : 'border-sky-200 focus:ring-sky-200/50 focus:border-sky-400'
                                                     }`}
                                                 disabled={isLoading}
-                                                required
                                                 aria-invalid={errors.length > 0}
-                                                aria-describedby={errors.length > 0 ? "exam-id-error exam-id-help" : "exam-id-help"}
-                                                aria-label="Enter your exam identification code"
-                                                autoComplete="off"
+                                                aria-describedby={errors.length > 0 ? "exam-id-error" : undefined}
                                             />
-                                            <div className="absolute inset-y-0 right-0 flex items-center pr-4" aria-hidden="true">
+                                            <div className="absolute inset-y-0 right-0 flex items-center pr-4">
                                                 {errors.length > 0 ? (
                                                     <svg className="w-5 h-5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -340,47 +237,21 @@ export default function AttenderDashboard() {
                                                 )}
                                             </div>
                                         </div>
-
-                                        {/* Help text */}
-                                        <div id="exam-id-help" className={`mt-1 text-xs ${isHighContrast ? 'text-gray-300' : 'text-gray-500'
-                                            }`}>
-                                            Enter the unique identifier provided by your instructor
-                                        </div>
-
-                                        {/* Error message */}
                                         {errors.length > 0 && (
-                                            <div
-                                                id="exam-id-error"
-                                                className="mt-2 text-sm text-red-600"
-                                                role="alert"
-                                                aria-live="polite"
-                                            >
-                                                <span className="sr-only">Error: </span>
+                                            <div id="exam-id-error" className="mt-2 text-sm text-red-600">
                                                 {errors[0].message}
                                             </div>
                                         )}
                                     </div>
 
                                     <button
-                                        ref={startButtonRef}
-                                        type="submit"
-                                        disabled={isLoading || errors.length > 0}
-                                        className={`w-full font-semibold py-4 px-6 rounded-xl transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98] shadow-lg hover:shadow-xl focus:outline-none focus:ring-4 flex items-center justify-center space-x-3 ${isHighContrast
-                                            ? 'bg-white text-black hover:bg-gray-200 focus:ring-white/50 disabled:bg-gray-600 disabled:text-gray-400'
-                                            : 'bg-gradient-to-r from-sky-400 to-blue-500 hover:from-sky-500 hover:to-blue-600 disabled:from-gray-400 disabled:to-gray-500 text-white focus:ring-sky-200/50'
-                                            }`}
-                                        aria-label={isLoading ? 'Starting exam, please wait' : 'Start exam'}
-                                        aria-describedby={errors.length > 0 ? 'exam-id-error' : undefined}
+                                        onClick={handleStartExam}
+                                        disabled={isLoading}
+                                        className="w-full bg-gradient-to-r from-sky-400 to-blue-500 hover:from-sky-500 hover:to-blue-600 disabled:from-gray-400 disabled:to-gray-500 text-white font-semibold py-4 px-6 rounded-xl transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98] shadow-lg hover:shadow-xl focus:outline-none focus:ring-4 focus:ring-sky-200/50 flex items-center justify-center space-x-3"
                                     >
                                         {isLoading ? (
                                             <>
-                                                <svg
-                                                    className="animate-spin -ml-1 mr-3 h-5 w-5"
-                                                    xmlns="http://www.w3.org/2000/svg"
-                                                    fill="none"
-                                                    viewBox="0 0 24 24"
-                                                    aria-hidden="true"
-                                                >
+                                                <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                                                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                                                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                                                 </svg>
@@ -389,7 +260,7 @@ export default function AttenderDashboard() {
                                         ) : (
                                             <>
                                                 <span>Start Exam</span>
-                                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
                                                 </svg>
                                             </>
@@ -435,13 +306,12 @@ export default function AttenderDashboard() {
                             </div>
                         </div>
                     </div>
-
                 </main>
 
                 {showAlert && (
                     <div className={`fixed top-4 right-4 px-6 py-3 rounded-xl shadow-lg transition-all duration-300 z-50 ${alertType === 'error' ? 'bg-red-500 text-white' :
-                        alertType === 'success' ? 'bg-green-500 text-white' :
-                            'bg-yellow-500 text-white'
+                            alertType === 'success' ? 'bg-green-500 text-white' :
+                                'bg-yellow-500 text-white'
                         } ${showAlert ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'}`}>
                         <div className="flex items-center space-x-2">
                             {alertType === 'error' && (
