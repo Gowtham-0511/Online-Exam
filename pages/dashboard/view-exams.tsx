@@ -1,8 +1,5 @@
 import { useEffect, useState } from "react";
-import { db } from "../../lib/firebase";
-import { collection, getDocs, query, where } from "firebase/firestore";
 import { useSession } from "next-auth/react";
-import { deleteDoc, doc } from "firebase/firestore";
 import toast from "react-hot-toast";
 import { useRouter } from "next/router";
 
@@ -17,26 +14,34 @@ export default function ViewExamsPage() {
         const fetchExams = async () => {
             if (!session?.user?.email) return;
 
-            const q = query(collection(db, "exams"), where("createdBy", "==", session.user.email));
-            const snapshot = await getDocs(q);
-            const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            setExams(data);
+            try {
+                const res = await fetch(`/api/exams/by-user?email=${session.user.email}`);
+                const data = await res.json();
+                setExams(data);
+            } catch (error) {
+                console.error("Failed to fetch exams", error);
+            }
         };
 
         fetchExams();
     }, [session]);
 
+
     const handleDelete = async (examId: string) => {
-        if (!confirm("Are you sure you want to delete this exam?")) return;
 
         try {
-            await deleteDoc(doc(db, "exams", examId));
+            await fetch(`/api/exams/delete/${examToDelete}`, {
+                method: "DELETE"
+            });
             toast.success("Exam deleted successfully.");
-            setExams((prev) => prev.filter((exam) => exam.id !== examId));
+            setExams(prev => prev.filter(exam => exam.id !== examToDelete));
         } catch (err) {
             toast.error("Failed to delete exam.");
             console.error(err);
         }
+
+        setShowConfirm(false);
+        setExamToDelete(null);
     };
 
     return (
@@ -246,19 +251,7 @@ export default function ViewExamsPage() {
                                         Cancel
                                     </button>
                                     <button
-                                        onClick={async () => {
-                                            if (!examToDelete) return;
-                                            try {
-                                                await deleteDoc(doc(db, "exams", examToDelete));
-                                                toast.success("Exam deleted successfully.");
-                                                setExams((prev) => prev.filter((exam) => exam.id !== examToDelete));
-                                            } catch (err) {
-                                                toast.error("Failed to delete exam.");
-                                                console.error(err);
-                                            }
-                                            setShowConfirm(false);
-                                            setExamToDelete(null);
-                                        }}
+                                        onClick={async () => { handleDelete(examToDelete as string); }}
                                         className="px-6 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 hover:shadow-md"
                                         style={{
                                             backgroundColor: '#FF6B6B',

@@ -1,17 +1,19 @@
 import { useRouter } from "next/router";
 import { useSession } from "next-auth/react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Head from "next/head";
 
 export default function AttenderDashboard() {
     const router = useRouter();
-    const { data: session } = useSession();
+    const { data: session, status } = useSession();
     const [examId, setExamId] = useState("");
     const [isLoading, setIsLoading] = useState(false);
     const [errors, setErrors] = useState<ExamValidationError[]>([]);
     const [showAlert, setShowAlert] = useState(false);
     const [alertMessage, setAlertMessage] = useState("");
     const [alertType, setAlertType] = useState<'error' | 'success' | 'warning'>('error');
+    const [userRole, setUserRole] = useState<string | null>(null);
+    const [isInitializing, setIsInitializing] = useState(true);
 
     interface ExamValidationError {
         field: string;
@@ -27,6 +29,53 @@ export default function AttenderDashboard() {
         basic: /^[a-zA-Z0-9-_]{3,50}$/,
         advanced: /^[a-zA-Z][a-zA-Z0-9-_]{2,49}$/
     };
+
+    // Initialize user in SQLite database when session is available
+    useEffect(() => {
+        const initializeUser = async () => {
+            if (status === "loading") return; // Still loading session
+
+            if (!session?.user?.email) {
+                setIsInitializing(false);
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/users/get-or-create', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        email: session.user.email,
+                        name: session.user.name || null,
+                    }),
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to initialize user');
+                }
+
+                const userData = await response.json();
+                setUserRole(userData.role);
+
+                // If user is not an attender, redirect them
+                if (userData.role !== 'attender') {
+                    showAlertMessage(`Access denied. This page is for attenders only. Your role: ${userData.role}`, 'error');
+                    setTimeout(() => {
+                        router.push('/');
+                    }, 2000);
+                }
+            } catch (error) {
+                console.error('Error initializing user:', error);
+                showAlertMessage('Failed to initialize user account. Please try refreshing the page.', 'error');
+            } finally {
+                setIsInitializing(false);
+            }
+        };
+
+        initializeUser();
+    }, [session, status, router]);
 
     const validateExamId = (examId: string): ExamValidationResult => {
         const errors: ExamValidationError[] = [];
@@ -56,10 +105,9 @@ export default function AttenderDashboard() {
 
     const handleStartExam = async () => {
         try {
-            // Clear previous errors
             setErrors([]);
 
-            // Validate exam ID
+            // Validate exam ID format
             const validation = validateExamId(examId);
             if (!validation.isValid) {
                 setErrors(validation.errors);
@@ -67,13 +115,18 @@ export default function AttenderDashboard() {
                 return;
             }
 
+            // Check if user is properly initialized
+            if (!session?.user?.email || userRole !== 'attender') {
+                showAlertMessage('Please wait for user initialization to complete', 'warning');
+                return;
+            }
+
             setIsLoading(true);
 
-            // TODO: Replace this with actual API call
-            // For now, simulate API validation
+            // Here you would typically make an API call to validate the exam
+            // For now, keeping the simulation as in the original code
             const simulateApiCall = new Promise((resolve, reject) => {
                 setTimeout(() => {
-                    // Simulate some exam IDs that don't exist
                     const invalidExamIds = ['invalid-exam', 'non-existent', 'expired-exam'];
                     if (invalidExamIds.includes(examId.toLowerCase())) {
                         reject(new Error('Exam not found or no longer available'));
@@ -85,7 +138,6 @@ export default function AttenderDashboard() {
 
             await simulateApiCall;
 
-            // If validation passes, navigate to exam
             showAlertMessage('Exam validated successfully! Redirecting...', 'success');
             setTimeout(() => {
                 router.push(`/exam/${examId}`);
@@ -108,30 +160,39 @@ export default function AttenderDashboard() {
         }
     };
 
-    // const handleStartExam = async () => {
-    //     if (!examId.trim()) {
-    //         const alertDiv = document.getElementById('custom-alert');
-    //         if (alertDiv) {
-    //             alertDiv.classList.remove('opacity-0', 'translate-y-2');
-    //             alertDiv.classList.add('opacity-100', 'translate-y-0');
-    //             setTimeout(() => {
-    //                 alertDiv.classList.add('opacity-0', 'translate-y-2');
-    //                 alertDiv.classList.remove('opacity-100', 'translate-y-0');
-    //             }, 3000);
-    //         }
-    //         return;
-    //     }
+    // Show loading state while initializing
+    if (status === "loading" || isInitializing) {
+        return (
+            <>
+                <Head>
+                    <title>Exam Hub - Loading</title>
+                    <link rel="icon" href="/logo.png" />
+                </Head>
+                <div className="min-h-screen bg-gradient-to-br from-blue-50 via-sky-50 to-blue-100 flex items-center justify-center">
+                    <div className="text-center">
+                        <div className="w-16 h-16 bg-gradient-to-r from-sky-400 to-blue-500 rounded-2xl mx-auto mb-4 flex items-center justify-center shadow-xl animate-pulse">
+                            <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                            </svg>
+                        </div>
+                        <h2 className="text-xl font-semibold text-gray-800 mb-2">Loading...</h2>
+                        <p className="text-gray-600">Setting up your dashboard</p>
+                    </div>
+                </div>
+            </>
+        );
+    }
 
-    //     setIsLoading(true);
-    //     setTimeout(() => {
-    //         router.push(`/exam/${examId}`);
-    //     }, 1000);
-    // };
+    // Redirect to sign in if not authenticated
+    if (status === "unauthenticated") {
+        router.push('/api/auth/signin');
+        return null;
+    }
 
     return (
         <>
             <Head>
-                <title>Exam Hub</title>
+                <title>Exam Hub - Attender Dashboard</title>
                 <link rel="icon" href="/logo.png" />
             </Head>
             <div className="min-h-screen bg-gradient-to-br from-blue-50 via-sky-50 to-blue-100 relative overflow-hidden">
@@ -156,6 +217,17 @@ export default function AttenderDashboard() {
                                     ExamHub
                                     <p className="text-xs text-slate-500 font-medium">Attender Portal</p>
                                 </span>
+                            </div>
+                            <div className="flex items-center space-x-4">
+                                <div className="text-sm text-gray-600">
+                                    Role: <span className="font-medium text-sky-600">{userRole || 'Loading...'}</span>
+                                </div>
+                                <button
+                                    onClick={() => router.push('/api/auth/signout')}
+                                    className="text-gray-600 hover:text-gray-800 transition-colors"
+                                >
+                                    Sign Out
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -221,7 +293,7 @@ export default function AttenderDashboard() {
                                                     ? 'border-red-300 focus:ring-red-200/50 focus:border-red-400'
                                                     : 'border-sky-200 focus:ring-sky-200/50 focus:border-sky-400'
                                                     }`}
-                                                disabled={isLoading}
+                                                disabled={isLoading || userRole !== 'attender'}
                                                 aria-invalid={errors.length > 0}
                                                 aria-describedby={errors.length > 0 ? "exam-id-error" : undefined}
                                             />
@@ -246,7 +318,7 @@ export default function AttenderDashboard() {
 
                                     <button
                                         onClick={handleStartExam}
-                                        disabled={isLoading}
+                                        disabled={isLoading || userRole !== 'attender'}
                                         className="w-full bg-gradient-to-r from-sky-400 to-blue-500 hover:from-sky-500 hover:to-blue-600 disabled:from-gray-400 disabled:to-gray-500 text-white font-semibold py-4 px-6 rounded-xl transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98] shadow-lg hover:shadow-xl focus:outline-none focus:ring-4 focus:ring-sky-200/50 flex items-center justify-center space-x-3"
                                     >
                                         {isLoading ? (
@@ -257,6 +329,8 @@ export default function AttenderDashboard() {
                                                 </svg>
                                                 <span>Starting Exam...</span>
                                             </>
+                                        ) : userRole !== 'attender' ? (
+                                            <span>Access Restricted</span>
                                         ) : (
                                             <>
                                                 <span>Start Exam</span>
@@ -308,10 +382,11 @@ export default function AttenderDashboard() {
                     </div>
                 </main>
 
+                {/* Alert Messages */}
                 {showAlert && (
                     <div className={`fixed top-4 right-4 px-6 py-3 rounded-xl shadow-lg transition-all duration-300 z-50 ${alertType === 'error' ? 'bg-red-500 text-white' :
-                            alertType === 'success' ? 'bg-green-500 text-white' :
-                                'bg-yellow-500 text-white'
+                        alertType === 'success' ? 'bg-green-500 text-white' :
+                            'bg-yellow-500 text-white'
                         } ${showAlert ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'}`}>
                         <div className="flex items-center space-x-2">
                             {alertType === 'error' && (
@@ -333,19 +408,6 @@ export default function AttenderDashboard() {
                         </div>
                     </div>
                 )}
-
-                {/* Custom Alert */}
-                <div
-                    id="custom-alert"
-                    className="fixed top-4 right-4 bg-red-500 text-white px-6 py-3 rounded-xl shadow-lg opacity-0 translate-y-2 transition-all duration-300 z-50"
-                >
-                    <div className="flex items-center space-x-2">
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                        <span className="font-medium">Please enter a valid exam ID</span>
-                    </div>
-                </div>
             </div>
         </>
     );

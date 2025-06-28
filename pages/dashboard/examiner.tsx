@@ -1,6 +1,4 @@
 import { useCallback, useState } from "react";
-import { db } from "../../lib/firebase";
-import { doc, setDoc, collection, addDoc, getDocs, query, where } from "firebase/firestore";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/router";
 import * as XLSX from 'xlsx';
@@ -45,34 +43,38 @@ export default function ExaminerDashboard() {
     const [selectedBankQuestions, setSelectedBankQuestions] = useState<string[]>([]);
     const [isLoadingQuestionBank, setIsLoadingQuestionBank] = useState(false);
 
+    const resetForm = () => {
+        setTitle("");
+        setLanguage("python");
+        setDuration(10);
+        setIsExamProctored(false);
+        setQuestions([{
+            id: "q1",
+            question: "",
+            expectedOutput: "",
+            difficulty: undefined,
+            marks: undefined
+        }]);
+        setUploadedQuestions([]);
+        setUseExcelQuestions(false);
+        setGeneratedQuestions([]);
+        setQuestionConfig({
+            beginner: { count: 0, marks: 0 },
+            intermediate: { count: 0, marks: 0 },
+            hard: { count: 0, marks: 0 }
+        });
+    };
+
     const handleCreateExam = useCallback(async () => {
         const validQuestions = questions.filter(q => q.question && q.question.trim() !== "");
 
         if (!title || !title.trim()) {
-            const errorAlert = document.getElementById('error-alert');
-            if (errorAlert) {
-                errorAlert.querySelector('span')!.textContent = "Please enter an exam title.";
-                errorAlert.classList.remove('opacity-0', 'translate-y-2');
-                errorAlert.classList.add('opacity-100', 'translate-y-0');
-                setTimeout(() => {
-                    errorAlert.classList.add('opacity-0', 'translate-y-2');
-                    errorAlert.classList.remove('opacity-100', 'translate-y-0');
-                }, 3000);
-            }
+            toast.error("Exam title is required.");
             return;
         }
 
         if (validQuestions.length === 0) {
-            const errorAlert = document.getElementById('error-alert');
-            if (errorAlert) {
-                errorAlert.querySelector('span')!.textContent = "Please add at least one question or generate questions from Excel.";
-                errorAlert.classList.remove('opacity-0', 'translate-y-2');
-                errorAlert.classList.add('opacity-100', 'translate-y-0');
-                setTimeout(() => {
-                    errorAlert.classList.add('opacity-0', 'translate-y-2');
-                    errorAlert.classList.remove('opacity-100', 'translate-y-0');
-                }, 3000);
-            }
+            toast.error("Please add at least one question or generate questions from Excel.");
             return;
         }
 
@@ -81,78 +83,43 @@ export default function ExaminerDashboard() {
         try {
             const examId = title.toLowerCase().replace(/\s+/g, "-");
 
-            const cleanedQuestions = validQuestions.map(q => {
-                const cleanQuestion: any = {
-                    id: q.id,
-                    question: q.question,
-                    expectedOutput: q.expectedOutput || ""
-                };
-
-                if (q.difficulty !== undefined && q.difficulty !== null) {
-                    cleanQuestion.difficulty = q.difficulty;
-                }
-                if (q.marks !== undefined && q.marks !== null) {
-                    cleanQuestion.marks = q.marks;
-                }
-
-                return cleanQuestion;
-            });
-
             const examData = {
-                title,
+                examId,
                 language,
                 duration,
                 createdBy: session?.user?.email,
-                createdAt: new Date().toISOString(),
-                questions: cleanedQuestions,
+                questions: validQuestions,
                 isExamProctored,
-                ...(useExcelQuestions && {
-                    isGeneratedFromExcel: true,
-                    questionConfig,
-                    totalMarks: Object.values(questionConfig).reduce((sum, config) =>
-                        sum + (config.count * config.marks), 0
-                    )
-                })
+                useExcelQuestions,
+                questionConfig,
             };
 
             console.log('Exam data being saved:', examData);
 
-            await setDoc(doc(db, "exams", examId), examData);
-
-            setShowSuccess(true);
-            setTimeout(() => {
-                setShowSuccess(false);
-                setTitle("");
-                setLanguage("python");
-                setDuration(10);
-                setIsExamProctored(false);
-                setQuestions([{
-                    id: "q1", question: "", expectedOutput: "",
-                    difficulty: undefined,
-                    marks: undefined
-                }]);
-                setUploadedQuestions([]);
-                setUseExcelQuestions(false);
-                setGeneratedQuestions([]);
-                setQuestionConfig({
-                    beginner: { count: 0, marks: 0 },
-                    intermediate: { count: 0, marks: 0 },
-                    hard: { count: 0, marks: 0 }
+            try {
+                const response = await fetch("/api/exams/create", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(examData),
                 });
-            }, 2000);
+
+                if (response.status === 409) {
+                    toast.error("An exam with this title already exists. Please choose a different title.");
+                    return;
+                }
+
+                if (!response.ok) throw new Error("Failed to create exam");
+
+                resetForm();
+            } catch (error) {
+                console.error("Error saving exam data:", error);
+                toast.error("Failed to save exam data. Please try again.");
+                return;
+            }
 
         } catch (error) {
             console.error("Error creating exam:", error);
-            const errorAlert = document.getElementById('error-alert');
-            if (errorAlert) {
-                errorAlert.querySelector('span')!.textContent = "Error creating exam. Please try again.";
-                errorAlert.classList.remove('opacity-0', 'translate-y-2');
-                errorAlert.classList.add('opacity-100', 'translate-y-0');
-                setTimeout(() => {
-                    errorAlert.classList.add('opacity-0', 'translate-y-2');
-                    errorAlert.classList.remove('opacity-100', 'translate-y-0');
-                }, 3000);
-            }
+            toast.error("Error creating exam. Please try again.");
         } finally {
             setIsLoading(false);
         }
@@ -308,18 +275,12 @@ export default function ExaminerDashboard() {
                 tags: []
             };
 
-            await addDoc(collection(db, "questionBank"), questionData);
-
-            const successAlert = document.getElementById('success-alert');
-            if (successAlert) {
-                successAlert.querySelector('span')!.textContent = "Question saved to bank!";
-                successAlert.classList.remove('opacity-0', 'translate-y-2');
-                successAlert.classList.add('opacity-100', 'translate-y-0');
-                setTimeout(() => {
-                    successAlert.classList.add('opacity-0', 'translate-y-2');
-                    successAlert.classList.remove('opacity-100', 'translate-y-0');
-                }, 3000);
-            }
+            await fetch("/api/question-bank", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(questionData),
+            });
+            toast.success("Question saved to bank successfully!");
         } catch (error) {
             console.error("Error saving to question bank:", error);
         }
@@ -328,16 +289,8 @@ export default function ExaminerDashboard() {
     const loadQuestionBank = async () => {
         setIsLoadingQuestionBank(true);
         try {
-            const q = query(
-                collection(db, "questionBank"),
-                where("createdBy", "==", session?.user?.email),
-                where("language", "==", language)
-            );
-            const querySnapshot = await getDocs(q);
-            const bankQuestions = querySnapshot.docs.map(doc => ({
-                id: doc.id,
-                ...doc.data()
-            }));
+            const res = await fetch(`/api/question-bank?email=${session?.user?.email}&language=${language}`);
+            const bankQuestions = await res.json();
             setQuestionBank(bankQuestions);
             setShowQuestionBank(true);
         } catch (error) {

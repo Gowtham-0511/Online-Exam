@@ -1,20 +1,24 @@
-import { db } from "./firebase";
-import { doc, getDoc, setDoc } from "firebase/firestore";
-
+// Client-side auth utilities
 export type UserRole = "attender" | "examiner" | "admin";
 
-export const createOrFetchUser = async (email: string, name: string | null) => {
-    const userRef = doc(db, "users", email);
-    const docSnap = await getDoc(userRef);
-
-    if (!docSnap.exists()) {
-        await setDoc(userRef, {
-            email,
-            name,
-            role: "attender",
+// This function now makes an API call instead of direct database access
+export const createOrFetchUser = async (email: string, name: string | null): Promise<{ role: UserRole }> => {
+    try {
+        const response = await fetch('/api/users/get-or-create', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ email, name }),
         });
-        return { role: "attender" };
-    } else {
-        return docSnap.data() as { role: UserRole };
+
+        if (!response.ok) {
+            throw new Error('Failed to create or fetch user');
+        }
+
+        return await response.json();
+    } catch (error) {
+        console.error('Error in createOrFetchUser:', error);
+        throw error;
     }
 };

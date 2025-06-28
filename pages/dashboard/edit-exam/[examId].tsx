@@ -19,21 +19,30 @@ export default function EditExamPage() {
         if (!examId) return;
 
         const fetchExam = async () => {
-            const ref = doc(db, "exams", examId as string);
-            const snap = await getDoc(ref);
-            if (snap.exists()) {
-                const data = snap.data();
-                if (data.createdBy === session?.user?.email) {
-                    setExam(data);
-                } else {
-                    toast.error("Unauthorized access.");
-                    router.push("/dashboard/examiner");
+            try {
+                const res = await fetch(`/api/exams/edit/${examId}`);
+                const data = await res.json();
+
+                if (!res.ok) {
+                    toast.error(data.error || "Failed to fetch exam.");
+                    router.push("/dashboard/view-exams");
+                    return;
                 }
-            } else {
-                toast.error("Exam not found.");
-                router.push("/dashboard/examiner");
+
+                if (data.createdBy !== session?.user?.email) {
+                    toast.error("Unauthorized access.");
+                    router.push("/dashboard/view-exams");
+                    return;
+                }
+
+                setExam(data);
+            } catch (err) {
+                toast.error("Something went wrong.");
+                console.error(err);
+                router.push("/dashboard/view-exams");
+            } finally {
+                setLoading(false);
             }
-            setLoading(false);
         };
 
         fetchExam();
@@ -67,13 +76,26 @@ export default function EditExamPage() {
 
         setUpdating(true);
         try {
-            const ref = doc(db, "exams", examId as string);
-            await updateDoc(ref, {
-                title: exam.title,
-                duration: exam.duration,
-                language: exam.language,
-                updatedAt: new Date().toISOString(),
+            const res = await fetch(`/api/exams/edit/${examId}`, {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    title: exam.title,
+                    duration: exam.duration,
+                    language: exam.language,
+                    isExamProctored: exam.isExamProctored || false,
+                    questionConfig: exam.questionConfig || {},
+                    questions: exam.questions || []
+                })
             });
+
+            const result = await res.json();
+
+            if (!res.ok) {
+                toast.error(result.error || "Failed to update exam.");
+                return;
+            }
+
             toast.success("Exam updated successfully!");
             router.push("/dashboard/view-exams");
         } catch (err) {

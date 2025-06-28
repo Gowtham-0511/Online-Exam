@@ -1,20 +1,19 @@
 import { useEffect, useState } from "react";
-import { collection, getDocs } from "firebase/firestore";
-import { db } from "../../lib/firebase";
+import jsPDF from "jspdf";
+import { useSession } from "next-auth/react";
 
 export default function ExaminerSubmissions() {
     const [submissions, setSubmissions] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
+    const { data: session } = useSession();
 
     useEffect(() => {
         const fetchSubmissions = async () => {
+            if (!session?.user?.email) return;
             try {
-                const snap = await getDocs(collection(db, "submissions"));
-                const list = snap.docs.map(doc => ({
-                    id: doc.id,
-                    ...doc.data()
-                }));
-                setSubmissions(list);
+                const res = await fetch(`/api/submissions/by-examiner?email=${session.user.email}`);
+                const data = await res.json();
+                setSubmissions(data);
             } catch (error) {
                 console.error("Error fetching submissions:", error);
             } finally {
@@ -22,7 +21,9 @@ export default function ExaminerSubmissions() {
             }
         };
         fetchSubmissions();
-    }, []);
+    }, [session]);
+
+
 
     if (loading) {
         return (
@@ -125,21 +126,18 @@ export default function ExaminerSubmissions() {
                                         {/* Submitted At */}
                                         <div className="col-span-2">
                                             <div className="text-sm text-slate-600">
-                                                {s.submittedAt?.seconds
-                                                    ? new Date(s.submittedAt.seconds * 1000).toLocaleDateString('en-US', {
-                                                        month: 'short',
-                                                        day: 'numeric',
-                                                        year: 'numeric'
-                                                    })
-                                                    : "N/A"}
+                                                {
+                                                    s.submittedAt
+                                                        ? new Date(s.submittedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+                                                        : "N/A"
+                                                }
                                             </div>
                                             <div className="text-xs text-slate-400">
-                                                {s.submittedAt?.seconds
-                                                    ? new Date(s.submittedAt.seconds * 1000).toLocaleTimeString('en-US', {
-                                                        hour: '2-digit',
-                                                        minute: '2-digit'
-                                                    })
-                                                    : ""}
+                                                {
+                                                    s.submittedAt
+                                                        ? new Date(s.submittedAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
+                                                        : ""
+                                                }
                                             </div>
                                         </div>
 
@@ -158,13 +156,13 @@ export default function ExaminerSubmissions() {
                                         {/* Actions */}
                                         <div className="col-span-3">
                                             <button
-                                                onClick={() => downloadAsFile(s)}
+                                                onClick={() => downloadAsPDF(s)}
                                                 className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-500 to-indigo-500 text-white text-sm font-medium rounded-lg hover:from-blue-600 hover:to-indigo-600 transition-all duration-200 shadow-sm hover:shadow-md transform hover:scale-105"
                                             >
                                                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                                                 </svg>
-                                                Download
+                                                Download PDF
                                             </button>
                                         </div>
                                     </div>
@@ -178,72 +176,77 @@ export default function ExaminerSubmissions() {
     );
 }
 
-function downloadAsFile(submission: { examId: string; email: string; submittedAt: { seconds: number; }; disqualified: any; answersWithQuestionIds: string | any[]; answers: any[]; answer: any; }) {
-    const examId = submission.examId || '';
-    const email = submission.email || 'unknown';
+function downloadAsPDF(submission: {
+    examId: string;
+    email: string;
+    submittedAt: string;
+    disqualified: boolean;
+    answersWithQuestionIds?: any[];
+    answers?: any[];
+    answer?: any;
+}) {
+    const doc = new jsPDF();
+    const isPython = submission.examId?.toLowerCase().includes("python");
 
-    // Determine file extension based on exam ID
-    const isPython = examId.toLowerCase().includes('python');
-    const fileExtension = isPython ? '.py' : '.sql';
-    const filename = `${examId}-${email}${fileExtension}`;
+    let y = 10;
+    const lineHeight = 8;
 
-    let content = '';
+    const addLine = (text: string) => {
+        doc.text(text, 10, y);
+        y += lineHeight;
+    };
 
-    // Add header as comment
-    const commentChar = isPython ? '#' : '--';
-    content += `${commentChar} ========================================\n`;
-    content += `${commentChar} EXAM SUBMISSION\n`;
-    content += `${commentChar} ========================================\n`;
-    content += `${commentChar} Exam ID: ${submission.examId || 'N/A'}\n`;
-    content += `${commentChar} Candidate: ${submission.email || 'N/A'}\n`;
-    content += `${commentChar} Submitted: ${submission.submittedAt?.seconds
-        ? new Date(submission.submittedAt.seconds * 1000).toLocaleString()
-        : 'N/A'}\n`;
-    content += `${commentChar} Status: ${submission.disqualified ? 'Disqualified' : 'Qualified'}\n`;
-    content += `${commentChar} ========================================\n\n`;
+    // Header
+    addLine("========================================");
+    addLine("          EXAM SUBMISSION               ");
+    addLine("========================================");
+    addLine(`Exam ID: ${submission.examId || "N/A"}`);
+    addLine(`Candidate: ${submission.email || "N/A"}`);
+    addLine(`Submitted: ${submission.submittedAt ? new Date(submission.submittedAt).toLocaleString() : "N/A"}`);
+    addLine(`Status: ${submission.disqualified ? "Disqualified" : "Qualified"}`);
+    addLine("========================================");
+    y += 4;
 
-    // Process answers based on available data structure
-    if (submission.answersWithQuestionIds && submission.answersWithQuestionIds.length > 0) {
-        // Sort by originalIndex to maintain question order
+    // Answers
+    if (submission.answersWithQuestionIds?.length) {
         const sortedAnswers = [...submission.answersWithQuestionIds].sort((a, b) =>
-            (a.originalIndex || 0) - (b.originalIndex || 0)
+            (a.originalIndex ?? 0) - (b.originalIndex ?? 0)
         );
 
         sortedAnswers.forEach((item, index) => {
-            content += `${commentChar} Question ${index + 1} (ID: ${item.questionId || 'N/A'})\n`;
-            content += `${commentChar} ${'-'.repeat(40)}\n`;
-            content += `${item.answer || 'No answer provided'}\n\n`;
-
-            if (index < sortedAnswers.length - 1) {
-                content += `${commentChar} ${'~'.repeat(50)}\n\n`;
-            }
+            addLine(`Question ${index + 1} (ID: ${item.questionId || "N/A"})`);
+            addLine("-".repeat(40));
+            const answerLines = (item.answer || "No answer provided").split("\n");
+            answerLines.forEach((line: string) => {
+                doc.text(line, 10, y);
+                y += lineHeight;
+            });
+            y += 4;
         });
-    } else if (submission.answers && submission.answers.length > 0) {
-        // Handle simple answers array
+    } else if (submission.answers?.length) {
         submission.answers.forEach((answer, index) => {
-            content += `${commentChar} Answer ${index + 1}\n`;
-            content += `${commentChar} ${'-'.repeat(20)}\n`;
-            content += `${answer || 'No answer provided'}\n\n`;
-
-            if (index < submission.answers.length - 1) {
-                content += `${commentChar} ${'~'.repeat(50)}\n\n`;
-            }
+            addLine(`Answer ${index + 1}`);
+            addLine("-".repeat(20));
+            const lines = (answer || "No answer provided").split("\n");
+            lines.forEach((line: string | string[]) => {
+                doc.text(line, 10, y);
+                y += lineHeight;
+            });
+            y += 4;
         });
     } else if (submission.answer) {
-        // Handle single answer field
-        content += `${commentChar} Answer\n`;
-        content += `${commentChar} ${'-'.repeat(10)}\n`;
-        content += `${submission.answer}\n\n`;
+        addLine("Answer");
+        addLine("-".repeat(10));
+        const lines = (submission.answer || "").split("\n");
+        lines.forEach((line: string | string[]) => {
+            doc.text(line, 10, y);
+            y += lineHeight;
+        });
     } else {
-        content += `${commentChar} No answers found in submission\n`;
+        addLine("No answers found in submission.");
     }
 
-    // Create and download the file
-    const blob = new Blob([content], { type: "text/plain;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = filename;
-    a.click();
-    URL.revokeObjectURL(url);
+    // Save as PDF
+    const filename = `${submission.examId}-${submission.email}.pdf`;
+    doc.save(filename);
 }

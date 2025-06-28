@@ -1,10 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/router";
-import { doc, getDoc, serverTimestamp, setDoc } from "firebase/firestore";
-import { db } from "../../lib/firebase";
 import CodeEditor from "../../components/CodeEditor";
 import { useSession } from "next-auth/react";
-import { generateAnswerPdf } from "@/lib/exportPdf";
 import { FilesetResolver, FaceDetector, ObjectDetector } from "@mediapipe/tasks-vision";
 import { toast } from "react-hot-toast";
 
@@ -101,10 +98,17 @@ export default function ExamPage() {
     useEffect(() => {
         const fetchExam = async () => {
             if (!examId) return;
-            const ref = doc(db, "exams", examId as string);
-            const snap = await getDoc(ref);
-            if (snap.exists()) {
-                const data = snap.data();
+
+            const response = await fetch(`/api/exams/${examId}`);
+            if (!response.ok) {
+                alert("Exam not found");
+                router.push("/dashboard/attender");
+                return;
+            }
+            const data = await response.json();
+
+
+            if (data) {
                 const seed = examId.toString().split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
                 const shuffled = shuffleArrayWithSeed(data.questions || [], seed);
                 setExam({ ...data, questions: shuffled });
@@ -265,7 +269,7 @@ export default function ExamPage() {
     useEffect(() => {
         let animationFrame: number;
         const confidenceBuffer: number[] = [];
-        const bufferSize = 10; // Analyze last 10 frames for stability
+        const bufferSize = 10;
 
         const monitorAudio = () => {
             if (!analyser || !examStarted || !audioContext) return;
@@ -277,28 +281,22 @@ export default function ExamPage() {
             analyser.getByteFrequencyData(frequencyData);
             analyser.getByteTimeDomainData(timeData);
 
-            // Calculate overall audio level
             const average = frequencyData.reduce((sum, value) => sum + value, 0) / bufferLength;
             setAudioLevel(average);
 
-            // Voice activity detection
             const hasVoiceActivity = detectVoiceActivity(frequencyData, timeData);
 
             if (hasVoiceActivity) {
-                // Analyze voice patterns
                 const voiceScore = analyzeVoicePattern(frequencyData, audioContext.sampleRate);
 
-                // Add to confidence buffer
                 confidenceBuffer.push(voiceScore);
                 if (confidenceBuffer.length > bufferSize) {
                     confidenceBuffer.shift();
                 }
 
-                // Calculate average confidence
                 const avgConfidence = confidenceBuffer.reduce((sum, val) => sum + val, 0) / confidenceBuffer.length;
                 setVoiceConfidence(avgConfidence);
 
-                // Voice detection threshold (adjustable)
                 const voiceThreshold = 0.6;
                 const minConfidenceFrames = 5;
 
@@ -317,15 +315,12 @@ export default function ExamPage() {
                         toast.error(`🗣️ Human voice detected. Warning ${newCount}/3`);
                     }
 
-                    // Reset speaking detection after 3 seconds
                     setTimeout(() => {
                         setSpeakingDetected(false);
-                        // Clear confidence buffer to reset detection
                         confidenceBuffer.length = 0;
                     }, 3000);
                 }
             } else {
-                // No voice activity, gradually reduce confidence
                 if (confidenceBuffer.length > 0) {
                     confidenceBuffer.push(0);
                     if (confidenceBuffer.length > bufferSize) {
@@ -391,48 +386,6 @@ export default function ExamPage() {
     }) => {
         const currentTime = Date.now();
 
-        // // Keystroke pattern analysis
-        // if (keystrokePattern.lastKeyTime > 0) {
-        //     const interval = currentTime - keystrokePattern.lastKeyTime;
-        //     const newIntervals = [...keystrokePattern.intervals, interval].slice(-10); // Keep last 10 intervals
-
-        //     // Detect suspicious patterns
-        //     const averageInterval = newIntervals.reduce((sum, int) => sum + int, 0) / newIntervals.length;
-        //     const isRobotic = newIntervals.length >= 5 &&
-        //         newIntervals.every(int => Math.abs(int - averageInterval) < 20); // Very consistent timing
-
-        //     const isTooFast = interval < 50; // Unrealistically fast typing
-
-        //     if (isRobotic || isTooFast) {
-        //         const newSuspiciousCount = keystrokePattern.suspiciousCount + 1;
-        //         setKeystrokePattern(prev => ({
-        //             ...prev,
-        //             intervals: newIntervals,
-        //             suspiciousCount: newSuspiciousCount,
-        //             lastKeyTime: currentTime
-        //         }));
-
-        //         if (newSuspiciousCount >= 15) {
-        //             handleDisqualification("Suspicious keystroke patterns detected - possible automation");
-        //             return;
-        //         } else if (newSuspiciousCount % 5 === 0) {
-        //             toast.error(`⌨️ Unusual typing pattern detected. Warning ${Math.floor(newSuspiciousCount / 5)}/3`);
-        //         }
-        //     } else {
-        //         setKeystrokePattern(prev => ({
-        //             ...prev,
-        //             intervals: newIntervals,
-        //             lastKeyTime: currentTime
-        //         }));
-        //     }
-        // } else {
-        //     setKeystrokePattern(prev => ({
-        //         ...prev,
-        //         lastKeyTime: currentTime
-        //     }));
-        // }
-
-        // Existing forbidden key detection
         const isForbiddenKey =
             e.key === 'F12' ||
             (e.ctrlKey && e.shiftKey && ['I', 'J', 'C'].includes(e.key)) ||
@@ -570,52 +523,77 @@ export default function ExamPage() {
             originalIndex: index
         }));
 
+        await fetch("/api/submissions", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                examId: examIdStr,
+                email,
+                userName,
+                answers,
+                answersWithQuestionIds,
+                disqualified: isDisqualified,
+                code,
+            }),
+        });
+
         if (videoRef.current?.srcObject) {
             const tracks = (videoRef.current.srcObject as MediaStream).getTracks();
             tracks.forEach(track => track.stop());
         }
+        if (audioContext) {
+            audioContext.close();
+        }
+        if (videoRef.current) {
+            videoRef.current.srcObject = null;
+        }
+        if (faceDetector) {
+            faceDetector.close();
+        }
+        if (objectDetector) {
+            objectDetector.close();
+        }
+        if (microphone) {
+            microphone.disconnect();
+        }
+        if (analyser) {
+            analyser.disconnect();
+        }
+        if (canvasRef.current) {
+            const ctx = canvasRef.current.getContext('2d');
+            if (ctx) {
+                ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
+            }
+        }
+        // const questionsAndAnswers = answersWithQuestionIds.map(item => ({
+        //     question: shuffledQuestions.find(q => q.id === item.questionId)?.question || `Question ${item.originalIndex + 1}`,
+        //     answer: item.answer,
+        //     questionId: item.questionId
+        // }));
 
-        router.push("/dashboard/attender");
+        // const pdfBytes = await generateAnswerPdf({
+        //     studentName: userName,
+        //     examTitle: exam.title,
+        //     codeAnswer: code,
+        //     questionsAndAnswers: questionsAndAnswers,
+        //     submissionTime: new Date().toLocaleString(),
+        //     examId: examIdStr
+        // });
 
-        await setDoc(doc(db, "submissions", `${examIdStr}_${email}`), {
-            email,
-            examId: examIdStr,
-            answer: code,
-            submittedAt: serverTimestamp(),
-            disqualified: isDisqualified,
-            answers: answers,
-            answersWithQuestionIds: answersWithQuestionIds,
-        });
+        // const blob = new Blob([pdfBytes], { type: "application/pdf" });
+        // const url = URL.createObjectURL(blob);
 
-        const questionsAndAnswers = answersWithQuestionIds.map(item => ({
-            question: shuffledQuestions.find(q => q.id === item.questionId)?.question || `Question ${item.originalIndex + 1}`,
-            answer: item.answer,
-            questionId: item.questionId
-        }));
+        // const downloadLink = document.createElement('a');
+        // downloadLink.href = url;
+        // downloadLink.download = `${exam.title}_${userName}_answers.pdf`;
+        // document.body.appendChild(downloadLink);
 
-        const pdfBytes = await generateAnswerPdf({
-            studentName: userName,
-            examTitle: exam.title,
-            codeAnswer: code,
-            questionsAndAnswers: questionsAndAnswers,
-            submissionTime: new Date().toLocaleString(),
-            examId: examIdStr
-        });
+        // downloadLink.click();
 
-        const blob = new Blob([pdfBytes], { type: "application/pdf" });
-        const url = URL.createObjectURL(blob);
+        // document.body.removeChild(downloadLink);
+        // URL.revokeObjectURL(url);
 
-        const downloadLink = document.createElement('a');
-        downloadLink.href = url;
-        downloadLink.download = `${exam.title}_${userName}_answers.pdf`;
-        document.body.appendChild(downloadLink);
-
-        downloadLink.click();
-
-        document.body.removeChild(downloadLink);
-        URL.revokeObjectURL(url);
-
-        alert("✅ PDF downloaded.");
+        // alert("✅ PDF downloaded.");
         router.push("/dashboard/attender");
     };
 
@@ -634,45 +612,49 @@ export default function ExamPage() {
             originalIndex: index
         }));
 
-        await setDoc(doc(db, "submissions", `${examIdStr}_${email}`), {
-            email,
-            examId: examIdStr,
-            answer: code,
-            submittedAt: serverTimestamp(),
-            disqualified: disqualifiedFlag,
-            answers: answers,
-            answersWithQuestionIds: answersWithQuestionIds,
+        await fetch("/api/submissions", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                examId: examIdStr,
+                email,
+                userName,
+                answers,
+                answersWithQuestionIds,
+                disqualified: disqualifiedFlag,
+                code,
+            }),
         });
 
-        const questionsAndAnswers = answersWithQuestionIds.map(item => ({
-            question: shuffledQuestions.find(q => q.id === item.questionId)?.question || `Question ${item.originalIndex + 1}`,
-            answer: item.answer,
-            questionId: item.questionId
-        }));
+        if (videoRef.current?.srcObject) {
+            const tracks = (videoRef.current.srcObject as MediaStream).getTracks();
+            tracks.forEach(track => track.stop());
+        }
+        if (audioContext) {
+            audioContext.close();
+        }
+        if (videoRef.current) {
+            videoRef.current.srcObject = null;
+        }
+        if (faceDetector) {
+            faceDetector.close();
+        }
+        if (objectDetector) {
+            objectDetector.close();
+        }
+        if (microphone) {
+            microphone.disconnect();
+        }
+        if (analyser) {
+            analyser.disconnect();
+        }
+        if (canvasRef.current) {
+            const ctx = canvasRef.current.getContext('2d');
+            if (ctx) {
+                ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
+            }
+        }
 
-        const pdfBytes = await generateAnswerPdf({
-            studentName: userName,
-            examTitle: exam.title,
-            codeAnswer: code,
-            questionsAndAnswers: questionsAndAnswers,
-            submissionTime: new Date().toLocaleString(),
-            examId: examIdStr
-        });
-
-        const blob = new Blob([pdfBytes], { type: "application/pdf" });
-        const url = URL.createObjectURL(blob);
-
-        const downloadLink = document.createElement('a');
-        downloadLink.href = url;
-        downloadLink.download = `${exam.title}_${userName}_answers.pdf`;
-        document.body.appendChild(downloadLink);
-
-        downloadLink.click();
-
-        document.body.removeChild(downloadLink);
-        URL.revokeObjectURL(url);
-
-        alert("✅ PDF downloaded.");
         router.push("/dashboard/attender");
     };
 
@@ -908,22 +890,7 @@ export default function ExamPage() {
 
     const handleDisqualification = (reason: string) => {
         setDisqualified(true);
-        alert(`You have been disqualified: ${reason}`);
-
-        if (examId && session?.user?.email) {
-            const submissionRef = doc(db, "submissions", `${examId}_${session.user.email}`);
-            setDoc(submissionRef, {
-                disqualified: true,
-                disqualificationReason: reason,
-                disqualificationTime: new Date().toISOString(),
-                detectedObjects: detectedObjects,
-                suspiciousActivity: lastSuspiciousActivity,
-                audioViolations: audioViolations,
-                voiceConfidence: voiceConfidence,
-                keystrokeViolations: keystrokePattern.suspiciousCount,
-                lastAudioViolation: lastAudioViolation
-            }, { merge: true });
-        }
+        toast.error(`🚫 Disqualified: ${reason}`);
 
         // Stop all monitoring
         if (videoRef.current?.srcObject) {
