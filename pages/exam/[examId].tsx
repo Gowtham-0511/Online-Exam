@@ -59,16 +59,6 @@ export default function ExamPage() {
     const [voiceDetectionBuffer, setVoiceDetectionBuffer] = useState<number[]>([]);
     const [voiceConfidence, setVoiceConfidence] = useState(0);
 
-    const [keystrokePattern, setKeystrokePattern] = useState<{
-        intervals: number[];
-        suspiciousCount: number;
-        lastKeyTime: number;
-    }>({
-        intervals: [],
-        suspiciousCount: 0,
-        lastKeyTime: 0
-    });
-
     const audioViolationsRef = useRef(0);
 
     type ExamQuestion = {
@@ -163,6 +153,40 @@ export default function ExamPage() {
                 });
         }
     }, [exam]);
+
+    useEffect(() => {
+        if (!exam || !session?.user?.email) return;
+
+        const now = new Date();
+        const start = exam.startTime ? new Date(exam.startTime) : null;
+        const end = exam.endTime ? new Date(exam.endTime) : null;
+
+        // Time validation
+        // if (start) {
+        //     alert("⏳ This exam has not started yet.");
+        //     router.push("/dashboard/attender");
+        //     return;
+        // }
+
+        // if (end && now > end) {
+        //     alert("❌ This exam has expired.");
+        //     router.push("/dashboard/attender");
+        //     return;
+        // }
+
+        // Allowed user validation
+        const allowedUsers: string[] = Array.isArray(exam.allowedUsers)
+            ? exam.allowedUsers
+            : exam.allowedUsers
+                ? JSON.parse(exam.allowedUsers)
+                : [];
+
+        if (allowedUsers.length > 0 && !allowedUsers.includes(session.user.email)) {
+            alert("🚫 You are not allowed to access this exam.");
+            router.push("/dashboard");
+            return;
+        }
+    }, [exam, session]);
 
     useEffect(() => {
         if (timeLeft <= 0 && exam) {
@@ -433,6 +457,36 @@ export default function ExamPage() {
         }
     };
 
+    const cleanupExamEnvironment = async () => {
+        // Exit fullscreen
+        if (document.fullscreenElement) {
+            await document.exitFullscreen().catch((err) =>
+                console.warn("Fullscreen exit failed:", err)
+            );
+        }
+
+        // Remove blocked keyboard and contextmenu events
+        if (handleKeyDownRef.current) {
+            document.removeEventListener('keydown', handleKeyDownRef.current);
+        }
+        if (handleContextMenuRef.current) {
+            document.removeEventListener('contextmenu', handleContextMenuRef.current);
+        }
+        if (handleVisibilityChangeRef.current) {
+            document.removeEventListener('visibilitychange', handleVisibilityChangeRef.current);
+        }
+        if (handleFsChangeRef.current) {
+            document.removeEventListener('fullscreenchange', handleFsChangeRef.current);
+        }
+        if (handleBlurRef.current) {
+            window.removeEventListener('blur', handleBlurRef.current);
+        }
+
+        (document.activeElement as HTMLElement | null)?.blur();
+
+        router.push("/dashboard/attender");
+    };
+
     useEffect(() => {
         if (!examStarted) return;
 
@@ -490,7 +544,7 @@ export default function ExamPage() {
             document.removeEventListener("fullscreenchange", handleFsChange);
             document.removeEventListener('visibilitychange', handleVisibilityChange);
             document.removeEventListener('contextmenu', handleContextMenu);
-            document.addEventListener('keydown', handleKeyDown);
+            document.removeEventListener('keydown', handleKeyDown);
         };
     }, [examStarted]);
 
@@ -594,7 +648,9 @@ export default function ExamPage() {
         // URL.revokeObjectURL(url);
 
         // alert("✅ PDF downloaded.");
+        await cleanupExamEnvironment();
         router.push("/dashboard/attender");
+
     };
 
     const handleSubmitWithDisqualification = async (disqualifiedFlag = isDisqualified) => {
@@ -655,7 +711,7 @@ export default function ExamPage() {
             }
         }
 
-        router.push("/dashboard/attender");
+        await cleanupExamEnvironment();
     };
 
     const handleRun = async () => {
@@ -673,8 +729,6 @@ export default function ExamPage() {
         }
 
         setRunning(false);
-
-
     };
 
     const handleRunPython = async () => {
@@ -1483,11 +1537,6 @@ export default function ExamPage() {
                         {audioViolations > 0 && (
                             <div className="text-red-600 text-xs">
                                 🗣️ Voice: {audioViolations}/3
-                            </div>
-                        )}
-                        {keystrokePattern.suspiciousCount > 0 && (
-                            <div className="text-orange-600 text-xs">
-                                ⌨️ Typing: {Math.floor(keystrokePattern.suspiciousCount / 5)}/3
                             </div>
                         )}
                         {suspiciousObjectCount > 0 && (

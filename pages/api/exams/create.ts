@@ -6,17 +6,42 @@ export default function handler(req: NextApiRequest, res: NextApiResponse) {
 
     try {
         const db = getDatabase();
-        const { examId, language, duration, createdBy, questions, isExamProctored, useExcelQuestions, questionConfig } = req.body;
+        const {
+            examId,
+            language,
+            duration,
+            createdBy,
+            questions,
+            isExamProctored,
+            useExcelQuestions,
+            questionConfig,
+            startTime,
+            endTime,
+            allowedUsers
+        } = req.body;
 
-        // ✅ Check if exam already exists
+
         const exists = db.prepare(`SELECT COUNT(*) AS count FROM exams WHERE title = ?`).get(examId) as { count: number };
         if (exists.count > 0) {
             return res.status(409).json({ error: 'Exam with this title already exists' });
         }
 
         const stmt = db.prepare(`
-        INSERT INTO exams (title, language, duration, createdBy, createdAt, isExamProctored, isGeneratedFromExcel, questionConfig, questions)
-        VALUES (?, ?, ?, ?, datetime('now'), ?, ?, ?, ?)
+            INSERT INTO exams (
+            title,
+            language,
+            duration,
+            createdBy,
+            createdAt,
+            isExamProctored,
+            isGeneratedFromExcel,
+            questionConfig,
+            questions,
+            startTime,
+            endTime,
+            allowedUsers
+            )
+            VALUES (?, ?, ?, ?, datetime('now'), ?, ?, ?, ?, ?, ?, ?)
         `);
 
         stmt.run(
@@ -27,7 +52,10 @@ export default function handler(req: NextApiRequest, res: NextApiResponse) {
             isExamProctored ? 1 : 0,
             useExcelQuestions ? 1 : 0,
             JSON.stringify(questionConfig),
-            JSON.stringify(questions)
+            JSON.stringify(questions),
+            startTime || null,
+            endTime || null,
+            allowedUsers?.length ? JSON.stringify(allowedUsers) : null
         );
 
         res.status(200).json({ success: true });

@@ -43,6 +43,11 @@ export default function ExaminerDashboard() {
     const [selectedBankQuestions, setSelectedBankQuestions] = useState<string[]>([]);
     const [isLoadingQuestionBank, setIsLoadingQuestionBank] = useState(false);
 
+    const [startTime, setStartTime] = useState("");
+    const [endTime, setEndTime] = useState("");
+    const [allowedUsersRaw, setAllowedUsersRaw] = useState(""); // comma-separated emails
+
+
     const resetForm = () => {
         setTitle("");
         setLanguage("python");
@@ -85,6 +90,7 @@ export default function ExaminerDashboard() {
 
             const examData = {
                 examId,
+                title,
                 language,
                 duration,
                 createdBy: session?.user?.email,
@@ -92,6 +98,12 @@ export default function ExaminerDashboard() {
                 isExamProctored,
                 useExcelQuestions,
                 questionConfig,
+                startTime,
+                endTime,
+                allowedUsers: allowedUsersRaw
+                    .split(",")
+                    .map((email) => email.trim())
+                    .filter(Boolean),
             };
 
             console.log('Exam data being saved:', examData);
@@ -541,6 +553,46 @@ export default function ExaminerDashboard() {
                                             </div>
                                         </div>
                                     </div>
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-semibold text-slate-700 mb-3">
+                                        Start Time
+                                    </label>
+                                    <input
+                                        type="datetime-local"
+                                        value={startTime}
+                                        onChange={(e) => setStartTime(e.target.value)}
+                                        className="w-full px-4 py-4 bg-white/80 border border-slate-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-emerald-200/50 focus:border-emerald-400 text-slate-800"
+                                        disabled={isLoading}
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-semibold text-slate-700 mb-3">
+                                        End Time
+                                    </label>
+                                    <input
+                                        type="datetime-local"
+                                        value={endTime}
+                                        onChange={(e) => setEndTime(e.target.value)}
+                                        className="w-full px-4 py-4 bg-white/80 border border-slate-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-emerald-200/50 focus:border-emerald-400 text-slate-800"
+                                        disabled={isLoading}
+                                    />
+                                </div>
+
+                                <div className="lg:col-span-3">
+                                    <label className="block text-sm font-semibold text-slate-700 mb-3">
+                                        Allowed Users (comma-separated emails)
+                                    </label>
+                                    <textarea
+                                        placeholder="Leave empty to allow all users"
+                                        value={allowedUsersRaw}
+                                        onChange={(e) => setAllowedUsersRaw(e.target.value)}
+                                        className="w-full px-4 py-4 bg-white/80 border border-slate-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-emerald-200/50 focus:border-emerald-400 text-slate-800 resize-none"
+                                        rows={3}
+                                        disabled={isLoading}
+                                    />
                                 </div>
                             </div>
 

@@ -1,7 +1,11 @@
 import { useEffect, useState } from "react";
-import { collection, getDocs } from "firebase/firestore";
-import { db } from "../../lib/firebase";
 import { useSession } from "next-auth/react";
+import toast from "react-hot-toast";
+import Swal from "sweetalert2";
+import withReactContent from "sweetalert2-react-content";
+import AdminAnalytics from "@/components/AdminAnalytics";
+
+const MySwal = withReactContent(Swal);
 
 export default function AdminDashboard() {
     const { data: session } = useSession();
@@ -27,9 +31,9 @@ export default function AdminDashboard() {
     useEffect(() => {
         const fetchUsers = async () => {
             try {
-                const snap = await getDocs(collection(db, "users"));
-                const list = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                setUsers(list);
+                const res = await fetch("/api/admin/users");
+                const data = await res.json();
+                setUsers(data);
             } catch (error) {
                 console.error("Error fetching users:", error);
             }
@@ -43,13 +47,14 @@ export default function AdminDashboard() {
     useEffect(() => {
         const fetchExams = async () => {
             try {
-                const snap = await getDocs(collection(db, "exams"));
-                const list = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                setExams(list);
+                const res = await fetch("/api/admin/exams");
+                const data = await res.json();
+                setExams(data);
             } catch (error) {
                 console.error("Error fetching exams:", error);
             }
         };
+
 
         if (!loading) {
             fetchExams();
@@ -147,38 +152,71 @@ export default function AdminDashboard() {
         return colors[language?.toLowerCase() as keyof typeof colors] || 'bg-gradient-to-r from-gray-500 to-slate-500';
     };
 
+    const handleViewQuestions = (exam: { questions: any; title: any; }) => {
+        const questionList = Array.isArray(exam.questions)
+            ? exam.questions
+            : JSON.parse(exam.questions || "[]");
+
+
+        if (!questionList.length) {
+            return Swal.fire("No questions found", "", "info");
+        }
+
+        MySwal.fire({
+            title: `Questions (${exam.title})`,
+            html: `
+                <div style="max-height: 400px; overflow-y: auto; text-align: left;">
+                    ${questionList
+                    .map(
+                        (q: { question: any; expectedOutput: any; }, i: number) =>
+                            `<div style="margin-bottom: 16px;">
+                                    <strong>Q${i + 1}:</strong> ${q.question || "(no text)"}<br/>
+                                    <small><em>Expected Output:</em> ${q.expectedOutput || "N/A"}</small>
+                                </div>`
+                    )
+                    .join("")
+                }
+                </div>
+            `,
+            width: "600px",
+            showCloseButton: true,
+            confirmButtonText: "Close",
+        });
+    };
+
+
     return (
-        <div className="min-h-screen bg-gradient-to-br from-violet-50 via-rose-50 to-amber-50">
+        <div className="min-h-screen" style={{ backgroundColor: '#E0F6FF' }}>
             {/* Header */}
-            <div className="bg-white/80 backdrop-blur-xl border-b border-white/30 sticky top-0 z-40">
-                <div className="max-w-7xl mx-auto px-8 py-6">
+            <div className="sticky top-0 z-50 border-b-2" style={{ backgroundColor: '#FFFFFF', borderColor: '#CCE7FF' }}>
+                <div className="max-w-7xl mx-auto px-2 py-2">
                     <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-6">
+                        <div className="flex items-center gap-8">
                             <div className="relative">
-                                <div className="w-16 h-16 bg-gradient-to-br from-violet-500 via-purple-500 to-pink-500 rounded-2xl flex items-center justify-center shadow-xl">
-                                    <span className="text-3xl">🛠️</span>
+                                <div className="w-20 h-20 rounded-3xl flex items-center justify-center shadow-xl border-2" style={{ backgroundColor: '#87CEEB', borderColor: '#B0E0E6' }}>
+                                    <span className="text-4xl">🛠️</span>
                                 </div>
-                                <div className="absolute -top-2 -right-2 w-6 h-6 bg-emerald-500 rounded-full flex items-center justify-center">
-                                    <span className="text-xs text-white font-bold">●</span>
+                                <div className="absolute -top-2 -right-2 w-8 h-8 rounded-full flex items-center justify-center shadow-lg" style={{ backgroundColor: '#ADD8E6' }}>
+                                    <span className="text-sm font-bold" style={{ color: '#6C757D' }}>●</span>
                                 </div>
                             </div>
                             <div>
-                                <h1 className="text-3xl font-bold bg-gradient-to-r from-slate-800 to-slate-600 bg-clip-text text-transparent">
+                                <h1 className="text-2xl font-bold mb-2" style={{ color: '#6C757D' }}>
                                     Admin Dashboard
                                 </h1>
-                                <p className="text-slate-600 mt-1">Manage your platform with ease</p>
+                                <p className="text-xl" style={{ color: '#6C757D' }}>Manage your platform with ease</p>
                             </div>
                         </div>
 
                         <div className="flex items-center gap-4">
-                            <div className="bg-gradient-to-r from-white to-gray-50 rounded-2xl px-4 py-2 border border-gray-200/50 shadow-lg">
-                                <div className="flex items-center gap-3">
-                                    <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-indigo-500 rounded-lg flex items-center justify-center">
-                                        <span className="text-white text-sm">👤</span>
+                            <div className="rounded-3xl px-6 py-4 border-2 shadow-lg" style={{ backgroundColor: '#F8F9FA', borderColor: '#CCE7FF' }}>
+                                <div className="flex items-center gap-4">
+                                    <div className="w-12 h-12 rounded-2xl flex items-center justify-center shadow-md" style={{ backgroundColor: '#87CEEB' }}>
+                                        <span className="text-white text-lg">👤</span>
                                     </div>
                                     <div>
-                                        <p className="text-sm font-semibold text-slate-800">{session.user?.name || 'Admin'}</p>
-                                        <p className="text-xs text-slate-600">{session.user?.email}</p>
+                                        <p className="text-base font-semibold" style={{ color: '#6C757D' }}>{session.user?.name || 'Admin'}</p>
+                                        <p className="text-sm" style={{ color: '#6C757D' }}>{session.user?.email}</p>
                                     </div>
                                 </div>
                             </div>
@@ -188,19 +226,21 @@ export default function AdminDashboard() {
             </div>
 
             {/* Navigation Tabs */}
-            <div className="max-w-7xl mx-auto px-8 py-6">
-                <div className="bg-white/80 backdrop-blur-xl rounded-2xl shadow-xl border border-white/30 p-2">
-                    <div className="flex gap-2">
+            <div className="max-w-7xl mx-auto px-8 py-8">
+                <div className="rounded-3xl shadow-2xl border-2 p-3" style={{ backgroundColor: '#FFFFFF', borderColor: '#CCE7FF' }}>
+                    <div className="flex gap-3">
                         {tabs.map((tab) => (
                             <button
                                 key={tab.id}
                                 onClick={() => setActiveTab(tab.id)}
-                                className={`flex items-center gap-3 px-6 py-3 rounded-xl font-semibold transition-all duration-300 ${activeTab === tab.id
-                                        ? 'bg-gradient-to-r from-violet-500 to-purple-500 text-white shadow-lg transform scale-105'
-                                        : 'text-slate-600 hover:bg-white/50 hover:text-slate-800'
+                                className={`flex items-center gap-4 px-8 py-4 rounded-2xl font-semibold transition-all duration-300 text-lg ${activeTab === tab.id ? 'transform scale-105 shadow-lg' : 'hover:scale-102'
                                     }`}
+                                style={activeTab === tab.id
+                                    ? { backgroundColor: '#87CEEB', color: '#FFFFFF' }
+                                    : { backgroundColor: 'transparent', color: '#6C757D' }
+                                }
                             >
-                                <span className="text-lg">{tab.icon}</span>
+                                <span className="text-2xl">{tab.icon}</span>
                                 <span>{tab.label}</span>
                             </button>
                         ))}
@@ -211,67 +251,69 @@ export default function AdminDashboard() {
             <div className="max-w-7xl mx-auto px-8 pb-8">
                 {/* Overview Tab */}
                 {activeTab === 'overview' && (
-                    <div className="space-y-8">
+                    <div className="space-y-10">
                         {/* Stats Grid */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
                             {stats.map((stat, index) => (
-                                <div key={index} className={`bg-gradient-to-br ${stat.bgColor} rounded-3xl p-6 border border-white/50 shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105`}>
-                                    <div className="flex items-center justify-between mb-4">
-                                        <div className={`w-12 h-12 bg-gradient-to-r ${stat.color} rounded-2xl flex items-center justify-center shadow-lg`}>
-                                            <span className="text-2xl">{stat.icon}</span>
+                                <div key={index} className="rounded-3xl p-8 border-2 shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105" style={{ backgroundColor: '#FFFFFF', borderColor: '#CCE7FF' }}>
+                                    <div className="flex items-center justify-between mb-6">
+                                        <div className="w-16 h-16 rounded-3xl flex items-center justify-center shadow-lg" style={{ backgroundColor: '#87CEEB' }}>
+                                            <span className="text-3xl">{stat.icon}</span>
                                         </div>
-                                        <div className={`px-3 py-1 rounded-full text-xs font-bold ${stat.changeType === 'positive' ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'
-                                            }`}>
+                                        <div className="px-4 py-2 rounded-full text-sm font-bold" style={{
+                                            backgroundColor: stat.changeType === 'positive' ? '#E6F3FF' : '#F8F9FA',
+                                            color: '#6C757D'
+                                        }}>
                                             {stat.change}
                                         </div>
                                     </div>
                                     <div>
-                                        <h3 className="text-3xl font-bold text-slate-800 mb-1">{stat.value}</h3>
-                                        <p className="text-slate-600 font-medium">{stat.title}</p>
+                                        <h3 className="text-4xl font-bold mb-2" style={{ color: '#6C757D' }}>{stat.value}</h3>
+                                        <p className="text-lg font-medium" style={{ color: '#6C757D' }}>{stat.title}</p>
                                     </div>
                                 </div>
                             ))}
                         </div>
 
                         {/* Recent Activity */}
-                        <div className="bg-white/80 backdrop-blur-xl rounded-3xl shadow-2xl border border-white/30 overflow-hidden">
-                            <div className="bg-gradient-to-r from-slate-50 to-gray-50 px-8 py-6 border-b border-gray-200/50">
-                                <h2 className="text-2xl font-bold text-slate-800 flex items-center gap-3">
-                                    <span className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-purple-500 rounded-2xl flex items-center justify-center">
-                                        <span className="text-white">📊</span>
+                        <div className="rounded-3xl shadow-2xl border-2 overflow-hidden" style={{ backgroundColor: '#FFFFFF', borderColor: '#CCE7FF' }}>
+                            <div className="px-10 py-8 border-b-2" style={{ backgroundColor: '#F8F9FA', borderColor: '#CCE7FF' }}>
+                                <h2 className="text-3xl font-bold flex items-center gap-4" style={{ color: '#6C757D' }}>
+                                    <span className="w-14 h-14 rounded-3xl flex items-center justify-center shadow-lg" style={{ backgroundColor: '#87CEEB' }}>
+                                        <span className="text-white text-2xl">📊</span>
                                     </span>
                                     System Overview
                                 </h2>
                             </div>
-                            <div className="p-8">
-                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                                    <div className="space-y-4">
-                                        <h3 className="text-lg font-semibold text-slate-700">Quick Stats</h3>
-                                        <div className="space-y-3">
-                                            <div className="flex justify-between items-center p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl">
-                                                <span className="text-slate-700">Registered Users</span>
-                                                <span className="font-bold text-blue-600">{users.length}</span>
+                            <div className="p-10">
+                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
+                                    <div className="space-y-6">
+                                        <h3 className="text-2xl font-semibold" style={{ color: '#6C757D' }}>Quick Stats</h3>
+                                        <div className="space-y-4">
+                                            <div className="flex justify-between items-center p-6 rounded-3xl border-2" style={{ backgroundColor: '#E6F3FF', borderColor: '#CCE7FF' }}>
+                                                <span className="text-lg" style={{ color: '#6C757D' }}>Registered Users</span>
+                                                <span className="font-bold text-2xl" style={{ color: '#87CEEB' }}>{users.length}</span>
                                             </div>
-                                            <div className="flex justify-between items-center p-4 bg-gradient-to-r from-emerald-50 to-teal-50 rounded-2xl">
-                                                <span className="text-slate-700">Active Exams</span>
-                                                <span className="font-bold text-emerald-600">{exams.length}</span>
+                                            <div className="flex justify-between items-center p-6 rounded-3xl border-2" style={{ backgroundColor: '#E6F3FF', borderColor: '#CCE7FF' }}>
+                                                <span className="text-lg" style={{ color: '#6C757D' }}>Active Exams</span>
+                                                <span className="font-bold text-2xl" style={{ color: '#87CEEB' }}>{exams.length}</span>
                                             </div>
                                         </div>
                                     </div>
-                                    <div className="space-y-4">
-                                        <h3 className="text-lg font-semibold text-slate-700">System Health</h3>
-                                        <div className="space-y-3">
-                                            <div className="flex items-center gap-3">
-                                                <div className="w-3 h-3 bg-emerald-500 rounded-full animate-pulse"></div>
-                                                <span className="text-slate-700">Database Connected</span>
+                                    <div className="space-y-6">
+                                        <h3 className="text-2xl font-semibold" style={{ color: '#6C757D' }}>System Health</h3>
+                                        <div className="space-y-4">
+                                            <div className="flex items-center gap-4">
+                                                <div className="w-4 h-4 rounded-full animate-pulse" style={{ backgroundColor: '#ADD8E6' }}></div>
+                                                <span className="text-lg" style={{ color: '#6C757D' }}>Database Connected</span>
                                             </div>
-                                            <div className="flex items-center gap-3">
-                                                <div className="w-3 h-3 bg-emerald-500 rounded-full animate-pulse"></div>
-                                                <span className="text-slate-700">Authentication Active</span>
+                                            <div className="flex items-center gap-4">
+                                                <div className="w-4 h-4 rounded-full animate-pulse" style={{ backgroundColor: '#ADD8E6' }}></div>
+                                                <span className="text-lg" style={{ color: '#6C757D' }}>Authentication Active</span>
                                             </div>
-                                            <div className="flex items-center gap-3">
-                                                <div className="w-3 h-3 bg-emerald-500 rounded-full animate-pulse"></div>
-                                                <span className="text-slate-700">All Services Operational</span>
+                                            <div className="flex items-center gap-4">
+                                                <div className="w-4 h-4 rounded-full animate-pulse" style={{ backgroundColor: '#ADD8E6' }}></div>
+                                                <span className="text-lg" style={{ color: '#6C757D' }}>All Services Operational</span>
                                             </div>
                                         </div>
                                     </div>
@@ -283,69 +325,101 @@ export default function AdminDashboard() {
 
                 {/* Users Tab */}
                 {activeTab === 'users' && (
-                    <div className="bg-white/80 backdrop-blur-xl rounded-3xl shadow-2xl border border-white/30 overflow-hidden">
-                        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 px-8 py-6 border-b border-blue-200/50">
+                    <div className="rounded-3xl shadow-2xl border-2 overflow-hidden" style={{ backgroundColor: '#FFFFFF', borderColor: '#CCE7FF' }}>
+                        <div className="px-10 py-8 border-b-2" style={{ backgroundColor: '#F8F9FA', borderColor: '#CCE7FF' }}>
                             <div className="flex items-center justify-between">
-                                <h2 className="text-2xl font-bold text-slate-800 flex items-center gap-3">
-                                    <span className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-500 rounded-2xl flex items-center justify-center">
-                                        <span className="text-white">👥</span>
+                                <h2 className="text-3xl font-bold flex items-center gap-4" style={{ color: '#6C757D' }}>
+                                    <span className="w-14 h-14 rounded-3xl flex items-center justify-center shadow-lg" style={{ backgroundColor: '#87CEEB' }}>
+                                        <span className="text-white text-2xl">👥</span>
                                     </span>
                                     Registered Users ({users.length})
                                 </h2>
-                                <div className="flex items-center gap-2">
-                                    <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></div>
-                                    <span className="text-sm text-slate-600">{users.length} Active</span>
+                                <div className="flex items-center gap-3">
+                                    <div className="w-3 h-3 rounded-full animate-pulse" style={{ backgroundColor: '#ADD8E6' }}></div>
+                                    <span className="text-lg" style={{ color: '#6C757D' }}>{users.length} Active</span>
                                 </div>
                             </div>
                         </div>
-                        <div className="p-8">
+                        <div className="p-10">
                             {users.length === 0 ? (
-                                <div className="text-center py-12">
-                                    <div className="w-20 h-20 bg-gradient-to-br from-gray-100 to-gray-200 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                                        <span className="text-4xl">👤</span>
+                                <div className="text-center py-16">
+                                    <div className="w-24 h-24 rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-lg" style={{ backgroundColor: '#F8F9FA' }}>
+                                        <span className="text-5xl">👤</span>
                                     </div>
-                                    <h3 className="text-xl font-semibold text-slate-800 mb-2">No Users Found</h3>
-                                    <p className="text-slate-600">Users will appear here once they register.</p>
+                                    <h3 className="text-2xl font-semibold mb-3" style={{ color: '#6C757D' }}>No Users Found</h3>
+                                    <p className="text-lg" style={{ color: '#6C757D' }}>Users will appear here once they register.</p>
                                 </div>
                             ) : (
                                 <div className="overflow-x-auto">
                                     <table className="w-full">
                                         <thead>
-                                            <tr className="border-b-2 border-gray-200">
-                                                <th className="text-left py-4 px-6 font-semibold text-slate-700">User</th>
-                                                <th className="text-left py-4 px-6 font-semibold text-slate-700">Email</th>
-                                                <th className="text-left py-4 px-6 font-semibold text-slate-700">Role</th>
-                                                <th className="text-left py-4 px-6 font-semibold text-slate-700">Status</th>
+                                            <tr className="border-b-2" style={{ borderColor: '#CCE7FF' }}>
+                                                <th className="text-left py-6 px-8 font-semibold text-xl" style={{ color: '#6C757D' }}>User</th>
+                                                <th className="text-left py-6 px-8 font-semibold text-xl" style={{ color: '#6C757D' }}>Email</th>
+                                                <th className="text-left py-6 px-8 font-semibold text-xl" style={{ color: '#6C757D' }}>Role</th>
+                                                <th className="text-left py-6 px-8 font-semibold text-xl" style={{ color: '#6C757D' }}>Status</th>
                                             </tr>
                                         </thead>
                                         <tbody>
                                             {users.map((user, index) => (
-                                                <tr key={index} className="border-b border-gray-100 hover:bg-gradient-to-r hover:from-violet-50 hover:to-purple-50 transition-all duration-200">
-                                                    <td className="py-4 px-6">
-                                                        <div className="flex items-center gap-3">
-                                                            <div className="w-10 h-10 bg-gradient-to-br from-violet-500 to-purple-500 rounded-xl flex items-center justify-center">
-                                                                <span className="text-white font-bold text-sm">
+                                                <tr key={index} className="border-b transition-all duration-200" style={{
+                                                    borderColor: '#E6F3FF',
+                                                    backgroundColor: index % 2 === 0 ? '#FFFFFF' : '#E0F6FF'
+                                                }}>
+                                                    <td className="py-6 px-8">
+                                                        <div className="flex items-center gap-4">
+                                                            <div className="w-14 h-14 rounded-2xl flex items-center justify-center shadow-lg" style={{ backgroundColor: '#87CEEB' }}>
+                                                                <span className="text-white font-bold text-lg">
                                                                     {user.email?.charAt(0).toUpperCase() || 'U'}
                                                                 </span>
                                                             </div>
                                                             <div>
-                                                                <p className="font-semibold text-slate-800">{user.name || 'Unknown'}</p>
-                                                                <p className="text-sm text-slate-600">ID: {user.id.substring(0, 8)}...</p>
+                                                                <p className="font-semibold text-lg" style={{ color: '#6C757D' }}>{user.name || 'Unknown'}</p>
                                                             </div>
                                                         </div>
                                                     </td>
-                                                    <td className="py-4 px-6">
-                                                        <span className="text-slate-700 font-medium">{user.email}</span>
+                                                    <td className="py-6 px-8">
+                                                        <span className="font-medium text-lg" style={{ color: '#6C757D' }}>{user.email}</span>
                                                     </td>
-                                                    <td className="py-4 px-6">
-                                                        <span className={`px-3 py-1 rounded-full text-xs font-bold ${getRoleColor(user.role)}`}>
-                                                            {user.role || 'User'}
-                                                        </span>
+                                                    <td className="py-6 px-8">
+                                                        <select
+                                                            value={user.role}
+                                                            onChange={async (e) => {
+                                                                const newRole = e.target.value;
+                                                                try {
+                                                                    const res = await fetch("/api/admin/update-user", {
+                                                                        method: "PUT",
+                                                                        headers: { "Content-Type": "application/json" },
+                                                                        body: JSON.stringify({ email: user.email, role: newRole })
+                                                                    });
+
+                                                                    const result = await res.json();
+                                                                    if (res.ok) {
+                                                                        toast.success(`Updated role to ${newRole}`);
+                                                                        setUsers((prev) =>
+                                                                            prev.map((u) => (u.email === user.email ? { ...u, role: newRole } : u))
+                                                                        );
+                                                                    } else {
+                                                                        toast.error(result.error || "Failed to update role");
+                                                                    }
+                                                                } catch (err) {
+                                                                    console.error(err);
+                                                                    toast.error("Error updating user role");
+                                                                }
+                                                            }}
+                                                            disabled={user.email === session?.user?.email}
+                                                            className="rounded-xl border-2 px-4 py-2 text-base font-medium shadow-sm"
+                                                            style={{ borderColor: '#CCE7FF', backgroundColor: '#FFFFFF', color: '#6C757D' }}
+                                                        >
+                                                            <option value="attender">Attender</option>
+                                                            <option value="examiner">Examiner</option>
+                                                            <option value="admin">Admin</option>
+                                                        </select>
                                                     </td>
-                                                    <td className="py-4 px-6">
-                                                        <div className="flex items-center gap-2">
-                                                            <div className="w-2 h-2 bg-emerald-500 rounded-full"></div>
-                                                            <span className="text-emerald-700 text-sm font-medium">Active</span>
+                                                    <td className="py-6 px-8">
+                                                        <div className="flex items-center gap-3">
+                                                            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: '#ADD8E6' }}></div>
+                                                            <span className="text-base font-medium" style={{ color: '#6C757D' }}>Active</span>
                                                         </div>
                                                     </td>
                                                 </tr>
@@ -360,80 +434,98 @@ export default function AdminDashboard() {
 
                 {/* Exams Tab */}
                 {activeTab === 'exams' && (
-                    <div className="bg-white/80 backdrop-blur-xl rounded-3xl shadow-2xl border border-white/30 overflow-hidden">
-                        <div className="bg-gradient-to-r from-emerald-50 to-teal-50 px-8 py-6 border-b border-emerald-200/50">
+                    <div className="rounded-3xl shadow-2xl border-2 overflow-hidden" style={{ backgroundColor: '#FFFFFF', borderColor: '#CCE7FF' }}>
+                        <div className="px-10 py-8 border-b-2" style={{ backgroundColor: '#F8F9FA', borderColor: '#CCE7FF' }}>
                             <div className="flex items-center justify-between">
-                                <h2 className="text-2xl font-bold text-slate-800 flex items-center gap-3">
-                                    <span className="w-10 h-10 bg-gradient-to-br from-emerald-500 to-teal-500 rounded-2xl flex items-center justify-center">
-                                        <span className="text-white">📝</span>
+                                <h2 className="text-3xl font-bold flex items-center gap-4" style={{ color: '#6C757D' }}>
+                                    <span className="w-14 h-14 rounded-3xl flex items-center justify-center shadow-lg" style={{ backgroundColor: '#87CEEB' }}>
+                                        <span className="text-white text-2xl">📝</span>
                                     </span>
                                     All Exams ({exams.length})
                                 </h2>
-                                <div className="flex items-center gap-2">
-                                    <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></div>
-                                    <span className="text-sm text-slate-600">{exams.length} Total</span>
+                                <div className="flex items-center gap-3">
+                                    <div className="w-3 h-3 rounded-full animate-pulse" style={{ backgroundColor: '#ADD8E6' }}></div>
+                                    <span className="text-lg" style={{ color: '#6C757D' }}>{exams.length} Total</span>
                                 </div>
                             </div>
                         </div>
-                        <div className="p-8">
+                        <div className="p-10">
                             {exams.length === 0 ? (
-                                <div className="text-center py-12">
-                                    <div className="w-20 h-20 bg-gradient-to-br from-gray-100 to-gray-200 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                                        <span className="text-4xl">📝</span>
+                                <div className="text-center py-16">
+                                    <div className="w-24 h-24 rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-lg" style={{ backgroundColor: '#F8F9FA' }}>
+                                        <span className="text-5xl">📝</span>
                                     </div>
-                                    <h3 className="text-xl font-semibold text-slate-800 mb-2">No Exams Found</h3>
-                                    <p className="text-slate-600">Exams will appear here once created.</p>
+                                    <h3 className="text-2xl font-semibold mb-3" style={{ color: '#6C757D' }}>No Exams Found</h3>
+                                    <p className="text-lg" style={{ color: '#6C757D' }}>Exams will appear here once created.</p>
                                 </div>
                             ) : (
                                 <div className="overflow-x-auto">
                                     <table className="w-full">
                                         <thead>
-                                            <tr className="border-b-2 border-gray-200">
-                                                <th className="text-left py-4 px-6 font-semibold text-slate-700">Exam</th>
-                                                <th className="text-left py-4 px-6 font-semibold text-slate-700">Language</th>
-                                                <th className="text-left py-4 px-6 font-semibold text-slate-700">Duration</th>
-                                                <th className="text-left py-4 px-6 font-semibold text-slate-700">Questions</th>
-                                                <th className="text-left py-4 px-6 font-semibold text-slate-700">Status</th>
+                                            <tr className="border-b-2" style={{ borderColor: '#CCE7FF' }}>
+                                                <th className="text-left py-6 px-8 font-semibold text-xl" style={{ color: '#6C757D' }}>Exam</th>
+                                                <th className="text-left py-6 px-8 font-semibold text-xl" style={{ color: '#6C757D' }}>Language</th>
+                                                <th className="text-left py-6 px-8 font-semibold text-xl" style={{ color: '#6C757D' }}>Duration</th>
+                                                <th className="text-left py-6 px-8 font-semibold text-xl" style={{ color: '#6C757D' }}>Questions</th>
+                                                <th className="text-left py-6 px-8 font-semibold text-xl" style={{ color: '#6C757D' }}>Actions</th>
                                             </tr>
                                         </thead>
                                         <tbody>
                                             {exams.map((exam, index) => (
-                                                <tr key={index} className="border-b border-gray-100 hover:bg-gradient-to-r hover:from-emerald-50 hover:to-teal-50 transition-all duration-200">
-                                                    <td className="py-4 px-6">
-                                                        <div className="flex items-center gap-3">
-                                                            <div className="w-10 h-10 bg-gradient-to-br from-emerald-500 to-teal-500 rounded-xl flex items-center justify-center">
-                                                                <span className="text-white font-bold text-sm">
+                                                <tr key={index} className="border-b transition-all duration-200" style={{ 
+                                                    borderColor: '#E6F3FF',
+                                                    backgroundColor: index % 2 === 0 ? '#FFFFFF' : '#E0F6FF'
+                                                }}>
+                                                    <td className="py-6 px-8">
+                                                        <div className="flex items-center gap-4">
+                                                            <div className="w-14 h-14 rounded-2xl flex items-center justify-center shadow-lg" style={{ backgroundColor: '#87CEEB' }}>
+                                                                <span className="text-white font-bold text-lg">
                                                                     {exam.title?.charAt(0).toUpperCase() || 'E'}
                                                                 </span>
                                                             </div>
                                                             <div>
-                                                                <p className="font-semibold text-slate-800">{exam.title}</p>
-                                                                <p className="text-sm text-slate-600">ID: {exam.id.substring(0, 8)}...</p>
+                                                                <p className="font-semibold text-lg" style={{ color: '#6C757D' }}>{exam.title}</p>
                                                             </div>
                                                         </div>
                                                     </td>
-                                                    <td className="py-4 px-6">
-                                                        <span className={`px-3 py-1 rounded-full text-xs font-bold text-white ${getLanguageColor(exam.language)}`}>
+                                                    <td className="py-6 px-8">
+                                                        <span
+                                                            className={`px-4 py-2 rounded-full text-sm font-bold shadow-sm border-2 ${getLanguageColor(exam.language)}`}
+                                                            style={{ borderColor: '#CCE7FF' }}
+                                                        >
                                                             {exam.language?.toUpperCase() || 'N/A'}
                                                         </span>
                                                     </td>
-                                                    <td className="py-4 px-6">
-                                                        <div className="flex items-center gap-2">
-                                                            <svg className="w-4 h-4 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <td className="py-6 px-8">
+                                                        <div className="flex items-center gap-3">
+                                                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ color: '#6C757D' }}>
                                                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                                                             </svg>
-                                                            <span className="text-slate-700 font-medium">{exam.duration} min</span>
+                                                            <span className="font-medium text-lg" style={{ color: '#6C757D' }}>{exam.duration} min</span>
                                                         </div>
                                                     </td>
-                                                    <td className="py-4 px-6">
-                                                        <span className="px-3 py-1 bg-gradient-to-r from-blue-100 to-indigo-100 text-blue-700 rounded-full text-xs font-bold">
+                                                    <td className="py-6 px-8">
+                                                        <span className="px-4 py-2 rounded-full text-sm font-bold shadow-sm border-2" style={{ 
+                                                            backgroundColor: '#E6F3FF',
+                                                            color: '#6C757D',
+                                                            borderColor: '#CCE7FF'
+                                                        }}>
                                                             {exam.questions?.length || 0} Q's
                                                         </span>
                                                     </td>
-                                                    <td className="py-4 px-6">
-                                                        <div className="flex items-center gap-2">
-                                                            <div className="w-2 h-2 bg-emerald-500 rounded-full"></div>
-                                                            <span className="text-emerald-700 text-sm font-medium">Active</span>
+                                                    <td className="py-6 px-8">
+                                                        <div className="space-y-3">
+                                                            <button
+                                                                onClick={() => handleViewQuestions(exam)}
+                                                                className="px-6 py-3 rounded-xl text-base font-medium shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105"
+                                                                style={{ backgroundColor: '#87CEEB', color: '#FFFFFF' }}
+                                                            >
+                                                                View Questions
+                                                            </button>
+                                                            <div className="flex items-center gap-3">
+                                                                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: '#ADD8E6' }}></div>
+                                                                <span className="text-base font-medium" style={{ color: '#6C757D' }}>Active</span>
+                                                            </div>
                                                         </div>
                                                     </td>
                                                 </tr>
@@ -458,13 +550,7 @@ export default function AdminDashboard() {
                             </h2>
                         </div>
                         <div className="p-8">
-                            <div className="text-center py-12">
-                                <div className="w-20 h-20 bg-gradient-to-br from-amber-100 to-orange-200 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                                    <span className="text-4xl">📊</span>
-                                </div>
-                                <h3 className="text-xl font-semibold text-slate-800 mb-2">Analytics Coming Soon</h3>
-                                <p className="text-slate-600">Detailed analytics and reporting features will be available here.</p>
-                            </div>
+                            <AdminAnalytics />
                         </div>
                     </div>
                 )}
