@@ -1,29 +1,68 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { getDatabase } from '../../lib/database';
+import { getDBConnection } from '@/lib/database'; // Make sure this uses `mssql`
 
-export default function handler(req: NextApiRequest, res: NextApiResponse) {
-    const db = getDatabase();
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+  const db = await getDBConnection();
 
-    if (req.method === 'POST') {
-        const { question, expectedOutput, difficulty, marks, language, createdBy } = req.body;
+  if (req.method === 'POST') {
+    const {
+      question,
+      expectedOutput,
+      difficulty,
+      marks,
+      language,
+      createdBy
+    } = req.body;
 
-        const stmt = db.prepare(`
-      INSERT INTO questionBank (question, expectedOutput, difficulty, marks, language, createdBy, createdAt)
-      VALUES (?, ?, ?, ?, ?, ?, datetime('now'))
-    `);
-        stmt.run(question, expectedOutput, difficulty, marks, language, createdBy);
-        return res.status(200).json({ success: true });
+    try {
+      await db
+        .request()
+        .input("question", question)
+        .input("expectedOutput", expectedOutput)
+        .input("difficulty", difficulty)
+        .input("marks", marks)
+        .input("language", language)
+        .input("createdBy", createdBy)
+        .input("createdAt", new Date().toISOString())
+        .query(`
+          INSERT INTO questionBank (
+            question, expectedOutput, difficulty, marks, language, createdBy, createdAt
+          ) VALUES (
+            @question, @expectedOutput, @difficulty, @marks, @language, @createdBy, @createdAt
+          )
+        `);
+
+      return res.status(200).json({ success: true });
+    } catch (error) {
+      console.error("Insert Error:", error);
+      return res.status(500).json({ error: "Failed to insert question" });
+    }
+  }
+
+  if (req.method === 'GET') {
+    const { email, language } = req.query;
+
+    if (typeof email !== "string" || typeof language !== "string") {
+      return res.status(400).json({ error: "Invalid query parameters" });
     }
 
-    if (req.method === 'GET') {
-        const { email, language } = req.query;
+    try {
+      const result = await db
+        .request()
+        .input("email", email)
+        .input("language", language)
+        .query(`
+          SELECT * FROM questionBank
+          WHERE createdBy = @email AND language = @language
+          ORDER BY createdAt DESC
+        `);
 
-        const stmt = db.prepare(`
-      SELECT * FROM questionBank WHERE createdBy = ? AND language = ? ORDER BY createdAt DESC
-    `);
-        const rows = stmt.all(email, language);
-        return res.status(200).json(rows);
+      return res.status(200).json(result.recordset);
+    } catch (error) {
+      console.error("Query Error:", error);
+      return res.status(500).json({ error: "Failed to fetch questions" });
     }
+  }
 
-    res.status(405).end();
+  res.status(405).end();
 }

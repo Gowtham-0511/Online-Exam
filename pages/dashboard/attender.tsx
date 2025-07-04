@@ -59,7 +59,6 @@ export default function AttenderDashboard() {
                 const userData = await response.json();
                 setUserRole(userData.role);
 
-                // If user is not an attender, redirect them
                 if (userData.role !== 'attender') {
                     showAlertMessage(`Access denied. This page is for attenders only. Your role: ${userData.role}`, 'error');
                     setTimeout(() => {

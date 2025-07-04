@@ -1,7 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { createOrFetchUser } from '../../../lib/userOperations';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '../auth/[...nextauth]';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
     if (req.method !== 'POST') {
@@ -17,7 +15,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         }
 
         const user = createOrFetchUser(email, name);
-        res.status(200).json(user);
+
+        res.status(200).json({ role: (await user).role }); 
     } catch (error) {
         console.error('Error in get-or-create user:', error);
         res.status(500).json({ error: 'Failed to create or fetch user' });

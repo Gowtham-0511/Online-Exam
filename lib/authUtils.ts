@@ -16,6 +16,8 @@ export const createOrFetchUser = async (email: string, name: string | null): Pro
             throw new Error('Failed to create or fetch user');
         }
 
+        console.log('User created or fetched successfully:', response);
+
         return await response.json();
     } catch (error) {
         console.error('Error in createOrFetchUser:', error);

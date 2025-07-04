@@ -60,6 +60,7 @@ export default function ExamPage() {
     const [voiceConfidence, setVoiceConfidence] = useState(0);
 
     const audioViolationsRef = useRef(0);
+    const hasSubmittedRef = useRef(false);
 
     type ExamQuestion = {
         id: string;
@@ -458,33 +459,78 @@ export default function ExamPage() {
     };
 
     const cleanupExamEnvironment = async () => {
-        // Exit fullscreen
-        if (document.fullscreenElement) {
-            await document.exitFullscreen().catch((err) =>
-                console.warn("Fullscreen exit failed:", err)
-            );
+        if (videoRef.current?.srcObject) {
+            const tracks = (videoRef.current.srcObject as MediaStream).getTracks();
+            tracks.forEach((track) => track.stop());
         }
 
-        // Remove blocked keyboard and contextmenu events
-        if (handleKeyDownRef.current) {
-            document.removeEventListener('keydown', handleKeyDownRef.current);
+        if (audioContext) {
+            audioContext.close();
         }
+
+        if (videoRef.current) {
+            videoRef.current.srcObject = null;
+        }
+
+        if (canvasRef.current) {
+            const ctx = canvasRef.current.getContext('2d');
+            if (ctx) ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
+        }
+
+        faceDetector?.close?.();
+        objectDetector?.close?.();
+        microphone?.disconnect?.();
+        analyser?.disconnect?.();
+
+        if (document.fullscreenElement) {
+            await document.exitFullscreen().catch(() => { });
+        }
+
         if (handleContextMenuRef.current) {
-            document.removeEventListener('contextmenu', handleContextMenuRef.current);
+            document.removeEventListener("contextmenu", handleContextMenuRef.current);
         }
         if (handleVisibilityChangeRef.current) {
-            document.removeEventListener('visibilitychange', handleVisibilityChangeRef.current);
+            document.removeEventListener("visibilitychange", handleVisibilityChangeRef.current);
         }
         if (handleFsChangeRef.current) {
-            document.removeEventListener('fullscreenchange', handleFsChangeRef.current);
+            document.removeEventListener("fullscreenchange", handleFsChangeRef.current);
         }
         if (handleBlurRef.current) {
-            window.removeEventListener('blur', handleBlurRef.current);
+            window.removeEventListener("blur", handleBlurRef.current);
         }
-
-        (document.activeElement as HTMLElement | null)?.blur();
-
-        router.push("/dashboard/attender");
+        if (handleKeyDownRef.current) {
+            document.removeEventListener("keydown", handleKeyDownRef.current);
+        }
+        handleContextMenuRef.current = null;
+        handleVisibilityChangeRef.current = null;
+        handleFsChangeRef.current = null;
+        handleBlurRef.current = null;
+        handleKeyDownRef.current = null;
+        videoRef.current = null;
+        canvasRef.current = null;
+        setFaceDetector(null);
+        setObjectDetector(null);
+        setAudioContext(null);
+        setMicrophone(null);
+        setAnalyser(null);
+        setVideoReady(false);
+        setExamStarted(false);
+        setDisqualified(false);
+        setCameraError("");
+        setSpeakingDetected(false);
+        setVoiceConfidence(0);
+        setAudioLevel(0);
+        setViolations(0);
+        setKeyViolations(0);
+        setNoFaceDetectedCount(0);
+        setMultipleFacesCount(0);
+        setSuspiciousObjectCount(0);
+        setDetectedObjects([]);
+        setLastSuspiciousActivity("");
+        setAudioViolations(0);
+        setLastAudioViolation("");
+        document.onkeydown = null;
+        document.oncontextmenu = null;
     };
 
     useEffect(() => {
@@ -506,18 +552,6 @@ export default function ExamPage() {
             if (handleVisibilityChangeRef.current) {
                 handleVisibilityChangeRef.current(e);
             }
-        };
-
-        const detectDevTools = () => {
-            const threshold = 160;
-            setInterval(() => {
-                if (window.outerHeight - window.innerHeight > threshold ||
-                    window.outerWidth - window.innerWidth > threshold) {
-                    setDisqualified(true);
-                    handleSubmitWithDisqualification(true);
-                    router.push("/dashboard/attender");
-                }
-            }, 1000);
         };
 
         const handleContextMenu = (e: any) => {
@@ -563,6 +597,11 @@ export default function ExamPage() {
     };
 
     const handleSubmit = async () => {
+
+        if (hasSubmittedRef.current) return;
+
+        hasSubmittedRef.current = true;
+
         if (!exam || !session) return;
 
         console.log(isDisqualified, "isDisqualified");
@@ -591,69 +630,17 @@ export default function ExamPage() {
             }),
         });
 
-        if (videoRef.current?.srcObject) {
-            const tracks = (videoRef.current.srcObject as MediaStream).getTracks();
-            tracks.forEach(track => track.stop());
-        }
-        if (audioContext) {
-            audioContext.close();
-        }
-        if (videoRef.current) {
-            videoRef.current.srcObject = null;
-        }
-        if (faceDetector) {
-            faceDetector.close();
-        }
-        if (objectDetector) {
-            objectDetector.close();
-        }
-        if (microphone) {
-            microphone.disconnect();
-        }
-        if (analyser) {
-            analyser.disconnect();
-        }
-        if (canvasRef.current) {
-            const ctx = canvasRef.current.getContext('2d');
-            if (ctx) {
-                ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
-            }
-        }
-        // const questionsAndAnswers = answersWithQuestionIds.map(item => ({
-        //     question: shuffledQuestions.find(q => q.id === item.questionId)?.question || `Question ${item.originalIndex + 1}`,
-        //     answer: item.answer,
-        //     questionId: item.questionId
-        // }));
-
-        // const pdfBytes = await generateAnswerPdf({
-        //     studentName: userName,
-        //     examTitle: exam.title,
-        //     codeAnswer: code,
-        //     questionsAndAnswers: questionsAndAnswers,
-        //     submissionTime: new Date().toLocaleString(),
-        //     examId: examIdStr
-        // });
-
-        // const blob = new Blob([pdfBytes], { type: "application/pdf" });
-        // const url = URL.createObjectURL(blob);
-
-        // const downloadLink = document.createElement('a');
-        // downloadLink.href = url;
-        // downloadLink.download = `${exam.title}_${userName}_answers.pdf`;
-        // document.body.appendChild(downloadLink);
-
-        // downloadLink.click();
-
-        // document.body.removeChild(downloadLink);
-        // URL.revokeObjectURL(url);
-
-        // alert("✅ PDF downloaded.");
-        await cleanupExamEnvironment();
+        await cleanupExamEnvironment(); // ✅
         router.push("/dashboard/attender");
 
     };
 
     const handleSubmitWithDisqualification = async (disqualifiedFlag = isDisqualified) => {
+
+        if (hasSubmittedRef.current) return;
+
+        hasSubmittedRef.current = true;
+
         if (!exam || !session) return;
 
         console.log(disqualifiedFlag, "disqualifiedFlag");
@@ -681,37 +668,8 @@ export default function ExamPage() {
                 code,
             }),
         });
-
-        if (videoRef.current?.srcObject) {
-            const tracks = (videoRef.current.srcObject as MediaStream).getTracks();
-            tracks.forEach(track => track.stop());
-        }
-        if (audioContext) {
-            audioContext.close();
-        }
-        if (videoRef.current) {
-            videoRef.current.srcObject = null;
-        }
-        if (faceDetector) {
-            faceDetector.close();
-        }
-        if (objectDetector) {
-            objectDetector.close();
-        }
-        if (microphone) {
-            microphone.disconnect();
-        }
-        if (analyser) {
-            analyser.disconnect();
-        }
-        if (canvasRef.current) {
-            const ctx = canvasRef.current.getContext('2d');
-            if (ctx) {
-                ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
-            }
-        }
-
         await cleanupExamEnvironment();
+        router.push("/dashboard/attender");
     };
 
     const handleRun = async () => {
@@ -942,9 +900,36 @@ export default function ExamPage() {
         }
     };
 
-    const handleDisqualification = (reason: string) => {
+    const handleDisqualification = async (reason: string) => {
         setDisqualified(true);
         toast.error(`🚫 Disqualified: ${reason}`);
+
+        const examIdStr = examId?.toString() || "unknown";
+
+        let imageBase64 = "";
+        if (videoRef.current && canvasRef.current) {
+            const video = videoRef.current;
+            const canvas = document.createElement("canvas");
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            const ctx = canvas.getContext("2d");
+            if (ctx) {
+                ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+                imageBase64 = canvas.toDataURL("image/png");
+            }
+        }
+
+        await fetch("/api/store-violation-image", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                image: imageBase64,
+                examId: examIdStr,
+                email: session?.user?.email || "unknown",
+                reason,
+                time: new Date().toISOString(),
+            }),
+        });
 
         // Stop all monitoring
         if (videoRef.current?.srcObject) {

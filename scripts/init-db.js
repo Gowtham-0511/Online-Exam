@@ -89,9 +89,23 @@ try {
   // db.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_submissions_exam_user ON submissions(examId, email);');
 
 
-  db.exec(`ALTER TABLE exams ADD COLUMN startTime TEXT;`);
-  db.exec(`ALTER TABLE exams ADD COLUMN endTime TEXT;`);
-  db.exec(`ALTER TABLE exams ADD COLUMN allowedUsers TEXT;`);
+  // db.exec(`ALTER TABLE exams ADD COLUMN startTime TEXT;`);
+  // db.exec(`ALTER TABLE exams ADD COLUMN endTime TEXT;`);
+  // db.exec(`ALTER TABLE exams ADD COLUMN allowedUsers TEXT;`);
+
+  // db.exec(`
+  //   CREATE TABLE IF NOT EXISTS violation_images (
+  //     id INTEGER PRIMARY KEY AUTOINCREMENT,
+  //     email TEXT,
+  //     examId TEXT,
+  //     reason TEXT,
+  //     timestamp TEXT,
+  //     imageBase64 TEXT
+  //   );
+  // `);
+
+  // db.exec(`DROP INDEX IF EXISTS idx_submissions_exam_user;
+  // `);
 
   console.log('Database initialized successfully!');
 } catch (error) {
