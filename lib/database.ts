@@ -50,10 +50,10 @@
 import sql from 'mssql';
 
 const config: sql.config = {
-  user: process.env.SQL_USER!,
-  password: process.env.SQL_PASSWORD!,
-  server: process.env.SQL_SERVER!,
-  database: process.env.SQL_DATABASE!,
+  user: "SysRankUser",
+  password: "$ysR@nk123",
+  server: "SSIC-SQL-01",
+  database: "SysRank",
   options: {
     encrypt: true,
     trustServerCertificate: true,
