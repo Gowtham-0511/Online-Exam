@@ -62,6 +62,15 @@ export default function AdminDashboard() {
         }
     }, [loading]);
 
+    const scheduleUser = (user: { name: any; }) => {
+        const dateTime = window.prompt(`Schedule ${user.name} - Enter date & time (YYYY-MM-DD HH:mm):`);
+        if (dateTime) {
+            console.log(`Scheduled ${user.name} at ${dateTime}`);
+            // You can now call your API or store this value
+        }
+    };
+
+
     if (!session || loading) {
         return (
             <div className="min-h-screen bg-gradient-to-br from-violet-50 via-rose-50 to-amber-50 flex items-center justify-center">
@@ -292,13 +301,16 @@ export default function AdminDashboard() {
                                                         </span>
                                                     </td>
                                                     <td className="py-4 px-6">
-                                                        <input
-                                                            type="checkbox"
-                                                            className="form-checkbox h-4 w-4 text-blue-600"
-                                                            // checked={user.role === 'Admin'} // or any logic you want
-                                                            // onChange={(e) => handleRoleChange(e, user)} // Define this function to handle changes
-                                                        />
+                                                        <label className="inline-flex items-center space-x-2">
+                                                            <input
+                                                                type="checkbox"
+                                                                className="form-checkbox h-4 w-4 text-blue-600"
+                                                                onChange={() => scheduleUser(user.email)}
+                                                            />
+                                                            <span className="text-xs font-bold">{user.role || 'User'}</span>
+                                                        </label>
                                                     </td>
+
                                                     <td className="py-4 px-6">
                                                         <div className="flex items-center gap-2">
                                                             <div className="w-2 h-2 bg-emerald-500 rounded-full"></div>
