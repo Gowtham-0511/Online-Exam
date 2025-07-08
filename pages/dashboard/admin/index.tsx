@@ -3,6 +3,7 @@ import { useSession } from "next-auth/react";
 import JobPositionsPage from "./job-positions";
 import SkillsetConfigPage from "./skillset-config";
 import QuestionBankPage from "./question-bank";
+import AdminAnalytics from "@/components/AdminAnalytics";
 
 export default function AdminDashboard() {
     const { data: session } = useSession();
@@ -18,6 +19,11 @@ export default function AdminDashboard() {
     const [loading, setLoading] = useState(true);
     const [activeTab, setActiveTab] = useState('overview');
     const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+    type User = { id: string; name?: string; email?: string; role?: string; schedule_start?: string; schedule_end?: string };
+    const [selectedUser, setSelectedUser] = useState<User | null>(null);
+    const [scheduleStart, setScheduleStart] = useState("");
+    const [scheduleEnd, setScheduleEnd] = useState("");
+    const [showModal, setShowModal] = useState(false);
 
     useEffect(() => {
         if (!session) {
@@ -72,6 +78,35 @@ export default function AdminDashboard() {
         if (dateTime) {
             console.log(`Scheduled ${user.name} at ${dateTime}`);
             // You can now call your API or store this value
+        }
+    };
+
+    const openScheduleModal = (user: any) => {
+        setSelectedUser(user);
+        setScheduleStart(user.schedule_start || "");
+        setScheduleEnd(user.schedule_end || "");
+        setShowModal(true);
+    };
+
+    const saveSchedule = async () => {
+        if (!selectedUser) return;
+
+        const res = await fetch("/api/admin/users/schedule", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                userId: selectedUser.id,
+                scheduleStart,
+                scheduleEnd,
+            }),
+        });
+
+        const data = await res.json();
+        if (data.success) {
+            setShowModal(false);
+            location.reload();
+        } else {
+            alert("Failed to update schedule");
         }
     };
 
@@ -315,12 +350,14 @@ export default function AdminDashboard() {
                                                         </span>
                                                     </td>
                                                     <td className="py-4 px-6">
-                                                        <input
-                                                            type="checkbox"
-                                                            className="form-checkbox h-4 w-4 text-blue-600"
-                                                            // checked={user.role === 'Admin'} // or any logic you want
-                                                            // onChange={(e) => handleRoleChange(e, user)} // Define this function to handle changes
-                                                        />
+                                                        <button
+                                                            className="text-blue-600 hover:underline text-sm"
+                                                            onClick={() => openScheduleModal(user)}
+                                                        >
+                                                            {user.schedule_start && user.schedule_end
+                                                                ? `${new Date(user.schedule_start).toLocaleString()} → ${new Date(user.schedule_end).toLocaleString()}`
+                                                                : "Set Schedule"}
+                                                        </button>
                                                     </td>
 
                                                     <td className="py-4 px-6">
@@ -437,25 +474,7 @@ export default function AdminDashboard() {
 
             case 'analytics':
                 return (
-                    <div className="bg-white/90 backdrop-blur-xl rounded-3xl shadow-xl border border-blue-200/50 overflow-hidden">
-                        <div className="bg-gradient-to-r from-blue-50 to-sky-50 px-8 py-6 border-b border-blue-200/50">
-                            <h2 className="text-2xl font-bold text-slate-800 flex items-center gap-3">
-                                <span className="w-10 h-10 bg-gradient-to-br from-blue-500 to-sky-500 rounded-2xl flex items-center justify-center">
-                                    <span className="text-white">📈</span>
-                                </span>
-                                Analytics & Insights
-                            </h2>
-                        </div>
-                        <div className="p-8">
-                            <div className="text-center py-12">
-                                <div className="w-20 h-20 bg-gradient-to-br from-blue-50 to-sky-100 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-blue-200">
-                                    <span className="text-4xl">📊</span>
-                                </div>
-                                <h3 className="text-xl font-semibold text-slate-800 mb-2">Analytics Coming Soon</h3>
-                                <p className="text-slate-600">Detailed analytics and reporting features will be available here.</p>
-                            </div>
-                        </div>
-                    </div>
+                    <AdminAnalytics />
                 );
 
             case 'reports':
@@ -569,8 +588,8 @@ export default function AdminDashboard() {
                                 key={item.id}
                                 onClick={() => setActiveTab(item.id)}
                                 className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl transition-all duration-200 ${activeTab === item.id
-                                        ? 'bg-gradient-to-r from-blue-500 to-sky-500 text-white shadow-lg'
-                                        : 'text-slate-700 hover:bg-gradient-to-r hover:from-blue-50 hover:to-sky-50 hover:text-blue-700'
+                                    ? 'bg-gradient-to-r from-blue-500 to-sky-500 text-white shadow-lg'
+                                    : 'text-slate-700 hover:bg-gradient-to-r hover:from-blue-50 hover:to-sky-50 hover:text-blue-700'
                                     }`}
                             >
                                 <span className="text-xl">{item.icon}</span>
@@ -636,6 +655,52 @@ export default function AdminDashboard() {
                     {renderContent()}
                 </main>
             </div>
+
+            {showModal && (
+                <div className="fixed inset-0 z-50 bg-black bg-opacity-40 flex items-center justify-center">
+                    <div className="bg-white rounded-xl p-6 w-[90%] max-w-md shadow-xl space-y-4">
+                        <h2 className="text-lg font-semibold text-gray-700">
+                            Schedule for {selectedUser?.email}
+                        </h2>
+
+                        <div className="space-y-2">
+                            <label className="block text-sm text-gray-600">Start Time</label>
+                            <input
+                                type="datetime-local"
+                                className="w-full border rounded-lg px-3 py-2"
+                                value={scheduleStart}
+                                onChange={(e) => setScheduleStart(e.target.value)}
+                            />
+                        </div>
+
+                        <div className="space-y-2">
+                            <label className="block text-sm text-gray-600">End Time</label>
+                            <input
+                                type="datetime-local"
+                                className="w-full border rounded-lg px-3 py-2"
+                                value={scheduleEnd}
+                                onChange={(e) => setScheduleEnd(e.target.value)}
+                            />
+                        </div>
+
+                        <div className="flex justify-end gap-2 pt-4">
+                            <button
+                                onClick={() => setShowModal(false)}
+                                className="px-4 py-2 bg-gray-300 rounded-lg text-gray-700"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={saveSchedule}
+                                className="px-4 py-2 bg-emerald-600 text-white rounded-lg"
+                            >
+                                Save
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
         </div>
     );
 }

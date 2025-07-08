@@ -1,21 +1,22 @@
 import { NextApiRequest, NextApiResponse } from "next";
-import { getDatabase } from "../../../lib/database";
+import { getDBConnection } from "@/lib/database";
 
-export default function handler(req: NextApiRequest, res: NextApiResponse) {
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
     if (req.method !== "GET") return res.status(405).end();
 
     try {
-        const db = getDatabase();
+        const db = await getDBConnection();
 
-        const stmt = db.prepare(`
-            SELECT DATE(submittedAt) as date, COUNT(*) as count
-            FROM submissions
-            GROUP BY DATE(submittedAt)
+        const result = await db.query(`
+            SELECT 
+                CAST(submittedAt AS DATE) AS date, 
+                COUNT(*) AS count
+            FROM Submissions
+            GROUP BY CAST(submittedAt AS DATE)
             ORDER BY date ASC
         `);
 
-        const timeline = stmt.all();
-        res.status(200).json(timeline);
+        res.status(200).json(result.recordset);
     } catch (err) {
         console.error("Error in submission timeline:", err);
         res.status(500).json({ error: "Failed to fetch timeline" });
