@@ -67,6 +67,15 @@ export default function AdminDashboard() {
         }
     }, [loading]);
 
+    const scheduleUser = (user: { name: any; }) => {
+        const dateTime = window.prompt(`Schedule ${user.name} - Enter date & time (YYYY-MM-DD HH:mm):`);
+        if (dateTime) {
+            console.log(`Scheduled ${user.name} at ${dateTime}`);
+            // You can now call your API or store this value
+        }
+    };
+
+
     if (!session || loading) {
         return (
             <div className="min-h-screen bg-gradient-to-br from-blue-50 via-sky-50 to-blue-100 flex items-center justify-center">
@@ -308,9 +317,12 @@ export default function AdminDashboard() {
                                                     <td className="py-4 px-6">
                                                         <input
                                                             type="checkbox"
-                                                            className="form-checkbox h-4 w-4 text-blue-600 rounded border-blue-300"
+                                                            className="form-checkbox h-4 w-4 text-blue-600"
+                                                            // checked={user.role === 'Admin'} // or any logic you want
+                                                            // onChange={(e) => handleRoleChange(e, user)} // Define this function to handle changes
                                                         />
                                                     </td>
+
                                                     <td className="py-4 px-6">
                                                         <div className="flex items-center gap-2">
                                                             <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
