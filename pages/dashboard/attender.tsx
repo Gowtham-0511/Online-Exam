@@ -191,7 +191,7 @@ export default function AttenderDashboard() {
     return (
         <>
             <Head>
-                <title>Exam Hub - Attender Dashboard</title>
+                <title>SysRank - Attender Dashboard</title>
                 <link rel="icon" href="/logo.png" />
             </Head>
             <div className="min-h-screen bg-gradient-to-br from-blue-50 via-sky-50 to-blue-100 relative overflow-hidden">
@@ -213,7 +213,7 @@ export default function AttenderDashboard() {
                                     </svg>
                                 </div>
                                 <span className="text-xl font-bold bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent">
-                                    ExamHub
+                                    SysRank
                                     <p className="text-xs text-slate-500 font-medium">Attender Portal</p>
                                 </span>
                             </div>

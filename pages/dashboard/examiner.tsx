@@ -45,7 +45,8 @@ export default function ExaminerDashboard() {
 
     const [startTime, setStartTime] = useState("");
     const [endTime, setEndTime] = useState("");
-    const [allowedUsersRaw, setAllowedUsersRaw] = useState(""); // comma-separated emails
+    const [allowedUsersRaw, setAllowedUsersRaw] = useState("");
+    const [currentStep, setCurrentStep] = useState(1);
 
 
     const resetForm = () => {
@@ -134,6 +135,7 @@ export default function ExaminerDashboard() {
             toast.error("Error creating exam. Please try again.");
         } finally {
             setIsLoading(false);
+            setCurrentStep(1);
         }
     }, [title, questions, language, duration, session]);
 
@@ -317,7 +319,7 @@ export default function ExaminerDashboard() {
             selectedBankQuestions.includes(q.id)
         ).map((q, index) => ({
             id: `bank-q${questions.length + index + 1}`,
-            question: q.question,
+            question: q.questionText,
             expectedOutput: q.expectedOutput,
             difficulty: q.difficulty,
             marks: q.marks
@@ -331,554 +333,398 @@ export default function ExaminerDashboard() {
     return (
         <>
             <Head>
-                <title>Exam Hub</title>
+                <title>SysRank</title>
                 <link rel="icon" href="/logo.png" />
             </Head>
             <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/50 relative overflow-hidden">
-                <div className="absolute inset-0 pointer-events-none overflow-hidden">
-                    <div className="absolute -top-40 -right-40 w-80 h-80 bg-gradient-to-br from-blue-100 to-indigo-100 rounded-full opacity-60 blur-3xl animate-pulse"></div>
-                    <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-gradient-to-tr from-violet-100 to-purple-100 rounded-full opacity-50 blur-3xl animate-pulse delay-1000"></div>
-                    <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-60 h-60 bg-gradient-to-r from-emerald-100 to-teal-100 rounded-full opacity-40 blur-2xl animate-pulse delay-500"></div>
-                </div>
+                <div className="min-h-screen bg-gradient-to-br from-[#F8F9FA] via-[#E6F3FF] to-[#E0F6FF] relative">
+                    <div className="absolute inset-0 pointer-events-none overflow-hidden">
+                        <div className="absolute -top-20 -right-20 w-40 h-40 bg-[#CCE7FF] rounded-full opacity-40 blur-2xl"></div>
+                        <div className="absolute -bottom-20 -left-20 w-40 h-40 bg-[#B0E0E6] rounded-full opacity-30 blur-2xl"></div>
+                    </div>
 
-                <nav className="relative z-10 bg-white/70 backdrop-blur-xl border-b border-white/50 shadow-sm">
-                    <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4">
-                        <div className="flex items-center justify-between">
-                            <div className="flex items-center space-x-4">
-                                <div className="w-12 h-12 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-2xl flex items-center justify-center shadow-lg shadow-emerald-500/20">
-                                    <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                                    </svg>
+                    <nav className="relative z-10 bg-white/60 backdrop-blur-md border-b border-[#E9ECEF]">
+                        <div className="max-w-6xl mx-auto px-6 py-4">
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center space-x-3">
+                                    <div className="w-10 h-10 bg-[#87CEEB] rounded-xl flex items-center justify-center">
+                                        <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                        </svg>
+                                    </div>
+                                    <div>
+                                        <h1 className="text-xl font-semibold text-[#6C757D]">SysRank</h1>
+                                        <p className="text-xs text-[#6C757D]/60">Examiner Portal</p>
+                                    </div>
                                 </div>
-                                <div>
-                                    <h1 className="text-2xl font-bold bg-gradient-to-r from-slate-800 to-slate-600 bg-clip-text text-transparent">
-                                        Exam Hub
-                                    </h1>
-                                    <p className="text-xs text-slate-500 font-medium">Examiner Portal</p>
-                                </div>
-                            </div>
-
-                            <div className="flex items-center space-x-4">
-                                {/* <div className="hidden sm:flex items-center space-x-2 bg-emerald-50 border border-emerald-200 text-emerald-700 rounded-full px-4 py-2">
-                                <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></div>
-                                <span className="text-sm font-medium">Active</span>
-                            </div> */}
-                                <div
-                                    className=" bg-gradient-to-br from-violet-500 to-purple-600 rounded-full p-2 flex items-center justify-center text-white font-semibold text-sm shadow-lg"
-                                >
+                                <div className="bg-[#87CEEB] text-white px-4 py-2 rounded-full text-sm font-medium">
                                     {session?.user?.name}
                                 </div>
                             </div>
                         </div>
-                    </div>
-                </nav>
+                    </nav>
 
-                {/* Main Content */}
-                <main className="relative z-10 max-w-6xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
-                    <div className="text-center mb-10">
-                        <div className="inline-flex items-center space-x-2 bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200 text-emerald-700 px-4 py-2 rounded-full text-sm font-medium mb-6">
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                            </svg>
-                            <span>Create Assessment</span>
+                    <main className="relative z-10 max-w-5xl mx-auto px-6 py-8">
+                        <div className="text-center mb-8">
+                            <div className="inline-flex items-center space-x-2 bg-[#E6F3FF] text-[#6C757D] px-4 py-2 rounded-full text-sm font-medium mb-4">
+                                <div className="w-2 h-2 bg-[#87CEEB] rounded-full"></div>
+                                <span>Create Assessment</span>
+                            </div>
+                            <h2 className="text-3xl font-light mb-3 text-[#6C757D]">Design Your Exam</h2>
+                            <p className="text-[#6C757D]/70 max-w-xl mx-auto">
+                                Create comprehensive assessments with our intuitive builder
+                            </p>
                         </div>
 
-                        <h2 className="text-4xl sm:text-5xl font-bold mb-4">
-                            <span className="bg-gradient-to-r from-slate-800 via-slate-700 to-slate-600 bg-clip-text text-transparent">
-                                Design Your Exam
-                            </span>
-                        </h2>
-
-                        <p className="text-slate-600 text-lg max-w-2xl mx-auto leading-relaxed">
-                            Create comprehensive assessments with our intuitive builder. Configure settings, add questions, and launch in minutes.
-                        </p>
-                    </div>
-
-                    {/* Form Card */}
-                    <div className="bg-white/70 backdrop-blur-xl border border-white/50 rounded-3xl shadow-2xl p-6 sm:p-8 relative overflow-hidden">
-                        <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-emerald-100/50 to-teal-100/50 rounded-full blur-2xl"></div>
-                        <div className="absolute bottom-0 left-0 w-24 h-24 bg-gradient-to-tr from-violet-100/50 to-purple-100/50 rounded-full blur-xl"></div>
-
-                        <div className="relative z-10">
-                            <div className="text-center mb-8">
-                                <div className={`w-16 h-16 bg-gradient-to-br ${selectedLanguage?.color || 'from-emerald-500 to-teal-600'} rounded-2xl mx-auto mb-4 flex items-center justify-center shadow-lg`}>
-                                    <span className="text-2xl">{selectedLanguage?.icon || '📝'}</span>
-                                </div>
-                                <h3 className="text-2xl font-bold text-slate-800 mb-2">Exam Configuration</h3>
-                                <p className="text-slate-600">Fill in the details below to create your assessment</p>
+                        <div className="mb-8">
+                            <div className="flex items-center justify-center space-x-4 mb-6">
+                                {[
+                                    { number: 1, title: 'Basic Info', active: currentStep === 1 },
+                                    { number: 2, title: 'Questions', active: currentStep === 2 },
+                                    { number: 3, title: 'Review', active: currentStep === 3 }
+                                ].map((step, index) => (
+                                    <div key={step.number} className="flex items-center">
+                                        <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium transition-all duration-300 ${step.active
+                                            ? 'bg-[#87CEEB] text-white'
+                                            : 'bg-[#E9ECEF] text-[#6C757D]'
+                                            }`}>
+                                            {step.number}
+                                        </div>
+                                        <span className={`ml-2 text-sm font-medium ${step.active ? 'text-[#87CEEB]' : 'text-[#6C757D]/60'
+                                            }`}>
+                                            {step.title}
+                                        </span>
+                                        {index < 2 && (
+                                            <div className={`w-12 h-px mx-4 ${step.active ? 'bg-[#87CEEB]' : 'bg-[#E9ECEF]'
+                                                }`}></div>
+                                        )}
+                                    </div>
+                                ))}
                             </div>
+                        </div>
 
-                            {/* Basic Settings */}
-                            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-                                <div>
-                                    <label className="block text-sm font-semibold text-slate-700 mb-3">
-                                        Exam Title <span className="text-red-500">*</span>
-                                    </label>
-                                    <div className="relative">
-                                        <input
-                                            type="text"
-                                            value={title}
-                                            onChange={(e) => setTitle(e.target.value)}
-                                            placeholder="e.g., Python Programming Assessment"
-                                            className="w-full px-4 py-4 bg-white/80 border border-slate-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-emerald-200/50 focus:border-emerald-400 transition-all duration-200 text-slate-800 placeholder-slate-400"
-                                            disabled={isLoading}
-                                        />
-                                        <div className="absolute inset-y-0 right-0 flex items-center pr-4">
-                                            <svg className="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                        <div className="bg-white/70 backdrop-blur-sm border border-[#E9ECEF] rounded-2xl shadow-sm p-8">
+                            {currentStep === 1 && (
+                                <div className="space-y-6">
+                                    <div className="text-center mb-6">
+                                        <div className="w-12 h-12 bg-[#E6F3FF] rounded-xl mx-auto mb-3 flex items-center justify-center">
+                                            <svg className="w-6 h-6 text-[#87CEEB]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                                             </svg>
                                         </div>
+                                        <h3 className="text-xl font-medium text-[#6C757D] mb-1">Basic Information</h3>
+                                        <p className="text-[#6C757D]/60 text-sm">Set up your exam details</p>
                                     </div>
-                                </div>
 
-                                <div>
-                                    <label className="block text-sm font-semibold text-slate-700 mb-3">
-                                        Programming Language
-                                    </label>
-                                    <div className="relative">
-                                        <select
-                                            value={language}
-                                            onChange={(e) => setLanguage(e.target.value)}
-                                            className="w-full px-4 py-4 bg-white/80 border border-slate-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-emerald-200/50 focus:border-emerald-400 transition-all duration-200 text-slate-800 appearance-none cursor-pointer"
-                                            disabled={isLoading}
-                                        >
-                                            {languageOptions.map((lang) => (
-                                                <option key={lang.value} value={lang.value}>
-                                                    {lang.icon} {lang.label}
-                                                </option>
-                                            ))}
-                                        </select>
-                                        <div className="absolute inset-y-0 right-0 flex items-center pr-4 pointer-events-none">
-                                            <svg className="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                                            </svg>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        <div>
+                                            <label className="block text-sm font-medium text-[#6C757D] mb-2">
+                                                Exam Title *
+                                            </label>
+                                            <input
+                                                type="text"
+                                                value={title}
+                                                onChange={(e) => setTitle(e.target.value)}
+                                                placeholder="e.g., Python Programming Assessment"
+                                                className="w-full px-4 py-3 bg-white border border-[#E9ECEF] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#87CEEB]/20 focus:border-[#87CEEB] transition-all text-[#6C757D] placeholder-[#6C757D]/40"
+                                                disabled={isLoading}
+                                            />
                                         </div>
-                                    </div>
-                                    {selectedLanguage && (
-                                        <div className="mt-3 inline-flex items-center space-x-2 bg-slate-50 rounded-full px-3 py-1">
-                                            <div className={`w-2 h-2 rounded-full bg-gradient-to-r ${selectedLanguage.color}`}></div>
-                                            <span className="text-sm text-slate-600 font-medium">
-                                                {selectedLanguage.label}
-                                            </span>
-                                        </div>
-                                    )}
-                                </div>
 
-                                <div>
-                                    <label className="block text-sm font-semibold text-slate-700 mb-3">
-                                        Duration (minutes)
-                                    </label>
-                                    <div className="relative">
-                                        <input
-                                            type="number"
-                                            min={1}
-                                            max={300}
-                                            value={duration}
-                                            onChange={(e) => setDuration(Number(e.target.value))}
-                                            className="w-full px-4 py-4 bg-white/80 border border-slate-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-emerald-200/50 focus:border-emerald-400 transition-all duration-200 text-slate-800"
-                                            disabled={isLoading}
-                                        />
-                                        <div className="absolute inset-y-0 right-0 flex items-center pr-4">
-                                            <svg className="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                            </svg>
+                                        <div>
+                                            <label className="block text-sm font-medium text-[#6C757D] mb-2">
+                                                Programming Language
+                                            </label>
+                                            <select
+                                                value={language}
+                                                onChange={(e) => setLanguage(e.target.value)}
+                                                className="w-full px-4 py-3 bg-white border border-[#E9ECEF] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#87CEEB]/20 focus:border-[#87CEEB] transition-all text-[#6C757D] appearance-none"
+                                                disabled={isLoading}
+                                            >
+                                                {languageOptions.map((lang) => (
+                                                    <option key={lang.value} value={lang.value}>
+                                                        {lang.icon} {lang.label}
+                                                    </option>
+                                                ))}
+                                            </select>
                                         </div>
-                                    </div>
-                                </div>
 
-                                <div>
-                                    <label className="block text-sm font-semibold text-slate-700 mb-3">
-                                        Exam Proctoring
-                                    </label>
-                                    <div className="relative">
-                                        <div className="flex items-center space-x-3 bg-white/80 border border-slate-200 rounded-xl p-4">
-                                            <div className="flex items-center">
-                                                <input
-                                                    type="checkbox"
-                                                    id="proctoring-toggle"
-                                                    checked={isExamProctored}
-                                                    onChange={(e) => setIsExamProctored(e.target.checked)}
-                                                    className="sr-only"
-                                                    disabled={isLoading}
-                                                />
-                                                <label
-                                                    htmlFor="proctoring-toggle"
-                                                    className={`relative inline-flex cursor-pointer items-center ${isLoading ? 'cursor-not-allowed opacity-50' : ''
-                                                        }`}
-                                                >
-                                                    <div
-                                                        className={`h-6 w-11 rounded-full transition-colors duration-200 ${isExamProctored
-                                                            ? 'bg-emerald-500'
-                                                            : 'bg-slate-300'
-                                                            }`}
-                                                    >
-                                                        <div
-                                                            className={`absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white shadow-sm transition-transform duration-200 ${isExamProctored ? 'translate-x-5' : 'translate-x-0'
-                                                                }`}
+                                        <div>
+                                            <label className="block text-sm font-medium text-[#6C757D] mb-2">
+                                                Duration (minutes)
+                                            </label>
+                                            <input
+                                                type="number"
+                                                min={1}
+                                                max={300}
+                                                value={duration}
+                                                onChange={(e) => setDuration(Number(e.target.value))}
+                                                className="w-full px-4 py-3 bg-white border border-[#E9ECEF] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#87CEEB]/20 focus:border-[#87CEEB] transition-all text-[#6C757D]"
+                                                disabled={isLoading}
+                                            />
+                                        </div>
+
+                                        <div>
+                                            <label className="block text-sm font-medium text-[#6C757D] mb-2">
+                                                Exam Proctoring
+                                            </label>
+                                            <div className="bg-white border border-[#E9ECEF] rounded-lg p-3">
+                                                <div className="flex items-center justify-between">
+                                                    <span className="text-sm font-medium text-[#6C757D]">
+                                                        {isExamProctored ? 'Proctored' : 'Non-Proctored'}
+                                                    </span>
+                                                    <div className="flex items-center">
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={isExamProctored}
+                                                            onChange={(e) => setIsExamProctored(e.target.checked)}
+                                                            className="sr-only"
                                                         />
+                                                        <div
+                                                            onClick={() => setIsExamProctored(!isExamProctored)}
+                                                            className={`w-10 h-6 rounded-full cursor-pointer transition-all duration-200 ${isExamProctored ? 'bg-[#87CEEB]' : 'bg-[#E9ECEF]'
+                                                                }`}
+                                                        >
+                                                            <div className={`w-4 h-4 bg-white rounded-full shadow-sm transition-transform duration-200 mt-1 ${isExamProctored ? 'translate-x-5' : 'translate-x-1'
+                                                                }`}></div>
+                                                        </div>
                                                     </div>
-                                                </label>
-                                            </div>
-                                            <div className="flex-1">
-                                                <span className="text-sm font-medium text-slate-700">
-                                                    {isExamProctored ? 'Proctored Exam' : 'Non-Proctored Exam'}
-                                                </span>
-                                                <p className="text-xs text-slate-500 mt-0.5">
-                                                    {isExamProctored
-                                                        ? 'Students will be monitored during the exam'
-                                                        : 'Students can take the exam without monitoring'
-                                                    }
-                                                </p>
-                                            </div>
-                                            <div className="flex items-center">
-                                                <svg
-                                                    className={`w-5 h-5 ${isExamProctored ? 'text-emerald-500' : 'text-slate-400'}`}
-                                                    fill="none"
-                                                    stroke="currentColor"
-                                                    viewBox="0 0 24 24"
-                                                >
-                                                    <path
-                                                        strokeLinecap="round"
-                                                        strokeLinejoin="round"
-                                                        strokeWidth={2}
-                                                        d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                                                    />
-                                                    <path
-                                                        strokeLinecap="round"
-                                                        strokeLinejoin="round"
-                                                        strokeWidth={2}
-                                                        d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
-                                                    />
-                                                </svg>
+                                                </div>
                                             </div>
                                         </div>
+
+                                        <div>
+                                            <label className="block text-sm font-medium text-[#6C757D] mb-2">
+                                                Start Time
+                                            </label>
+                                            <input
+                                                type="datetime-local"
+                                                value={startTime}
+                                                onChange={(e) => setStartTime(e.target.value)}
+                                                className="w-full px-4 py-3 bg-white border border-[#E9ECEF] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#87CEEB]/20 focus:border-[#87CEEB] transition-all text-[#6C757D]"
+                                                disabled={isLoading}
+                                            />
+                                        </div>
+
+                                        <div>
+                                            <label className="block text-sm font-medium text-[#6C757D] mb-2">
+                                                End Time
+                                            </label>
+                                            <input
+                                                type="datetime-local"
+                                                value={endTime}
+                                                onChange={(e) => setEndTime(e.target.value)}
+                                                className="w-full px-4 py-3 bg-white border border-[#E9ECEF] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#87CEEB]/20 focus:border-[#87CEEB] transition-all text-[#6C757D]"
+                                                disabled={isLoading}
+                                            />
+                                        </div>
                                     </div>
-                                </div>
 
-                                <div>
-                                    <label className="block text-sm font-semibold text-slate-700 mb-3">
-                                        Start Time
-                                    </label>
-                                    <input
-                                        type="datetime-local"
-                                        value={startTime}
-                                        onChange={(e) => setStartTime(e.target.value)}
-                                        className="w-full px-4 py-4 bg-white/80 border border-slate-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-emerald-200/50 focus:border-emerald-400 text-slate-800"
-                                        disabled={isLoading}
-                                    />
-                                </div>
-
-                                <div>
-                                    <label className="block text-sm font-semibold text-slate-700 mb-3">
-                                        End Time
-                                    </label>
-                                    <input
-                                        type="datetime-local"
-                                        value={endTime}
-                                        onChange={(e) => setEndTime(e.target.value)}
-                                        className="w-full px-4 py-4 bg-white/80 border border-slate-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-emerald-200/50 focus:border-emerald-400 text-slate-800"
-                                        disabled={isLoading}
-                                    />
-                                </div>
-
-                                <div className="lg:col-span-3">
-                                    <label className="block text-sm font-semibold text-slate-700 mb-3">
-                                        Allowed Users (comma-separated emails)
-                                    </label>
-                                    <textarea
-                                        placeholder="Leave empty to allow all users"
-                                        value={allowedUsersRaw}
-                                        onChange={(e) => setAllowedUsersRaw(e.target.value)}
-                                        className="w-full px-4 py-4 bg-white/80 border border-slate-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-emerald-200/50 focus:border-emerald-400 text-slate-800 resize-none"
-                                        rows={3}
-                                        disabled={isLoading}
-                                    />
-                                </div>
-                            </div>
-
-                            {/* Questions Section */}
-                            <div className="mb-8">
-                                <div className="flex items-center justify-between mb-6">
                                     <div>
-                                        <h4 className="text-xl font-semibold text-slate-800 mb-1">Exam Questions</h4>
-                                        <p className="text-sm text-slate-600">Add questions manually or import from your question bank.</p>
+                                        <label className="block text-sm font-medium text-[#6C757D] mb-2">
+                                            Allowed Users (optional)
+                                        </label>
+                                        <textarea
+                                            placeholder="Enter comma-separated emails or leave empty for all users"
+                                            value={allowedUsersRaw}
+                                            onChange={(e) => setAllowedUsersRaw(e.target.value)}
+                                            className="w-full px-4 py-3 bg-white border border-[#E9ECEF] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#87CEEB]/20 focus:border-[#87CEEB] transition-all text-[#6C757D] placeholder-[#6C757D]/40 resize-none"
+                                            rows={3}
+                                            disabled={isLoading}
+                                        />
                                     </div>
-                                    <div className="flex items-center space-x-3">
+
+                                    <div className="flex justify-end pt-4">
                                         <button
-                                            type="button"
+                                            onClick={() => setCurrentStep(2)}
+                                            disabled={!title.trim()}
+                                            className="bg-[#87CEEB] hover:bg-[#ADD8E6] disabled:bg-[#E9ECEF] disabled:text-[#6C757D]/40 text-white px-6 py-3 rounded-lg transition-all duration-200 font-medium"
+                                        >
+                                            Next: Questions
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+
+                            {currentStep === 2 && (
+                                <div className="space-y-6">
+                                    <div className="text-center mb-6">
+                                        <div className="w-12 h-12 bg-[#E6F3FF] rounded-xl mx-auto mb-3 flex items-center justify-center">
+                                            <svg className="w-6 h-6 text-[#87CEEB]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                            </svg>
+                                        </div>
+                                        <h3 className="text-xl font-medium text-[#6C757D] mb-1">Exam Questions</h3>
+                                        <p className="text-[#6C757D]/60 text-sm">Add questions manually or import from your question bank</p>
+                                    </div>
+
+                                    {/* Question management buttons */}
+                                    <div className="flex flex-wrap gap-3 justify-center">
+                                        <button
                                             onClick={loadQuestionBank}
                                             disabled={isLoadingQuestionBank}
-                                            className="inline-flex items-center space-x-2 bg-purple-50 hover:bg-purple-100 border border-purple-200 text-purple-700 px-4 py-2 rounded-lg transition-colors duration-200 text-sm font-medium"
+                                            className="inline-flex items-center space-x-2 bg-[#E6F3FF] hover:bg-[#CCE7FF] text-[#6C757D] px-4 py-2 rounded-lg transition-all duration-200 text-sm font-medium"
                                         >
-                                            {isLoadingQuestionBank ? (
-                                                <svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
-                                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                                </svg>
-                                            ) : (
-                                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-                                                </svg>
-                                            )}
+                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                                            </svg>
                                             <span>Question Bank</span>
                                         </button>
                                         <button
-                                            type="button"
                                             onClick={addQuestion}
-                                            className="inline-flex items-center space-x-2 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-700 px-4 py-2 rounded-lg transition-colors duration-200 text-sm font-medium"
-                                            disabled={isLoading}
+                                            className="inline-flex items-center space-x-2 bg-[#87CEEB] hover:bg-[#ADD8E6] text-white px-4 py-2 rounded-lg transition-all duration-200 text-sm font-medium"
                                         >
                                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
                                             </svg>
                                             <span>Add Question</span>
                                         </button>
-                                        <button
-                                            type="button"
-                                            onClick={async () => {
-                                                const validQuestions = questions.filter((q) => q.question.trim());
-                                                for (const q of validQuestions) {
-                                                    await saveToQuestionBank(q);
-                                                }
-                                                toast.success("All questions uploaded to the bank!");
-                                            }}
-                                            className="inline-flex items-center space-x-2 bg-blue-50 hover:bg-blue-100 border border-blue-200 text-blue-700 px-4 py-2 rounded-lg transition-colors duration-200 text-sm font-medium"
-                                        >
+                                        <label className="inline-flex items-center space-x-2 bg-[#B0E0E6] hover:bg-[#ADD8E6] text-white px-4 py-2 rounded-lg cursor-pointer transition-all duration-200 text-sm font-medium">
                                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
                                             </svg>
-                                            <span>Upload All</span>
-                                        </button>
-
-                                    </div>
-                                </div>
-
-                                <div className="space-y-4">
-                                    <button
-                                        onClick={() => setPreviewMode(prev => !prev)}
-                                        className="ml-auto mb-4 px-4 py-2 rounded-lg bg-blue-100 text-blue-800 font-semibold text-sm"
-                                    >
-                                        {previewMode ? "Switch to Edit Mode" : "Preview Questions"}
-                                    </button>
-
-                                    {/* Excel Upload Section */}
-                                    <div className="mb-8 p-6 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl border border-blue-200">
-                                        <div className="flex items-center justify-between mb-4">
-                                            <div>
-                                                <h4 className="text-lg font-semibold text-slate-800 mb-1">
-                                                    📊 Generate from Excel
-                                                </h4>
-                                                <p className="text-sm text-slate-600">
-                                                    Upload an Excel file with questions (columns: Question, Answer, Difficulty, Marks)
-                                                </p>
-                                            </div>
-                                            <label className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg cursor-pointer transition-colors duration-200 flex items-center space-x-2">
-                                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                                                </svg>
-                                                <span>Upload Excel</span>
-                                                <input
-                                                    type="file"
-                                                    accept=".xlsx,.xls"
-                                                    onChange={handleExcelUpload}
-                                                    className="hidden"
-                                                    disabled={isLoading}
-                                                />
-                                            </label>
-                                        </div>
-
-                                        {uploadedQuestions.length > 0 && (
-                                            <div className="mt-4 p-4 bg-white rounded-lg border border-blue-200">
-                                                <div className="flex items-center justify-between mb-2">
-                                                    <span className="text-sm font-medium text-slate-700">
-                                                        📝 {uploadedQuestions.length} questions loaded
-                                                    </span>
-                                                    <div className="flex space-x-4 text-xs">
-                                                        <span className="text-green-600">
-                                                            Beginner: {uploadedQuestions.filter(q => q.difficulty === 'beginner').length}
-                                                        </span>
-                                                        <span className="text-yellow-600">
-                                                            Intermediate: {uploadedQuestions.filter(q => q.difficulty === 'intermediate').length}
-                                                        </span>
-                                                        <span className="text-red-600">
-                                                            Hard: {uploadedQuestions.filter(q => q.difficulty === 'hard').length}
-                                                        </span>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        )}
+                                            <span>Import Excel</span>
+                                            <input
+                                                type="file"
+                                                accept=".xlsx,.xls"
+                                                onChange={handleExcelUpload}
+                                                className="hidden"
+                                                disabled={isLoading}
+                                            />
+                                        </label>
                                     </div>
 
-                                    {questions.map((q, i) => (
-                                        <div key={q.id} className="bg-slate-50/80 border border-slate-200 rounded-xl p-6">
-                                            <div className="flex items-center justify-between mb-4">
-                                                <div className="flex items-center space-x-3">
-                                                    <div className="w-6 h-6 bg-emerald-500 text-white rounded-full flex items-center justify-center text-xs font-bold">
-                                                        {i + 1}
+                                    {/* Questions display */}
+                                    <div className="space-y-4">
+                                        {questions.map((q, i) => (
+                                            <div key={q.id} className="bg-[#F8F9FA] border border-[#E9ECEF] rounded-xl p-4">
+                                                <div className="flex items-center justify-between mb-3">
+                                                    <div className="flex items-center space-x-3">
+                                                        <div className="w-6 h-6 bg-[#87CEEB] text-white rounded-full flex items-center justify-center text-xs font-medium">
+                                                            {i + 1}
+                                                        </div>
+                                                        <span className="text-sm font-medium text-[#6C757D]">Question {i + 1}</span>
                                                     </div>
-                                                    <span className="text-sm font-semibold text-slate-700">Question {i + 1}</span>
-                                                    {q.difficulty && (
-                                                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${q.difficulty === 'beginner' ? 'bg-green-100 text-green-700' :
-                                                            q.difficulty === 'intermediate' ? 'bg-yellow-100 text-yellow-700' :
-                                                                'bg-red-100 text-red-700'
-                                                            }`}>
-                                                            {q.difficulty}
-                                                        </span>
-                                                    )}
-                                                    {q.marks && (
-                                                        <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-medium">
-                                                            {q.marks} marks
-                                                        </span>
-                                                    )}
-                                                </div>
-                                                <div className="flex items-center space-x-2">
-                                                    {q.question.trim() && !useExcelQuestions && (
+                                                    {questions.length > 1 && (
                                                         <button
-                                                            type="button"
-                                                            onClick={() => saveToQuestionBank(q)}
-                                                            className="text-purple-500 hover:text-purple-700 hover:bg-purple-50 p-2 rounded-lg transition-colors duration-200"
-                                                            title="Save to Question Bank"
-                                                            disabled={isLoading}
-                                                        >
-                                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
-                                                            </svg>
-                                                        </button>
-                                                    )}
-                                                    {questions.length > 1 && !useExcelQuestions && (
-                                                        <button
-                                                            type="button"
                                                             onClick={() => removeQuestion(i)}
-                                                            className="text-red-500 hover:text-red-700 hover:bg-red-50 p-2 rounded-lg transition-colors duration-200"
-                                                            disabled={isLoading}
+                                                            className="text-[#6C757D]/40 hover:text-red-500 p-1 rounded transition-colors"
                                                         >
                                                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                                                             </svg>
                                                         </button>
                                                     )}
                                                 </div>
-                                            </div>
-                                            {/* Rest of the question display remains the same */}
-                                            <div className="space-y-4">
-                                                <div>
-                                                    <label className="block text-xs font-medium text-slate-600 mb-2">
-                                                        Question Description *
-                                                    </label>
-                                                    {/* <textarea
-                                                        value={q.question}
-                                                        onChange={(e) => !useExcelQuestions && updateQuestion(i, "question", e.target.value)}
-                                                        placeholder="Enter your question here..."
-                                                        rows={4}
-                                                        className="w-full px-4 py-3 bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-200 focus:border-emerald-400 transition-all duration-200 text-slate-800 placeholder-slate-400 resize-none"
-                                                        disabled={isLoading || useExcelQuestions}
-                                                        readOnly={useExcelQuestions}
-                                                    /> */}
-
-                                                    {previewMode ? (
-                                                        <p className="text-slate-700 whitespace-pre-wrap">{q.question}</p>
-                                                    ) : (
+                                                <div className="space-y-3">
+                                                    <div>
                                                         <textarea
                                                             value={q.question}
-                                                            onChange={(e) => !useExcelQuestions && updateQuestion(i, "question", e.target.value)}
+                                                            onChange={(e) => updateQuestion(i, "question", e.target.value)}
                                                             placeholder="Enter your question here..."
-                                                            rows={4}
-                                                            className="w-full px-4 py-3 bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-200 focus:border-emerald-400 transition-all duration-200 text-slate-800 placeholder-slate-400 resize-none"
-                                                            disabled={isLoading || useExcelQuestions}
-                                                            readOnly={useExcelQuestions}
+                                                            rows={3}
+                                                            className="w-full px-3 py-2 bg-white border border-[#E9ECEF] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#87CEEB]/20 focus:border-[#87CEEB] transition-all text-[#6C757D] placeholder-[#6C757D]/40 resize-none"
                                                         />
-                                                    )}
-
-                                                </div>
-                                                <div>
-                                                    <label className="block text-xs font-medium text-slate-600 mb-2">
-                                                        Expected Output {useExcelQuestions ? '' : '(Optional)'}
-                                                    </label>
-                                                    <textarea
-                                                        value={q.expectedOutput}
-                                                        onChange={(e) => !useExcelQuestions && updateQuestion(i, "expectedOutput", e.target.value)}
-                                                        placeholder="Describe the expected output..."
-                                                        rows={2}
-                                                        className="w-full px-4 py-3 bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-200 focus:border-emerald-400 transition-all duration-200 text-slate-800 placeholder-slate-400 resize-none"
-                                                        disabled={isLoading || useExcelQuestions}
-                                                        readOnly={useExcelQuestions}
-                                                    />
+                                                    </div>
+                                                    <div>
+                                                        <textarea
+                                                            value={q.expectedOutput}
+                                                            onChange={(e) => updateQuestion(i, "expectedOutput", e.target.value)}
+                                                            placeholder="Expected output (optional)..."
+                                                            rows={2}
+                                                            className="w-full px-3 py-2 bg-white border border-[#E9ECEF] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#87CEEB]/20 focus:border-[#87CEEB] transition-all text-[#6C757D] placeholder-[#6C757D]/40 resize-none"
+                                                        />
+                                                    </div>
                                                 </div>
                                             </div>
-                                        </div>
-                                    ))}
+                                        ))}
+                                    </div>
+
+                                    <div className="flex justify-between pt-4">
+                                        <button
+                                            onClick={() => setCurrentStep(1)}
+                                            className="text-[#6C757D] hover:text-[#87CEEB] px-6 py-3 rounded-lg transition-all duration-200 font-medium"
+                                        >
+                                            Back
+                                        </button>
+                                        <button
+                                            onClick={() => setCurrentStep(3)}
+                                            disabled={!questions.some(q => q.question.trim())}
+                                            className="bg-[#87CEEB] hover:bg-[#ADD8E6] disabled:bg-[#E9ECEF] disabled:text-[#6C757D]/40 text-white px-6 py-3 rounded-lg transition-all duration-200 font-medium"
+                                        >
+                                            Next: Review
+                                        </button>
+                                    </div>
                                 </div>
-                            </div>
+                            )}
 
-                            {/* Action Buttons */}
-                            <div className="flex flex-col sm:flex-row gap-4">
-                                <button
-                                    onClick={handleCreateExam}
-                                    disabled={isLoading || !isFormValid}
-                                    className="flex-1 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 disabled:from-slate-400 disabled:to-slate-500 text-white font-semibold py-4 px-6 rounded-xl transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98] shadow-lg hover:shadow-xl focus:outline-none focus:ring-4 focus:ring-emerald-200/50 flex items-center justify-center space-x-3"
-                                >
-                                    {isLoading ? (
-                                        <>
-                                            <svg className="animate-spin w-5 h-5" fill="none" viewBox="0 0 24 24">
-                                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            {currentStep === 3 && (
+                                <div className="space-y-6">
+                                    <div className="text-center mb-6">
+                                        <div className="w-12 h-12 bg-[#E6F3FF] rounded-xl mx-auto mb-3 flex items-center justify-center">
+                                            <svg className="w-6 h-6 text-[#87CEEB]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                                             </svg>
-                                            <span>Creating...</span>
-                                        </>
-                                    ) : showSuccess ? (
-                                        <>
-                                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                                            </svg>
-                                            <span>Created!</span>
-                                        </>
-                                    ) : (
-                                        <>
-                                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                                            </svg>
-                                            <span>Create Exam</span>
-                                        </>
-                                    )}
-                                </button>
+                                        </div>
+                                        <h3 className="text-xl font-medium text-[#6C757D] mb-1">Review & Create</h3>
+                                        <p className="text-[#6C757D]/60 text-sm">Review your exam details before creating</p>
+                                    </div>
 
-                                <button
-                                    onClick={handleViewSubmissions}
-                                    className="sm:flex-none bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 font-semibold py-4 px-6 rounded-xl transition-all duration-200 shadow-sm hover:shadow-md focus:outline-none focus:ring-4 focus:ring-slate-200/50 flex items-center justify-center space-x-3"
-                                >
-                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
-                                    </svg>
-                                    <span>View Submissions</span>
-                                </button>
+                                    {/* Review content */}
+                                    <div className="bg-[#F8F9FA] rounded-xl p-6 space-y-4">
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            <div>
+                                                <span className="text-sm font-medium text-[#6C757D]">Title:</span>
+                                                <p className="text-[#6C757D]/70">{title}</p>
+                                            </div>
+                                            <div>
+                                                <span className="text-sm font-medium text-[#6C757D]">Language:</span>
+                                                <p className="text-[#6C757D]/70">{languageOptions.find(l => l.value === language)?.label}</p>
+                                            </div>
+                                            <div>
+                                                <span className="text-sm font-medium text-[#6C757D]">Duration:</span>
+                                                <p className="text-[#6C757D]/70">{duration} minutes</p>
+                                            </div>
+                                            <div>
+                                                <span className="text-sm font-medium text-[#6C757D]">Questions:</span>
+                                                <p className="text-[#6C757D]/70">{questions.filter(q => q.question.trim()).length} questions</p>
+                                            </div>
+                                        </div>
+                                    </div>
 
-                                <button
-                                    onClick={() => router.push("/dashboard/view-exams")}
-                                    className="sm:flex-none bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 font-semibold py-4 px-6 rounded-xl transition-all duration-200 shadow-sm hover:shadow-md focus:outline-none focus:ring-4 focus:ring-slate-200/50 flex items-center justify-center space-x-3"
-                                >
-                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
-                                    </svg>
-                                    <span>View Exams</span>
-                                </button>
-
-                            </div>
+                                    <div className="flex justify-between pt-4">
+                                        <button
+                                            onClick={() => setCurrentStep(2)}
+                                            className="text-[#6C757D] hover:text-[#87CEEB] px-6 py-3 rounded-lg transition-all duration-200 font-medium"
+                                        >
+                                            Back
+                                        </button>
+                                        <button
+                                            onClick={handleCreateExam}
+                                            disabled={isLoading || !isFormValid}
+                                            className="bg-[#87CEEB] hover:bg-[#ADD8E6] disabled:bg-[#E9ECEF] disabled:text-[#6C757D]/40 text-white px-8 py-3 rounded-lg transition-all duration-200 font-medium"
+                                        >
+                                            {isLoading ? 'Creating...' : 'Create Exam'}
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
                         </div>
-                    </div>
-                </main>
+                    </main>
+                </div>
 
                 {/* Success Modal */}
                 {showSuccess && (
-                    <div className="fixed inset-0 bg-black/20 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-                        <div className="bg-white rounded-3xl p-8 shadow-2xl transform animate-bounce max-w-sm w-full">
+                    <div className="fixed inset-0 bg-black/10 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                        <div className="bg-white rounded-2xl p-8 shadow-xl max-w-sm w-full">
                             <div className="text-center">
-                                <div className="w-16 h-16 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-full mx-auto mb-4 flex items-center justify-center shadow-lg">
+                                <div className="w-16 h-16 bg-[#87CEEB] rounded-full mx-auto mb-4 flex items-center justify-center">
                                     <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                                     </svg>
                                 </div>
-                                <h3 className="text-xl font-bold text-slate-800 mb-2">Success!</h3>
-                                <p className="text-slate-600">Your exam has been created successfully</p>
+                                <h3 className="text-xl font-medium text-[#6C757D] mb-2">Success!</h3>
+                                <p className="text-[#6C757D]/60 text-sm">Your exam has been created successfully</p>
                             </div>
                         </div>
                     </div>
@@ -887,7 +733,7 @@ export default function ExaminerDashboard() {
                 {/* Error Alert (hidden by default) */}
                 <div
                     id="error-alert"
-                    className="fixed top-4 right-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg shadow-lg z-50 opacity-0 translate-y-2 transition-all duration-300"
+                    className="fixed top-4 right-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl shadow-lg z-50 opacity-0 translate-y-2 transition-all duration-300"
                 >
                     <div className="flex items-center space-x-2">
                         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -900,7 +746,7 @@ export default function ExaminerDashboard() {
                 {/* Success Alert for Question Bank */}
                 <div
                     id="success-alert"
-                    className="fixed top-4 right-4 bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg shadow-lg z-50 opacity-0 translate-y-2 transition-all duration-300"
+                    className="fixed top-4 right-4 bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-xl shadow-lg z-50 opacity-0 translate-y-2 transition-all duration-300"
                 >
                     <div className="flex items-center space-x-2">
                         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -912,15 +758,15 @@ export default function ExaminerDashboard() {
 
                 {/* Question Configuration Modal */}
                 {showQuestionConfig && (
-                    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-                        <div className="bg-white rounded-2xl p-6 shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+                    <div className="fixed inset-0 bg-black/10 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                        <div className="bg-white rounded-2xl p-6 shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
                             <div className="flex items-center justify-between mb-6">
-                                <h3 className="text-xl font-bold text-slate-800">Configure Question Paper</h3>
+                                <h3 className="text-xl font-medium text-[#6C757D]">Configure Question Paper</h3>
                                 <button
                                     onClick={() => setShowQuestionConfig(false)}
-                                    className="text-slate-400 hover:text-slate-600"
+                                    className="text-[#6C757D]/40 hover:text-[#6C757D] p-1 rounded transition-colors"
                                 >
-                                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                                     </svg>
                                 </button>
@@ -928,11 +774,11 @@ export default function ExaminerDashboard() {
 
                             <div className="space-y-6">
                                 {/* Beginner Questions */}
-                                <div className="p-4 bg-green-50 rounded-lg border border-green-200">
-                                    <h4 className="font-semibold text-green-800 mb-3">🟢 Beginner Questions</h4>
+                                <div className="p-4 bg-green-50 rounded-xl border border-green-200">
+                                    <h4 className="font-medium text-green-800 mb-3">🟢 Beginner Questions</h4>
                                     <div className="grid grid-cols-2 gap-4">
                                         <div>
-                                            <label className="block text-sm font-medium text-slate-700 mb-1">Count</label>
+                                            <label className="block text-sm font-medium text-[#6C757D] mb-1">Count</label>
                                             <input
                                                 type="number"
                                                 min="0"
@@ -942,11 +788,11 @@ export default function ExaminerDashboard() {
                                                     ...prev,
                                                     beginner: { ...prev.beginner, count: parseInt(e.target.value) || 0 }
                                                 }))}
-                                                className="w-full px-3 py-2 border border-green-300 rounded-lg focus:ring-2 focus:ring-green-200"
+                                                className="w-full px-3 py-2 border border-green-300 rounded-lg focus:ring-2 focus:ring-green-200 focus:border-green-400"
                                             />
                                         </div>
                                         <div>
-                                            <label className="block text-sm font-medium text-slate-700 mb-1">Marks each</label>
+                                            <label className="block text-sm font-medium text-[#6C757D] mb-1">Marks each</label>
                                             <input
                                                 type="number"
                                                 min="1"
@@ -955,7 +801,7 @@ export default function ExaminerDashboard() {
                                                     ...prev,
                                                     beginner: { ...prev.beginner, marks: parseInt(e.target.value) || 1 }
                                                 }))}
-                                                className="w-full px-3 py-2 border border-green-300 rounded-lg focus:ring-2 focus:ring-green-200"
+                                                className="w-full px-3 py-2 border border-green-300 rounded-lg focus:ring-2 focus:ring-green-200 focus:border-green-400"
                                             />
                                         </div>
                                     </div>
@@ -965,11 +811,11 @@ export default function ExaminerDashboard() {
                                 </div>
 
                                 {/* Intermediate Questions */}
-                                <div className="p-4 bg-yellow-50 rounded-lg border border-yellow-200">
-                                    <h4 className="font-semibold text-yellow-800 mb-3">🟡 Intermediate Questions</h4>
+                                <div className="p-4 bg-yellow-50 rounded-xl border border-yellow-200">
+                                    <h4 className="font-medium text-yellow-800 mb-3">🟡 Intermediate Questions</h4>
                                     <div className="grid grid-cols-2 gap-4">
                                         <div>
-                                            <label className="block text-sm font-medium text-slate-700 mb-1">Count</label>
+                                            <label className="block text-sm font-medium text-[#6C757D] mb-1">Count</label>
                                             <input
                                                 type="number"
                                                 min="0"
@@ -979,11 +825,11 @@ export default function ExaminerDashboard() {
                                                     ...prev,
                                                     intermediate: { ...prev.intermediate, count: parseInt(e.target.value) || 0 }
                                                 }))}
-                                                className="w-full px-3 py-2 border border-yellow-300 rounded-lg focus:ring-2 focus:ring-yellow-200"
+                                                className="w-full px-3 py-2 border border-yellow-300 rounded-lg focus:ring-2 focus:ring-yellow-200 focus:border-yellow-400"
                                             />
                                         </div>
                                         <div>
-                                            <label className="block text-sm font-medium text-slate-700 mb-1">Marks each</label>
+                                            <label className="block text-sm font-medium text-[#6C757D] mb-1">Marks each</label>
                                             <input
                                                 type="number"
                                                 min="1"
@@ -992,7 +838,7 @@ export default function ExaminerDashboard() {
                                                     ...prev,
                                                     intermediate: { ...prev.intermediate, marks: parseInt(e.target.value) || 1 }
                                                 }))}
-                                                className="w-full px-3 py-2 border border-yellow-300 rounded-lg focus:ring-2 focus:ring-yellow-200"
+                                                className="w-full px-3 py-2 border border-yellow-300 rounded-lg focus:ring-2 focus:ring-yellow-200 focus:border-yellow-400"
                                             />
                                         </div>
                                     </div>
@@ -1002,11 +848,11 @@ export default function ExaminerDashboard() {
                                 </div>
 
                                 {/* Hard Questions */}
-                                <div className="p-4 bg-red-50 rounded-lg border border-red-200">
-                                    <h4 className="font-semibold text-red-800 mb-3">🔴 Hard Questions</h4>
+                                <div className="p-4 bg-red-50 rounded-xl border border-red-200">
+                                    <h4 className="font-medium text-red-800 mb-3">🔴 Hard Questions</h4>
                                     <div className="grid grid-cols-2 gap-4">
                                         <div>
-                                            <label className="block text-sm font-medium text-slate-700 mb-1">Count</label>
+                                            <label className="block text-sm font-medium text-[#6C757D] mb-1">Count</label>
                                             <input
                                                 type="number"
                                                 min="0"
@@ -1016,11 +862,11 @@ export default function ExaminerDashboard() {
                                                     ...prev,
                                                     hard: { ...prev.hard, count: parseInt(e.target.value) || 0 }
                                                 }))}
-                                                className="w-full px-3 py-2 border border-red-300 rounded-lg focus:ring-2 focus:ring-red-200"
+                                                className="w-full px-3 py-2 border border-red-300 rounded-lg focus:ring-2 focus:ring-red-200 focus:border-red-400"
                                             />
                                         </div>
                                         <div>
-                                            <label className="block text-sm font-medium text-slate-700 mb-1">Marks each</label>
+                                            <label className="block text-sm font-medium text-[#6C757D] mb-1">Marks each</label>
                                             <input
                                                 type="number"
                                                 min="1"
@@ -1029,7 +875,7 @@ export default function ExaminerDashboard() {
                                                     ...prev,
                                                     hard: { ...prev.hard, marks: parseInt(e.target.value) || 1 }
                                                 }))}
-                                                className="w-full px-3 py-2 border border-red-300 rounded-lg focus:ring-2 focus:ring-red-200"
+                                                className="w-full px-3 py-2 border border-red-300 rounded-lg focus:ring-2 focus:ring-red-200 focus:border-red-400"
                                             />
                                         </div>
                                     </div>
@@ -1039,18 +885,18 @@ export default function ExaminerDashboard() {
                                 </div>
 
                                 {/* Total Summary */}
-                                <div className="p-4 bg-slate-50 rounded-lg border border-slate-200">
-                                    <h4 className="font-semibold text-slate-800 mb-2">📊 Summary</h4>
+                                <div className="p-4 bg-[#F8F9FA] rounded-xl border border-[#E9ECEF]">
+                                    <h4 className="font-medium text-[#6C757D] mb-2">📊 Summary</h4>
                                     <div className="grid grid-cols-2 gap-4 text-sm">
                                         <div>
-                                            <span className="text-slate-600">Total Questions: </span>
-                                            <span className="font-semibold">
+                                            <span className="text-[#6C757D]/60">Total Questions: </span>
+                                            <span className="font-medium text-[#6C757D]">
                                                 {questionConfig.beginner.count + questionConfig.intermediate.count + questionConfig.hard.count}
                                             </span>
                                         </div>
                                         <div>
-                                            <span className="text-slate-600">Total Marks: </span>
-                                            <span className="font-semibold">
+                                            <span className="text-[#6C757D]/60">Total Marks: </span>
+                                            <span className="font-medium text-[#6C757D]">
                                                 {(questionConfig.beginner.count * questionConfig.beginner.marks) +
                                                     (questionConfig.intermediate.count * questionConfig.intermediate.marks) +
                                                     (questionConfig.hard.count * questionConfig.hard.marks)}
@@ -1063,13 +909,13 @@ export default function ExaminerDashboard() {
                             <div className="flex justify-end space-x-3 mt-6">
                                 <button
                                     onClick={() => setShowQuestionConfig(false)}
-                                    className="px-4 py-2 text-slate-600 hover:text-slate-800 transition-colors"
+                                    className="px-4 py-2 text-[#6C757D]/60 hover:text-[#6C757D] transition-colors"
                                 >
                                     Cancel
                                 </button>
                                 <button
                                     onClick={generateQuestionPaper}
-                                    className="bg-emerald-500 hover:bg-emerald-600 text-white px-6 py-2 rounded-lg transition-colors"
+                                    className="bg-[#87CEEB] hover:bg-[#87CEEB]/80 disabled:bg-[#6C757D]/20 disabled:text-[#6C757D]/40 text-white px-6 py-2 rounded-lg transition-colors"
                                     disabled={questionConfig.beginner.count + questionConfig.intermediate.count + questionConfig.hard.count === 0}
                                 >
                                     Generate Question Paper
@@ -1081,39 +927,41 @@ export default function ExaminerDashboard() {
 
                 {/* Question Bank Modal */}
                 {showQuestionBank && (
-                    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-                        <div className="bg-white rounded-2xl p-6 shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+                    <div className="fixed inset-0 bg-black/10 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                        <div className="bg-white rounded-2xl p-6 shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
                             <div className="flex items-center justify-between mb-6">
-                                <h3 className="text-xl font-bold text-slate-800">Question Bank</h3>
+                                <h3 className="text-xl font-medium text-[#6C757D]">Question Bank</h3>
                                 <button
                                     onClick={() => setShowQuestionBank(false)}
-                                    className="text-slate-400 hover:text-slate-600"
+                                    className="text-[#6C757D]/40 hover:text-[#6C757D] p-1 rounded transition-colors"
                                 >
-                                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                                     </svg>
                                 </button>
                             </div>
 
                             {questionBank.length === 0 ? (
-                                <div className="text-center py-8">
-                                    <svg className="w-16 h-16 text-slate-300 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-                                    </svg>
-                                    <p className="text-slate-500">No questions in your bank for {language}</p>
-                                    <p className="text-sm text-slate-400 mt-1">Save questions to build your question bank</p>
+                                <div className="text-center py-12">
+                                    <div className="w-16 h-16 bg-[#F8F9FA] rounded-xl mx-auto mb-4 flex items-center justify-center">
+                                        <svg className="w-8 h-8 text-[#6C757D]/40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                                        </svg>
+                                    </div>
+                                    <p className="text-[#6C757D]/60">No questions in your bank for {language}</p>
+                                    <p className="text-[#6C757D]/40 text-sm mt-1">Save questions to build your question bank</p>
                                 </div>
                             ) : (
                                 <>
                                     <div className="mb-4">
-                                        <p className="text-sm text-slate-600">
+                                        <p className="text-sm text-[#6C757D]/60">
                                             {questionBank.length} questions available • {selectedBankQuestions.length} selected
                                         </p>
                                     </div>
 
                                     <div className="space-y-3 mb-6 max-h-96 overflow-y-auto">
                                         {questionBank.map((q) => (
-                                            <div key={q.id} className="p-4 border border-slate-200 rounded-lg hover:bg-slate-50">
+                                            <div key={q.id} className="p-4 border border-[#E9ECEF] rounded-xl hover:bg-[#F8F9FA] transition-colors">
                                                 <div className="flex items-start space-x-3">
                                                     <input
                                                         type="checkbox"
@@ -1125,7 +973,7 @@ export default function ExaminerDashboard() {
                                                                 setSelectedBankQuestions(selectedBankQuestions.filter(id => id !== q.id));
                                                             }
                                                         }}
-                                                        className="mt-1 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
+                                                        className="mt-1 rounded border-[#E9ECEF] text-[#87CEEB] focus:ring-[#87CEEB] focus:ring-2"
                                                     />
                                                     <div className="flex-1">
                                                         <div className="flex items-center space-x-2 mb-2">
@@ -1135,13 +983,13 @@ export default function ExaminerDashboard() {
                                                                 }`}>
                                                                 {q.difficulty}
                                                             </span>
-                                                            <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-medium">
+                                                            <span className="px-2 py-1 bg-[#87CEEB]/10 text-[#87CEEB] rounded-full text-xs font-medium">
                                                                 {q.marks} marks
                                                             </span>
                                                         </div>
-                                                        <p className="text-sm text-slate-800 mb-1">{q.question}</p>
+                                                        <p className="text-sm text-[#6C757D] mb-1">{q.question}</p>
                                                         {q.expectedOutput && (
-                                                            <p className="text-xs text-slate-500">Expected: {q.expectedOutput}</p>
+                                                            <p className="text-xs text-[#6C757D]/50">Expected: {q.expectedOutput}</p>
                                                         )}
                                                     </div>
                                                 </div>
@@ -1157,7 +1005,7 @@ export default function ExaminerDashboard() {
                                                     selectedBankQuestions.length === questionBank.length ? [] : allIds
                                                 );
                                             }}
-                                            className="text-sm text-slate-600 hover:text-slate-800"
+                                            className="text-sm text-[#6C757D]/60 hover:text-[#6C757D] transition-colors"
                                         >
                                             {selectedBankQuestions.length === questionBank.length ? 'Deselect All' : 'Select All'}
                                         </button>
@@ -1165,14 +1013,14 @@ export default function ExaminerDashboard() {
                                         <div className="flex space-x-3">
                                             <button
                                                 onClick={() => setShowQuestionBank(false)}
-                                                className="px-4 py-2 text-slate-600 hover:text-slate-800 transition-colors"
+                                                className="px-4 py-2 text-[#6C757D]/60 hover:text-[#6C757D] transition-colors"
                                             >
                                                 Cancel
                                             </button>
                                             <button
                                                 onClick={addFromQuestionBank}
                                                 disabled={selectedBankQuestions.length === 0}
-                                                className="bg-emerald-500 hover:bg-emerald-600 disabled:bg-slate-300 text-white px-6 py-2 rounded-lg transition-colors"
+                                                className="bg-[#87CEEB] hover:bg-[#87CEEB]/80 disabled:bg-[#6C757D]/20 disabled:text-[#6C757D]/40 text-white px-6 py-2 rounded-lg transition-colors"
                                             >
                                                 Add Selected ({selectedBankQuestions.length})
                                             </button>

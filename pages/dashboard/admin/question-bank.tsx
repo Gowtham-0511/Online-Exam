@@ -54,7 +54,7 @@ export default function QuestionBankPage() {
         const res = await fetch("/api/questions", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ ...question, createdBy: session?.user?.name }),
+            body: JSON.stringify({ ...question, createdBy: session?.user?.email }),
         });
 
         if (res.ok) {

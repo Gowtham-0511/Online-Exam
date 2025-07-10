@@ -25,7 +25,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         .input("createdBy", createdBy)
         .input("createdAt", new Date().toISOString())
         .query(`
-          INSERT INTO questionBank (
+          INSERT INTO Questions (
             question, expectedOutput, difficulty, marks, language, createdBy, createdAt
           ) VALUES (
             @question, @expectedOutput, @difficulty, @marks, @language, @createdBy, @createdAt
@@ -42,6 +42,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (req.method === 'GET') {
     const { email, language } = req.query;
 
+    // console.log(email, language);
+
     if (typeof email !== "string" || typeof language !== "string") {
       return res.status(400).json({ error: "Invalid query parameters" });
     }
@@ -52,10 +54,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         .input("email", email)
         .input("language", language)
         .query(`
-          SELECT * FROM questionBank
+          SELECT * FROM Questions
           WHERE createdBy = @email AND language = @language
           ORDER BY createdAt DESC
         `);
+
+      console.log(result);
 
       return res.status(200).json(result.recordset);
     } catch (error) {

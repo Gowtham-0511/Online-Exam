@@ -34,7 +34,7 @@ export default function Home() {
   return (
     <>
       <Head>
-        <title>Exam Hub</title>
+        <title>SysRank</title>
         <link rel="icon" href="/logo.png" />
       </Head>
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 flex items-center justify-center p-4 relative overflow-hidden">
@@ -59,7 +59,7 @@ export default function Home() {
 
               <div>
                 <h1 className="text-3xl font-bold bg-gradient-to-r from-slate-800 to-slate-600 bg-clip-text text-transparent">
-                  Online Exam App
+                  SysRank
                 </h1>
                 <p className="text-slate-500 mt-2 font-medium">
                   Your gateway to seamless online assessments
