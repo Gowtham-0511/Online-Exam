@@ -18,7 +18,7 @@ export default function JobPositionsPage() {
 
 
     const fetchPositions = async () => {
-        const res = await fetch("/api/job-positions");
+        const res = await fetch("/api/exams");
         const data = await res.json();
         setPositions(data);
     };
@@ -30,7 +30,7 @@ export default function JobPositionsPage() {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
-        const res = await fetch("/api/job-positions", {
+        const res = await fetch("/api/exams", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ title, description }),
@@ -47,7 +47,7 @@ export default function JobPositionsPage() {
     };
 
     const handleUpdate = async (id: number) => {
-        const res = await fetch("/api/job-positions", {
+        const res = await fetch("/api/exams", {
             method: "PUT",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ id, title: editTitle, description: editDesc }),
@@ -65,7 +65,7 @@ export default function JobPositionsPage() {
     const handleDelete = async (id: number) => {
         if (!confirm("Are you sure you want to delete this position?")) return;
 
-        const res = await fetch("/api/job-positions", {
+        const res = await fetch("/api/exams", {
             method: "DELETE",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ id }),
@@ -88,10 +88,10 @@ export default function JobPositionsPage() {
                         className="text-3xl font-bold mb-2"
                         style={{ color: '#6C757D' }}
                     >
-                        📌 Job Positions Management
+                        📌 Exams
                     </h1>
                     <p style={{ color: '#6C757D' }}>
-                        Create, edit, and manage job positions for your organization
+                        Create, edit, and manage exams for your organization
                     </p>
                 </div>
 
@@ -104,7 +104,7 @@ export default function JobPositionsPage() {
                         className="text-xl font-semibold mb-4 flex items-center gap-2"
                         style={{ color: '#6C757D' }}
                     >
-                        ✨ Add New Position
+                        ✨ Add New Exam
                     </h2>
 
                     <div className="space-y-4">
@@ -113,7 +113,7 @@ export default function JobPositionsPage() {
                                 className="block text-sm font-medium mb-2"
                                 style={{ color: '#6C757D' }}
                             >
-                                Job Title
+                                Exam Title
                             </label>
                             <input
                                 type="text"
@@ -187,7 +187,7 @@ export default function JobPositionsPage() {
                                 e.currentTarget.style.backgroundColor = '#87CEEB';
                             }}
                         >
-                            ➕ Add Job Position
+                            ➕ Add Exam
                         </button>
                     </div>
                 </div>
@@ -198,7 +198,7 @@ export default function JobPositionsPage() {
                         className="text-2xl font-semibold mb-6 flex items-center gap-2"
                         style={{ color: '#6C757D' }}
                     >
-                        📄 Current Positions ({positions.length})
+                        📄 Current Exams ({positions.length})
                     </h2>
 
                     <div className="space-y-4">

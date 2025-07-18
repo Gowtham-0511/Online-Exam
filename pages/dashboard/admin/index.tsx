@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
-import JobPositionsPage from "./job-positions";
+import ExamsPage from "./exams";
 import SkillsetConfigPage from "./skillset-config";
 import QuestionBankPage from "./question-bank";
+import UserManagementPage from "./user-management";
 import AdminAnalytics from "@/components/AdminAnalytics";
 
 export default function AdminDashboard() {
@@ -73,42 +74,11 @@ export default function AdminDashboard() {
         }
     }, [loading]);
 
-    const scheduleUser = (user: { name: any; }) => {
-        const dateTime = window.prompt(`Schedule ${user.name} - Enter date & time (YYYY-MM-DD HH:mm):`);
-        if (dateTime) {
-            console.log(`Scheduled ${user.name} at ${dateTime}`);
-            // You can now call your API or store this value
-        }
-    };
+    
 
-    const openScheduleModal = (user: any) => {
-        setSelectedUser(user);
-        setScheduleStart(user.schedule_start || "");
-        setScheduleEnd(user.schedule_end || "");
-        setShowModal(true);
-    };
+   
 
-    const saveSchedule = async () => {
-        if (!selectedUser) return;
-
-        const res = await fetch("/api/admin/users/schedule", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-                userId: selectedUser.id,
-                scheduleStart,
-                scheduleEnd,
-            }),
-        });
-
-        const data = await res.json();
-        if (data.success) {
-            setShowModal(false);
-            location.reload();
-        } else {
-            alert("Failed to update schedule");
-        }
-    };
+    
 
 
     if (!session || loading) {
@@ -176,13 +146,13 @@ export default function AdminDashboard() {
     const menuItems = [
         { id: 'overview', label: 'Overview', icon: '📊', description: 'Dashboard overview' },
         { id: 'users', label: 'User Management', icon: '👥', description: 'Manage all users' },
-        { id: 'exams', label: 'Exam Management', icon: '📝', description: 'Manage all exams' },
-        { id: 'jobpositions', label: 'Job Positions', icon: '🏢', description: 'Manage job roles' },
+        { id: 'exammanagement', label: 'Exam Management', icon: '📝', description: 'Manage all exams' },
+        { id: 'exams', label: 'Exams', icon: '🏢', description: 'Manage all exams' },
         { id: 'skillsets', label: 'Skillset Config', icon: '🧠', description: 'Map skills to jobs' },
         { id: 'questions', label: 'Questions', icon: '❓', description: 'Manage questions' },
-        { id: 'analytics', label: 'Analytics', icon: '📈', description: 'View insights' },
-        { id: 'reports', label: 'Reports', icon: '📊', description: 'Generate reports' },
-        { id: 'settings', label: 'Settings', icon: '⚙️', description: 'System settings' }
+        { id: 'analytics', label: 'Analytics', icon: '📈', description: 'View insights' }
+        // { id: 'reports', label: 'Reports', icon: '📊', description: 'Generate reports' },
+        // { id: 'settings', label: 'Settings', icon: '⚙️', description: 'System settings' }
     ];
 
     const getRoleColor = (role: string) => {
@@ -289,94 +259,9 @@ export default function AdminDashboard() {
                 );
 
             case 'users':
-                return (
-                    <div className="bg-white/90 backdrop-blur-xl rounded-3xl shadow-xl border border-blue-200/50 overflow-hidden">
-                        <div className="bg-gradient-to-r from-blue-50 to-sky-50 px-8 py-6 border-b border-blue-200/50">
-                            <div className="flex items-center justify-between">
-                                <h2 className="text-2xl font-bold text-slate-800 flex items-center gap-3">
-                                    <span className="w-10 h-10 bg-gradient-to-br from-blue-500 to-sky-500 rounded-2xl flex items-center justify-center">
-                                        <span className="text-white">👥</span>
-                                    </span>
-                                    Registered Users ({users.length})
-                                </h2>
-                                <div className="flex items-center gap-2">
-                                    <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
-                                    <span className="text-sm text-slate-600">{users.length} Active</span>
-                                </div>
-                            </div>
-                        </div>
-                        <div className="p-8">
-                            {users.length === 0 ? (
-                                <div className="text-center py-12">
-                                    <div className="w-20 h-20 bg-gradient-to-br from-blue-50 to-sky-100 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-blue-200">
-                                        <span className="text-4xl">👤</span>
-                                    </div>
-                                    <h3 className="text-xl font-semibold text-slate-800 mb-2">No Users Found</h3>
-                                    <p className="text-slate-600">Users will appear here once they register.</p>
-                                </div>
-                            ) : (
-                                <div className="overflow-x-auto">
-                                    <table className="w-full">
-                                        <thead>
-                                            <tr className="border-b-2 border-blue-200">
-                                                <th className="text-left py-4 px-6 font-semibold text-slate-700">User</th>
-                                                <th className="text-left py-4 px-6 font-semibold text-slate-700">Email</th>
-                                                <th className="text-left py-4 px-6 font-semibold text-slate-700">Role</th>
-                                                <th className="text-left py-4 px-6 font-semibold text-slate-700">Schedule</th>
-                                                <th className="text-left py-4 px-6 font-semibold text-slate-700">Status</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {users.map((user, index) => (
-                                                <tr key={index} className="border-b border-blue-100 hover:bg-gradient-to-r hover:from-blue-50 hover:to-sky-50 transition-all duration-200">
-                                                    <td className="py-4 px-6">
-                                                        <div className="flex items-center gap-3">
-                                                            <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-sky-500 rounded-xl flex items-center justify-center">
-                                                                <span className="text-white font-bold text-sm">
-                                                                    {user.email?.charAt(0).toUpperCase() || 'U'}
-                                                                </span>
-                                                            </div>
-                                                            <div>
-                                                                <p className="font-semibold text-slate-800">{user.name || 'Unknown'}</p>
-                                                            </div>
-                                                        </div>
-                                                    </td>
-                                                    <td className="py-4 px-6">
-                                                        <span className="text-slate-700 font-medium">{user.email}</span>
-                                                    </td>
-                                                    <td className="py-4 px-6">
-                                                        <span className={`px-3 py-1 rounded-full text-xs font-bold ${getRoleColor(user.role)}`}>
-                                                            {user.role || 'User'}
-                                                        </span>
-                                                    </td>
-                                                    <td className="py-4 px-6">
-                                                        <button
-                                                            className="text-blue-600 hover:underline text-sm"
-                                                            onClick={() => openScheduleModal(user)}
-                                                        >
-                                                            {user.schedule_start && user.schedule_end
-                                                                ? `${new Date(user.schedule_start).toLocaleString()} → ${new Date(user.schedule_end).toLocaleString()}`
-                                                                : "Set Schedule"}
-                                                        </button>
-                                                    </td>
+                return <UserManagementPage />;
 
-                                                    <td className="py-4 px-6">
-                                                        <div className="flex items-center gap-2">
-                                                            <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                                                            <span className="text-blue-700 text-sm font-medium">Active</span>
-                                                        </div>
-                                                    </td>
-                                                </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                );
-
-            case 'exams':
+            case 'exammanagement':
                 return (
                     <div className="bg-white/90 backdrop-blur-xl rounded-3xl shadow-xl border border-blue-200/50 overflow-hidden">
                         <div className="bg-gradient-to-r from-sky-50 to-blue-50 px-8 py-6 border-b border-sky-200/50">
@@ -463,8 +348,8 @@ export default function AdminDashboard() {
                     </div>
                 );
 
-            case 'jobpositions':
-                return <JobPositionsPage />;
+            case 'exams':
+                return <ExamsPage />;
 
             case 'skillsets':
                 return <SkillsetConfigPage />;
@@ -477,51 +362,6 @@ export default function AdminDashboard() {
                     <AdminAnalytics />
                 );
 
-            case 'reports':
-                return (
-                    <div className="bg-white/90 backdrop-blur-xl rounded-3xl shadow-xl border border-blue-200/50 overflow-hidden">
-                        <div className="bg-gradient-to-r from-sky-50 to-blue-50 px-8 py-6 border-b border-sky-200/50">
-                            <h2 className="text-2xl font-bold text-slate-800 flex items-center gap-3">
-                                <span className="w-10 h-10 bg-gradient-to-br from-sky-500 to-blue-500 rounded-2xl flex items-center justify-center">
-                                    <span className="text-white">📊</span>
-                                </span>
-                                Reports & Data Export
-                            </h2>
-                        </div>
-                        <div className="p-8">
-                            <div className="text-center py-12">
-                                <div className="w-20 h-20 bg-gradient-to-br from-sky-50 to-blue-100 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-sky-200">
-                                    <span className="text-4xl">📋</span>
-                                </div>
-                                <h3 className="text-xl font-semibold text-slate-800 mb-2">Reports Module</h3>
-                                <p className="text-slate-600">Generate and export detailed reports from your data.</p>
-                            </div>
-                        </div>
-                    </div>
-                );
-
-            case 'settings':
-                return (
-                    <div className="bg-white/90 backdrop-blur-xl rounded-3xl shadow-xl border border-blue-200/50 overflow-hidden">
-                        <div className="bg-gradient-to-r from-blue-50 to-sky-50 px-8 py-6 border-b border-blue-200/50">
-                            <h2 className="text-2xl font-bold text-slate-800 flex items-center gap-3">
-                                <span className="w-10 h-10 bg-gradient-to-br from-blue-500 to-sky-500 rounded-2xl flex items-center justify-center">
-                                    <span className="text-white">⚙️</span>
-                                </span>
-                                System Settings
-                            </h2>
-                        </div>
-                        <div className="p-8">
-                            <div className="text-center py-12">
-                                <div className="w-20 h-20 bg-gradient-to-br from-blue-50 to-sky-100 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-blue-200">
-                                    <span className="text-4xl">🔧</span>
-                                </div>
-                                <h3 className="text-xl font-semibold text-slate-800 mb-2">Settings Panel</h3>
-                                <p className="text-slate-600">Configure your application settings and preferences.</p>
-                            </div>
-                        </div>
-                    </div>
-                );
 
             default:
                 return null;
@@ -655,52 +495,6 @@ export default function AdminDashboard() {
                     {renderContent()}
                 </main>
             </div>
-
-            {showModal && (
-                <div className="fixed inset-0 z-50 bg-black bg-opacity-40 flex items-center justify-center">
-                    <div className="bg-white rounded-xl p-6 w-[90%] max-w-md shadow-xl space-y-4">
-                        <h2 className="text-lg font-semibold text-gray-700">
-                            Schedule for {selectedUser?.email}
-                        </h2>
-
-                        <div className="space-y-2">
-                            <label className="block text-sm text-gray-600">Start Time</label>
-                            <input
-                                type="datetime-local"
-                                className="w-full border rounded-lg px-3 py-2"
-                                value={scheduleStart}
-                                onChange={(e) => setScheduleStart(e.target.value)}
-                            />
-                        </div>
-
-                        <div className="space-y-2">
-                            <label className="block text-sm text-gray-600">End Time</label>
-                            <input
-                                type="datetime-local"
-                                className="w-full border rounded-lg px-3 py-2"
-                                value={scheduleEnd}
-                                onChange={(e) => setScheduleEnd(e.target.value)}
-                            />
-                        </div>
-
-                        <div className="flex justify-end gap-2 pt-4">
-                            <button
-                                onClick={() => setShowModal(false)}
-                                className="px-4 py-2 bg-gray-300 rounded-lg text-gray-700"
-                            >
-                                Cancel
-                            </button>
-                            <button
-                                onClick={saveSchedule}
-                                className="px-4 py-2 bg-emerald-600 text-white rounded-lg"
-                            >
-                                Save
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
-
         </div>
     );
 }

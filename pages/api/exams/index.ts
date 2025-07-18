@@ -5,7 +5,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const db = await getDBConnection();
 
     if (req.method === "GET") {
-        const result = await db.query(`SELECT * FROM JobPositions ORDER BY createdAt DESC`);
+        const result = await db.query(`SELECT * FROM Exams ORDER BY createdAt DESC`);
         return res.status(200).json(result.recordset);
     }
 
@@ -15,7 +15,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             .request()
             .input("title", title)
             .input("description", description)
-            .query(`INSERT INTO JobPositions (title, description) VALUES (@title, @description)`);
+            .query(`INSERT INTO Exams (title, description) VALUES (@title, @description)`);
 
         return res.status(201).json({ success: true });
     }
@@ -27,7 +27,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             .input("id", id)
             .input("title", title)
             .input("description", description)
-            .query(`UPDATE JobPositions SET title = @title, description = @description WHERE id = @id`);
+            .query(`UPDATE Exams SET title = @title, description = @description WHERE id = @id`);
         return res.status(200).json({ success: true });
     }
 
@@ -36,7 +36,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         await db
             .request()
             .input("id", id)
-            .query(`DELETE FROM JobPositions WHERE id = @id`);
+            .query(`DELETE FROM Exams WHERE id = @id`);
         return res.status(200).json({ success: true });
     }
 

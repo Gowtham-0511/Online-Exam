@@ -1,6 +1,6 @@
 import { NextApiRequest, NextApiResponse } from "next";
-import { getDatabase } from "../../../lib/database";
-import { UserRole } from "../../../lib/userOperations";
+import { getDatabase } from "@/lib/database";
+import { UserRole } from "@/lib/userOperations";
 
 export default function handler(req: NextApiRequest, res: NextApiResponse) {
     if (req.method !== "PUT") return res.status(405).end();
