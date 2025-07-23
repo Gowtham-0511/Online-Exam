@@ -3,6 +3,8 @@ import Papa from "papaparse";
 import toast from "react-hot-toast";
 import { useSession } from "next-auth/react";
 
+import Tiptap from '@/components/Tiptap'
+
 interface QuestionInput {
     id?: number;
     questionText: string;
@@ -385,7 +387,7 @@ export default function QuestionBankPage() {
                         ➕ Add Single Question
                     </h2>
                     <form onSubmit={handleManualSubmit} style={{ display: 'grid', gap: '1rem' }}>
-                        <input
+                        {/* <input
                             type="text"
                             required
                             placeholder="Enter your question..."
@@ -402,7 +404,8 @@ export default function QuestionBankPage() {
                             onChange={(e) => setQuestion({ ...question, questionText: e.target.value })}
                             onFocus={(e) => e.target.style.borderColor = '#87CEEB'}
                             onBlur={(e) => e.target.style.borderColor = '#E6F3FF'}
-                        />
+                        /> */}
+                        <Tiptap />
                         <input
                             type="text"
                             required

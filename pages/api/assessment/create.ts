@@ -25,7 +25,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         const check = await db
             .request()
             .input("title", examId)
-            .query(`SELECT COUNT(*) as count FROM exams WHERE title = @title`);
+            .query(`SELECT COUNT(*) as count FROM Assessment WHERE title = @title`);
 
         if (check.recordset[0].count > 0) {
             return res.status(409).json({ error: 'Exam with this title already exists' });
@@ -47,7 +47,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             .input("endTime", endTime || null)
             .input("allowedUsers", allowedUsers?.length ? JSON.stringify(allowedUsers) : null)
             .query(`
-        INSERT INTO exams (
+        INSERT INTO Assessment (
           title,
           language,
           duration,
