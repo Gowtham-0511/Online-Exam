@@ -1,500 +1,427 @@
-import { useEffect, useState } from "react";
-import { useSession } from "next-auth/react";
-import ExamsPage from "./exams";
-import SkillsetConfigPage from "./skillset-config";
-import QuestionBankPage from "./question-bank";
-import UserManagementPage from "./user-management";
-import AdminAnalytics from "@/components/AdminAnalytics";
+import AdminLayout from "./layout";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Progress } from "@/components/ui/progress";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Separator } from "@/components/ui/separator";
+import {
+    Users,
+    FileText,
+    TrendingUp,
+    Clock,
+    CheckCircle,
+    AlertTriangle,
+    Eye,
+    Calendar,
+    Award,
+    BookOpen,
+    ArrowUpRight,
+    ArrowDownRight,
+    MoreHorizontal,
+    Star,
+    Target,
+    Activity
+} from "lucide-react";
+
+// Mock data - replace with real API calls
+const stats = [
+    {
+        title: "Total Users",
+        value: "2,847",
+        change: "+12.5%",
+        trend: "up",
+        icon: Users,
+        description: "Active users this month"
+    },
+    {
+        title: "Active Exams",
+        value: "156",
+        change: "+8.2%",
+        trend: "up",
+        icon: FileText,
+        description: "Currently running exams"
+    },
+    {
+        title: "Completion Rate",
+        value: "87.3%",
+        change: "+2.1%",
+        trend: "up",
+        icon: Target,
+        description: "Average exam completion"
+    },
+    {
+        title: "System Health",
+        value: "99.9%",
+        change: "-0.1%",
+        trend: "down",
+        icon: Activity,
+        description: "Uptime this month"
+    }
+];
+
+const recentExams = [
+    {
+        id: 1,
+        title: "JavaScript Fundamentals",
+        category: "Programming",
+        participants: 45,
+        completionRate: 92,
+        status: "active",
+        createdAt: "2 hours ago"
+    },
+    {
+        id: 2,
+        title: "Data Structures & Algorithms",
+        category: "Computer Science",
+        participants: 78,
+        completionRate: 85,
+        status: "active",
+        createdAt: "5 hours ago"
+    },
+    {
+        id: 3,
+        title: "React Development",
+        category: "Frontend",
+        participants: 23,
+        completionRate: 96,
+        status: "completed",
+        createdAt: "1 day ago"
+    },
+    {
+        id: 4,
+        title: "Database Design",
+        category: "Backend",
+        participants: 67,
+        completionRate: 89,
+        status: "active",
+        createdAt: "2 days ago"
+    }
+];
+
+const recentActivity = [
+    {
+        id: 1,
+        user: "John Doe",
+        action: "completed exam",
+        target: "JavaScript Fundamentals",
+        time: "5 minutes ago",
+        avatar: "/api/placeholder/32/32"
+    },
+    {
+        id: 2,
+        user: "Sarah Wilson",
+        action: "created new exam",
+        target: "Python Basics",
+        time: "15 minutes ago",
+        avatar: "/api/placeholder/32/32"
+    },
+    {
+        id: 3,
+        user: "Mike Johnson",
+        action: "updated skillset",
+        target: "Web Development",
+        time: "1 hour ago",
+        avatar: "/api/placeholder/32/32"
+    },
+    {
+        id: 4,
+        user: "Emma Davis",
+        action: "submitted results",
+        target: "Data Analysis Quiz",
+        time: "2 hours ago",
+        avatar: "/api/placeholder/32/32"
+    }
+];
+
+const upcomingEvents = [
+    {
+        id: 1,
+        title: "System Maintenance",
+        date: "Tomorrow, 2:00 AM",
+        type: "maintenance",
+        priority: "high"
+    },
+    {
+        id: 2,
+        title: "Q4 Performance Review",
+        date: "Dec 15, 2024",
+        type: "review",
+        priority: "medium"
+    },
+    {
+        id: 3,
+        title: "New Feature Release",
+        date: "Dec 20, 2024",
+        type: "release",
+        priority: "high"
+    }
+];
+
+const topPerformers = [
+    {
+        id: 1,
+        name: "Alice Johnson",
+        score: 98.5,
+        exams: 12,
+        avatar: "/api/placeholder/32/32"
+    },
+    {
+        id: 2,
+        name: "Bob Smith",
+        score: 96.2,
+        exams: 8,
+        avatar: "/api/placeholder/32/32"
+    },
+    {
+        id: 3,
+        name: "Carol Williams",
+        score: 94.8,
+        exams: 15,
+        avatar: "/api/placeholder/32/32"
+    }
+];
 
 export default function AdminDashboard() {
-    const { data: session } = useSession();
-    type Exam = {
-        title?: string;
-        language?: string;
-        duration?: number;
-        questions?: any[];
-        // add other properties as needed
-    };
-    const [users, setUsers] = useState<any[]>([]);
-    const [exams, setExams] = useState<Exam[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [activeTab, setActiveTab] = useState('overview');
-    const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-    type User = { id: string; name?: string; email?: string; role?: string; schedule_start?: string; schedule_end?: string };
-    const [selectedUser, setSelectedUser] = useState<User | null>(null);
-    const [scheduleStart, setScheduleStart] = useState("");
-    const [scheduleEnd, setScheduleEnd] = useState("");
-    const [showModal, setShowModal] = useState(false);
-
-    useEffect(() => {
-        if (!session) {
-            return;
-        }
-
-        console.log(session.user?.email);
-
-        const allowedAdmins = ["gowthamr@systechusa.com", "kalaiselvanj@systechusa.com"];
-        if (!allowedAdmins.includes(session.user?.email || "")) {
-            alert("Access denied: Admins only");
-            return;
-        }
-
-        setLoading(false);
-    }, [session]);
-
-    useEffect(() => {
-        const fetchUsers = async () => {
-            try {
-                const res = await fetch("/api/admin/users");
-                const data = await res.json();
-                setUsers(data);
-            } catch (error) {
-                console.error("Error fetching users:", error);
-            }
-        };
-
-        if (!loading) {
-            fetchUsers();
-        }
-    }, [loading]);
-
-    useEffect(() => {
-        const fetchExams = async () => {
-            try {
-                const res = await fetch("/api/admin/exams");
-                const data = await res.json();
-                setExams(data);
-            } catch (error) {
-                console.error("Error fetching exams:", error);
-            }
-        };
-
-        if (!loading) {
-            fetchExams();
-        }
-    }, [loading]);
-
-    
-
-   
-
-    
-
-
-    if (!session || loading) {
-        return (
-            <div className="min-h-screen bg-gradient-to-br from-blue-50 via-sky-50 to-blue-100 flex items-center justify-center">
-                <div className="bg-white/90 backdrop-blur-xl rounded-3xl shadow-2xl border border-blue-200/50 p-12">
-                    <div className="flex flex-col items-center gap-6">
-                        <div className="relative">
-                            <div className="w-20 h-20 border-4 border-blue-200 rounded-full"></div>
-                            <div className="absolute inset-0 w-20 h-20 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-                        </div>
-                        <div className="text-center">
-                            <h3 className="text-2xl font-bold text-slate-800 mb-2">Loading Dashboard</h3>
-                            <p className="text-slate-600">Authenticating and preparing your admin panel...</p>
-                        </div>
+    return (
+        <AdminLayout>
+            <div className="space-y-8">
+                {/* Welcome Section */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between">
+                    <div>
+                        <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-100">
+                            Good morning, Admin! 👋
+                        </h1>
+                        <p className="text-slate-600 dark:text-slate-400 mt-2">
+                            Here's what's happening with your platform today.
+                        </p>
+                    </div>
+                    <div className="flex items-center space-x-3 mt-4 sm:mt-0">
+                        <Button size="sm" variant="outline">
+                            <Calendar className="w-4 h-4 mr-2" />
+                            Schedule
+                        </Button>
+                        <Button size="sm">
+                            <Eye className="w-4 h-4 mr-2" />
+                            View Reports
+                        </Button>
                     </div>
                 </div>
-            </div>
-        );
-    }
 
-    const stats = [
-        {
-            title: "Total Users",
-            value: users.length,
-            icon: "👥",
-            color: "from-blue-400 to-blue-600",
-            bgColor: "from-blue-50 to-sky-50",
-            borderColor: "border-blue-200",
-            change: "+12%",
-            changeType: "positive"
-        },
-        {
-            title: "Active Exams",
-            value: exams.length,
-            icon: "📝",
-            color: "from-sky-400 to-sky-600",
-            bgColor: "from-sky-50 to-blue-50",
-            borderColor: "border-sky-200",
-            change: "+8%",
-            changeType: "positive"
-        },
-        {
-            title: "Total Sessions",
-            value: "2.4k",
-            icon: "⚡",
-            color: "from-blue-500 to-blue-700",
-            bgColor: "from-blue-50 to-sky-100",
-            borderColor: "border-blue-300",
-            change: "+23%",
-            changeType: "positive"
-        },
-        {
-            title: "Success Rate",
-            value: "94%",
-            icon: "🎯",
-            color: "from-sky-500 to-blue-500",
-            bgColor: "from-sky-50 to-blue-50",
-            borderColor: "border-sky-300",
-            change: "+5%",
-            changeType: "positive"
-        }
-    ];
-
-    const menuItems = [
-        { id: 'overview', label: 'Overview', icon: '📊', description: 'Dashboard overview' },
-        { id: 'users', label: 'User Management', icon: '👥', description: 'Manage all users' },
-        { id: 'exammanagement', label: 'Exam Management', icon: '📝', description: 'Manage all exams' },
-        { id: 'exams', label: 'Exams', icon: '🏢', description: 'Manage all exams' },
-        { id: 'skillsets', label: 'Skillset Config', icon: '🧠', description: 'Map skills to jobs' },
-        { id: 'questions', label: 'Questions', icon: '❓', description: 'Manage questions' },
-        { id: 'analytics', label: 'Analytics', icon: '📈', description: 'View insights' }
-        // { id: 'reports', label: 'Reports', icon: '📊', description: 'Generate reports' },
-        // { id: 'settings', label: 'Settings', icon: '⚙️', description: 'System settings' }
-    ];
-
-    const getRoleColor = (role: string) => {
-        switch (role?.toLowerCase()) {
-            case 'admin':
-                return 'bg-gradient-to-r from-blue-600 to-blue-700 text-white';
-            case 'teacher':
-            case 'instructor':
-                return 'bg-gradient-to-r from-sky-500 to-sky-600 text-white';
-            case 'student':
-            case 'attender':
-                return 'bg-gradient-to-r from-blue-400 to-blue-500 text-white';
-            default:
-                return 'bg-gradient-to-r from-gray-400 to-gray-500 text-white';
-        }
-    };
-
-    interface LanguageColors {
-        [key: string]: string;
-    }
-
-    const getLanguageColor = (language: string | undefined): string => {
-        const colors: LanguageColors = {
-            'javascript': 'bg-gradient-to-r from-blue-400 to-sky-500',
-            'python': 'bg-gradient-to-r from-sky-500 to-blue-600',
-            'java': 'bg-gradient-to-r from-blue-500 to-blue-700',
-            'cpp': 'bg-gradient-to-r from-sky-400 to-blue-500',
-            'c': 'bg-gradient-to-r from-blue-600 to-sky-700',
-        };
-        return colors[language?.toLowerCase() ?? ''] || 'bg-gradient-to-r from-gray-400 to-gray-500';
-    };
-
-    const renderContent = () => {
-        switch (activeTab) {
-            case 'overview':
-                return (
-                    <div className="space-y-8">
-                        {/* Stats Grid */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                            {stats.map((stat, index) => (
-                                <div key={index} className={`bg-gradient-to-br ${stat.bgColor} rounded-3xl p-6 border ${stat.borderColor} shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105`}>
-                                    <div className="flex items-center justify-between mb-4">
-                                        <div className={`w-12 h-12 bg-gradient-to-r ${stat.color} rounded-2xl flex items-center justify-center shadow-md`}>
-                                            <span className="text-2xl">{stat.icon}</span>
-                                        </div>
-                                        <div className={`px-3 py-1 rounded-full text-xs font-bold ${stat.changeType === 'positive' ? 'bg-blue-100 text-blue-700' : 'bg-red-100 text-red-700'}`}>
+                {/* Stats Grid */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    {stats.map((stat, index) => {
+                        const Icon = stat.icon;
+                        return (
+                            <Card key={index} className="hover:shadow-lg transition-shadow duration-200">
+                                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                    <CardTitle className="text-sm font-medium text-slate-600 dark:text-slate-400">
+                                        {stat.title}
+                                    </CardTitle>
+                                    <Icon className="h-4 w-4 text-slate-500" />
+                                </CardHeader>
+                                <CardContent>
+                                    <div className="text-2xl font-bold text-slate-900 dark:text-slate-100">
+                                        {stat.value}
+                                    </div>
+                                    <div className="flex items-center space-x-2 text-xs text-slate-600 dark:text-slate-400">
+                                        <div className={`flex items-center ${stat.trend === 'up' ? 'text-green-600' : 'text-red-600'
+                                            }`}>
+                                            {stat.trend === 'up' ? (
+                                                <ArrowUpRight className="w-3 h-3 mr-1" />
+                                            ) : (
+                                                <ArrowDownRight className="w-3 h-3 mr-1" />
+                                            )}
                                             {stat.change}
                                         </div>
+                                        <span>from last month</span>
                                     </div>
-                                    <div>
-                                        <h3 className="text-3xl font-bold text-slate-800 mb-1">{stat.value}</h3>
-                                        <p className="text-slate-600 font-medium">{stat.title}</p>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
+                                    <p className="text-xs text-slate-500 mt-1">{stat.description}</p>
+                                </CardContent>
+                            </Card>
+                        );
+                    })}
+                </div>
 
-                        {/* Recent Activity */}
-                        <div className="bg-white/90 backdrop-blur-xl rounded-3xl shadow-xl border border-blue-200/50 overflow-hidden">
-                            <div className="bg-gradient-to-r from-blue-50 to-sky-50 px-8 py-6 border-b border-blue-200/50">
-                                <h2 className="text-2xl font-bold text-slate-800 flex items-center gap-3">
-                                    <span className="w-10 h-10 bg-gradient-to-br from-blue-500 to-sky-500 rounded-2xl flex items-center justify-center">
-                                        <span className="text-white">📊</span>
-                                    </span>
-                                    System Overview
-                                </h2>
-                            </div>
-                            <div className="p-8">
-                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                                    <div className="space-y-4">
-                                        <h3 className="text-lg font-semibold text-slate-700">Quick Stats</h3>
-                                        <div className="space-y-3">
-                                            <div className="flex justify-between items-center p-4 bg-gradient-to-r from-blue-50 to-sky-50 rounded-2xl border border-blue-200/50">
-                                                <span className="text-slate-700">Registered Users</span>
-                                                <span className="font-bold text-blue-600">{users.length}</span>
-                                            </div>
-                                            <div className="flex justify-between items-center p-4 bg-gradient-to-r from-sky-50 to-blue-50 rounded-2xl border border-sky-200/50">
-                                                <span className="text-slate-700">Active Exams</span>
-                                                <span className="font-bold text-sky-600">{exams.length}</span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div className="space-y-4">
-                                        <h3 className="text-lg font-semibold text-slate-700">System Health</h3>
-                                        <div className="space-y-3">
-                                            <div className="flex items-center gap-3">
-                                                <div className="w-3 h-3 bg-blue-500 rounded-full animate-pulse"></div>
-                                                <span className="text-slate-700">Database Connected</span>
-                                            </div>
-                                            <div className="flex items-center gap-3">
-                                                <div className="w-3 h-3 bg-sky-500 rounded-full animate-pulse"></div>
-                                                <span className="text-slate-700">Authentication Active</span>
-                                            </div>
-                                            <div className="flex items-center gap-3">
-                                                <div className="w-3 h-3 bg-blue-600 rounded-full animate-pulse"></div>
-                                                <span className="text-slate-700">All Services Operational</span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                );
-
-            case 'users':
-                return <UserManagementPage />;
-
-            case 'exammanagement':
-                return (
-                    <div className="bg-white/90 backdrop-blur-xl rounded-3xl shadow-xl border border-blue-200/50 overflow-hidden">
-                        <div className="bg-gradient-to-r from-sky-50 to-blue-50 px-8 py-6 border-b border-sky-200/50">
+                {/* Main Content Grid */}
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    {/* Recent Exams */}
+                    <Card className="lg:col-span-2">
+                        <CardHeader>
                             <div className="flex items-center justify-between">
-                                <h2 className="text-2xl font-bold text-slate-800 flex items-center gap-3">
-                                    <span className="w-10 h-10 bg-gradient-to-br from-sky-500 to-blue-500 rounded-2xl flex items-center justify-center">
-                                        <span className="text-white">📝</span>
-                                    </span>
-                                    All Exams ({exams.length})
-                                </h2>
-                                <div className="flex items-center gap-2">
-                                    <div className="w-2 h-2 bg-sky-500 rounded-full animate-pulse"></div>
-                                    <span className="text-sm text-slate-600">{exams.length} Total</span>
-                                </div>
-                            </div>
-                        </div>
-                        <div className="p-8">
-                            {exams.length === 0 ? (
-                                <div className="text-center py-12">
-                                    <div className="w-20 h-20 bg-gradient-to-br from-sky-50 to-blue-100 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-sky-200">
-                                        <span className="text-4xl">📝</span>
-                                    </div>
-                                    <h3 className="text-xl font-semibold text-slate-800 mb-2">No Exams Found</h3>
-                                    <p className="text-slate-600">Exams will appear here once created.</p>
-                                </div>
-                            ) : (
-                                <div className="overflow-x-auto">
-                                    <table className="w-full">
-                                        <thead>
-                                            <tr className="border-b-2 border-sky-200">
-                                                <th className="text-left py-4 px-6 font-semibold text-slate-700">Exam</th>
-                                                <th className="text-left py-4 px-6 font-semibold text-slate-700">Language</th>
-                                                <th className="text-left py-4 px-6 font-semibold text-slate-700">Duration</th>
-                                                <th className="text-left py-4 px-6 font-semibold text-slate-700">Questions</th>
-                                                <th className="text-left py-4 px-6 font-semibold text-slate-700">Status</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {exams.map((exam, index) => (
-                                                <tr key={index} className="border-b border-sky-100 hover:bg-gradient-to-r hover:from-sky-50 hover:to-blue-50 transition-all duration-200">
-                                                    <td className="py-4 px-6">
-                                                        <div className="flex items-center gap-3">
-                                                            <div className="w-10 h-10 bg-gradient-to-br from-sky-500 to-blue-500 rounded-xl flex items-center justify-center">
-                                                                <span className="text-white font-bold text-sm">
-                                                                    {exam.title?.charAt(0).toUpperCase() || 'E'}
-                                                                </span>
-                                                            </div>
-                                                            <div>
-                                                                <p className="font-semibold text-slate-800">{exam.title}</p>
-                                                            </div>
-                                                        </div>
-                                                    </td>
-                                                    <td className="py-4 px-6">
-                                                        <span className={`px-3 py-1 rounded-full text-xs font-bold text-white ${getLanguageColor(exam.language)}`}>
-                                                            {exam.language?.toUpperCase() || 'N/A'}
-                                                        </span>
-                                                    </td>
-                                                    <td className="py-4 px-6">
-                                                        <div className="flex items-center gap-2">
-                                                            <svg className="w-4 h-4 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                                            </svg>
-                                                            <span className="text-slate-700 font-medium">{exam.duration} min</span>
-                                                        </div>
-                                                    </td>
-                                                    <td className="py-4 px-6">
-                                                        <span className="px-3 py-1 bg-gradient-to-r from-blue-100 to-sky-100 text-blue-700 rounded-full text-xs font-bold border border-blue-200">
-                                                            {exam.questions?.length || 0} Q's
-                                                        </span>
-                                                    </td>
-                                                    <td className="py-4 px-6">
-                                                        <div className="flex items-center gap-2">
-                                                            <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                                                            <span className="text-blue-700 text-sm font-medium">Active</span>
-                                                        </div>
-                                                    </td>
-                                                </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                );
-
-            case 'exams':
-                return <ExamsPage />;
-
-            case 'skillsets':
-                return <SkillsetConfigPage />;
-
-            case 'questions':
-                return <QuestionBankPage />;
-
-            case 'analytics':
-                return (
-                    <AdminAnalytics />
-                );
-
-
-            default:
-                return null;
-        }
-    };
-
-    return (
-        <div className="min-h-screen bg-gradient-to-br from-blue-50 via-sky-50 to-blue-100 flex">
-            {/* Sidebar */}
-            <div className={`${sidebarCollapsed ? 'w-20' : 'w-80'} transition-all duration-300 bg-white/90 backdrop-blur-xl border-r border-blue-200/50 shadow-xl flex flex-col`}>
-                {/* Sidebar Header */}
-                <div className="p-6 border-b border-blue-200/50">
-                    <div className="flex items-center justify-between">
-                        {!sidebarCollapsed && (
-                            <div className="flex items-center gap-3">
-                                <div className="w-12 h-12 bg-gradient-to-br from-blue-500 via-sky-500 to-blue-600 rounded-2xl flex items-center justify-center shadow-lg">
-                                    <span className="text-2xl">🛠️</span>
-                                </div>
                                 <div>
-                                    <h2 className="text-xl font-bold bg-gradient-to-r from-slate-800 to-blue-600 bg-clip-text text-transparent">
-                                        Admin Panel
-                                    </h2>
-                                    <p className="text-sm text-slate-600">Control Center</p>
+                                    <CardTitle>Recent Exams</CardTitle>
+                                    <CardDescription>Latest exam activities and performance</CardDescription>
                                 </div>
+                                <Button variant="ghost" size="sm">
+                                    <MoreHorizontal className="w-4 h-4" />
+                                </Button>
                             </div>
-                        )}
-                        <button
-                            onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-                            className="p-2 rounded-xl bg-gradient-to-r from-blue-100 to-sky-100 hover:from-blue-200 hover:to-sky-200 transition-all duration-200 border border-blue-200/50"
-                        >
-                            <span className="text-lg text-blue-600">{sidebarCollapsed ? '→' : '←'}</span>
-                        </button>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="space-y-4">
+                                {recentExams.map((exam) => (
+                                    <div key={exam.id} className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-800 rounded-lg">
+                                        <div className="space-y-1">
+                                            <div className="flex items-center space-x-2">
+                                                <h4 className="font-medium text-slate-900 dark:text-slate-100">
+                                                    {exam.title}
+                                                </h4>
+                                                <Badge variant={exam.status === 'active' ? 'default' : 'secondary'}>
+                                                    {exam.status}
+                                                </Badge>
+                                            </div>
+                                            <p className="text-sm text-slate-600 dark:text-slate-400">
+                                                {exam.category} • {exam.participants} participants
+                                            </p>
+                                            <p className="text-xs text-slate-500">{exam.createdAt}</p>
+                                        </div>
+                                        <div className="text-right space-y-1">
+                                            <div className="text-sm font-medium text-slate-900 dark:text-slate-100">
+                                                {exam.completionRate}%
+                                            </div>
+                                            <Progress value={exam.completionRate} className="w-20" />
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </CardContent>
+                    </Card>
+
+                    {/* Quick Actions & Upcoming Events */}
+                    <div className="space-y-6">
+                        {/* Quick Actions */}
+                        <Card>
+                            <CardHeader>
+                                <CardTitle>Quick Actions</CardTitle>
+                                <CardDescription>Frequently used admin tasks</CardDescription>
+                            </CardHeader>
+                            <CardContent className="space-y-3">
+                                <Button className="w-full justify-start">
+                                    <Users className="w-4 h-4 mr-2" />
+                                    Add New User
+                                </Button>
+                                <Button variant="outline" className="w-full justify-start">
+                                    <FileText className="w-4 h-4 mr-2" />
+                                    Create Exam
+                                </Button>
+                                <Button variant="outline" className="w-full justify-start">
+                                    <BookOpen className="w-4 h-4 mr-2" />
+                                    Manage Questions
+                                </Button>
+                                <Button variant="outline" className="w-full justify-start">
+                                    <TrendingUp className="w-4 h-4 mr-2" />
+                                    View Analytics
+                                </Button>
+                            </CardContent>
+                        </Card>
+
+                        {/* Upcoming Events */}
+                        <Card>
+                            <CardHeader>
+                                <CardTitle>Upcoming Events</CardTitle>
+                                <CardDescription>Important dates and deadlines</CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                <div className="space-y-3">
+                                    {upcomingEvents.map((event) => (
+                                        <div key={event.id} className="flex items-start space-x-3 p-3 bg-slate-50 dark:bg-slate-800 rounded-lg">
+                                            <div className={`w-2 h-2 rounded-full mt-2 ${event.priority === 'high' ? 'bg-red-500' :
+                                                    event.priority === 'medium' ? 'bg-yellow-500' : 'bg-green-500'
+                                                }`} />
+                                            <div className="flex-1 space-y-1">
+                                                <p className="text-sm font-medium text-slate-900 dark:text-slate-100">
+                                                    {event.title}
+                                                </p>
+                                                <p className="text-xs text-slate-500">{event.date}</p>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </CardContent>
+                        </Card>
                     </div>
                 </div>
 
-                {/* User Info */}
-                {!sidebarCollapsed && (
-                    <div className="p-6 border-b border-blue-200/50">
-                        <div className="bg-gradient-to-r from-blue-50 to-sky-50 rounded-2xl p-4 border border-blue-200/50">
-                            <div className="flex items-center gap-3">
-                                <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-sky-500 rounded-xl flex items-center justify-center">
-                                    <span className="text-white font-bold text-lg">
-                                        {session?.user?.email?.charAt(0).toUpperCase() || 'A'}
-                                    </span>
-                                </div>
-                                <div>
-                                    <h3 className="font-semibold text-slate-800">
-                                        {session?.user?.name || 'Admin User'}
-                                    </h3>
-                                    <p className="text-sm text-slate-600 truncate">
-                                        {session?.user?.email}
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                )}
-
-                {/* Navigation Menu */}
-                <nav className="flex-1 p-6 overflow-y-auto">
-                    <div className="space-y-2">
-                        {menuItems.map((item) => (
-                            <button
-                                key={item.id}
-                                onClick={() => setActiveTab(item.id)}
-                                className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl transition-all duration-200 ${activeTab === item.id
-                                    ? 'bg-gradient-to-r from-blue-500 to-sky-500 text-white shadow-lg'
-                                    : 'text-slate-700 hover:bg-gradient-to-r hover:from-blue-50 hover:to-sky-50 hover:text-blue-700'
-                                    }`}
-                            >
-                                <span className="text-xl">{item.icon}</span>
-                                {!sidebarCollapsed && (
-                                    <div className="flex-1 text-left">
-                                        <div className="font-medium">{item.label}</div>
-                                        <div className="text-xs opacity-75">{item.description}</div>
+                {/* Bottom Section */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    {/* Recent Activity */}
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Recent Activity</CardTitle>
+                            <CardDescription>Latest user actions and system events</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="space-y-4">
+                                {recentActivity.map((activity) => (
+                                    <div key={activity.id} className="flex items-center space-x-3">
+                                        <Avatar className="w-8 h-8">
+                                            <AvatarImage src={activity.avatar} alt={activity.user} />
+                                            <AvatarFallback>
+                                                {activity.user.split(' ').map(n => n[0]).join('')}
+                                            </AvatarFallback>
+                                        </Avatar>
+                                        <div className="flex-1 space-y-1">
+                                            <p className="text-sm text-slate-900 dark:text-slate-100">
+                                                <span className="font-medium">{activity.user}</span>
+                                                {' '}{activity.action}{' '}
+                                                <span className="font-medium">{activity.target}</span>
+                                            </p>
+                                            <p className="text-xs text-slate-500">{activity.time}</p>
+                                        </div>
                                     </div>
-                                )}
-                            </button>
-                        ))}
-                    </div>
-                </nav>
-
-                {/* Sidebar Footer */}
-                {!sidebarCollapsed && (
-                    <div className="p-6 border-t border-blue-200/50">
-                        <div className="bg-gradient-to-r from-blue-50 to-sky-50 rounded-2xl p-4 border border-blue-200/50">
-                            <div className="flex items-center gap-3">
-                                <div className="w-3 h-3 bg-blue-500 rounded-full animate-pulse"></div>
-                                <span className="text-sm text-slate-600">System Status: Online</span>
+                                ))}
                             </div>
-                        </div>
-                    </div>
-                )}
+                        </CardContent>
+                    </Card>
+
+                    {/* Top Performers */}
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Top Performers</CardTitle>
+                            <CardDescription>Highest scoring users this month</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="space-y-4">
+                                {topPerformers.map((performer, index) => (
+                                    <div key={performer.id} className="flex items-center space-x-3">
+                                        <div className="flex items-center space-x-3 flex-1">
+                                            <div className="flex items-center space-x-2">
+                                                <span className={`text-sm font-bold ${index === 0 ? 'text-yellow-600' :
+                                                        index === 1 ? 'text-slate-400' : 'text-amber-600'
+                                                    }`}>
+                                                    #{index + 1}
+                                                </span>
+                                                {index === 0 && <Star className="w-4 h-4 text-yellow-500 fill-current" />}
+                                            </div>
+                                            <Avatar className="w-8 h-8">
+                                                <AvatarImage src={performer.avatar} alt={performer.name} />
+                                                <AvatarFallback>
+                                                    {performer.name.split(' ').map(n => n[0]).join('')}
+                                                </AvatarFallback>
+                                            </Avatar>
+                                            <div>
+                                                <p className="text-sm font-medium text-slate-900 dark:text-slate-100">
+                                                    {performer.name}
+                                                </p>
+                                                <p className="text-xs text-slate-500">
+                                                    {performer.exams} exams completed
+                                                </p>
+                                            </div>
+                                        </div>
+                                        <div className="text-right">
+                                            <div className="text-sm font-bold text-slate-900 dark:text-slate-100">
+                                                {performer.score}%
+                                            </div>
+                                            <div className="text-xs text-slate-500">avg score</div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </CardContent>
+                    </Card>
+                </div>
             </div>
-
-            {/* Main Content */}
-            <div className="flex-1 flex flex-col">
-                {/* Header */}
-                <header className="bg-white/90 backdrop-blur-xl border-b border-blue-200/50 shadow-sm">
-                    <div className="px-8 py-6">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <h1 className="text-3xl font-bold bg-gradient-to-r from-slate-800 to-blue-600 bg-clip-text text-transparent">
-                                    {menuItems.find(item => item.id === activeTab)?.label || 'Dashboard'}
-                                </h1>
-                                <p className="text-slate-600 mt-1">
-                                    {menuItems.find(item => item.id === activeTab)?.description || 'Welcome to your admin dashboard'}
-                                </p>
-                            </div>
-                            <div className="flex items-center gap-4">
-                                <div className="px-4 py-2 bg-gradient-to-r from-blue-50 to-sky-50 rounded-2xl border border-blue-200/50">
-                                    <span className="text-sm font-medium text-slate-700">
-                                        {new Date().toLocaleDateString('en-US', {
-                                            weekday: 'long',
-                                            year: 'numeric',
-                                            month: 'long',
-                                            day: 'numeric'
-                                        })}
-                                    </span>
-                                </div>
-                                <button className="p-3 rounded-2xl bg-gradient-to-r from-blue-100 to-sky-100 hover:from-blue-200 hover:to-sky-200 transition-all duration-200 border border-blue-200/50">
-                                    <span className="text-xl">🔔</span>
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </header>
-
-                {/* Main Content Area */}
-                <main className="flex-1 p-8 overflow-y-auto">
-                    {renderContent()}
-                </main>
-            </div>
-        </div>
+        </AdminLayout>
     );
 }

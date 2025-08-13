@@ -51,7 +51,7 @@ import sql from 'mssql';
 
 const config: sql.config = {
   user: "SysRankUser",
-  password: "$ysR@nk123",
+  password: "SysR@nk123",
   server: "SSIC-SQL-01",
   database: "SysRank",
   options: {
