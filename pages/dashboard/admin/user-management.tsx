@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-
+ 
 interface User {
     name?: string;
     email: string;
@@ -7,7 +7,7 @@ interface User {
     schedule_start?: string;
     schedule_end?: string;
 }
-
+ 
 const UsersPage: React.FC = () => {
     const [users, setUsers] = useState<User[]>([]);
     const [loading, setLoading] = useState(true);
@@ -20,11 +20,11 @@ const UsersPage: React.FC = () => {
     const [selectedUsers, setSelectedUsers] = useState<User[]>([]);
     const [startTime, setStartTime] = useState('');
     const [endTime, setEndTime] = useState('');
-
+ 
     useEffect(() => {
         fetchUsers();
     }, []);
-
+ 
     const fetchUsers = async () => {
         try {
             const response = await fetch('/api/admin/users');
@@ -40,28 +40,46 @@ const UsersPage: React.FC = () => {
         }
     };
 
+    // Function to determine user status based on your business logic
+    const getUserStatus = (user: User): number => {
+        if (user.is_active) {
+            return 1; // Active
+        } else if (user.schedule_start && user.schedule_end) {
+            return 2; // Completed
+        } else {
+            return 0; // Inactive
+        }
+    };
+ 
     const filteredUsers = users.filter(user => {
-        if (statusFilter !== null && user.is_active !== statusFilter) return false;
+        // Filter by status
+        if (statusFilter !== null) {
+            const userStatus = getUserStatus(user);
+            if (userStatus !== statusFilter) return false;
+        }
+        
+        // Filter by search term
         if (searchTerm && !user.name?.toLowerCase().includes(searchTerm.toLowerCase()) && !user.email.toLowerCase().includes(searchTerm.toLowerCase())) return false;
+        
         return true;
     });
-
+ 
     const indexOfLastUser = currentPage * usersPerPage;
     const indexOfFirstUser = indexOfLastUser - usersPerPage;
     const currentUsers = filteredUsers.slice(indexOfFirstUser, indexOfLastUser);
-
+ 
     const paginate = (pageNumber: number) => setCurrentPage(pageNumber);
-
+ 
     const handleStatusFilter = (status: number | null) => {
         setStatusFilter(status);
         setCurrentPage(1); // Reset to first page when filter changes
     };
-
+ 
     const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setSearchTerm(e.target.value);
         setCurrentPage(1); // Reset to first page when search term changes
     };
-
+ 
     const handleCheckboxChange = (user: User) => {
         if (multiSelect) {
             setSelectedUsers((prev) =>
@@ -73,20 +91,20 @@ const UsersPage: React.FC = () => {
             setSelectedUser(user);
         }
     };
-
+ 
     const handleScheduleSubmit = () => {
         if (!startTime || !endTime) {
             alert("Please enter both start and end time.");
             return;
         }
-
+ 
         const userEmails = multiSelect ? selectedUsers.map(user => user.email) : [selectedUser?.email];
         const scheduleData = {
             useremails: userEmails,
             scheduleStart: startTime,
             scheduleEnd: endTime,
         };
-
+ 
         fetch('/api/schedule', {
             method: 'POST',
             headers: {
@@ -110,7 +128,7 @@ const UsersPage: React.FC = () => {
             alert('Failed to save schedule. Please try again.');
         });
     };
-
+ 
     const closeModal = () => {
         setSelectedUser(null);
         setSelectedUsers([]);
@@ -118,9 +136,9 @@ const UsersPage: React.FC = () => {
         setEndTime('');
         setMultiSelect(false); // Reset multiSelect to false
     };
-
+ 
     const showModal = selectedUser || (multiSelect && selectedUsers.length > 0);
-
+ 
     return (
         <div className="bg-white/90 backdrop-blur-xl rounded-3xl shadow-xl border border-blue-200/50 overflow-hidden">
             <div className="bg-gradient-to-r from-blue-50 to-sky-50 px-8 py-6 border-b border-blue-200/50">
@@ -152,7 +170,7 @@ const UsersPage: React.FC = () => {
                     </div>
                 </div>
             </div>
-
+ 
             <div className="p-8">
                 {loading ? (
                     <div className="text-center py-12 text-slate-600 text-lg">Loading users...</div>
@@ -243,7 +261,7 @@ const UsersPage: React.FC = () => {
                     </div>
                 )}
             </div>
-
+ 
             <div className="p-8">
                 <div className="flex justify-center">
                     {Array.from({ length: Math.ceil(filteredUsers.length / usersPerPage) }, (_, i) => (
@@ -257,7 +275,7 @@ const UsersPage: React.FC = () => {
                     ))}
                 </div>
             </div>
-
+ 
             {/* Schedule Modal */}
             {showModal && (
                 <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center">
@@ -274,7 +292,7 @@ const UsersPage: React.FC = () => {
                                     : <span>{selectedUser?.name || selectedUser?.email || 'Attender'}</span>}
                             </div>
                         </div>
-
+ 
                         <div className="mb-4">
                             <label className="block text-sm text-slate-600 mb-1">Start Time</label>
                             <input
@@ -307,5 +325,5 @@ const UsersPage: React.FC = () => {
         </div>
     );
 };
-
+ 
 export default UsersPage;
