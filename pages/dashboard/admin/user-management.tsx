@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
- 
+
 interface User {
     name?: string;
     email: string;
@@ -20,7 +20,7 @@ const UsersPage: React.FC = () => {
     const [selectedUsers, setSelectedUsers] = useState<User[]>([]);
     const [startTime, setStartTime] = useState('');
     const [endTime, setEndTime] = useState('');
- 
+
     useEffect(() => {
         fetchUsers();
     }, []);
@@ -77,7 +77,7 @@ const UsersPage: React.FC = () => {
  
     const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setSearchTerm(e.target.value);
-        setCurrentPage(1); // Reset to first page when search term changes
+        setCurrentPage(1);
     };
  
     const handleCheckboxChange = (user: User) => {
@@ -104,7 +104,7 @@ const UsersPage: React.FC = () => {
             scheduleStart: startTime,
             scheduleEnd: endTime,
         };
- 
+
         fetch('/api/schedule', {
             method: 'POST',
             headers: {
@@ -112,21 +112,21 @@ const UsersPage: React.FC = () => {
             },
             body: JSON.stringify(scheduleData),
         })
-        .then(response => {
-            if (!response.ok) {
-                throw new Error('Network response was not ok');
-            }
-            return response.json();
-        })
-        .then(data => {
-            console.log('Schedule saved successfully:', data);
-            closeModal();
-            fetchUsers(); // Reload users after saving the schedule
-        })
-        .catch(error => {
-            console.error('Error saving schedule:', error);
-            alert('Failed to save schedule. Please try again.');
-        });
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                return response.json();
+            })
+            .then(data => {
+                console.log('Schedule saved successfully:', data);
+                closeModal();
+                fetchUsers(); // Reload users after saving the schedule
+            })
+            .catch(error => {
+                console.error('Error saving schedule:', error);
+                alert('Failed to save schedule. Please try again.');
+            });
     };
  
     const closeModal = () => {
@@ -138,7 +138,7 @@ const UsersPage: React.FC = () => {
     };
  
     const showModal = selectedUser || (multiSelect && selectedUsers.length > 0);
- 
+
     return (
         <div className="bg-white/90 backdrop-blur-xl rounded-3xl shadow-xl border border-blue-200/50 overflow-hidden">
             <div className="bg-gradient-to-r from-blue-50 to-sky-50 px-8 py-6 border-b border-blue-200/50">
@@ -170,7 +170,7 @@ const UsersPage: React.FC = () => {
                     </div>
                 </div>
             </div>
- 
+
             <div className="p-8">
                 {loading ? (
                     <div className="text-center py-12 text-slate-600 text-lg">Loading users...</div>
@@ -261,7 +261,7 @@ const UsersPage: React.FC = () => {
                     </div>
                 )}
             </div>
- 
+
             <div className="p-8">
                 <div className="flex justify-center">
                     {Array.from({ length: Math.ceil(filteredUsers.length / usersPerPage) }, (_, i) => (
@@ -275,7 +275,7 @@ const UsersPage: React.FC = () => {
                     ))}
                 </div>
             </div>
- 
+
             {/* Schedule Modal */}
             {showModal && (
                 <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center">
@@ -292,7 +292,7 @@ const UsersPage: React.FC = () => {
                                     : <span>{selectedUser?.name || selectedUser?.email || 'Attender'}</span>}
                             </div>
                         </div>
- 
+
                         <div className="mb-4">
                             <label className="block text-sm text-slate-600 mb-1">Start Time</label>
                             <input

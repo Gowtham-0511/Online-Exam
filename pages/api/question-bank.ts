@@ -1,5 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { getDBConnection } from '@/lib/database'; // Make sure this uses `mssql`
+import { getDBConnection } from '@/lib/database';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const db = await getDBConnection();
@@ -40,26 +40,25 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   if (req.method === 'GET') {
-    const { email, language } = req.query;
+    const { language } = req.query;
 
-    // console.log(email, language);
+    console.log(language);
 
-    if (typeof email !== "string" || typeof language !== "string") {
+    if (typeof language !== "string") {
       return res.status(400).json({ error: "Invalid query parameters" });
     }
 
     try {
       const result = await db
         .request()
-        .input("email", email)
         .input("language", language)
         .query(`
           SELECT * FROM Questions
-          WHERE createdBy = @email AND language = @language
+          WHERE language = @language
           ORDER BY createdAt DESC
         `);
 
-      console.log(result);
+      // console.log(result);
 
       return res.status(200).json(result.recordset);
     } catch (error) {
