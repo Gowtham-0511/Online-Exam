@@ -11,7 +11,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         ORDER BY created_at DESC
         `);
 
-        console.log(result);
 
         res.status(200).json(result.recordset); // .recordset for MSSQL results
     } catch (err) {

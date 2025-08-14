@@ -41,7 +41,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     if (req.method === "POST") {
-        const { questionText, expectedOutput, difficulty, marks, language, jobId, skillId, createdBy } = req.body;
+        const { questionText, expectedOutput, difficulty, marks, language, jobId, skillId, imageUrl, imageAltText, createdBy } = req.body;
 
         await db.request()
             .input("questionText", questionText)
@@ -51,12 +51,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             .input("language", language)
             .input("jobId", jobId)
             .input("skillId", skillId)
+            .input("imageUrl", imageUrl)
+            .input("imageAltText", imageAltText)
             .input("createdBy", createdBy)
             .query(`
         INSERT INTO Questions (
-          questionText, expectedOutput, difficulty, marks, language, jobId, skillId, createdBy
+          questionText, expectedOutput, difficulty, marks, language, jobId, skillId, imageUrl, imageAltText, createdBy
         ) VALUES (
-          @questionText, @expectedOutput, @difficulty, @marks, @language, @jobId, @skillId, @createdBy
+          @questionText, @expectedOutput, @difficulty, @marks, @language, @jobId, @skillId, @imageUrl, @imageAltText, @createdBy
         )
       `);
 
@@ -101,3 +103,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     res.setHeader("Allow", ["GET", "POST", "PUT", "DELETE"]);
     res.status(405).end();
 }
+
+// ⬇ ADD THIS AT THE VERY END OR VERY TOP (OUTSIDE FUNCTION)
+export const config = {
+  api: {
+    bodyParser: {
+      sizeLimit: '10mb', // adjust as needed
+    },
+  },
+};

@@ -6,7 +6,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   if (req.method === 'POST') {
     const {
-      question,
+      questionText,
       expectedOutput,
       difficulty,
       marks,
@@ -17,7 +17,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     try {
       await db
         .request()
-        .input("question", question)
+        .input("question", questionText)
         .input("expectedOutput", expectedOutput)
         .input("difficulty", difficulty)
         .input("marks", marks)
@@ -69,3 +69,4 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   res.status(405).end();
 }
+
