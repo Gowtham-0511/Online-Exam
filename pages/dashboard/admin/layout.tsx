@@ -115,7 +115,7 @@ const getDisplayName = (session: any): string => {
 export default function AdminLayout({ children }: AdminLayoutProps) {
     const router = useRouter();
     const [sidebarOpen, setSidebarOpen] = useState(false);
-    const [desktopSidebarCollapsed, setDesktopSidebarCollapsed] = useState(false);
+    const [desktopSidebarCollapsed, setDesktopSidebarCollapsed] = useState(true);
     const { data: session, status } = useSession();
 
     const getCurrentPageId = () => {
@@ -156,7 +156,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
     const userImage = session?.user?.image || null;
     const userInitials = getUserInitials(userName);
 
-    const SidebarContent = ({ isCollapsed = false }: { isCollapsed?: boolean }) => (
+    const SidebarContent = ({ isCollapsed = true }: { isCollapsed?: boolean }) => (
         <div className="flex flex-col h-full bg-gradient-to-b from-slate-50 to-white dark:from-slate-900 dark:to-slate-800">
             <div className={cn(
                 "p-6 border-b border-slate-200 dark:border-slate-700 transition-all duration-300",
