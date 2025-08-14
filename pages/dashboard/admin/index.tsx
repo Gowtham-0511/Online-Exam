@@ -41,22 +41,6 @@ const stats = [
         trend: "up",
         icon: FileText,
         description: "Currently running exams"
-    },
-    {
-        title: "Completion Rate",
-        value: "87.3%",
-        change: "+2.1%",
-        trend: "up",
-        icon: Target,
-        description: "Average exam completion"
-    },
-    {
-        title: "System Health",
-        value: "99.9%",
-        change: "-0.1%",
-        trend: "down",
-        icon: Activity,
-        description: "Uptime this month"
     }
 ];
 
@@ -190,21 +174,11 @@ export default function AdminDashboard() {
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between">
                     <div>
                         <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-100">
-                            Good morning, Admin! 👋
+                            Hi, Admin! 👋
                         </h1>
                         <p className="text-slate-600 dark:text-slate-400 mt-2">
                             Here's what's happening with your platform today.
                         </p>
-                    </div>
-                    <div className="flex items-center space-x-3 mt-4 sm:mt-0">
-                        <Button size="sm" variant="outline">
-                            <Calendar className="w-4 h-4 mr-2" />
-                            Schedule
-                        </Button>
-                        <Button size="sm">
-                            <Eye className="w-4 h-4 mr-2" />
-                            View Reports
-                        </Button>
                     </div>
                 </div>
 
@@ -315,111 +289,7 @@ export default function AdminDashboard() {
                                 </Button>
                             </CardContent>
                         </Card>
-
-                        {/* Upcoming Events */}
-                        <Card>
-                            <CardHeader>
-                                <CardTitle>Upcoming Events</CardTitle>
-                                <CardDescription>Important dates and deadlines</CardDescription>
-                            </CardHeader>
-                            <CardContent>
-                                <div className="space-y-3">
-                                    {upcomingEvents.map((event) => (
-                                        <div key={event.id} className="flex items-start space-x-3 p-3 bg-slate-50 dark:bg-slate-800 rounded-lg">
-                                            <div className={`w-2 h-2 rounded-full mt-2 ${event.priority === 'high' ? 'bg-red-500' :
-                                                    event.priority === 'medium' ? 'bg-yellow-500' : 'bg-green-500'
-                                                }`} />
-                                            <div className="flex-1 space-y-1">
-                                                <p className="text-sm font-medium text-slate-900 dark:text-slate-100">
-                                                    {event.title}
-                                                </p>
-                                                <p className="text-xs text-slate-500">{event.date}</p>
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            </CardContent>
-                        </Card>
                     </div>
-                </div>
-
-                {/* Bottom Section */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    {/* Recent Activity */}
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Recent Activity</CardTitle>
-                            <CardDescription>Latest user actions and system events</CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="space-y-4">
-                                {recentActivity.map((activity) => (
-                                    <div key={activity.id} className="flex items-center space-x-3">
-                                        <Avatar className="w-8 h-8">
-                                            <AvatarImage src={activity.avatar} alt={activity.user} />
-                                            <AvatarFallback>
-                                                {activity.user.split(' ').map(n => n[0]).join('')}
-                                            </AvatarFallback>
-                                        </Avatar>
-                                        <div className="flex-1 space-y-1">
-                                            <p className="text-sm text-slate-900 dark:text-slate-100">
-                                                <span className="font-medium">{activity.user}</span>
-                                                {' '}{activity.action}{' '}
-                                                <span className="font-medium">{activity.target}</span>
-                                            </p>
-                                            <p className="text-xs text-slate-500">{activity.time}</p>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        </CardContent>
-                    </Card>
-
-                    {/* Top Performers */}
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Top Performers</CardTitle>
-                            <CardDescription>Highest scoring users this month</CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="space-y-4">
-                                {topPerformers.map((performer, index) => (
-                                    <div key={performer.id} className="flex items-center space-x-3">
-                                        <div className="flex items-center space-x-3 flex-1">
-                                            <div className="flex items-center space-x-2">
-                                                <span className={`text-sm font-bold ${index === 0 ? 'text-yellow-600' :
-                                                        index === 1 ? 'text-slate-400' : 'text-amber-600'
-                                                    }`}>
-                                                    #{index + 1}
-                                                </span>
-                                                {index === 0 && <Star className="w-4 h-4 text-yellow-500 fill-current" />}
-                                            </div>
-                                            <Avatar className="w-8 h-8">
-                                                <AvatarImage src={performer.avatar} alt={performer.name} />
-                                                <AvatarFallback>
-                                                    {performer.name.split(' ').map(n => n[0]).join('')}
-                                                </AvatarFallback>
-                                            </Avatar>
-                                            <div>
-                                                <p className="text-sm font-medium text-slate-900 dark:text-slate-100">
-                                                    {performer.name}
-                                                </p>
-                                                <p className="text-xs text-slate-500">
-                                                    {performer.exams} exams completed
-                                                </p>
-                                            </div>
-                                        </div>
-                                        <div className="text-right">
-                                            <div className="text-sm font-bold text-slate-900 dark:text-slate-100">
-                                                {performer.score}%
-                                            </div>
-                                            <div className="text-xs text-slate-500">avg score</div>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        </CardContent>
-                    </Card>
                 </div>
             </div>
         </AdminLayout>
