@@ -132,7 +132,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
     const userInitials = getUserInitials(userName);
 
     const SidebarContent = ({ isCollapsed = false }: { isCollapsed?: boolean }) => (
-        <div className="flex flex-col h-full">
+        <div className="flex flex-col h-full bg-gradient-to-b from-slate-50 to-white dark:from-slate-900 dark:to-slate-800">
             <div className={cn(
                 "p-6 border-b transition-all duration-300",
                 isCollapsed ? "px-3" : ""
