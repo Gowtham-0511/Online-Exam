@@ -1,5 +1,14 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { getDBConnection } from '@/lib/database'; // make sure this points to your MSSQL connector
+import { getDBConnection } from '@/lib/database';
+import sql from 'mssql';
+
+export const config = {
+    api: {
+        bodyParser: {
+            sizeLimit: '10mb',
+        },
+    },
+}
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
     if (req.method !== 'POST') return res.status(405).end();
@@ -42,7 +51,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             .input("isExamProctored", isExamProctored ? 1 : 0)
             .input("isGeneratedFromExcel", useExcelQuestions ? 1 : 0)
             .input("questionConfig", JSON.stringify(questionConfig || {}))
-            .input("questions", JSON.stringify(questions || []))
+            .input("questions", sql.NVarChar(sql.MAX), JSON.stringify(questions || []))
             .input("startTime", startTime || null)
             .input("endTime", endTime || null)
             .input("allowedUsers", allowedUsers?.length ? JSON.stringify(allowedUsers) : null)

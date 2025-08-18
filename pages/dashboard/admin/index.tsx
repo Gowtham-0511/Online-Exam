@@ -3,25 +3,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Separator } from "@/components/ui/separator";
 import {
     Users,
     FileText,
     TrendingUp,
-    Clock,
-    CheckCircle,
-    AlertTriangle,
-    Eye,
-    Calendar,
-    Award,
     BookOpen,
     ArrowUpRight,
     ArrowDownRight,
     MoreHorizontal,
-    Star,
-    Target,
-    Activity
 } from "lucide-react";
 
 // Mock data - replace with real API calls
@@ -83,88 +72,6 @@ const recentExams = [
     }
 ];
 
-const recentActivity = [
-    {
-        id: 1,
-        user: "John Doe",
-        action: "completed exam",
-        target: "JavaScript Fundamentals",
-        time: "5 minutes ago",
-        avatar: "/api/placeholder/32/32"
-    },
-    {
-        id: 2,
-        user: "Sarah Wilson",
-        action: "created new exam",
-        target: "Python Basics",
-        time: "15 minutes ago",
-        avatar: "/api/placeholder/32/32"
-    },
-    {
-        id: 3,
-        user: "Mike Johnson",
-        action: "updated skillset",
-        target: "Web Development",
-        time: "1 hour ago",
-        avatar: "/api/placeholder/32/32"
-    },
-    {
-        id: 4,
-        user: "Emma Davis",
-        action: "submitted results",
-        target: "Data Analysis Quiz",
-        time: "2 hours ago",
-        avatar: "/api/placeholder/32/32"
-    }
-];
-
-const upcomingEvents = [
-    {
-        id: 1,
-        title: "System Maintenance",
-        date: "Tomorrow, 2:00 AM",
-        type: "maintenance",
-        priority: "high"
-    },
-    {
-        id: 2,
-        title: "Q4 Performance Review",
-        date: "Dec 15, 2024",
-        type: "review",
-        priority: "medium"
-    },
-    {
-        id: 3,
-        title: "New Feature Release",
-        date: "Dec 20, 2024",
-        type: "release",
-        priority: "high"
-    }
-];
-
-const topPerformers = [
-    {
-        id: 1,
-        name: "Alice Johnson",
-        score: 98.5,
-        exams: 12,
-        avatar: "/api/placeholder/32/32"
-    },
-    {
-        id: 2,
-        name: "Bob Smith",
-        score: 96.2,
-        exams: 8,
-        avatar: "/api/placeholder/32/32"
-    },
-    {
-        id: 3,
-        name: "Carol Williams",
-        score: 94.8,
-        exams: 15,
-        avatar: "/api/placeholder/32/32"
-    }
-];
 
 export default function AdminDashboard() {
     return (
@@ -282,10 +189,6 @@ export default function AdminDashboard() {
                                 <Button variant="outline" className="w-full justify-start">
                                     <BookOpen className="w-4 h-4 mr-2" />
                                     Manage Questions
-                                </Button>
-                                <Button variant="outline" className="w-full justify-start">
-                                    <TrendingUp className="w-4 h-4 mr-2" />
-                                    View Analytics
                                 </Button>
                             </CardContent>
                         </Card>

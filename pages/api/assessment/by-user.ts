@@ -17,10 +17,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             .request()
             .input("email", email)
             .query(`
-                SELECT rowid AS id, * FROM exams
+                SELECT * FROM assessment
                 WHERE createdBy = @email
                 ORDER BY createdAt DESC
             `);
+
+        console.log("Fetched exams for user:", email, result.recordset);
 
         res.status(200).json(result.recordset);
     } catch (err) {
