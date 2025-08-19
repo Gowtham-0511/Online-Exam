@@ -56,34 +56,34 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             .input("endTime", endTime || null)
             .input("allowedUsers", allowedUsers?.length ? JSON.stringify(allowedUsers) : null)
             .query(`
-        INSERT INTO Assessment (
-          title,
-          language,
-          duration,
-          createdBy,
-          createdAt,
-          isExamProctored,
-          isGeneratedFromExcel,
-          questionConfig,
-          questions,
-          startTime,
-          endTime,
-          allowedUsers
-        ) VALUES (
-          @title,
-          @language,
-          @duration,
-          @createdBy,
-          @createdAt,
-          @isExamProctored,
-          @isGeneratedFromExcel,
-          @questionConfig,
-          @questions,
-          @startTime,
-          @endTime,
-          @allowedUsers
-        )
-      `);
+                INSERT INTO Assessment (
+                title,
+                language,
+                duration,
+                createdBy,
+                createdAt,
+                isExamProctored,
+                isGeneratedFromExcel,
+                questionConfig,
+                questions,
+                startTime,
+                endTime,
+                allowedUsers
+                ) VALUES (
+                @title,
+                @language,
+                @duration,
+                @createdBy,
+                @createdAt,
+                @isExamProctored,
+                @isGeneratedFromExcel,
+                @questionConfig,
+                @questions,
+                @startTime,
+                @endTime,
+                @allowedUsers
+                )
+            `);
 
         res.status(200).json({ success: true });
     } catch (error) {

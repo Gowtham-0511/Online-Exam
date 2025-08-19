@@ -90,7 +90,7 @@ export default function ExamPage() {
         const fetchExam = async () => {
             if (!examId) return;
 
-            const response = await fetch(`/api/exams/${examId}`);
+            const response = await fetch(`/api/assessment/${examId}`);
             if (!response.ok) {
                 alert("Exam not found");
                 router.push("/dashboard/attender");

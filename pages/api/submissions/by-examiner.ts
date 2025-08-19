@@ -13,30 +13,31 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const db = await getDBConnection();
 
-    // Step 1: Get exams created by examiner
     const examsResult = await db
       .request()
       .input("createdBy", email)
       .query(`SELECT id, title FROM Assessment WHERE createdBy = @createdBy`);
 
     const exams = examsResult.recordset;
-    console.log("Exams found:", exams);
+    // console.log("Exams found:", exams);
 
     if (exams.length === 0) {
-      return res.status(200).json([]); // no exams for this examiner
+      return res.status(200).json([]);
     }
 
-    // Step 2: Use exam IDs for submissions (safer than titles)
     const examIds = exams.map((e: any) => e.id);
     const placeholders = examIds.map((_, idx) => `@id${idx}`).join(",");
 
     const request = db.request();
     examIds.forEach((id, idx) => request.input(`id${idx}`, id));
 
+    console.log("Fetching submissions for exam IDs:", examIds);
+    console.log("Placeholders for query:", placeholders);
+
     const submissionsResult = await request.query(`
       SELECT * 
       FROM Submissions 
-      WHERE examId IN (${placeholders})
+      WHERE id IN (${placeholders})
       ORDER BY submittedAt DESC
     `);
 
