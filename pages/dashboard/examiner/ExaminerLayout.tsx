@@ -11,11 +11,8 @@ import {
     Menu,
     ChevronRight,
     BarChart3,
-    Users,
-    Building2,
-    Brain,
-    HelpCircle,
-    Home,
+    PlusCircle,
+    FileText,
 } from 'lucide-react';
 import ThemeToggle from '@/components/ThemeToggle';
 
@@ -30,51 +27,29 @@ interface MenuItem {
 
 const menuItems: MenuItem[] = [
     {
-        id: 'overview',
+        id: 'CreateExam',
         navigation: 'index',
-        label: 'Overview',
-        icon: Home,
-        description: 'Dashboard overview'
+        label: 'Create Exam',
+        icon: PlusCircle,
+        description: 'Create a new exam',
     },
     {
-        id: 'candidate-management',
-        navigation: 'user-management',
-        label: 'Candidate Management',
-        icon: Users,
-        description: 'Manage Candidates',
-        badge: '12'
-    },
-        {
-        id: 'system-user-management',
-        navigation: 'system-user-management',
-        label: 'System User Management',
-        icon: Users,
-        description: 'Manage System Users',
+        id: 'ViewExams',
+        navigation: 'view-exams',
+        label: 'View Exams',
+        icon: FileText,
+        description: 'View all exams',
     },
     {
-        id: 'exams',
-        navigation: 'exams',
-        label: 'Exams',
-        icon: Building2,
-        description: 'Manage all exams'
-    },
-    {
-        id: 'skillsets',
-        navigation: 'skillset-config',
-        label: 'Skillset Config',
-        icon: Brain,
-        description: 'Map skills to jobs'
-    },
-    {
-        id: 'questions',
-        navigation: 'question-bank',
-        label: 'Questions',
-        icon: HelpCircle,
-        description: 'Manage questions'
+        id: 'viewResults',
+        navigation: 'examiner-submissions',
+        label: 'View Results',
+        icon: BarChart3,
+        description: 'View exam results',
     }
 ];
 
-interface AdminLayoutProps {
+interface ExaminerLayoutProps {
     children: React.ReactNode;
 }
 
@@ -93,7 +68,9 @@ const getDisplayName = (session: any): string => {
     return 'User';
 };
 
-export default function AdminLayout({ children }: AdminLayoutProps) {
+// ExaminerLayout
+
+export default function ExaminerLayout({ children }: ExaminerLayoutProps) {
     const router = useRouter();
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const [desktopSidebarCollapsed, setDesktopSidebarCollapsed] = useState(true);
@@ -104,8 +81,13 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
         const segments = pathname.split('/');
         const lastSegment = segments[segments.length - 1];
 
-        if (lastSegment === 'admin' || lastSegment === 'index') {
-            return 'overview';
+        console.log('Current Path:', pathname);
+        console.log('Last Segment:', lastSegment);
+        if (lastSegment === 'examiner' || lastSegment === '') {
+            return 'CreateExam';
+        }
+        if (lastSegment === 'index') {
+            return 'CreateExam';
         }
 
         const currentItem = menuItems.find(item => item.navigation === lastSegment);
@@ -116,8 +98,8 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
 
     const handleNavigation = (item: MenuItem) => {
         const targetPath = item.navigation === 'index'
-            ? '/dashboard/admin'
-            : `/dashboard/admin/${item.navigation}`;
+            ? '/dashboard/examiner'
+            : `/dashboard/examiner/${item.navigation}`;
         router.push(targetPath);
         setSidebarOpen(false);
     };
@@ -132,7 +114,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
     const userInitials = getUserInitials(userName);
 
     const SidebarContent = ({ isCollapsed = false }: { isCollapsed?: boolean }) => (
-        <div className="flex flex-col h-full bg-gradient-to-b from-slate-50 to-white dark:from-slate-900 dark:to-slate-800">
+        <div className="flex flex-col h-full">
             <div className={cn(
                 "p-6 border-b transition-all duration-300",
                 isCollapsed ? "px-3" : ""
@@ -322,4 +304,4 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
             </div>
         </div>
     );
-}
+};
