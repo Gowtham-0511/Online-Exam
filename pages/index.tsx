@@ -17,7 +17,8 @@ import {
   Moon,
   Sun,
   Loader2,
-  ArrowRight
+  ArrowRight,
+  BarChart3
 } from "lucide-react";
 
 export default function Home() {
@@ -91,7 +92,7 @@ export default function Home() {
           <div className="container mx-auto flex justify-between items-center">
             <div className="flex items-center space-x-3">
               <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center">
-                <CheckCircle className="w-5 h-5 text-primary-foreground" />
+                <BarChart3 className="w-5 h-5 text-primary-foreground" />
               </div>
               <div>
                 <h1 className="text-xl font-bold text-foreground">SysRank</h1>
