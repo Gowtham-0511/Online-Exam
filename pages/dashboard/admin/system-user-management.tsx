@@ -36,6 +36,15 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select'
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog'
+import { Label } from '@/components/ui/label'
 
 interface User {
     name?: string;
@@ -52,6 +61,9 @@ const SystemUserPage = () => {
     const [searchQuery, setSearchQuery] = useState('');
     const [filterStatus, setFilterStatus] = useState('all');
     const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+    const [editModalOpen, setEditModalOpen] = useState(false);
+    const [selectedUser, setSelectedUser] = useState<User | null>(null);
+    const [newRole, setNewRole] = useState('');
 
     useEffect(() => {
         fetchUsers();
@@ -93,12 +105,55 @@ const SystemUserPage = () => {
             user.email.toLowerCase().includes(searchQuery.toLowerCase());
         const matchesFilter = filterStatus === 'all' ||
             (filterStatus === 'active' && (user.is_active === true || user.is_active === 1)) ||
-            (filterStatus === 'inactive' && (user.is_active === false || user.is_active === 0));
+            (filterStatus === 'inactive' && (user.is_active === false || user.is_active === 0 || user.is_active === null));
         return matchesSearch && matchesFilter;
     });
 
+    console.log(users);
+
     const activeUsers = users.filter(user => user.is_active === true || user.is_active === 1).length;
-    const inactiveUsers = users.filter(user => user.is_active === false || user.is_active === 0).length;
+    const inactiveUsers = users.filter(user => user.is_active === false || user.is_active === 0 || user.is_active === null).length;
+
+    const handleEditUser = (user: User) => {
+        setSelectedUser(user);
+        setNewRole(user.role || '');
+        setEditModalOpen(true);
+    };
+
+    const handleSaveRole = async () => {
+        if (!selectedUser) return;
+
+        try {
+            const response = await fetch(`/api/admin/system-user/${selectedUser.email}`, {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    role: newRole
+                })
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to update user role');
+            }
+
+            // Update local state
+            setUsers(prevUsers =>
+                prevUsers.map(user =>
+                    user.email === selectedUser.email
+                        ? { ...user, role: newRole }
+                        : user
+                )
+            );
+
+            setEditModalOpen(false);
+            setSelectedUser(null);
+            setNewRole('');
+        } catch (error) {
+            console.error('Failed to update user role:', error);
+        }
+    };
 
     const UserCard = ({ user }: { user: User }) => {
         const isActive = user.is_active === true || user.is_active === 1;
@@ -132,7 +187,7 @@ const SystemUserPage = () => {
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
                                 <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                                <DropdownMenuItem>Edit User</DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => handleEditUser(user)}>Edit User</DropdownMenuItem>
                                 <DropdownMenuItem>View Details</DropdownMenuItem>
                                 <DropdownMenuSeparator />
                                 <DropdownMenuItem className="text-destructive">
@@ -170,12 +225,12 @@ const SystemUserPage = () => {
                                 {isActive ? (
                                     <>
                                         <UserCheck className="h-3 w-3 mr-1" />
-                                        {user.role}
+                                        {user.role || 'No Role Assigned'}
                                     </>
                                 ) : (
                                     <>
                                         <UserX className="h-3 w-3 mr-1" />
-                                        {user.role}
+                                        {user.role || 'No Role Assigned'}
                                     </>
                                 )}
                             </Badge>
@@ -226,7 +281,7 @@ const SystemUserPage = () => {
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="end">
                                     <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                                    <DropdownMenuItem>Edit User</DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => handleEditUser(user)}>Edit User</DropdownMenuItem>
                                     <DropdownMenuItem>View Details</DropdownMenuItem>
                                     <DropdownMenuSeparator />
                                     <DropdownMenuItem className="text-destructive">
@@ -257,6 +312,16 @@ const SystemUserPage = () => {
                         <p className="text-muted-foreground">
                             Manage and monitor your system users with advanced controls
                         </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <Button variant="outline" size="sm">
+                            <Download className="h-4 w-4 mr-2" />
+                            Export
+                        </Button>
+                        <Button className="bg-systech-gradient hover:opacity-90">
+                            <Plus className="h-4 w-4 mr-2" />
+                            Add User
+                        </Button>
                     </div>
                 </div>
 
@@ -402,6 +467,81 @@ const SystemUserPage = () => {
                         ))}
                     </div>
                 )}
+
+                {/* Edit User Role Modal */}
+                <Dialog open={editModalOpen} onOpenChange={setEditModalOpen}>
+                    <DialogContent className="sm:max-w-[425px]">
+                        <DialogHeader>
+                            <DialogTitle className="flex items-center gap-2">
+                                <div className="p-2 bg-systech-gradient rounded-lg">
+                                    <Users className="h-4 w-4 text-white" />
+                                </div>
+                                Edit User Role
+                            </DialogTitle>
+                            <DialogDescription>
+                                Update the role for {selectedUser?.name || selectedUser?.email}
+                            </DialogDescription>
+                        </DialogHeader>
+
+                        <div className="grid gap-4 py-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="user-info" className="text-sm font-medium">
+                                    User Information
+                                </Label>
+                                <div className="flex items-center space-x-3 p-3 bg-muted/50 rounded-lg">
+                                    <Avatar className="h-10 w-10">
+                                        <AvatarImage src={`https://api.dicebear.com/7.x/initials/svg?seed=${selectedUser?.email}`} />
+                                        <AvatarFallback className="bg-systech-gradient text-white">
+                                            {getInitials(selectedUser?.name, selectedUser?.email)}
+                                        </AvatarFallback>
+                                    </Avatar>
+                                    <div>
+                                        <div className="font-medium">{selectedUser?.name || 'Unnamed User'}</div>
+                                        <div className="text-sm text-muted-foreground">{selectedUser?.email}</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="space-y-2">
+                                <Label htmlFor="role" className="text-sm font-medium">
+                                    User Role
+                                </Label>
+                                <Select value={newRole} onValueChange={setNewRole}>
+                                    <SelectTrigger className="w-full">
+                                        <SelectValue placeholder="Select a role" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="admin">Administrator</SelectItem>
+                                        <SelectItem value="examiner">Examiner</SelectItem>
+                                        <SelectItem value="attender">Attender</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+
+                            {selectedUser?.role && (
+                                <div className="text-xs text-muted-foreground">
+                                    Current role: <span className="font-medium capitalize">{selectedUser.role}</span>
+                                </div>
+                            )}
+                        </div>
+
+                        <DialogFooter>
+                            <Button
+                                variant="outline"
+                                onClick={() => setEditModalOpen(false)}
+                            >
+                                Cancel
+                            </Button>
+                            <Button
+                                onClick={handleSaveRole}
+                                className="bg-systech-gradient hover:opacity-90"
+                                disabled={!newRole}
+                            >
+                                Save Changes
+                            </Button>
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
             </div>
         </AdminLayout>
     )

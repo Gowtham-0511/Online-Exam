@@ -1,5 +1,62 @@
 import React, { useEffect, useState } from 'react';
 import AdminLayout from './layout';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Checkbox } from '@/components/ui/checkbox';
+import {
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
+} from '@/components/ui/table';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuLabel,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import {
+    Users,
+    Search,
+    Filter,
+    Calendar,
+    Clock,
+    Mail,
+    UserCheck,
+    UserX,
+    Play,
+    CheckCircle2,
+    Circle,
+    MoreVertical,
+    CalendarClock,
+    Sparkles,
+    ChevronLeft,
+    ChevronRight
+} from 'lucide-react';
 
 interface User {
     name?: string;
@@ -21,6 +78,7 @@ const UsersPage: React.FC = () => {
     const [selectedUsers, setSelectedUsers] = useState<User[]>([]);
     const [startTime, setStartTime] = useState('');
     const [endTime, setEndTime] = useState('');
+    const [scheduleModalOpen, setScheduleModalOpen] = useState(false);
 
     useEffect(() => {
         fetchUsers();
@@ -52,6 +110,32 @@ const UsersPage: React.FC = () => {
         }
     };
 
+    const getStatusInfo = (status: number) => {
+        switch (status) {
+            case 1:
+                return {
+                    label: 'Active',
+                    icon: Play,
+                    color: 'bg-blue-500 text-blue-50',
+                    dotColor: 'bg-blue-500'
+                };
+            case 2:
+                return {
+                    label: 'Completed',
+                    icon: CheckCircle2,
+                    color: 'bg-green-500 text-green-50',
+                    dotColor: 'bg-green-500'
+                };
+            default:
+                return {
+                    label: 'Inactive',
+                    icon: Circle,
+                    color: 'bg-gray-500 text-gray-50',
+                    dotColor: 'bg-gray-400'
+                };
+        }
+    };
+
     const filteredUsers = users.filter(user => {
         // Filter by status
         if (statusFilter !== null) {
@@ -68,12 +152,13 @@ const UsersPage: React.FC = () => {
     const indexOfLastUser = currentPage * usersPerPage;
     const indexOfFirstUser = indexOfLastUser - usersPerPage;
     const currentUsers = filteredUsers.slice(indexOfFirstUser, indexOfLastUser);
+    const totalPages = Math.ceil(filteredUsers.length / usersPerPage);
 
     const paginate = (pageNumber: number) => setCurrentPage(pageNumber);
 
-    const handleStatusFilter = (status: number | null) => {
-        setStatusFilter(status);
-        setCurrentPage(1); // Reset to first page when filter changes
+    const handleStatusFilter = (status: string) => {
+        setStatusFilter(status === 'all' ? null : parseInt(status));
+        setCurrentPage(1);
     };
 
     const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -90,10 +175,12 @@ const UsersPage: React.FC = () => {
             );
         } else {
             setSelectedUser(user);
+            setSelectedUsers([user]);
         }
+        setScheduleModalOpen(true);
     };
 
-    const handleScheduleSubmit = () => {
+    const handleScheduleSubmit = async () => {
         if (!startTime || !endTime) {
             alert("Please enter both start and end time.");
             return;
@@ -106,28 +193,27 @@ const UsersPage: React.FC = () => {
             scheduleEnd: endTime,
         };
 
-        fetch('/api/schedule', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(scheduleData),
-        })
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error('Network response was not ok');
-                }
-                return response.json();
-            })
-            .then(data => {
-                console.log('Schedule saved successfully:', data);
-                closeModal();
-                fetchUsers(); // Reload users after saving the schedule
-            })
-            .catch(error => {
-                console.error('Error saving schedule:', error);
-                alert('Failed to save schedule. Please try again.');
+        try {
+            const response = await fetch('/api/admin/users/schedule', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(scheduleData),
             });
+
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+
+            const data = await response.json();
+            console.log('Schedule saved successfully:', data);
+            closeModal();
+            fetchUsers();
+        } catch (error) {
+            console.error('Error saving schedule:', error);
+            alert('Failed to save schedule. Please try again.');
+        }
     };
 
     const closeModal = () => {
@@ -135,195 +221,459 @@ const UsersPage: React.FC = () => {
         setSelectedUsers([]);
         setStartTime('');
         setEndTime('');
-        setMultiSelect(false); // Reset multiSelect to false
+        setMultiSelect(false);
+        setScheduleModalOpen(false);
     };
 
-    const showModal = selectedUser || (multiSelect && selectedUsers.length > 0);
+    const getInitials = (name?: string, email?: string) => {
+        if (name) {
+            return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+        }
+        return email ? email.slice(0, 2).toUpperCase() : 'U';
+    };
+
+    const formatDateTime = (dateTime?: string) => {
+        if (!dateTime) return 'N/A';
+        return new Date(dateTime).toLocaleString('en-US', {
+            month: 'short',
+            day: 'numeric',
+            year: 'numeric',
+            hour: 'numeric',
+            minute: '2-digit',
+            hour12: true
+        });
+    };
+
+    // Stats calculation
+    const activeUsers = users.filter(user => getUserStatus(user) === 1).length;
+    const completedUsers = users.filter(user => getUserStatus(user) === 2).length;
+    const inactiveUsers = users.filter(user => getUserStatus(user) === 0).length;
 
     return (
         <AdminLayout>
-            <div className="bg-white/90 backdrop-blur-xl rounded-3xl shadow-xl border border-blue-200/50 overflow-hidden">
-                <div className="bg-gradient-to-r from-blue-50 to-sky-50 px-8 py-6 border-b border-blue-200/50">
-                    <div className="flex items-center justify-between">
-                        <h2 className="text-2xl font-bold text-slate-800 flex items-center gap-3">
-                            <span className="w-10 h-10 bg-gradient-to-br from-blue-500 to-sky-500 rounded-2xl flex items-center justify-center">
-                                <span className="text-white">👥</span>
-                            </span>
-                            Registered Users ({filteredUsers.length})
-                        </h2>
-                        <div className="flex items-center gap-3">
-                            <input
-                                type="text"
-                                placeholder="Search by name or email"
-                                value={searchTerm}
-                                onChange={handleSearchChange}
-                                className="border p-2 rounded"
-                            />
-                            <select
-                                value={statusFilter || ''}
-                                onChange={(e) => handleStatusFilter(e.target.value ? parseInt(e.target.value, 10) : null)}
-                                className="border p-2 rounded"
-                            >
-                                <option value="">All Status</option>
-                                <option value="1">Active</option>
-                                <option value="0">Inactive</option>
-                                <option value="2">Completed</option>
-                            </select>
-                        </div>
-                    </div>
-                </div>
-
-                <div className="p-8">
-                    {loading ? (
-                        <div className="text-center py-12 text-slate-600 text-lg">Loading users...</div>
-                    ) : filteredUsers.length === 0 ? (
-                        <div className="text-center py-12">
-                            <div className="w-20 h-20 bg-gradient-to-br from-blue-50 to-sky-100 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-blue-200">
-                                <span className="text-4xl">👤</span>
+            <div className="space-y-6 p-6">
+                {/* Header Section */}
+                <div className="flex flex-col space-y-4 md:flex-row md:items-center md:justify-between md:space-y-0">
+                    <div>
+                        <div className="flex items-center gap-3 mb-2">
+                            <div className="p-2 bg-systech-gradient rounded-lg">
+                                <Users className="h-6 w-6 text-white" />
                             </div>
-                            <h3 className="text-xl font-semibold text-slate-800 mb-2">No Users Found</h3>
-                            <p className="text-slate-600">No users match the current filters.</p>
+                            <h1 className="text-3xl font-bold text-foreground">Candidate Management</h1>
+                            <Sparkles className="h-5 w-5 text-systech-primary animate-pulse" />
                         </div>
-                    ) : (
-                        <div className="overflow-x-auto">
-                            <table className="w-full">
-                                <thead>
-                                    <tr className="border-b-2 border-blue-200">
-                                        <th className="text-left py-4 px-6 font-semibold text-slate-700">User</th>
-                                        <th className="text-left py-4 px-6 font-semibold text-slate-700">Email</th>
-                                        <th className="text-left py-4 px-6 font-semibold text-slate-700">Schedule</th>
-                                        <th className="text-left py-4 px-6 font-semibold text-slate-700">Status</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {currentUsers.map((user, index) => (
-                                        <tr key={index} className="border-b border-blue-100 hover:bg-gradient-to-r hover:from-blue-50 hover:to-sky-50 transition-all duration-200">
-                                            <td className="py-4 px-6">
-                                                <div className="flex items-center gap-3">
-                                                    <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-sky-500 rounded-xl flex items-center justify-center">
-                                                        <span className="text-white font-bold text-sm">
-                                                            {user.email?.charAt(0).toUpperCase() || 'U'}
-                                                        </span>
-                                                    </div>
-                                                    <div>
-                                                        <p className="font-semibold text-slate-800">{user.name || 'Unknown'}</p>
-                                                    </div>
-                                                </div>
-                                            </td>
-                                            <td className="py-4 px-6">
-                                                <span className="text-slate-700 font-medium">{user.email}</span>
-                                            </td>
-                                            <td className="py-4 px-6">
-                                                {user.is_active ? (
-                                                    <div className="text-sm text-slate-700">
-                                                        <div>
-                                                            <span className="font-medium">Start:</span>{' '}
-                                                            {user.schedule_start ? new Date(user.schedule_start).toLocaleString() : 'N/A'}
-                                                        </div>
-                                                        <div>
-                                                            <span className="font-medium">End:</span>{' '}
-                                                            {user.schedule_end ? new Date(user.schedule_end).toLocaleString() : 'N/A'}
-                                                        </div>
-                                                    </div>
-                                                ) : (
-                                                    <input
-                                                        type="checkbox"
-                                                        onChange={() => handleCheckboxChange(user)}
-                                                        checked={
-                                                            multiSelect
-                                                                ? selectedUsers.some((u) => u.email === user.email)
-                                                                : selectedUser?.email === user.email
-                                                        }
-                                                        className="form-checkbox h-4 w-4 text-blue-600"
-                                                    />
-                                                )}
-                                            </td>
-                                            <td className="py-4 px-6">
-                                                {user.is_active ? (
-                                                    <div className="flex items-center gap-2">
-                                                        <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                                                        <span className="text-blue-700 text-sm font-medium">Active</span>
-                                                    </div>
-                                                ) : user.schedule_start && user.schedule_end ? (
-                                                    <div className="flex items-center gap-2">
-                                                        <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                                                        <span className="text-green-700 text-sm font-medium">Completed</span>
-                                                    </div>
-                                                ) : (
-                                                    <div className="flex items-center gap-2">
-                                                        <div className="w-2 h-2 bg-gray-400 rounded-full"></div>
-                                                        <span className="text-gray-600 text-sm font-medium">Inactive</span>
-                                                    </div>
-                                                )}
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
-                    )}
-                </div>
-
-                <div className="p-8">
-                    <div className="flex justify-center">
-                        {Array.from({ length: Math.ceil(filteredUsers.length / usersPerPage) }, (_, i) => (
-                            <button
-                                key={i}
-                                onClick={() => paginate(i + 1)}
-                                className={`mx-1 px-4 py-2 rounded ${currentPage === i + 1 ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-800'}`}
-                            >
-                                {i + 1}
-                            </button>
-                        ))}
+                        <p className="text-muted-foreground">
+                            Manage exam candidates and schedules with advanced controls
+                        </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <Button
+                            variant="outline"
+                            onClick={() => setMultiSelect(!multiSelect)}
+                            className={multiSelect ? 'bg-systech-primary text-white' : ''}
+                        >
+                            <Calendar className="h-4 w-4 mr-2" />
+                            {multiSelect ? 'Exit Multi-Select' : 'Bulk Schedule'}
+                        </Button>
                     </div>
                 </div>
+
+                {/* Stats Cards */}
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <Card className="border-border/50">
+                        <CardContent className="p-6">
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <p className="text-sm font-medium text-muted-foreground">Total Candidates</p>
+                                    <p className="text-2xl font-bold text-systech-primary">{users.length}</p>
+                                </div>
+                                <Users className="h-8 w-8 text-systech-primary" />
+                            </div>
+                        </CardContent>
+                    </Card>
+
+                    <Card className="border-border/50">
+                        <CardContent className="p-6">
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <p className="text-sm font-medium text-muted-foreground">Active</p>
+                                    <p className="text-2xl font-bold text-blue-600">{activeUsers}</p>
+                                </div>
+                                <Play className="h-8 w-8 text-blue-600" />
+                            </div>
+                        </CardContent>
+                    </Card>
+
+                    <Card className="border-border/50">
+                        <CardContent className="p-6">
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <p className="text-sm font-medium text-muted-foreground">Completed</p>
+                                    <p className="text-2xl font-bold text-green-600">{completedUsers}</p>
+                                </div>
+                                <CheckCircle2 className="h-8 w-8 text-green-600" />
+                            </div>
+                        </CardContent>
+                    </Card>
+
+                    <Card className="border-border/50">
+                        <CardContent className="p-6">
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <p className="text-sm font-medium text-muted-foreground">Inactive</p>
+                                    <p className="text-2xl font-bold text-gray-500">{inactiveUsers}</p>
+                                </div>
+                                <Circle className="h-8 w-8 text-gray-500" />
+                            </div>
+                        </CardContent>
+                    </Card>
+                </div>
+
+                {/* Filters and Search */}
+                <Card className="border-border/50">
+                    <CardContent className="p-6">
+                        <div className="flex flex-col space-y-4 md:flex-row md:items-center md:justify-between md:space-y-0">
+                            <div className="flex flex-1 items-center space-x-4">
+                                <div className="relative flex-1 max-w-sm">
+                                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                    <Input
+                                        placeholder="Search candidates..."
+                                        value={searchTerm}
+                                        onChange={handleSearchChange}
+                                        className="pl-10 border-border/50 focus:border-systech-primary"
+                                    />
+                                </div>
+
+                                <Select value={statusFilter?.toString() || 'all'} onValueChange={handleStatusFilter}>
+                                    <SelectTrigger className="w-[180px] border-border/50">
+                                        <Filter className="h-4 w-4 mr-2" />
+                                        <SelectValue placeholder="Filter by status" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="all">All Status</SelectItem>
+                                        <SelectItem value="1">Active</SelectItem>
+                                        <SelectItem value="0">Inactive</SelectItem>
+                                        <SelectItem value="2">Completed</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+
+                            <div className="text-sm text-muted-foreground">
+                                Showing {currentUsers.length} of {filteredUsers.length} candidates
+                            </div>
+                        </div>
+                    </CardContent>
+                </Card>
+
+                {/* Users Table */}
+                <Card className="border-border/50">
+                    <CardHeader>
+                        <CardTitle className="flex items-center gap-2">
+                            <Users className="h-5 w-5" />
+                            Candidates List
+                        </CardTitle>
+                        <CardDescription>
+                            {multiSelect ? 'Select multiple candidates to schedule exams in bulk' : 'Click on inactive candidates to schedule exams'}
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent className="p-0">
+                        {loading ? (
+                            <div className="space-y-4 p-6">
+                                {[...Array(5)].map((_, i) => (
+                                    <div key={i} className="flex items-center space-x-4">
+                                        <Skeleton className="h-12 w-12 rounded-full" />
+                                        <div className="space-y-2 flex-1">
+                                            <Skeleton className="h-4 w-[200px]" />
+                                            <Skeleton className="h-3 w-[160px]" />
+                                        </div>
+                                        <Skeleton className="h-4 w-[100px]" />
+                                        <Skeleton className="h-6 w-[80px] rounded-full" />
+                                    </div>
+                                ))}
+                            </div>
+                        ) : filteredUsers.length === 0 ? (
+                            <div className="flex flex-col items-center justify-center py-12">
+                                <Users className="h-12 w-12 text-muted-foreground mb-4" />
+                                <h3 className="text-lg font-semibold mb-2">No candidates found</h3>
+                                <p className="text-muted-foreground text-center">
+                                    {searchTerm || statusFilter !== null
+                                        ? 'Try adjusting your search or filter criteria'
+                                        : 'No candidates have been registered yet'
+                                    }
+                                </p>
+                            </div>
+                        ) : (
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead>Candidate</TableHead>
+                                        <TableHead>Email</TableHead>
+                                        <TableHead>Schedule</TableHead>
+                                        <TableHead>Status</TableHead>
+                                        <TableHead className="w-[100px]">Actions</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {currentUsers.map((user, index) => {
+                                        const userStatus = getUserStatus(user);
+                                        const statusInfo = getStatusInfo(userStatus);
+                                        const StatusIcon = statusInfo.icon;
+                                        const isSelectable = !user.is_active;
+
+                                        return (
+                                            <TableRow key={index} className="hover:bg-muted/50">
+                                                <TableCell>
+                                                    <div className="flex items-center gap-3">
+                                                        <Avatar className="h-10 w-10">
+                                                            <AvatarImage src={`https://api.dicebear.com/7.x/initials/svg?seed=${user.email}`} />
+                                                            <AvatarFallback className="bg-systech-gradient text-white font-semibold">
+                                                                {getInitials(user.name, user.email)}
+                                                            </AvatarFallback>
+                                                        </Avatar>
+                                                        <div>
+                                                            <p className="font-semibold text-foreground">
+                                                                {user.name || 'Unknown'}
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                </TableCell>
+                                                <TableCell>
+                                                    <div className="flex items-center gap-2">
+                                                        <Mail className="h-4 w-4 text-muted-foreground" />
+                                                        <span className="text-foreground">{user.email}</span>
+                                                    </div>
+                                                </TableCell>
+                                                <TableCell>
+                                                    {user.is_active ? (
+                                                        <div className="space-y-1 text-sm">
+                                                            <div className="flex items-center gap-2">
+                                                                <Clock className="h-3 w-3 text-muted-foreground" />
+                                                                <span className="font-medium">Start:</span>
+                                                                <span>{formatDateTime(user.schedule_start)}</span>
+                                                            </div>
+                                                            <div className="flex items-center gap-2">
+                                                                <Clock className="h-3 w-3 text-muted-foreground" />
+                                                                <span className="font-medium">End:</span>
+                                                                <span>{formatDateTime(user.schedule_end)}</span>
+                                                            </div>
+                                                        </div>
+                                                    ) : (
+                                                        <div className="flex items-center gap-2">
+                                                            {isSelectable && (
+                                                                <Button
+                                                                    variant="ghost"
+                                                                    size="sm"
+                                                                    onClick={() => handleCheckboxChange(user)}
+                                                                    className={`
+                        px-3 py-2 rounded-full border-2 border-dashed transition-all duration-200 hover:scale-105
+                        ${multiSelect && selectedUsers.some((u) => u.email === user.email)
+                                                                            ? 'border-systech-primary bg-systech-primary/10 text-systech-primary'
+                                                                            : selectedUser?.email === user.email
+                                                                                ? 'border-systech-primary bg-systech-primary/10 text-systech-primary'
+                                                                                : 'border-gray-300 text-muted-foreground hover:border-systech-primary hover:text-systech-primary'
+                                                                        }
+                    `}
+                                                                >
+                                                                    <CalendarClock className="h-4 w-4 mr-2" />
+                                                                    <span className="text-sm font-medium">
+                                                                        {(multiSelect && selectedUsers.some((u) => u.email === user.email)) ||
+                                                                            selectedUser?.email === user.email
+                                                                            ? 'Selected'
+                                                                            : 'Schedule'
+                                                                        }
+                                                                    </span>
+                                                                </Button>
+                                                            )}
+                                                            {!isSelectable && (
+                                                                <span className="text-muted-foreground text-sm italic">Not available</span>
+                                                            )}
+                                                        </div>
+                                                    )}
+                                                </TableCell>
+                                                <TableCell>
+                                                    <Badge variant="secondary" className={`${statusInfo.color} border-0`}>
+                                                        <StatusIcon className="h-3 w-3 mr-1" />
+                                                        {statusInfo.label}
+                                                    </Badge>
+                                                </TableCell>
+                                                <TableCell>
+                                                    <DropdownMenu>
+                                                        <DropdownMenuTrigger asChild>
+                                                            <Button variant="ghost" className="h-8 w-8 p-0">
+                                                                <MoreVertical className="h-4 w-4" />
+                                                            </Button>
+                                                        </DropdownMenuTrigger>
+                                                        <DropdownMenuContent align="end">
+                                                            <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                                                            {/* <DropdownMenuItem>
+                                                                <Mail className="h-4 w-4 mr-2" />
+                                                                Send Email
+                                                            </DropdownMenuItem> */}
+                                                            {/* <DropdownMenuSeparator /> */}
+                                                            <DropdownMenuItem className="text-destructive">
+                                                                <UserX className="h-4 w-4 mr-2" />
+                                                                Remove Candidate
+                                                            </DropdownMenuItem>
+                                                        </DropdownMenuContent>
+                                                    </DropdownMenu>
+                                                </TableCell>
+                                            </TableRow>
+                                        );
+                                    })}
+                                </TableBody>
+                            </Table>
+                        )}
+                    </CardContent>
+                </Card>
+
+                {/* Pagination */}
+                {totalPages > 1 && (
+                    <Card className="border-border/50">
+                        <CardContent className="p-4">
+                            <div className="flex items-center justify-between">
+                                <div className="text-sm text-muted-foreground">
+                                    Page {currentPage} of {totalPages}
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => paginate(currentPage - 1)}
+                                        disabled={currentPage === 1}
+                                    >
+                                        <ChevronLeft className="h-4 w-4" />
+                                        Previous
+                                    </Button>
+
+                                    {[...Array(Math.min(5, totalPages))].map((_, i) => {
+                                        const pageNum = i + 1;
+                                        return (
+                                            <Button
+                                                key={pageNum}
+                                                variant={currentPage === pageNum ? "default" : "outline"}
+                                                size="sm"
+                                                onClick={() => paginate(pageNum)}
+                                                className={currentPage === pageNum ? 'bg-systech-primary' : ''}
+                                            >
+                                                {pageNum}
+                                            </Button>
+                                        );
+                                    })}
+
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => paginate(currentPage + 1)}
+                                        disabled={currentPage === totalPages}
+                                    >
+                                        Next
+                                        <ChevronRight className="h-4 w-4" />
+                                    </Button>
+                                </div>
+                            </div>
+                        </CardContent>
+                    </Card>
+                )}
 
                 {/* Schedule Modal */}
-                {showModal && (
-                    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center">
-                        <div className="bg-white p-6 rounded-xl shadow-2xl w-full max-w-md">
-                            <div className="mb-4">
-                                <label className="block text-sm font-semibold text-slate-700 mb-1">Schedule Exam for</label>
-                                <div className="flex gap-2 overflow-x-auto max-w-full whitespace-nowrap py-1 px-2 border border-slate-200 rounded bg-slate-50 text-slate-800 text-sm scroll-smooth">
-                                    {multiSelect
-                                        ? selectedUsers.map((u, i) => (
-                                            <span key={i} className="px-2 py-1 bg-blue-100 text-blue-700 rounded-full mr-2">
-                                                {u.name || u.email}
-                                            </span>
-                                        ))
-                                        : <span>{selectedUser?.name || selectedUser?.email || 'Attender'}</span>}
+                <Dialog open={scheduleModalOpen} onOpenChange={setScheduleModalOpen}>
+                    <DialogContent className="sm:max-w-[500px]">
+                        <DialogHeader>
+                            <DialogTitle className="flex items-center gap-2">
+                                <div className="p-2 bg-systech-gradient rounded-lg">
+                                    <CalendarClock className="h-4 w-4 text-white" />
+                                </div>
+                                Schedule Exam
+                            </DialogTitle>
+                            <DialogDescription>
+                                Set the exam schedule for selected candidate{multiSelect && selectedUsers.length > 1 ? 's' : ''}
+                            </DialogDescription>
+                        </DialogHeader>
+
+                        <div className="space-y-4 py-4">
+                            <div className="space-y-2">
+                                <Label className="text-sm font-medium">Selected Candidate{multiSelect && selectedUsers.length > 1 ? 's' : ''}</Label>
+                                <div className="p-3 bg-muted/50 rounded-lg border max-h-32 overflow-y-auto">
+                                    {multiSelect ? (
+                                        <div className="flex flex-wrap gap-2">
+                                            {selectedUsers.map((user, i) => (
+                                                <Badge key={i} variant="secondary" className="bg-systech-primary text-white">
+                                                    {user.name || user.email}
+                                                </Badge>
+                                            ))}
+                                        </div>
+                                    ) : (
+                                        <div className="flex items-center gap-3">
+                                            <Avatar className="h-8 w-8">
+                                                <AvatarImage src={`https://api.dicebear.com/7.x/initials/svg?seed=${selectedUser?.email}`} />
+                                                <AvatarFallback className="bg-systech-gradient text-white text-xs">
+                                                    {getInitials(selectedUser?.name, selectedUser?.email)}
+                                                </AvatarFallback>
+                                            </Avatar>
+                                            <div>
+                                                <div className="font-medium text-sm">{selectedUser?.name || 'Unnamed Candidate'}</div>
+                                                <div className="text-xs text-muted-foreground">{selectedUser?.email}</div>
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
 
-                            <div className="mb-4">
-                                <label className="block text-sm text-slate-600 mb-1">Start Time</label>
-                                <input
-                                    type="datetime-local"
-                                    value={startTime}
-                                    onChange={(e) => setStartTime(e.target.value)}
-                                    className="w-full border p-2 rounded"
-                                />
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                    <Label htmlFor="startTime" className="text-sm font-medium">
+                                        Start Time
+                                    </Label>
+                                    <Input
+                                        id="startTime"
+                                        type="datetime-local"
+                                        value={startTime}
+                                        onChange={(e) => setStartTime(e.target.value)}
+                                        className="border-border/50 focus:border-systech-primary"
+                                    />
+                                </div>
+
+                                <div className="space-y-2">
+                                    <Label htmlFor="endTime" className="text-sm font-medium">
+                                        End Time
+                                    </Label>
+                                    <Input
+                                        id="endTime"
+                                        type="datetime-local"
+                                        value={endTime}
+                                        onChange={(e) => setEndTime(e.target.value)}
+                                        className="border-border/50 focus:border-systech-primary"
+                                    />
+                                </div>
                             </div>
-                            <div className="mb-4">
-                                <label className="block text-sm text-slate-600 mb-1">End Time</label>
-                                <input
-                                    type="datetime-local"
-                                    value={endTime}
-                                    onChange={(e) => setEndTime(e.target.value)}
-                                    className="w-full border p-2 rounded"
-                                />
-                            </div>
-                            <div className="flex justify-end gap-3">
-                                <button onClick={closeModal} className="px-4 py-2 rounded bg-gray-200 text-gray-800">
-                                    Cancel
-                                </button>
-                                <button onClick={handleScheduleSubmit} className="px-4 py-2 rounded bg-blue-600 text-white">
-                                    Schedule
-                                </button>
-                            </div>
+
+                            {startTime && endTime && (
+                                <div className="p-3 bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 rounded-lg">
+                                    <div className="text-sm font-medium text-green-800 dark:text-green-200 mb-1">
+                                        Exam Duration
+                                    </div>
+                                    <div className="text-xs text-green-600 dark:text-green-300">
+                                        {Math.round((new Date(endTime).getTime() - new Date(startTime).getTime()) / (1000 * 60))} minutes
+                                    </div>
+                                </div>
+                            )}
                         </div>
-                    </div>
-                )}
+
+                        <DialogFooter>
+                            <Button variant="outline" onClick={closeModal}>
+                                Cancel
+                            </Button>
+                            <Button
+                                onClick={handleScheduleSubmit}
+                                className="bg-systech-gradient hover:opacity-90"
+                                disabled={!startTime || !endTime}
+                            >
+                                <Calendar className="h-4 w-4 mr-2" />
+                                Schedule Exam
+                            </Button>
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
             </div>
         </AdminLayout>
     );
