@@ -81,8 +81,6 @@ export default function ExaminerLayout({ children }: ExaminerLayoutProps) {
         const segments = pathname.split('/');
         const lastSegment = segments[segments.length - 1];
 
-        console.log('Current Path:', pathname);
-        console.log('Last Segment:', lastSegment);
         if (lastSegment === 'examiner' || lastSegment === '') {
             return 'CreateExam';
         }

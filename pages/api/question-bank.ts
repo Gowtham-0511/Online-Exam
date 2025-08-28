@@ -55,7 +55,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         .query(`
           SELECT * FROM Questions
           WHERE language = @language
-          ORDER BY createdAt DESC
+          ORDER BY NEWID();
         `);
 
       // console.log(result);
