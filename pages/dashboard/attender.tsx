@@ -39,6 +39,12 @@ export default function AttenderDashboard() {
     const [isInitializing, setIsInitializing] = useState(true);
     const [isDarkMode, setIsDarkMode] = useState(false);
 
+    const [showExamPopup, setShowExamPopup] = useState(false);
+    const [examData, setExamData] = useState<any>(null);
+    const [fullScreenEnabled, setFullScreenEnabled] = useState(false);
+    const [cameraEnabled, setCameraEnabled] = useState(false);
+    const [microphoneEnabled, setMicrophoneEnabled] = useState(false);
+
     interface ExamValidationError {
         field: string;
         message: string;
@@ -132,9 +138,6 @@ export default function AttenderDashboard() {
         } else if (examId.length > 50) {
             errors.push({ field: 'examId', message: 'Exam ID cannot exceed 50 characters' });
         }
-        // } else if (!EXAM_ID_PATTERNS.advanced.test(examId)) {
-        //     errors.push({ field: 'examId', message: 'Exam ID must start with a letter and contain only letters, numbers, hyphens, and underscores' });
-        // }
 
         return { isValid: errors.length === 0, errors };
     };
@@ -167,23 +170,35 @@ export default function AttenderDashboard() {
 
             setIsLoading(true);
 
-            const simulateApiCall = new Promise((resolve, reject) => {
-                setTimeout(() => {
-                    const invalidExamIds = ['invalid-exam', 'non-existent', 'expired-exam'];
-                    if (invalidExamIds.includes(examId.toLowerCase())) {
-                        reject(new Error('Exam not found or no longer available'));
-                    } else {
-                        resolve(true);
+            console.log('Starting exam with ID:', examId);
+
+
+            const fetchExamDetails = async () => {
+                try {
+                    const response = await fetch(`/api/assessment/${encodeURIComponent(examId)}`, { method: 'GET' });
+                    if (!response.ok) {
+                        if (response.status === 404) {
+                            throw new Error('Exam not found or no longer available');
+                        } else {
+                            throw new Error('Failed to fetch exam details');
+                        }
                     }
-                }, 1500);
-            });
+                    const examData = await response.json();
+                    console.log('Fetched exam data:', examData);
 
-            await simulateApiCall;
+                    setExamData(examData);
+                    setShowExamPopup(true);
+                } catch (error) {
+                    throw error;
+                }
+            };
 
-            showAlertMessage('Exam validated successfully! Redirecting...', 'success');
-            setTimeout(() => {
-                router.push(`/exam/${examId}`);
-            }, 1000);
+            await fetchExamDetails();
+
+            // showAlertMessage('Exam validated successfully! Redirecting...', 'success');
+            // setTimeout(() => {
+            //     router.push(`/exam/${examId}`);
+            // }, 1000);
 
         } catch (error) {
             console.error('Error starting exam:', error);
@@ -199,6 +214,51 @@ export default function AttenderDashboard() {
             showAlertMessage(errorMessage, 'error');
         } finally {
             setIsLoading(false);
+        }
+    };
+
+    const enableFullScreen = async () => {
+        try {
+            await document.documentElement.requestFullscreen();
+            setFullScreenEnabled(true);
+            showAlertMessage('Full screen enabled', 'success');
+        } catch (error) {
+            showAlertMessage('Failed to enable full screen', 'error');
+        }
+    };
+
+    const enableCameraAndMicrophone = async () => {
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({
+                video: true,
+                audio: true
+            });
+            setCameraEnabled(true);
+            setMicrophoneEnabled(true);
+            showAlertMessage('Camera and microphone enabled', 'success');
+
+            // Stop the stream for now, we'll restart it during the exam
+            stream.getTracks().forEach(track => track.stop());
+        } catch (error) {
+            showAlertMessage('Failed to enable camera and microphone', 'error');
+        }
+    };
+
+    const startExam = () => {
+        setShowExamPopup(false);
+        showAlertMessage('Starting exam...', 'success');
+        setTimeout(() => {
+            router.push(`/exam/${examId}`);
+        }, 1000);
+    };
+
+    const canStartExam = () => {
+        if (!examData) return false;
+
+        if (examData.isExamProctored) {
+            return fullScreenEnabled && cameraEnabled && microphoneEnabled;
+        } else {
+            return fullScreenEnabled;
         }
     };
 
@@ -447,6 +507,104 @@ export default function AttenderDashboard() {
                                 </AlertDescription>
                             </div>
                         </Alert>
+                    </div>
+                )}
+
+                {showExamPopup && examData && (
+                    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+                        <Card className="w-full max-w-md">
+                            <CardHeader className="text-center">
+                                <CardTitle className="text-xl">Exam Details</CardTitle>
+                                <CardDescription>Review exam information and requirements</CardDescription>
+                            </CardHeader>
+
+                            <CardContent className="space-y-6">
+                                {/* Exam Info */}
+                                <div className="space-y-3">
+                                    <h3 className="font-semibold text-lg">{examData.title}</h3>
+                                    <div className="text-sm text-muted-foreground space-y-1">
+                                        <p>Duration: {examData.duration || 'Not specified'}</p>
+                                    </div>
+                                </div>
+
+                                <Separator />
+
+                                {/* Requirements Section */}
+                                <div className="space-y-4">
+                                    <h4 className="font-semibold">Requirements:</h4>
+
+                                    {/* Full Screen Requirement */}
+                                    <div className="flex items-center justify-between p-3 border rounded-lg">
+                                        <div className="flex items-center space-x-3">
+                                            {fullScreenEnabled ? (
+                                                <CheckCircle className="w-5 h-5 text-green-500" />
+                                            ) : (
+                                                <AlertCircle className="w-5 h-5 text-orange-500" />
+                                            )}
+                                            <span className="text-sm">Full Screen Mode</span>
+                                        </div>
+                                        {!fullScreenEnabled && (
+                                            <Button size="sm" onClick={enableFullScreen}>
+                                                Enable
+                                            </Button>
+                                        )}
+                                    </div>
+
+                                    {/* Proctored Exam Requirements */}
+                                    {examData.isExamProctored && (
+                                        <div className="flex items-center justify-between p-3 border rounded-lg">
+                                            <div className="flex items-center space-x-3">
+                                                {cameraEnabled && microphoneEnabled ? (
+                                                    <CheckCircle className="w-5 h-5 text-green-500" />
+                                                ) : (
+                                                    <AlertCircle className="w-5 h-5 text-orange-500" />
+                                                )}
+                                                <span className="text-sm">Camera & Microphone</span>
+                                            </div>
+                                            {(!cameraEnabled || !microphoneEnabled) && (
+                                                <Button size="sm" onClick={enableCameraAndMicrophone}>
+                                                    Enable
+                                                </Button>
+                                            )}
+                                        </div>
+                                    )}
+
+                                    {examData.isExamProctored && (
+                                        <Alert>
+                                            <Info className="w-4 h-4" />
+                                            <AlertDescription className="text-xs">
+                                                This exam is proctored. Your camera and microphone will be active during the exam.
+                                            </AlertDescription>
+                                        </Alert>
+                                    )}
+                                </div>
+
+                                {/* Action Buttons */}
+                                <div className="flex space-x-3 pt-4">
+                                    <Button
+                                        variant="outline"
+                                        onClick={() => setShowExamPopup(false)}
+                                        className="flex-1"
+                                    >
+                                        Cancel
+                                    </Button>
+                                    <Button
+                                        onClick={startExam}
+                                        disabled={!canStartExam()}
+                                        className="flex-1"
+                                    >
+                                        {canStartExam() ? (
+                                            <>
+                                                Start Exam
+                                                <ArrowRight className="w-4 h-4 ml-2" />
+                                            </>
+                                        ) : (
+                                            'Complete Requirements'
+                                        )}
+                                    </Button>
+                                </div>
+                            </CardContent>
+                        </Card>
                     </div>
                 )}
             </div>

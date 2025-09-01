@@ -4,7 +4,35 @@ import CodeEditor from "../../components/CodeEditor";
 import { useSession } from "next-auth/react";
 import { FilesetResolver, FaceDetector, ObjectDetector } from "@mediapipe/tasks-vision";
 import { toast } from "react-hot-toast";
-
+import { useTheme } from "next-themes";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
+import { Progress } from "@/components/ui/progress";
+import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import {
+    Clock,
+    Code,
+    Play,
+    Send,
+    ChevronLeft,
+    ChevronRight,
+    Eye,
+    Mic,
+    Camera,
+    AlertTriangle,
+    CheckCircle2,
+    Circle,
+    Terminal,
+    FileCode,
+    User,
+    Monitor
+} from "lucide-react";
 export default function ExamPage() {
     const [exam, setExam] = useState<any>(null);
     const [code, setCode] = useState("");
@@ -20,22 +48,24 @@ export default function ExamPage() {
     const [activeQuestionIndex, setActiveQuestionIndex] = useState(0);
     const [sqlResult, setSqlResult] = useState<{ columns: string[]; rows: any[][] } | null>(null);
     const [shuffledQuestions, setShuffledQuestions] = useState<any[]>([]);
+
+    // Camera and detection states
     const videoRef = useRef<HTMLVideoElement | null>(null);
     const [cameraError, setCameraError] = useState("");
-
     const [faceDetector, setFaceDetector] = useState<FaceDetector | null>(null);
     const [faceDetectionActive, setFaceDetectionActive] = useState(false);
     const [noFaceDetectedCount, setNoFaceDetectedCount] = useState(0);
     const [multipleFacesCount, setMultipleFacesCount] = useState(0);
     const canvasRef = useRef<HTMLCanvasElement | null>(null);
     const [videoReady, setVideoReady] = useState(false);
-
     const [objectDetector, setObjectDetector] = useState<ObjectDetector | null>(null);
     const [suspiciousObjectCount, setSuspiciousObjectCount] = useState(0);
     const [detectedObjects, setDetectedObjects] = useState<string[]>([]);
     const [lastSuspiciousActivity, setLastSuspiciousActivity] = useState<string>("");
 
-    const [editorTheme, setEditorTheme] = useState<'light' | 'dark'>('dark');
+    // Theme handling
+    const { theme, setTheme } = useTheme();
+    const [editorTheme, setEditorTheme] = useState<"light" | "dark">("light");
 
     const [violations, setViolations] = useState(0);
     const [keyViolations, setKeyViolations] = useState(0);
@@ -49,6 +79,7 @@ export default function ExamPage() {
     const handleFsChangeRef = useRef<((e: any) => void) | null>(null);
     const handleVisibilityChangeRef = useRef<((e: any) => void) | null>(null);
 
+    // Audio monitoring states
     const [audioContext, setAudioContext] = useState<AudioContext | null>(null);
     const [microphone, setMicrophone] = useState<MediaStreamAudioSourceNode | null>(null);
     const [analyser, setAnalyser] = useState<AnalyserNode | null>(null);
@@ -533,54 +564,54 @@ export default function ExamPage() {
         document.oncontextmenu = null;
     };
 
-    useEffect(() => {
-        if (!examStarted) return;
+    // useEffect(() => {
+    //     if (!examStarted) return;
 
-        const handleBlur = (e: any) => {
-            if (handleBlurRef.current) {
-                handleBlurRef.current(e);
-            }
-        };
+    //     const handleBlur = (e: any) => {
+    //         if (handleBlurRef.current) {
+    //             handleBlurRef.current(e);
+    //         }
+    //     };
 
-        const handleFsChange = (e: any) => {
-            if (handleFsChangeRef.current) {
-                handleFsChangeRef.current(e);
-            }
-        };
+    //     const handleFsChange = (e: any) => {
+    //         if (handleFsChangeRef.current) {
+    //             handleFsChangeRef.current(e);
+    //         }
+    //     };
 
-        const handleVisibilityChange = (e: any) => {
-            if (handleVisibilityChangeRef.current) {
-                handleVisibilityChangeRef.current(e);
-            }
-        };
+    //     const handleVisibilityChange = (e: any) => {
+    //         if (handleVisibilityChangeRef.current) {
+    //             handleVisibilityChangeRef.current(e);
+    //         }
+    //     };
 
-        const handleContextMenu = (e: any) => {
-            if (handleContextMenuRef.current) {
-                handleContextMenuRef.current(e);
-            }
-        };
+    //     const handleContextMenu = (e: any) => {
+    //         if (handleContextMenuRef.current) {
+    //             handleContextMenuRef.current(e);
+    //         }
+    //     };
 
 
-        const handleKeyDown = (e: any) => {
-            if (handleKeyDownRef.current) {
-                handleKeyDownRef.current(e);
-            }
-        };
+    //     const handleKeyDown = (e: any) => {
+    //         if (handleKeyDownRef.current) {
+    //             handleKeyDownRef.current(e);
+    //         }
+    //     };
 
-        window.addEventListener("blur", handleBlur);
-        document.addEventListener("fullscreenchange", handleFsChange);
-        document.addEventListener('visibilitychange', handleVisibilityChange);
-        document.addEventListener('contextmenu', handleContextMenu);
-        document.addEventListener('keydown', handleKeyDown);
+    //     window.addEventListener("blur", handleBlur);
+    //     document.addEventListener("fullscreenchange", handleFsChange);
+    //     document.addEventListener('visibilitychange', handleVisibilityChange);
+    //     document.addEventListener('contextmenu', handleContextMenu);
+    //     document.addEventListener('keydown', handleKeyDown);
 
-        return () => {
-            window.removeEventListener("blur", handleBlur);
-            document.removeEventListener("fullscreenchange", handleFsChange);
-            document.removeEventListener('visibilitychange', handleVisibilityChange);
-            document.removeEventListener('contextmenu', handleContextMenu);
-            document.removeEventListener('keydown', handleKeyDown);
-        };
-    }, [examStarted]);
+    //     return () => {
+    //         window.removeEventListener("blur", handleBlur);
+    //         document.removeEventListener("fullscreenchange", handleFsChange);
+    //         document.removeEventListener('visibilitychange', handleVisibilityChange);
+    //         document.removeEventListener('contextmenu', handleContextMenu);
+    //         document.removeEventListener('keydown', handleKeyDown);
+    //     };
+    // }, [examStarted]);
 
     const formatTimeReadable = (seconds: number) => {
         const hours = Math.floor(seconds / 3600);
@@ -588,11 +619,11 @@ export default function ExamPage() {
         const remainingSeconds = seconds % 60;
 
         if (hours > 0) {
-            return `${hours} hr ${minutes} min ${remainingSeconds} sec left`;
+            return `${hours}h ${minutes}m ${remainingSeconds}s`;
         } else if (minutes > 0) {
-            return `${minutes} min ${remainingSeconds} sec left`;
+            return `${minutes}m ${remainingSeconds}s`;
         } else {
-            return `${remainingSeconds} sec left`;
+            return `${remainingSeconds}s`;
         }
     };
 
@@ -741,21 +772,22 @@ export default function ExamPage() {
 
     if (!exam) {
         return (
-            <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-purple-50 flex items-center justify-center p-4">
-                <div className="bg-white/70 backdrop-blur-xl rounded-3xl shadow-2xl border border-white/20 p-12 max-w-md w-full">
-                    <div className="flex flex-col items-center gap-6">
-                        <div className="relative">
-                            <div className="w-16 h-16 border-4 border-blue-200 border-t-blue-500 rounded-full animate-spin"></div>
-                            <div className="absolute inset-0 w-16 h-16 border-4 border-purple-200 border-b-purple-500 rounded-full animate-spin animation-delay-150"></div>
+            <div className="min-h-screen bg-background flex items-center justify-center p-4">
+                <Card className="w-full max-w-md">
+                    <CardContent className="p-8">
+                        <div className="flex flex-col items-center gap-6">
+                            <div className="relative">
+                                <div className="w-16 h-16 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
+                                <div className="absolute inset-0 w-16 h-16 border-4 border-primary/10 border-b-primary rounded-full animate-spin"
+                                    style={{ animationDelay: "150ms" }} />
+                            </div>
+                            <div className="text-center space-y-2">
+                                <h3 className="text-2xl font-bold">Loading Exam</h3>
+                                <p className="text-muted-foreground">Preparing your assessment...</p>
+                            </div>
                         </div>
-                        <div className="text-center">
-                            <h3 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                                Loading Exam
-                            </h3>
-                            <p className="text-gray-500 mt-2">Preparing your assessment...</p>
-                        </div>
-                    </div>
-                </div>
+                    </CardContent>
+                </Card>
             </div>
         );
     }
@@ -767,9 +799,14 @@ export default function ExamPage() {
     };
 
     const getTimeColor = () => {
-        if (timeLeft > 300) return "text-emerald-600";
-        if (timeLeft > 60) return "text-amber-600";
-        return "text-rose-600";
+        if (timeLeft > 300) return "text-primary";
+        if (timeLeft > 60) return "text-amber-600 dark:text-amber-400";
+        return "text-destructive";
+    };
+
+    const getProgressValue = () => {
+        const totalTime = (exam?.duration || 0) * 60;
+        return ((totalTime - timeLeft) / totalTime) * 100;
     };
 
     const getProgressWidth = () => {
@@ -1106,85 +1143,93 @@ export default function ExamPage() {
         return energy > energyThreshold && zcr >= zcrMin && zcr <= zcrMax;
     };
 
-    return (
-        <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-purple-50">
-            {/* Floating Header */}
-            <div className="fixed top-0 left-0 right-0 z-50 p-4">
-                <div className="max-w-7xl mx-auto">
-                    <div className="bg-white/90 backdrop-blur-xl rounded-2xl shadow-xl border border-gray-200 px-6 py-4">
-                        <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-4">
-                                <div className="relative">
-                                    <div className="w-12 h-12 bg-gradient-to-br from-sky-400 to-blue-500 rounded-2xl flex items-center justify-center shadow-lg">
-                                        <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
-                                        </svg>
-                                    </div>
-                                    <div className="absolute -top-1 -right-1 w-4 h-4 bg-sky-400 rounded-full border-2 border-white"></div>
-                                </div>
-                                <div>
-                                    <h1 className="text-xl font-bold text-gray-700">
-                                        {exam.title}
-                                    </h1>
-                                    <div className="flex items-center gap-2 mt-1">
-                                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-sky-100 text-sky-700">
-                                            {exam.language}
-                                        </span>
-                                        <span className="text-sm text-gray-500">•</span>
-                                        <span className="text-sm text-gray-500">{exam.questions?.length || 0} Questions</span>
-                                        <span className="text-sm text-gray-500">•</span>
-                                        <span className="text-sm font-medium text-sky-600">
-                                            {getAnsweredCount()}/{exam.questions?.length || 0} Answered
-                                        </span>
-                                    </div>
-                                </div>
+    if (!exam) {
+        return (
+            <div className="min-h-screen bg-background flex items-center justify-center p-4">
+                <Card className="w-full max-w-md bg-card border-border">
+                    <CardContent className="p-8">
+                        <div className="flex flex-col items-center gap-6">
+                            <div className="relative">
+                                <div className="w-16 h-16 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
+                                <div className="absolute inset-0 w-16 h-16 border-4 border-primary/10 border-b-primary rounded-full animate-spin"
+                                    style={{ animationDelay: "150ms" }} />
                             </div>
-
-                            <div className="flex items-center gap-4">
-                                {/* Enhanced Timer */}
-                                <div className={`bg-gradient-to-r ${getTimerBgColor()} rounded-2xl px-6 py-3 border border-gray-200 shadow-lg`}>
-                                    <div className="flex items-center gap-3">
-                                        <div className="relative">
-                                            <svg className="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <circle cx="12" cy="12" r="10" strokeWidth={2} />
-                                                <polyline points="12,6 12,12 16,14" strokeWidth={2} />
-                                            </svg>
-                                            {timeLeft <= 60 && (
-                                                <div className="absolute inset-0 w-6 h-6 bg-red-400 rounded-full animate-ping opacity-20"></div>
-                                            )}
-                                        </div>
-                                        <div>
-                                            <div className={`text-base font-semibold ${getTimeColor()}`}>
-                                                {formatTimeReadable(timeLeft)}
-                                            </div>
-                                            <div className="w-40 h-2 bg-gray-200 rounded-full mt-1 overflow-hidden">
-                                                <div
-                                                    className={`h-full transition-all duration-1000 rounded-full ${timeLeft > 300 ? 'bg-gradient-to-r from-sky-400 to-blue-500' :
-                                                        timeLeft > 60 ? 'bg-gradient-to-r from-blue-400 to-sky-500' :
-                                                            'bg-gradient-to-r from-red-400 to-red-500'}`}
-                                                    style={{ width: `${100 - getProgressWidth()}%` }}
-                                                ></div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* Submit Button */}
-                                <button
-                                    onClick={handleSubmit}
-                                    className="group relative overflow-hidden bg-gradient-to-r from-sky-500 to-blue-600 text-white px-8 py-3 rounded-2xl font-semibold shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:scale-105 hover:-translate-y-1"
-                                >
-                                    <div className="absolute inset-0 bg-gradient-to-r from-sky-600 to-blue-700 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                                    <div className="relative flex items-center gap-2">
-                                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-                                        </svg>
-                                        Submit Exam
-                                    </div>
-                                </button>
+                            <div className="text-center space-y-2">
+                                <h3 className="text-2xl font-bold text-foreground">
+                                    Loading Exam
+                                </h3>
+                                <p className="text-muted-foreground">Preparing your assessment...</p>
                             </div>
                         </div>
-                    </div>
+                    </CardContent>
+                </Card>
+            </div>
+        );
+    }
+
+    return (
+        <div className="min-h-screen bg-background">
+            {/* Floating Header */}
+            <div className="fixed top-0 left-0 right-0 z-50 p-2">
+                <div className="max-w-7xl mx-auto">
+                    <Card className="bg-card/95 backdrop-blur-xl shadow-2xl border-border">
+                        <CardContent className="px-4 py-2">
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-3">
+                                    <div className="relative">
+                                        <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center shadow-lg">
+                                            <Code className="w-4 h-4 text-primary-foreground" />
+                                        </div>
+                                        <div className="absolute -top-0.5 -right-0.5 w-3 h-3 bg-accent rounded-full border border-card animate-pulse"></div>
+                                    </div>
+                                    <div>
+                                        <h1 className="text-lg font-bold text-foreground">
+                                            {exam.title}
+                                        </h1>
+                                        <div className="flex items-center gap-2">
+                                            <Badge variant="secondary" className="text-xs px-2 py-0">
+                                                {exam.language}
+                                            </Badge>
+                                            <span className="text-xs text-muted-foreground">{exam.questions?.length || 0} Questions</span>
+                                            <Badge variant="outline" className="text-xs px-2 py-0">
+                                                {getAnsweredCount()}/{exam.questions?.length || 0} Answered
+                                            </Badge>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="flex items-center gap-3">
+                                    {/* Enhanced Timer */}
+                                    <Card className={`border ${timeLeft <= 60 ? 'border-destructive' : timeLeft <= 300 ? 'border-amber-500' : 'border-primary'}`}>
+                                        <CardContent className="px-3 py-2">
+                                            <div className="flex items-center gap-2">
+                                                <Clock className={`w-4 h-4 ${getTimeColor()}`} />
+                                                <div>
+                                                    <div className={`text-sm font-semibold ${getTimeColor()}`}>
+                                                        {formatTimeReadable(timeLeft)}
+                                                    </div>
+                                                    <Progress
+                                                        value={100 - getProgressWidth()}
+                                                        className="w-32 h-1.5"
+                                                    />
+                                                </div>
+                                            </div>
+                                        </CardContent>
+                                    </Card>
+
+                                    {/* Submit Button */}
+                                    <Button
+                                        onClick={handleSubmit}
+                                        size="sm"
+                                        className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:scale-105"
+                                    >
+                                        <Send className="w-4 h-4 mr-2" />
+                                        Submit Exam
+                                    </Button>
+                                </div>
+                            </div>
+                        </CardContent>
+                    </Card>
                 </div>
             </div>
 
@@ -1193,185 +1238,166 @@ export default function ExamPage() {
                 <div className="max-w-7xl mx-auto">
                     <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 h-[calc(100vh-180px)]">
                         {/* Question Panel with Tabs */}
-                        <div className="bg-white/90 backdrop-blur-xl rounded-3xl shadow-2xl border border-gray-200 overflow-hidden flex flex-col">
+                        <Card className="bg-card/95 backdrop-blur-xl shadow-2xl border-border overflow-hidden flex flex-col">
                             {/* Question Tabs */}
-                            <div className="bg-gradient-to-r from-blue-50 to-sky-100 px-6 py-4 border-b border-gray-200">
+                            <CardHeader className="bg-muted/50 px-6 py-4 border-b border-border">
                                 <div className="flex items-center justify-between mb-4">
                                     <div className="flex items-center gap-3">
-                                        <div className="w-10 h-10 bg-gradient-to-br from-sky-400 to-blue-500 rounded-2xl flex items-center justify-center shadow-lg">
-                                            <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                            </svg>
+                                        <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center shadow-lg">
+                                            <FileCode className="w-5 h-5 text-primary-foreground" />
                                         </div>
                                         <div>
-                                            <h2 className="text-xl font-bold text-gray-700">
+                                            <CardTitle className="text-xl text-foreground">
                                                 Question {activeQuestionIndex + 1} of {exam.questions?.length || 0}
-                                            </h2>
-                                            <p className="text-gray-500 text-sm mt-1">Select a question to solve</p>
+                                            </CardTitle>
+                                            <p className="text-muted-foreground text-sm mt-1">Select a question to solve</p>
                                         </div>
                                     </div>
 
                                     {/* Navigation arrows */}
                                     <div className="flex items-center gap-2">
-                                        <button
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
                                             onClick={() => navigateQuestion('prev')}
                                             disabled={activeQuestionIndex === 0}
-                                            className="p-2 rounded-xl bg-white/80 border border-gray-200 shadow-sm hover:bg-white hover:border-sky-300 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                                            className="h-9 w-9 p-0"
                                         >
-                                            <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                                            </svg>
-                                        </button>
-                                        <button
+                                            <ChevronLeft className="w-4 h-4" />
+                                        </Button>
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
                                             onClick={() => navigateQuestion('next')}
                                             disabled={activeQuestionIndex === exam.questions.length - 1}
-                                            className="p-2 rounded-xl bg-white/80 border border-gray-200 shadow-sm hover:bg-white hover:border-sky-300 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                                            className="h-9 w-9 p-0"
                                         >
-                                            <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                                            </svg>
-                                        </button>
+                                            <ChevronRight className="w-4 h-4" />
+                                        </Button>
                                     </div>
                                 </div>
 
                                 {/* Tab Navigation */}
-                                <div className="flex flex-wrap gap-2 max-h-20 overflow-y-auto custom-scrollbar">
-                                    {(exam.questions as ExamQuestion[]).map((_, index) => (
-                                        <button
-                                            key={index}
-                                            onClick={() => setActiveQuestionIndex(index)}
-                                            className={`relative flex items-center gap-2 px-4 py-2 rounded-xl font-medium text-sm transition-all duration-200 ${activeQuestionIndex === index
-                                                ? 'bg-gradient-to-r from-sky-400 to-blue-500 text-white shadow-lg scale-105'
-                                                : 'bg-white/80 text-gray-700 hover:bg-white hover:border-sky-200 border border-gray-200'
-                                                }`}
-                                        >
-                                            <span className="font-bold">{index + 1}</span>
-                                            {isQuestionAnswered(index) && (
-                                                <div className="w-2 h-2 bg-sky-200 rounded-full shadow-lg animate-pulse"></div>
-                                            )}
-                                            {activeQuestionIndex === index && (
-                                                <div className="absolute inset-0 bg-gradient-to-r from-sky-500 to-blue-600 rounded-xl opacity-0 hover:opacity-20 transition-opacity duration-200"></div>
-                                            )}
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
+                                <ScrollArea className="max-h-20">
+                                    <div className="flex flex-wrap gap-2">
+                                        {(exam.questions as ExamQuestion[]).map((_, index) => (
+                                            <Button
+                                                key={index}
+                                                variant={activeQuestionIndex === index ? "default" : "outline"}
+                                                size="sm"
+                                                onClick={() => setActiveQuestionIndex(index)}
+                                                className={`relative flex items-center gap-2 transition-all duration-200 ${activeQuestionIndex === index ? 'shadow-lg scale-105' : ''
+                                                    }`}
+                                            >
+                                                <span className="font-bold">{index + 1}</span>
+                                                {isQuestionAnswered(index) && (
+                                                    <CheckCircle2 className="w-3 h-3" />
+                                                )}
+                                            </Button>
+                                        ))}
+                                    </div>
+                                </ScrollArea>
+                            </CardHeader>
 
                             {/* Current Question Content */}
-                            <div className="flex-1 p-8 overflow-y-auto custom-scrollbar">
+                            <CardContent className="flex-1 p-8 overflow-y-auto">
                                 {exam.questions && exam.questions[activeQuestionIndex] && (
                                     <div className="space-y-6">
                                         {/* Question Statement */}
-                                        <div className="bg-gradient-to-r from-sky-50 to-blue-50 border border-sky-200 rounded-2xl p-6 shadow-sm">
+                                        <Alert className="border-primary/20 bg-primary/5">
                                             <div className="flex items-start gap-4">
-                                                <div className="flex-shrink-0 w-8 h-8 bg-gradient-to-br from-sky-400 to-blue-500 rounded-xl flex items-center justify-center text-white font-bold text-sm shadow-lg">
+                                                <div className="flex-shrink-0 w-8 h-8 bg-primary rounded-xl flex items-center justify-center text-primary-foreground font-bold text-sm shadow-lg">
                                                     {activeQuestionIndex + 1}
                                                 </div>
-                                                <div className="flex-1">
-                                                    <h3 className="text-lg font-semibold text-gray-700 mb-3 leading-relaxed">
-                                                        {exam.questions[activeQuestionIndex].question}
-                                                    </h3>
-                                                </div>
+                                                <AlertDescription
+                                                    className="[&>img]:max-w-md [&>img]:w-full [&>img]:h-auto [&>img]:rounded-lg text-lg font-semibold text-foreground leading-relaxed"
+                                                    dangerouslySetInnerHTML={{ __html: exam.questions[activeQuestionIndex].question }}
+                                                />
                                             </div>
-                                        </div>
+                                        </Alert>
 
                                         {/* Answer Input */}
                                         <div className="relative">
-                                            <label className="block text-sm font-medium text-gray-600 mb-3">
+                                            <label className="block text-sm font-medium text-foreground mb-3">
                                                 Your Solution:
                                             </label>
-                                            <textarea
+                                            <Textarea
                                                 value={answers[activeQuestionIndex] || ""}
                                                 onChange={(e) => {
                                                     updateAnswer(activeQuestionIndex, e.target.value);
                                                     setCode(e.target.value);
                                                 }}
-                                                className="w-full h-64 p-4 font-mono text-sm bg-gray-50 border border-gray-200 rounded-2xl focus:ring-2 focus:ring-sky-300 focus:border-sky-400 transition-all duration-300 resize-none backdrop-blur-sm shadow-inner"
+                                                className="min-h-64 font-mono text-sm bg-muted/30 border-border focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all duration-300 resize-none backdrop-blur-sm"
                                                 placeholder="Write your code here..."
                                             />
                                             <div className="absolute bottom-3 right-3 flex items-center gap-2">
                                                 {isQuestionAnswered(activeQuestionIndex) && (
-                                                    <div className="flex items-center gap-1 text-sky-600 text-xs font-medium bg-sky-50 px-2 py-1 rounded-full border border-sky-200">
-                                                        <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-                                                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                                                        </svg>
+                                                    <Badge variant="outline" className="text-xs bg-primary/10 text-primary border-primary/20">
+                                                        <CheckCircle2 className="w-3 h-3 mr-1" />
                                                         Answered
-                                                    </div>
+                                                    </Badge>
                                                 )}
-                                                <span className="text-xs text-gray-500">
-                                                    {(answers[activeQuestionIndex] || "").length} characters
-                                                </span>
+                                                <Badge variant="secondary" className="text-xs">
+                                                    {(answers[activeQuestionIndex] || "").length} chars
+                                                </Badge>
                                             </div>
                                         </div>
                                     </div>
                                 )}
-                            </div>
-                        </div>
+                            </CardContent>
+                        </Card>
 
                         {/* Code Editor Panel */}
-                        <div className="bg-white/90 backdrop-blur-xl rounded-3xl shadow-2xl border border-gray-200 overflow-hidden flex flex-col">
+                        <Card className="bg-card/95 backdrop-blur-xl shadow-2xl border-border overflow-hidden flex flex-col">
                             {/* Header Section */}
-                            <div className="bg-gradient-to-r from-blue-50 to-sky-100 px-4 sm:px-6 lg:px-8 py-4 lg:py-6 border-b border-gray-200">
+                            <CardHeader className="bg-muted/50 px-4 sm:px-6 lg:px-8 py-4 lg:py-6 border-b border-border">
                                 <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                                     <div className="flex items-center gap-3 flex-shrink-0">
-                                        <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-sky-400 to-blue-500 rounded-xl sm:rounded-2xl flex items-center justify-center shadow-lg">
-                                            <svg className="w-4 h-4 sm:w-5 sm:h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
-                                            </svg>
+                                        <div className="w-8 h-8 sm:w-10 sm:h-10 bg-primary rounded-xl sm:rounded-2xl flex items-center justify-center shadow-lg">
+                                            <Terminal className="w-4 h-4 sm:w-5 sm:h-5 text-primary-foreground" />
                                         </div>
                                         <div className="min-w-0 flex-1">
-                                            <h2 className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-700 truncate">
+                                            <CardTitle className="text-lg sm:text-xl lg:text-2xl text-foreground">
                                                 Code Editor
-                                            </h2>
-                                            <p className="text-gray-500 text-xs sm:text-sm mt-1 hidden sm:block">Write and test your solution</p>
+                                            </CardTitle>
+                                            <p className="text-muted-foreground text-xs sm:text-sm mt-1 hidden sm:block">Write and test your solution</p>
                                         </div>
                                     </div>
-                                    <button
-                                        onClick={handleRun}
-                                        disabled={running}
-                                        className="group relative overflow-hidden bg-gradient-to-r from-sky-400 to-blue-500 text-white px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl font-semibold shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none w-full sm:w-auto text-sm sm:text-base"
-                                    >
-                                        <div className="absolute inset-0 bg-gradient-to-r from-sky-500 to-blue-600 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                                        <div className="relative flex items-center justify-center gap-2">
+                                    <div className="flex items-center gap-3">
+                                        <Button
+                                            onClick={handleRun}
+                                            disabled={running}
+                                            className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 disabled:opacity-50 disabled:transform-none"
+                                        >
                                             {running ? (
                                                 <>
-                                                    <div className="w-3 h-3 sm:w-4 sm:h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                                                    <span>Running...</span>
+                                                    <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin mr-2"></div>
+                                                    Running...
                                                 </>
                                             ) : (
                                                 <>
-                                                    <svg className="w-3 h-3 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <polygon points="5,3 19,12 5,21" strokeWidth={2} />
-                                                    </svg>
-                                                    <span>Run Code</span>
+                                                    <Play className="w-4 h-4 mr-2" />
+                                                    Run Code
                                                 </>
                                             )}
-                                        </div>
-                                    </button>
+                                        </Button>
 
-                                    <label className="relative inline-flex items-center cursor-pointer">
-                                        <input
-                                            type="checkbox"
-                                            className="sr-only"
-                                            checked={editorTheme === 'dark'}
-                                            onChange={() => setEditorTheme(prev => prev === 'dark' ? 'light' : 'dark')}
-                                        />
-                                        <div className={`
-                                            w-11 h-6 rounded-full transition-colors duration-200 ease-in-out
-                                            ${editorTheme === 'dark' ? 'bg-blue-600' : 'bg-gray-300'}
-                                        `}>
-                                            <div className={`
-                                                w-4 h-4 bg-white rounded-full shadow-lg transform transition-transform duration-200 ease-in-out
-                                                ${editorTheme === 'dark' ? 'translate-x-6' : 'translate-x-1'}
-                                                mt-1
-                                            `} />
+                                        <div className="flex items-center space-x-2">
+                                            <label htmlFor="theme-switch" className="text-sm font-medium text-foreground">
+                                                Dark
+                                            </label>
+                                            <Switch
+                                                id="theme-switch"
+                                                checked={editorTheme === 'dark'}
+                                                onCheckedChange={() => setEditorTheme(prev => prev === 'dark' ? 'light' : 'dark')}
+                                            />
                                         </div>
-                                    </label>
+                                    </div>
                                 </div>
-                            </div>
+                            </CardHeader>
 
                             {/* Code Editor Section */}
-                            <div className="h-48 sm:h-64 md:h-80 overflow-hidden bg-gray-50">
+                            <div className="h-48 sm:h-64 md:h-80 overflow-hidden bg-muted/20">
                                 <CodeEditor
                                     language={exam.language}
                                     value={code}
@@ -1379,45 +1405,46 @@ export default function ExamPage() {
                                         setCode(newCode);
                                         updateAnswer(activeQuestionIndex, newCode);
                                     }}
-                                    theme={editorTheme === "dark" ? "vs-dark" : "light"} // 🔁 Add this line
+                                    theme={editorTheme === "dark" ? "vs-dark" : "light"}
                                 />
                             </div>
 
                             {/* Enhanced Output Panel */}
-                            <div className="bg-white border-t border-gray-200">
-                                <div className="px-3 sm:px-4 md:px-6 py-2 sm:py-3 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-sky-50">
+                            <div className="bg-card border-t border-border">
+                                <div className="px-3 sm:px-4 md:px-6 py-2 sm:py-3 border-b border-border bg-muted/30">
                                     <div className="flex items-center justify-between">
                                         <div className="flex items-center gap-2 sm:gap-3">
                                             <div className="flex items-center gap-1">
-                                                <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-sky-400 rounded-full"></div>
-                                                <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-blue-400 rounded-full"></div>
-                                                <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-sky-300 rounded-full"></div>
+                                                <div className="w-2 h-2 bg-primary rounded-full"></div>
+                                                <div className="w-2 h-2 bg-accent rounded-full"></div>
+                                                <div className="w-2 h-2 bg-secondary rounded-full"></div>
                                             </div>
-                                            <span className="text-xs sm:text-sm font-medium text-gray-700">Console Output</span>
+                                            <span className="text-xs sm:text-sm font-medium text-foreground">Console Output</span>
                                         </div>
                                         {output && (
-                                            <button
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
                                                 onClick={() => setOutput("")}
-                                                className="text-gray-500 hover:text-gray-700 transition-colors duration-200 p-1 rounded-md hover:bg-gray-100"
-                                                aria-label="Clear output"
+                                                className="h-6 w-6 p-0 hover:bg-muted"
                                             >
-                                                <svg className="w-3 h-3 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                                                 </svg>
-                                            </button>
+                                            </Button>
                                         )}
                                     </div>
                                 </div>
 
                                 {/* Console Output */}
-                                <div className="p-3 sm:p-4 md:p-6 bg-gray-50 h-32 sm:h-40 md:h-48 overflow-auto">
+                                <ScrollArea className="h-32 sm:h-40 md:h-48 p-3 sm:p-4 md:p-6 bg-muted/10">
                                     {sqlResult ? (
                                         <div className="overflow-x-auto">
-                                            <table className="w-full text-sm border-collapse border border-gray-200 rounded-lg overflow-hidden">
-                                                <thead className="bg-gradient-to-r from-sky-100 to-blue-100">
+                                            <table className="w-full text-sm border-collapse border border-border rounded-lg overflow-hidden">
+                                                <thead className="bg-muted">
                                                     <tr>
                                                         {sqlResult.columns.map((col, index) => (
-                                                            <th key={index} className="border border-gray-200 px-3 py-2 text-left font-semibold text-gray-700 bg-sky-50">
+                                                            <th key={index} className="border border-border px-3 py-2 text-left font-semibold text-foreground">
                                                                 {col}
                                                             </th>
                                                         ))}
@@ -1425,9 +1452,9 @@ export default function ExamPage() {
                                                 </thead>
                                                 <tbody>
                                                     {sqlResult.rows.map((row, rowIndex) => (
-                                                        <tr key={rowIndex} className="hover:bg-blue-50 transition-colors duration-150">
+                                                        <tr key={rowIndex} className="hover:bg-muted/50 transition-colors duration-150">
                                                             {row.map((cell, cellIndex) => (
-                                                                <td key={cellIndex} className="border border-gray-200 px-3 py-2 text-gray-600">
+                                                                <td key={cellIndex} className="border border-border px-3 py-2 text-muted-foreground">
                                                                     {String(cell)}
                                                                 </td>
                                                             ))}
@@ -1437,130 +1464,119 @@ export default function ExamPage() {
                                             </table>
                                         </div>
                                     ) : (
-                                        <pre className="text-sm text-gray-600 font-mono whitespace-pre-wrap break-words">
+                                        <pre className="text-sm text-muted-foreground font-mono whitespace-pre-wrap break-words">
                                             {output || (
-                                                <span className="text-gray-500 italic text-xs sm:text-sm">
+                                                <span className="text-muted-foreground/70 italic text-xs sm:text-sm">
                                                     Click 'Run Code' to see output here...
                                                 </span>
                                             )}
                                         </pre>
                                     )}
-                                </div>
+                                </ScrollArea>
                             </div>
-                        </div>
+                        </Card>
                     </div>
                 </div>
             </div>
 
+            {/* Proctoring Panel (if active) */}
             {exam?.isExamProctored && (
-                <div className="fixed bottom-4 right-4 z-50 bg-white rounded-xl shadow-xl p-2 border border-gray-300 w-64">
-                    <p className="text-xs font-medium text-gray-700 mb-1">AI Proctoring Active</p>
-                    <div className="relative">
-                        <video
-                            ref={videoRef}
-                            autoPlay
-                            playsInline
-                            muted
-                            width={160}
-                            height={120}
-                            className="rounded-lg border border-gray-200"
-                            onLoadedMetadata={() => {
-                                console.log("Video ready with dimensions:",
-                                    videoRef.current?.videoWidth,
-                                    videoRef.current?.videoHeight
-                                );
-                                setVideoReady(true);
-                            }}
-                            onError={(e) => {
-                                console.error("Video error:", e);
-                                setCameraError("Video stream error");
-                            }}
-                        />
-                        <canvas
-                            ref={canvasRef}
-                            className="absolute top-0 left-0 rounded-lg pointer-events-none"
-                            style={{ width: '160px', height: '120px' }}
-                        />
-                    </div>
+                <Card className="fixed bottom-4 right-4 z-50 w-64 bg-card/95 backdrop-blur-xl border-border shadow-2xl">
+                    <CardHeader className="pb-2">
+                        <CardTitle className="text-xs font-medium text-foreground flex items-center gap-2">
+                            <Camera className="w-3 h-3" />
+                            AI Proctoring Active
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent className="pt-0 space-y-3">
+                        <div className="relative">
+                            <video
+                                ref={videoRef}
+                                autoPlay
+                                playsInline
+                                muted
+                                width={160}
+                                height={120}
+                                className="rounded-lg border border-border bg-muted"
+                                onLoadedMetadata={() => {
+                                    console.log("Video ready with dimensions:",
+                                        videoRef.current?.videoWidth,
+                                        videoRef.current?.videoHeight
+                                    );
+                                    setVideoReady(true);
+                                }}
+                                onError={(e) => {
+                                    console.error("Video error:", e);
+                                    setCameraError("Video stream error");
+                                }}
+                            />
+                            <canvas
+                                ref={canvasRef}
+                                className="absolute top-0 left-0 rounded-lg pointer-events-none"
+                                style={{ width: '160px', height: '120px' }}
+                            />
+                        </div>
 
-                    {/* Enhanced Voice Detection Indicator */}
-                    <div className="mt-2 mb-2 space-y-1">
-                        <div className="flex items-center gap-2 text-xs">
-                            <span className="text-gray-600">Audio Level:</span>
-                            <div className="flex-1 bg-gray-200 rounded-full h-2">
-                                <div
-                                    className={`h-2 rounded-full transition-all duration-200 ${audioLevel > 25 ? 'bg-yellow-500' : 'bg-green-500'
-                                        }`}
-                                    style={{ width: `${Math.min(audioLevel * 2, 100)}%` }}
+                        {/* Enhanced Voice Detection Indicator */}
+                        <div className="space-y-2">
+                            <div className="flex items-center justify-between text-xs">
+                                <span className="text-muted-foreground">Audio Level:</span>
+                                <Progress
+                                    value={Math.min(audioLevel * 2, 100)}
+                                    className="w-16 h-2"
                                 />
                             </div>
+
+                            <div className="flex items-center justify-between text-xs">
+                                <span className="text-muted-foreground">Voice:</span>
+                                <div className="flex items-center gap-1">
+                                    <Progress
+                                        value={voiceConfidence * 100}
+                                        className="w-16 h-2"
+                                    />
+                                    <span className={`text-xs ${speakingDetected ? 'text-destructive' : 'text-primary'}`}>
+                                        {speakingDetected ? <AlertTriangle className="w-3 h-3" /> : <CheckCircle2 className="w-3 h-3" />}
+                                    </span>
+                                </div>
+                            </div>
                         </div>
 
-                        <div className="flex items-center gap-2 text-xs">
-                            <span className="text-gray-600">Voice Confidence:</span>
-                            <div className="flex-1 bg-gray-200 rounded-full h-2">
-                                <div
-                                    className={`h-2 rounded-full transition-all duration-200 ${voiceConfidence > 0.6 ? 'bg-red-500' : voiceConfidence > 0.3 ? 'bg-orange-500' : 'bg-green-500'
-                                        }`}
-                                    style={{ width: `${voiceConfidence * 100}%` }}
-                                />
-                            </div>
-                            <span className={`text-xs font-medium ${speakingDetected ? 'text-red-600' : 'text-green-600'}`}>
-                                {speakingDetected ? '🗣️' : '🤫'}
-                            </span>
-                        </div>
-                    </div>
+                        <Separator />
 
-                    <div className="mt-2 text-xs space-y-1">
-                        <div className={`flex items-center gap-1 ${noFaceDetectedCount > 5 ? 'text-red-600' : 'text-green-600'}`}>
-                            <div className="w-2 h-2 rounded-full bg-current"></div>
-                            Face: {noFaceDetectedCount > 0 ? 'Not Detected' : 'Detected'}
+                        <div className="text-xs space-y-1">
+                            <div className={`flex items-center gap-2 ${noFaceDetectedCount > 5 ? 'text-destructive' : 'text-primary'}`}>
+                                <Circle className="w-2 h-2 fill-current" />
+                                Face: {noFaceDetectedCount > 0 ? 'Not Detected' : 'Detected'}
+                            </div>
+                            {multipleFacesCount > 0 && (
+                                <Alert variant="destructive" className="py-1">
+                                    <AlertTriangle className="w-3 h-3" />
+                                    <AlertDescription className="text-xs">Multiple faces detected!</AlertDescription>
+                                </Alert>
+                            )}
+                            {audioViolations > 0 && (
+                                <Alert variant="destructive" className="py-1">
+                                    <Mic className="w-3 h-3" />
+                                    <AlertDescription className="text-xs">Voice: {audioViolations}/3</AlertDescription>
+                                </Alert>
+                            )}
+                            {suspiciousObjectCount > 0 && (
+                                <Alert variant="destructive" className="py-1">
+                                    <Monitor className="w-3 h-3" />
+                                    <AlertDescription className="text-xs">Object: {lastSuspiciousActivity}</AlertDescription>
+                                </Alert>
+                            )}
                         </div>
-                        {multipleFacesCount > 0 && (
-                            <div className="text-red-600 text-xs">⚠️ Multiple faces!</div>
+
+                        {cameraError && (
+                            <Alert variant="destructive">
+                                <AlertTriangle className="w-4 h-4" />
+                                <AlertDescription className="text-xs">{cameraError}</AlertDescription>
+                            </Alert>
                         )}
-                        {audioViolations > 0 && (
-                            <div className="text-red-600 text-xs">
-                                🗣️ Voice: {audioViolations}/3
-                            </div>
-                        )}
-                        {suspiciousObjectCount > 0 && (
-                            <div className="text-red-600 text-xs">
-                                📱 Object: {lastSuspiciousActivity}
-                            </div>
-                        )}
-                        {detectedObjects.length > 0 && (
-                            <div className="text-gray-500 text-xs max-h-12 overflow-y-auto">
-                                Objects: {detectedObjects.slice(0, 2).join(', ')}
-                                {detectedObjects.length > 2 && '...'}
-                            </div>
-                        )}
-                    </div>
-                    {cameraError && (
-                        <p className="text-xs text-red-600 mt-1">{cameraError}</p>
-                    )}
-                </div>
+                    </CardContent>
+                </Card>
             )}
-
-            <style jsx>{`
-                .custom-scrollbar::-webkit-scrollbar {
-                    width: 6px;
-                }
-                .custom-scrollbar::-webkit-scrollbar-track {
-                    background: rgba(255, 255, 255, 0.1);
-                    border-radius: 10px;
-                }
-                .custom-scrollbar::-webkit-scrollbar-thumb {
-                    background: rgba(156, 163, 175, 0.5);
-                    border-radius: 10px;
-                }
-                .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-                    background: rgba(156, 163, 175, 0.8);
-                }
-                .animation-delay-150 {
-                    animation-delay: 150ms;
-                }
-            `}</style>
         </div>
     );
 }

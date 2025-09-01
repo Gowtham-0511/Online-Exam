@@ -19,25 +19,25 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       .query(`SELECT id, title FROM Assessment WHERE createdBy = @createdBy`);
 
     const exams = examsResult.recordset;
-    // console.log("Exams found:", exams);
 
     if (exams.length === 0) {
       return res.status(200).json([]);
     }
 
     const examIds = exams.map((e: any) => e.id);
-    const placeholders = examIds.map((_, idx) => `@id${idx}`).join(",");
+    const examTitles = exams.map((e: any) => e.title);
+    console.log("Exam Titles:", examTitles);
+    const placeholders = examTitles.map((_, idx) => `@id${idx}`).join(",");
 
     const request = db.request();
-    examIds.forEach((id, idx) => request.input(`id${idx}`, id));
+    examTitles.forEach((id, idx) => request.input(`id${idx}`, id));
 
     console.log("Fetching submissions for exam IDs:", examIds);
-    console.log("Placeholders for query:", placeholders);
 
     const submissionsResult = await request.query(`
       SELECT * 
       FROM Submissions 
-      WHERE id IN (${placeholders})
+      WHERE examId IN (${placeholders})
       ORDER BY submittedAt DESC
     `);
 

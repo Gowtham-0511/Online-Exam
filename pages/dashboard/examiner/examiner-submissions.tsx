@@ -52,10 +52,20 @@ interface Submission {
     answer?: any;
 }
 
+interface Question {
+    id: string;
+    examId: string;
+    questionText: string;
+    expectedOutput?: string;
+    order: number;
+    questions?: string;
+}
+
 export default function ExaminerSubmissions() {
     const [submissions, setSubmissions] = useState<Submission[]>([]);
     const [loading, setLoading] = useState(true);
     const [downloadingId, setDownloadingId] = useState<string | null>(null);
+    const [questionsCache, setQuestionsCache] = useState<{ [examId: string]: Question[] }>({});
     const { data: session } = useSession();
 
     useEffect(() => {
@@ -71,7 +81,6 @@ export default function ExaminerSubmissions() {
                 }
 
                 const data = await res.json();
-                console.log("Fetched submissions:", data);
                 setSubmissions(data);
             } catch (error) {
                 console.error("Error fetching submissions:", error);
@@ -83,105 +92,344 @@ export default function ExaminerSubmissions() {
         fetchSubmissions();
     }, [session]);
 
+
+    const fetchQuestions = async (examId: string): Promise<Question[]> => {
+        if (questionsCache[examId]) {
+            return questionsCache[examId];
+        }
+
+        try {
+            const res = await fetch(`/api/submissions/${examId}`);
+            if (!res.ok) {
+                throw new Error('Failed to fetch questions');
+            }
+            const questions = await res.json();
+
+            console.log("Questions fetched for examId", examId, questions);
+
+            setQuestionsCache(prev => ({
+                ...prev,
+                [examId]: questions
+            }));
+
+            return questions;
+        } catch (error) {
+            console.error('Error fetching questions:', error);
+            return [];
+        }
+    };
+
+    const fetchViolationImages = async (examId: string, email: string) => {
+        try {
+            const res = await fetch(`/api/submissions/violations?examId=${examId}&email=${email}`);
+            if (!res.ok) {
+                throw new Error("Failed to fetch violation images");
+            }
+            const data = await res.json();
+
+            console.log("Violation images fetched:", data);
+
+            return data.map((row: any) => row.imageBase64);
+        } catch (err) {
+            console.error("fetchViolationImages error:", err);
+            return [];
+        }
+    }
+
+    // const downloadAsPDF = async (submission: Submission) => {
+    //     try {
+    //         setDownloadingId(submission.examId + submission.email);
+
+    //         console.log("Generating PDF for submission:", submission);
+
+    //         const doc = new jsPDF();
+    //         let y = 20;
+    //         const lineHeight = 8;
+    //         const pageHeight = doc.internal.pageSize.height;
+
+    //         const addLine = (text: string, fontSize = 12) => {
+    //             if (y > pageHeight - 30) {
+    //                 doc.addPage();
+    //                 y = 20;
+    //             }
+    //             doc.setFontSize(fontSize);
+    //             doc.text(text, 15, y);
+    //             y += lineHeight;
+    //         };
+
+    //         // Header
+    //         doc.setFontSize(18);
+    //         doc.text("EXAM SUBMISSION REPORT", 15, y);
+    //         y += 15;
+
+    //         addLine("━".repeat(50), 10);
+    //         addLine(`Exam ID: ${submission.examId || "N/A"}`, 14);
+    //         addLine(`Candidate: ${submission.email || "N/A"}`, 12);
+    //         addLine(`Submitted: ${submission.submittedAt ? new Date(submission.submittedAt).toLocaleString() : "N/A"}`, 12);
+    //         addLine(`Status: ${submission.disqualified ? "❌ Disqualified" : "✅ Qualified"}`, 12);
+    //         addLine("━".repeat(50), 10);
+    //         y += 10;
+
+    //         // Answers
+    //         if (submission.answersWithQuestionIds?.length) {
+    //             addLine("ANSWERS:", 16);
+    //             y += 5;
+
+    //             const sortedAnswers = [...submission.answersWithQuestionIds].sort((a, b) =>
+    //                 (a.originalIndex ?? 0) - (b.originalIndex ?? 0)
+    //             );
+
+    //             sortedAnswers.forEach((item, index) => {
+    //                 addLine(`Question ${index + 1} (ID: ${item.questionId || "N/A"})`, 14);
+    //                 addLine("─".repeat(40), 10);
+
+    //                 const answerText = item.answer || "No answer provided";
+    //                 const answerLines = answerText.split("\n");
+
+    //                 answerLines.forEach((line: string) => {
+    //                     if (y > pageHeight - 30) {
+    //                         doc.addPage();
+    //                         y = 20;
+    //                     }
+    //                     doc.setFontSize(10);
+    //                     doc.text(line, 15, y);
+    //                     y += 6;
+    //                 });
+    //                 y += 8;
+    //             });
+    //         } else if (submission.answers?.length) {
+    //             addLine("ANSWERS:", 16);
+    //             y += 5;
+
+    //             submission.answers.forEach((answer, index) => {
+    //                 addLine(`Answer ${index + 1}`, 14);
+    //                 addLine("─".repeat(20), 10);
+
+    //                 const answerText = answer || "No answer provided";
+    //                 const lines = answerText.split("\n");
+
+    //                 lines.forEach((line: string) => {
+    //                     if (y > pageHeight - 30) {
+    //                         doc.addPage();
+    //                         y = 20;
+    //                     }
+    //                     doc.setFontSize(10);
+    //                     doc.text(line, 15, y);
+    //                     y += 6;
+    //                 });
+    //                 y += 8;
+    //             });
+    //         } else if (submission.answer) {
+    //             addLine("ANSWER:", 16);
+    //             addLine("─".repeat(10), 10);
+
+    //             const answerText = submission.answer || "";
+    //             const lines = answerText.split("\n");
+
+    //             lines.forEach((line: string) => {
+    //                 if (y > pageHeight - 30) {
+    //                     doc.addPage();
+    //                     y = 20;
+    //                 }
+    //                 doc.setFontSize(10);
+    //                 doc.text(line, 15, y);
+    //                 y += 6;
+    //             });
+    //         } else {
+    //             addLine("No answers found in submission.", 12);
+    //         }
+
+    //         const filename = `submission-${submission.examId}-${submission.email.split('@')[0]}.pdf`;
+    //         doc.save(filename);
+
+    //     } catch (error) {
+    //         console.error("Error generating PDF:", error);
+    //     } finally {
+    //         setDownloadingId(null);
+    //     }
+    // };
+
     const downloadAsPDF = async (submission: Submission) => {
         try {
             setDownloadingId(submission.examId + submission.email);
+
+            const questions = await fetchQuestions(submission.examId);
+            console.log('Fetched questions for PDF:', questions);
 
             const doc = new jsPDF();
             let y = 20;
             const lineHeight = 8;
             const pageHeight = doc.internal.pageSize.height;
+            const pageWidth = doc.internal.pageSize.width;
+            const margin = 15;
+            const contentWidth = pageWidth - (margin * 2);
 
-            const addLine = (text: string, fontSize = 12) => {
+            const addLine = (text: string, fontSize = 12, isBold = false) => {
                 if (y > pageHeight - 30) {
                     doc.addPage();
                     y = 20;
                 }
                 doc.setFontSize(fontSize);
-                doc.text(text, 15, y);
-                y += lineHeight;
-            };
+                if (isBold) {
+                    doc.setFont('helvetica', 'bold');
+                } else {
+                    doc.setFont('helvetica', 'normal');
+                }
 
-            // Header
-            doc.setFontSize(18);
-            doc.text("EXAM SUBMISSION REPORT", 15, y);
-            y += 15;
-
-            addLine("━".repeat(50), 10);
-            addLine(`Exam ID: ${submission.examId || "N/A"}`, 14);
-            addLine(`Candidate: ${submission.email || "N/A"}`, 12);
-            addLine(`Submitted: ${submission.submittedAt ? new Date(submission.submittedAt).toLocaleString() : "N/A"}`, 12);
-            addLine(`Status: ${submission.disqualified ? "❌ Disqualified" : "✅ Qualified"}`, 12);
-            addLine("━".repeat(50), 10);
-            y += 10;
-
-            // Answers
-            if (submission.answersWithQuestionIds?.length) {
-                addLine("ANSWERS:", 16);
-                y += 5;
-
-                const sortedAnswers = [...submission.answersWithQuestionIds].sort((a, b) =>
-                    (a.originalIndex ?? 0) - (b.originalIndex ?? 0)
-                );
-
-                sortedAnswers.forEach((item, index) => {
-                    addLine(`Question ${index + 1} (ID: ${item.questionId || "N/A"})`, 14);
-                    addLine("─".repeat(40), 10);
-
-                    const answerText = item.answer || "No answer provided";
-                    const answerLines = answerText.split("\n");
-
-                    answerLines.forEach((line: string) => {
-                        if (y > pageHeight - 30) {
-                            doc.addPage();
-                            y = 20;
-                        }
-                        doc.setFontSize(10);
-                        doc.text(line, 15, y);
-                        y += 6;
-                    });
-                    y += 8;
-                });
-            } else if (submission.answers?.length) {
-                addLine("ANSWERS:", 16);
-                y += 5;
-
-                submission.answers.forEach((answer, index) => {
-                    addLine(`Answer ${index + 1}`, 14);
-                    addLine("─".repeat(20), 10);
-
-                    const answerText = answer || "No answer provided";
-                    const lines = answerText.split("\n");
-
-                    lines.forEach((line: string) => {
-                        if (y > pageHeight - 30) {
-                            doc.addPage();
-                            y = 20;
-                        }
-                        doc.setFontSize(10);
-                        doc.text(line, 15, y);
-                        y += 6;
-                    });
-                    y += 8;
-                });
-            } else if (submission.answer) {
-                addLine("ANSWER:", 16);
-                addLine("─".repeat(10), 10);
-
-                const answerText = submission.answer || "";
-                const lines = answerText.split("\n");
-
+                const lines = doc.splitTextToSize(text, contentWidth);
                 lines.forEach((line: string) => {
                     if (y > pageHeight - 30) {
                         doc.addPage();
                         y = 20;
                     }
-                    doc.setFontSize(10);
-                    doc.text(line, 15, y);
-                    y += 6;
+                    doc.text(line, margin, y);
+                    y += lineHeight;
                 });
-            } else {
+            };
+
+            doc.setFontSize(18);
+            doc.setFont("helvetica", 'bold');
+            doc.text("EXAM SUBMISSION REPORT", margin, y);
+            y += 15;
+
+            addLine("=".repeat(60), 10);
+            addLine(`Exam ID: ${submission.examId || "N/A"}`, 14, true);
+            addLine(`Candidate: ${submission.email || "N/A"}`, 12);
+            addLine(`Submitted: ${submission.submittedAt ? new Date(submission.submittedAt).toLocaleString() : "N/A"}`, 12);
+            addLine(`Status: ${submission.disqualified ? "DISQUALIFIED" : "QUALIFIED"}`, 12);
+            addLine("=".repeat(60), 10);
+            y += 10;
+
+            let answersData: any[] = [];
+            if (submission.answersWithQuestionIds) {
+                if (typeof submission.answersWithQuestionIds === 'string') {
+                    try {
+                        answersData = JSON.parse(submission.answersWithQuestionIds);
+                        console.log('Parsed answers:', answersData);
+                    } catch (e) {
+                        console.error('Error parsing answersWithQuestionIds:', e);
+                        answersData = [];
+                    }
+                } else if (Array.isArray(submission.answersWithQuestionIds)) {
+                    answersData = submission.answersWithQuestionIds;
+                }
+            }
+
+            if (answersData.length > 0) {
+                addLine("QUESTIONS AND ANSWERS:", 16, true);
+                y += 5;
+
+                const sortedAnswers = [...answersData].sort((a, b) => {
+                    const indexA = a.originalIndex !== undefined ? a.originalIndex : 0;
+                    const indexB = b.originalIndex !== undefined ? b.originalIndex : 0;
+                    return indexA - indexB;
+                });
+
+                sortedAnswers.forEach((answerItem, index) => {
+                    const parsedQuestions = questions.flatMap(q => JSON.parse(q.questions || "[]"));
+                    console.log("Parsed questions array:", parsedQuestions);
+
+                    const question = parsedQuestions.find(q => q.id === answerItem.questionId);
+
+                    addLine(`Question ${index + 1}`, 14, true);
+                    addLine(`Question ID: ${answerItem.questionId || "N/A"}`, 10);
+
+                    if (question) {
+                        addLine(`Question: ${question.question}`, 11);
+                        if (question.expectedOutput) {
+                            addLine(`Expected Output: ${question.expectedOutput}`, 10);
+                        }
+                    } else {
+                        addLine("Question details not found", 10);
+                    }
+
+                    addLine("-".repeat(50), 10);
+
+                    const answerText = answerItem.answer || "No answer provided";
+                    addLine("Candidate's Answer:", 12, true);
+                    if (answerText.trim()) {
+                        addLine(answerText, 10);
+                    } else {
+                        addLine("No answer provided", 10);
+                    }
+
+                    y += 8;
+                });
+
+            }
+            else if (submission.answers?.length) {
+                addLine("ANSWERS:", 16, true);
+                y += 5;
+
+                submission.answers.forEach((answer, index) => {
+                    const question = questions.find(q => q.order === index + 1) || questions[index];
+
+                    addLine(`Question ${index + 1}`, 14, true);
+                    if (question) {
+                        addLine(`Question: ${question.questionText}`, 11);
+                        if (question.expectedOutput) {
+                            addLine(`Expected Output: ${question.expectedOutput}`, 10);
+                        }
+                    }
+                    addLine("-".repeat(30), 10);
+
+                    addLine("Candidate's Answer:", 12, true);
+                    const answerText = answer || "No answer provided";
+                    addLine(answerText, 10);
+                    y += 8;
+                });
+            }
+            else if (submission.answer) {
+                addLine("ANSWER:", 16, true);
+                const question = questions[0];
+                if (question) {
+                    addLine(`Question: ${question.questionText}`, 11);
+                    if (question.expectedOutput) {
+                        addLine(`Expected Output: ${question.expectedOutput}`, 10);
+                    }
+                }
+                addLine("-".repeat(20), 10);
+
+                addLine("Candidate's Answer:", 12, true);
+                const answerText = submission.answer || "No answer provided";
+                addLine(answerText, 10);
+            }
+            else {
                 addLine("No answers found in submission.", 12);
+            }
+
+            if (submission.disqualified) {
+                y += 10;
+                addLine("⚠️ This candidate has been disqualified.", 14, true);
+                addLine("Violation Evidence:", 12, true);
+
+                const violationImages = await fetchViolationImages(submission.examId, submission.email);
+                if (violationImages.length === 0) {
+                    addLine("No violation images found.", 10);
+                } else {
+                    for (const imgBase64 of violationImages) {
+                        if (y > pageHeight - 60) {
+                            doc.addPage();
+                            y = 20;
+                        }
+                        try {
+                            const imgProps = doc.getImageProperties(imgBase64);
+                            const imgWidth = Math.min(contentWidth, imgProps.width * 0.75);
+                            const imgHeight = (imgProps.height * imgWidth) / imgProps.width;
+
+                            if (y + imgHeight > pageHeight - 30) {
+                                doc.addPage();
+                                y = 20;
+                            }
+
+                            doc.addImage(imgBase64, 'JPEG', margin, y, imgWidth, imgHeight);
+                            y += imgHeight + 10;
+                        } catch (e) {
+                            console.error("Error adding image to PDF:", e);
+                            addLine("Error displaying an image.", 10);
+                        }
+                    }
+                }
             }
 
             // Save PDF
@@ -190,6 +438,7 @@ export default function ExaminerSubmissions() {
 
         } catch (error) {
             console.error("Error generating PDF:", error);
+            alert("Error generating PDF. Please try again.");
         } finally {
             setDownloadingId(null);
         }
