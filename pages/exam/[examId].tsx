@@ -1309,9 +1309,10 @@ export default function ExamPage() {
                                                 <div className="flex-shrink-0 w-8 h-8 bg-primary rounded-xl flex items-center justify-center text-primary-foreground font-bold text-sm shadow-lg">
                                                     {activeQuestionIndex + 1}
                                                 </div>
-                                                <AlertDescription className="text-lg font-semibold text-foreground leading-relaxed">
-                                                    {exam.questions[activeQuestionIndex].question}
-                                                </AlertDescription>
+                                                <AlertDescription
+                                                    className="[&>img]:max-w-md [&>img]:w-full [&>img]:h-auto [&>img]:rounded-lg text-lg font-semibold text-foreground leading-relaxed"
+                                                    dangerouslySetInnerHTML={{ __html: exam.questions[activeQuestionIndex].question }}
+                                                />
                                             </div>
                                         </Alert>
 
