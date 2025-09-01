@@ -131,9 +131,10 @@ export default function AttenderDashboard() {
             errors.push({ field: 'examId', message: 'Exam ID must be at least 3 characters' });
         } else if (examId.length > 50) {
             errors.push({ field: 'examId', message: 'Exam ID cannot exceed 50 characters' });
-        } else if (!EXAM_ID_PATTERNS.advanced.test(examId)) {
-            errors.push({ field: 'examId', message: 'Exam ID must start with a letter and contain only letters, numbers, hyphens, and underscores' });
         }
+        // } else if (!EXAM_ID_PATTERNS.advanced.test(examId)) {
+        //     errors.push({ field: 'examId', message: 'Exam ID must start with a letter and contain only letters, numbers, hyphens, and underscores' });
+        // }
 
         return { isValid: errors.length === 0, errors };
     };
