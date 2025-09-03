@@ -12,7 +12,6 @@ import { Separator } from "@/components/ui/separator";
 import { Progress } from "@/components/ui/progress";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
@@ -22,7 +21,6 @@ import {
     Send,
     ChevronLeft,
     ChevronRight,
-    Eye,
     Mic,
     Camera,
     AlertTriangle,
@@ -63,8 +61,6 @@ export default function ExamPage() {
     const [detectedObjects, setDetectedObjects] = useState<string[]>([]);
     const [lastSuspiciousActivity, setLastSuspiciousActivity] = useState<string>("");
 
-    // Theme handling
-    const { theme, setTheme } = useTheme();
     const [editorTheme, setEditorTheme] = useState<"light" | "dark">("light");
 
     const [violations, setViolations] = useState(0);
@@ -187,38 +183,73 @@ export default function ExamPage() {
     }, [exam]);
 
     useEffect(() => {
-        if (!exam || !session?.user?.email) return;
+        const onFsChange = () => {
+            if (!document.fullscreenElement && examStarted && !hasSubmittedRef.current) {
+                console.log("Fullscreen exited - disqualifying");
+                setDisqualified(true);
+                handleSubmitWithDisqualification(true);
+            }
+        };
 
-        const now = new Date();
-        const start = exam.startTime ? new Date(exam.startTime) : null;
-        const end = exam.endTime ? new Date(exam.endTime) : null;
+        document.addEventListener("fullscreenchange", onFsChange);
+        document.addEventListener("webkitfullscreenchange", onFsChange);
+        document.addEventListener("mozfullscreenchange", onFsChange);
 
-        // Time validation
-        // if (start) {
-        //     alert("⏳ This exam has not started yet.");
-        //     router.push("/dashboard/attender");
-        //     return;
-        // }
+        return () => {
+            document.removeEventListener("fullscreenchange", onFsChange);
+            document.removeEventListener("webkitfullscreenchange", onFsChange);
+            document.removeEventListener("mozfullscreenchange", onFsChange);
+        };
+    }, [examStarted]);
 
-        // if (end && now > end) {
-        //     alert("❌ This exam has expired.");
-        //     router.push("/dashboard/attender");
-        //     return;
-        // }
 
-        // Allowed user validation
-        const allowedUsers: string[] = Array.isArray(exam.allowedUsers)
-            ? exam.allowedUsers
-            : exam.allowedUsers
-                ? JSON.parse(exam.allowedUsers)
-                : [];
-
-        if (allowedUsers.length > 0 && !allowedUsers.includes(session.user.email)) {
-            alert("🚫 You are not allowed to access this exam.");
-            router.push("/dashboard");
-            return;
+    const onFullscreenChange = () => {
+        if (!document.fullscreenElement && examStarted && !hasSubmittedRef.current) {
+            console.log("Fullscreen exited - disqualifying");
+            setDisqualified(true);
+            handleSubmitWithDisqualification(true);
         }
-    }, [exam, session]);
+    };
+
+    ["fullscreenchange", "webkitfullscreenchange", "mozfullscreenchange"].forEach(evt =>
+        document.addEventListener(evt, onFullscreenChange)
+    );
+
+
+
+    // useEffect(() => {
+    //     if (!exam || !session?.user?.email) return;
+
+    //     const now = new Date();
+    //     const start = exam.startTime ? new Date(exam.startTime) : null;
+    //     const end = exam.endTime ? new Date(exam.endTime) : null;
+
+    //     // Time validation
+    //     // if (start) {
+    //     //     alert("⏳ This exam has not started yet.");
+    //     //     router.push("/dashboard/attender");
+    //     //     return;
+    //     // }
+
+    //     // if (end && now > end) {
+    //     //     alert("❌ This exam has expired.");
+    //     //     router.push("/dashboard/attender");
+    //     //     return;
+    //     // }
+
+    //     // Allowed user validation
+    //     // const allowedUsers: string[] = Array.isArray(exam.allowedUsers)
+    //     //     ? exam.allowedUsers
+    //     //     : exam.allowedUsers
+    //     //         ? JSON.parse(exam.allowedUsers)
+    //     //         : [];
+
+    //     // if (allowedUsers.length > 0 && !allowedUsers.includes(session.user.email)) {
+    //     //     alert("🚫 You are not allowed to access this exam.");
+    //     //     router.push("/dashboard");
+    //     //     return;
+    //     // }
+    // }, [exam, session]);
 
     useEffect(() => {
         if (timeLeft <= 0 && exam) {
@@ -466,26 +497,26 @@ export default function ExamPage() {
     };
 
     handleBlurRef.current = () => {
-        if (document.fullscreenElement) {
+        if (examStarted && !hasSubmittedRef.current) {
+            console.log("Window blur detected - disqualifying");
             setDisqualified(true);
             handleSubmitWithDisqualification(true);
-            router.push("/dashboard/attender");
         }
     };
 
     handleFsChangeRef.current = () => {
-        if (!document.fullscreenElement) {
+        if (!document.fullscreenElement && examStarted && !hasSubmittedRef.current) {
+            console.log("Fullscreen exited - disqualifying");
             setDisqualified(true);
             handleSubmitWithDisqualification(true);
-            router.push("/dashboard/attender");
         }
     };
 
     handleVisibilityChangeRef.current = () => {
-        if (document.hidden) {
+        if (document.hidden && examStarted && !hasSubmittedRef.current) {
+            console.log("Tab hidden - disqualifying");
             setDisqualified(true);
             handleSubmitWithDisqualification(true);
-            router.push("/dashboard/attender");
         }
     };
 
@@ -563,55 +594,6 @@ export default function ExamPage() {
         document.onkeydown = null;
         document.oncontextmenu = null;
     };
-
-    // useEffect(() => {
-    //     if (!examStarted) return;
-
-    //     const handleBlur = (e: any) => {
-    //         if (handleBlurRef.current) {
-    //             handleBlurRef.current(e);
-    //         }
-    //     };
-
-    //     const handleFsChange = (e: any) => {
-    //         if (handleFsChangeRef.current) {
-    //             handleFsChangeRef.current(e);
-    //         }
-    //     };
-
-    //     const handleVisibilityChange = (e: any) => {
-    //         if (handleVisibilityChangeRef.current) {
-    //             handleVisibilityChangeRef.current(e);
-    //         }
-    //     };
-
-    //     const handleContextMenu = (e: any) => {
-    //         if (handleContextMenuRef.current) {
-    //             handleContextMenuRef.current(e);
-    //         }
-    //     };
-
-
-    //     const handleKeyDown = (e: any) => {
-    //         if (handleKeyDownRef.current) {
-    //             handleKeyDownRef.current(e);
-    //         }
-    //     };
-
-    //     window.addEventListener("blur", handleBlur);
-    //     document.addEventListener("fullscreenchange", handleFsChange);
-    //     document.addEventListener('visibilitychange', handleVisibilityChange);
-    //     document.addEventListener('contextmenu', handleContextMenu);
-    //     document.addEventListener('keydown', handleKeyDown);
-
-    //     return () => {
-    //         window.removeEventListener("blur", handleBlur);
-    //         document.removeEventListener("fullscreenchange", handleFsChange);
-    //         document.removeEventListener('visibilitychange', handleVisibilityChange);
-    //         document.removeEventListener('contextmenu', handleContextMenu);
-    //         document.removeEventListener('keydown', handleKeyDown);
-    //     };
-    // }, [examStarted]);
 
     const formatTimeReadable = (seconds: number) => {
         const hours = Math.floor(seconds / 3600);
