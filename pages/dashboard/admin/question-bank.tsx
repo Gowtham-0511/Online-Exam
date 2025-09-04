@@ -285,6 +285,7 @@ export default function QuestionBankPage() {
 
     const languageConfig = {
         python: { emoji: '🐍', name: 'Python' },
+        sql: { emoji: '🗄️', name: 'SQL' },
         javascript: { emoji: '💛', name: 'JavaScript' },
         java: { emoji: '☕', name: 'Java' },
         cpp: { emoji: '⚡', name: 'C++' },
