@@ -18,6 +18,7 @@ import {
     Home,
     Package,
     CalendarClock,
+    ClipboardList,
 } from 'lucide-react';
 import ThemeToggle from '@/components/ThemeToggle';
 
@@ -53,20 +54,20 @@ const menuItems: MenuItem[] = [
         icon: Users,
         description: 'Manage System Users',
     },
-    {
-        id: 'exams',
-        navigation: 'exams',
-        label: 'Exams',
-        icon: Building2,
-        description: 'Manage all exams'
-    },
-    {
-        id: 'skillsets',
-        navigation: 'skillset-config',
-        label: 'Skillset Config',
-        icon: Brain,
-        description: 'Map skills to jobs'
-    },
+    // {
+    //     id: 'exams',
+    //     navigation: 'exams',
+    //     label: 'Exams',
+    //     icon: Building2,
+    //     description: 'Manage all exams'
+    // },
+    // {
+    //     id: 'skillsets',
+    //     navigation: 'skillset-config',
+    //     label: 'Skillset Config',
+    //     icon: Brain,
+    //     description: 'Map skills to jobs'
+    // },
     {
         id: 'questions',
         navigation: 'question-bank',
@@ -87,6 +88,13 @@ const menuItems: MenuItem[] = [
         label: 'Exam Scheduling',
         icon: CalendarClock,
         description: 'Schedule Exam'
+    },
+    {
+        id: 'assessmentManagement',
+        navigation: 'assessment-management',
+        label: 'Assessment Management',
+        icon: ClipboardList,
+        description: 'Create and Manage Assessment'
     }
 ];
 

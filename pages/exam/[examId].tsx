@@ -203,15 +203,15 @@ export default function ExamPage() {
             setAnswers(new Array(exam.questions.length).fill(""));
         }
 
-        if (exam && !examStarted) {
-            document.documentElement.requestFullscreen()
-                .then(() => {
-                    setExamStarted(true);
-                })
-                .catch(() => {
-                    alert("Please allow fullscreen mode.");
-                });
-        }
+        // if (exam && !examStarted) {
+        //     document.documentElement.requestFullscreen()
+        //         .then(() => {
+        //             setExamStarted(true);
+        //         })
+        //         .catch(() => {
+        //             alert("Please allow fullscreen mode.");
+        //         });
+        // }
     }, [exam]);
 
     useEffect(() => {
@@ -242,9 +242,9 @@ export default function ExamPage() {
         }
     };
 
-    ["fullscreenchange", "webkitfullscreenchange", "mozfullscreenchange"].forEach(evt =>
-        document.addEventListener(evt, onFullscreenChange)
-    );
+    // ["fullscreenchange", "webkitfullscreenchange", "mozfullscreenchange"].forEach(evt =>
+    //     document.addEventListener(evt, onFullscreenChange)
+    // );
 
     useEffect(() => {
         if (timeLeft <= 0 && exam) {
@@ -1874,130 +1874,287 @@ export default function ExamPage() {
                         )}
 
                         {/* Code Editor Panel */}
-                        <Card className="bg-card/95 backdrop-blur-xl shadow-2xl border-border overflow-hidden flex flex-col">
-                            {/* Header Section */}
-                            <CardHeader className="bg-muted/50 px-4 sm:px-6 lg:px-8 py-4 lg:py-6 border-b border-border">
+                        <Card className="relative overflow-hidden flex flex-col group transition-all duration-500 hover:shadow-2xl border-border/50 backdrop-blur-xl">
+                            {/* Animated background layers */}
+                            <div className="absolute inset-0 bg-gradient-to-br from-card/95 via-card/98 to-card/95" />
+                            <div className="absolute inset-0 bg-gradient-to-tr from-primary/[0.02] via-transparent to-accent/[0.02]" />
+                            <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-primary/30 to-transparent" />
+
+                            {/* Floating geometric decorations */}
+                            <div className="absolute top-6 right-6 w-32 h-32 bg-gradient-to-br from-primary/5 to-accent/5 rounded-full blur-3xl opacity-50 animate-pulse" />
+                            <div className="absolute bottom-8 left-8 w-24 h-24 bg-gradient-to-tl from-accent/5 to-primary/5 rounded-full blur-2xl opacity-40 animate-pulse delay-1000" />
+
+                            {/* Enhanced Header Section */}
+                            <CardHeader className="relative z-10 bg-gradient-to-r from-muted/60 via-muted/40 to-muted/60 backdrop-blur-xl px-8 py-6 border-b border-border/30">
                                 <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                                    <div className="flex items-center gap-3 flex-shrink-0">
-                                        <div className="w-8 h-8 sm:w-10 sm:h-10 bg-primary rounded-xl sm:rounded-2xl flex items-center justify-center shadow-lg">
-                                            <Terminal className="w-4 h-4 sm:w-5 sm:h-5 text-primary-foreground" />
+                                    <div className="flex items-center gap-4 flex-shrink-0">
+                                        {/* Enhanced Terminal Icon */}
+                                        <div className="relative group">
+                                            <div className="absolute inset-0 bg-systech-gradient rounded-2xl blur-lg opacity-50 group-hover:opacity-70 transition-opacity duration-300" />
+                                            <div className="relative w-14 h-14 bg-systech-gradient rounded-2xl flex items-center justify-center shadow-lg transform group-hover:scale-110 group-hover:rotate-6 transition-all duration-300">
+                                                <Terminal className="w-7 h-7 text-white group-hover:rotate-12 transition-transform duration-300" />
+                                                {/* Code indicator dots */}
+                                                <div className="absolute -top-1 -right-1 w-4 h-4 bg-gradient-to-br from-accent to-accent/80 rounded-full shadow-lg flex items-center justify-center">
+                                                    <div className="w-2 h-2 bg-white rounded-full animate-pulse" />
+                                                </div>
+                                            </div>
                                         </div>
-                                        <div className="min-w-0 flex-1">
-                                            <CardTitle className="text-lg sm:text-xl lg:text-2xl text-foreground">
-                                                Code Editor
-                                            </CardTitle>
-                                            <p className="text-muted-foreground text-xs sm:text-sm mt-1 hidden sm:block">Write and test your solution</p>
+
+                                        <div className="min-w-0 flex-1 space-y-2">
+                                            <div className="flex items-center gap-3">
+                                                <CardTitle className="text-2xl font-bold bg-gradient-to-r from-foreground via-foreground/90 to-foreground/80 bg-clip-text text-transparent">
+                                                    Code Editor
+                                                </CardTitle>
+                                                {/* Live coding indicator */}
+                                                <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-green-50 dark:bg-green-950/50 border border-green-200 dark:border-green-800">
+                                                    <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+                                                    <span className="text-xs font-medium text-green-700 dark:text-green-300">ACTIVE</span>
+                                                </div>
+                                            </div>
+                                            <p className="text-muted-foreground font-medium">Write and test your solution with real-time execution</p>
+
+                                            {/* Code stats */}
+                                            <div className="flex items-center gap-4 mt-2">
+                                                <div className="flex items-center gap-2">
+                                                    <div className="w-3 h-3 rounded-full bg-gradient-to-r from-primary to-primary/80 shadow-sm" />
+                                                    <span className="text-xs font-medium text-muted-foreground">
+                                                        Lines: {code.split('\n').length}
+                                                    </span>
+                                                </div>
+                                                <div className="w-px h-3 bg-border" />
+                                                <div className="flex items-center gap-2">
+                                                    <Code className="w-3 h-3 text-primary" />
+                                                    <span className="text-xs font-medium text-muted-foreground">
+                                                        Characters: {code.length}
+                                                    </span>
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
-                                    <div className="flex items-center gap-3">
+
+                                    {/* Enhanced Action Controls */}
+                                    <div className="flex items-center gap-4">
+                                        {/* Run Button with enhanced styling */}
                                         <Button
                                             onClick={handleRun}
                                             disabled={running}
-                                            className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 disabled:opacity-50 disabled:transform-none"
+                                            className="relative px-8 py-3 bg-systech-gradient text-white font-bold text-lg rounded-2xl transition-all duration-500 hover:scale-105 hover:shadow-2xl hover:shadow-primary/40 group overflow-hidden border border-primary/20 disabled:opacity-50 disabled:transform-none"
                                         >
-                                            {running ? (
-                                                <>
-                                                    <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin mr-2"></div>
-                                                    Running...
-                                                </>
-                                            ) : (
-                                                <>
-                                                    <Play className="w-4 h-4 mr-2" />
-                                                    Run Code
-                                                </>
-                                            )}
+                                            {/* Animated background shimmer */}
+                                            <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 translate-x-[-200%] group-hover:translate-x-[200%] transition-transform duration-1000" />
+
+                                            {/* Button content */}
+                                            <div className="relative flex items-center gap-3">
+                                                {running ? (
+                                                    <>
+                                                        <div className="w-5 h-5 border-2 border-current border-t-transparent rounded-full animate-spin"></div>
+                                                        <span>Executing...</span>
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <Play className="w-5 h-5 group-hover:rotate-12 group-hover:scale-110 transition-transform duration-300" />
+                                                        <span>Run Code</span>
+                                                    </>
+                                                )}
+                                            </div>
+
+                                            {/* Glow effect */}
+                                            <div className="absolute inset-0 rounded-2xl bg-primary/20 blur-lg scale-110 opacity-0 group-hover:opacity-100 transition-opacity duration-500 -z-10" />
                                         </Button>
 
-                                        <div className="flex items-center space-x-2">
-                                            <label htmlFor="theme-switch" className="text-sm font-medium text-foreground">
-                                                Dark
-                                            </label>
-                                            <Switch
-                                                id="theme-switch"
-                                                checked={editorTheme === 'dark'}
-                                                onCheckedChange={() => setEditorTheme(prev => prev === 'dark' ? 'light' : 'dark')}
-                                            />
+                                        {/* Theme Toggle with enhanced styling */}
+                                        <div className="flex items-center gap-3 p-3 rounded-2xl bg-gradient-to-r from-muted/60 to-muted/40 border border-border/50 backdrop-blur-sm">
+                                            <div className="flex items-center gap-2">
+                                                <Sun className={`w-4 h-4 transition-all duration-300 ${editorTheme === 'light' ? 'text-amber-500 scale-110' : 'text-muted-foreground scale-90'}`} />
+                                                <Switch
+                                                    id="theme-switch"
+                                                    checked={editorTheme === 'dark'}
+                                                    onCheckedChange={() => setEditorTheme(prev => prev === 'dark' ? 'light' : 'dark')}
+                                                    className="data-[state=checked]:bg-systech-gradient"
+                                                />
+                                                <Moon className={`w-4 h-4 transition-all duration-300 ${editorTheme === 'dark' ? 'text-blue-400 scale-110' : 'text-muted-foreground scale-90'}`} />
+                                            </div>
+                                            <div className="w-px h-4 bg-border" />
+                                            <span className="text-xs font-medium text-muted-foreground">
+                                                {editorTheme === 'dark' ? 'Dark' : 'Light'}
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Enhanced Language Badge and Status */}
+                                <div className="flex items-center justify-between mt-4">
+                                    <div className="flex items-center gap-4">
+                                        <Badge className="px-4 py-2 text-sm font-bold bg-systech-gradient text-white rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300">
+                                            <FileCode className="w-4 h-4 mr-2" />
+                                            {exam.language?.toUpperCase()}
+                                        </Badge>
+
+                                        <div className="flex items-center gap-3">
+                                            <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-muted/50 border border-border/50">
+                                                <div className={`w-2 h-2 rounded-full ${code.length > 0 ? 'bg-primary animate-pulse' : 'bg-muted-foreground/50'}`} />
+                                                <span className="text-xs font-medium text-muted-foreground">
+                                                    {code.length > 0 ? 'Modified' : 'Empty'}
+                                                </span>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
                             </CardHeader>
 
-                            {/* Code Editor Section */}
-                            <div className="h-48 sm:h-64 md:h-80 overflow-hidden bg-muted/20">
-                                <CodeEditor
-                                    language={exam.language}
-                                    value={code}
-                                    onChange={(newCode) => {
-                                        setCode(newCode);
-                                        updateAnswer(activeQuestionIndex, newCode);
-                                    }}
-                                    theme={editorTheme === "dark" ? "vs-dark" : "light"}
-                                />
+                            {/* Enhanced Code Editor Section */}
+                            <div className="relative z-10 h-80 overflow-hidden">
+                                {/* Editor border glow */}
+                                <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-accent/5 pointer-events-none" />
+                                <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-primary/20 to-transparent" />
+
+                                <div className="h-full bg-gradient-to-br from-muted/30 via-muted/10 to-muted/30 backdrop-blur-sm relative">
+                                    <CodeEditor
+                                        language={exam.language}
+                                        value={code}
+                                        onChange={(newCode) => {
+                                            setCode(newCode);
+                                            updateAnswer(activeQuestionIndex, newCode);
+                                        }}
+                                        theme={editorTheme === "dark" ? "vs-dark" : "light"}
+                                    />
+
+                                    {/* Floating editor overlay */}
+                                    <div className="absolute top-4 right-4 flex items-center gap-2">
+                                        <Badge variant="outline" className="px-2 py-1 text-xs bg-card/80 backdrop-blur-sm border-border/40">
+                                            <Monitor className="w-3 h-3 mr-1" />
+                                            {editorTheme === 'dark' ? 'Dark Mode' : 'Light Mode'}
+                                        </Badge>
+                                    </div>
+                                </div>
                             </div>
 
-                            {/* Enhanced Output Panel */}
-                            <div className="bg-card border-t border-border">
-                                <div className="px-3 sm:px-4 md:px-6 py-2 sm:py-3 border-b border-border bg-muted/30">
+                            {/* Enhanced Console Output Section */}
+                            <div className="relative z-10 bg-gradient-to-br from-card/90 via-card/95 to-card/90 border-t border-border/30">
+                                {/* Console Header */}
+                                <div className="px-6 py-4 border-b border-border/30 bg-gradient-to-r from-muted/40 via-muted/20 to-muted/40 backdrop-blur-sm">
                                     <div className="flex items-center justify-between">
-                                        <div className="flex items-center gap-2 sm:gap-3">
-                                            <div className="flex items-center gap-1">
-                                                <div className="w-2 h-2 bg-primary rounded-full"></div>
-                                                <div className="w-2 h-2 bg-accent rounded-full"></div>
-                                                <div className="w-2 h-2 bg-secondary rounded-full"></div>
+                                        <div className="flex items-center gap-4">
+                                            {/* Terminal dots with animation */}
+                                            <div className="flex items-center gap-2">
+                                                <div className="w-3 h-3 bg-red-500 rounded-full shadow-sm animate-pulse"></div>
+                                                <div className="w-3 h-3 bg-amber-500 rounded-full shadow-sm animate-pulse delay-100"></div>
+                                                <div className="w-3 h-3 bg-green-500 rounded-full shadow-sm animate-pulse delay-200"></div>
                                             </div>
-                                            <span className="text-xs sm:text-sm font-medium text-foreground">Console Output</span>
+
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-8 h-8 bg-gradient-to-br from-slate-600 to-slate-700 rounded-lg flex items-center justify-center shadow-md">
+                                                    <Terminal className="w-4 h-4 text-white" />
+                                                </div>
+                                                <div>
+                                                    <span className="text-sm font-bold text-foreground">Console Output</span>
+                                                    <p className="text-xs text-muted-foreground">Real-time execution results</p>
+                                                </div>
+                                            </div>
                                         </div>
-                                        {output && (
-                                            <Button
-                                                variant="ghost"
-                                                size="sm"
-                                                onClick={() => setOutput("")}
-                                                className="h-6 w-6 p-0 hover:bg-muted"
-                                            >
-                                                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                                                </svg>
-                                            </Button>
-                                        )}
+
+                                        <div className="flex items-center gap-3">
+                                            {/* Output status indicator */}
+                                            <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full transition-all duration-300 ${output
+                                                ? 'bg-green-50 dark:bg-green-950/50 border border-green-200 dark:border-green-800 text-green-700 dark:text-green-300'
+                                                : 'bg-muted/50 border border-border/30 text-muted-foreground'
+                                                }`}>
+                                                <div className={`w-2 h-2 rounded-full ${output ? 'bg-green-500 animate-pulse' : 'bg-muted-foreground/50'
+                                                    }`} />
+                                                <span className="text-xs font-medium">
+                                                    {output ? 'Output Ready' : 'Awaiting Execution'}
+                                                </span>
+                                            </div>
+
+                                            {output && (
+                                                <Button
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    onClick={() => setOutput("")}
+                                                    className="h-8 w-8 p-0 hover:bg-destructive/10 hover:text-destructive rounded-lg transition-all duration-200"
+                                                >
+                                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                                    </svg>
+                                                </Button>
+                                            )}
+                                        </div>
                                     </div>
                                 </div>
 
-                                {/* Console Output */}
-                                <ScrollArea className="h-32 sm:h-40 md:h-48 p-3 sm:p-4 md:p-6 bg-muted/10">
-                                    {sqlResult ? (
-                                        <div className="overflow-x-scroll">
-                                            <table className="w-full text-sm border-collapse border border-border rounded-lg overflow-hidden">
-                                                <thead className="bg-muted">
-                                                    <tr>
-                                                        {sqlResult.columns.map((col, index) => (
-                                                            <th key={index} className="border border-border px-3 py-2 text-left font-semibold text-foreground">
-                                                                {col}
-                                                            </th>
-                                                        ))}
-                                                    </tr>
-                                                </thead>
-                                                <tbody>
-                                                    {sqlResult.rows.map((row, rowIndex) => (
-                                                        <tr key={rowIndex} className="hover:bg-muted/50 transition-colors duration-150">
-                                                            {sqlResult.columns.map((col, colIndex) => (
-                                                                <td key={colIndex} className="border border-border px-3 py-2 text-muted-foreground">
-                                                                    {String((row as Record<string, any>)[col])}
-                                                                </td>
+                                {/* Console Content */}
+                                <ScrollArea className="h-48 relative">
+                                    <div className="p-6 bg-gradient-to-br from-muted/20 via-muted/10 to-muted/20">
+                                        {sqlResult ? (
+                                            <div className="relative overflow-hidden rounded-2xl border-2 border-border/30 bg-gradient-to-br from-card/95 to-card/80 backdrop-blur-sm shadow-lg">
+                                                {/* Table header glow */}
+                                                <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-primary/40 to-transparent" />
+
+                                                <div className="overflow-x-auto">
+                                                    <table className="w-full text-sm">
+                                                        <thead className="bg-gradient-to-r from-muted/80 via-muted/60 to-muted/80 backdrop-blur-sm">
+                                                            <tr>
+                                                                {sqlResult.columns.map((col, index) => (
+                                                                    <th key={index} className="px-4 py-3 text-left font-bold text-foreground border-r border-border/30 last:border-r-0">
+                                                                        <div className="flex items-center gap-2">
+                                                                            <div className="w-2 h-2 bg-primary rounded-full" />
+                                                                            {col}
+                                                                        </div>
+                                                                    </th>
+                                                                ))}
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody>
+                                                            {sqlResult.rows.map((row, rowIndex) => (
+                                                                <tr key={rowIndex} className="hover:bg-gradient-to-r hover:from-primary/5 hover:to-accent/5 transition-all duration-200 border-b border-border/20 last:border-b-0">
+                                                                    {sqlResult.columns.map((col, colIndex) => (
+                                                                        <td key={colIndex} className="px-4 py-3 text-muted-foreground border-r border-border/20 last:border-r-0">
+                                                                            <div className="font-mono text-sm">
+                                                                                {String((row as Record<string, any>)[col]) || <span className="italic text-muted-foreground/60">null</span>}
+                                                                            </div>
+                                                                        </td>
+                                                                    ))}
+                                                                </tr>
                                                             ))}
-                                                        </tr>
-                                                    ))}
-                                                </tbody>
-                                            </table>
-                                        </div>
-                                    ) : (
-                                        <pre className="text-sm text-muted-foreground font-mono whitespace-pre-wrap break-words">
-                                            {output || (
-                                                <span className="text-muted-foreground/70 italic text-xs sm:text-sm">
-                                                    Click 'Run Code' to see output here...
-                                                </span>
-                                            )}
-                                        </pre>
-                                    )}
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            <div className="relative min-h-32 rounded-2xl border-2 border-dashed border-border/30 bg-gradient-to-br from-muted/20 via-muted/10 to-muted/20 backdrop-blur-sm flex items-center justify-center">
+                                                <div className="text-center space-y-3">
+                                                    {output ? (
+                                                        <div className="space-y-2">
+                                                            <div className="w-12 h-12 bg-gradient-to-br from-primary to-accent rounded-2xl flex items-center justify-center mx-auto shadow-lg">
+                                                                <Terminal className="w-6 h-6 text-white" />
+                                                            </div>
+                                                            <pre className="text-sm text-muted-foreground font-mono whitespace-pre-wrap break-words text-left max-w-full">
+                                                                {output}
+                                                            </pre>
+                                                        </div>
+                                                    ) : (
+                                                        <div className="space-y-3">
+                                                            <div className="w-16 h-16 bg-gradient-to-br from-muted/60 to-muted/40 rounded-2xl flex items-center justify-center mx-auto shadow-inner">
+                                                                <Play className="w-8 h-8 text-muted-foreground/60" />
+                                                            </div>
+                                                            <div className="space-y-1">
+                                                                <p className="text-muted-foreground/70 italic text-sm font-medium">
+                                                                    Ready for code execution
+                                                                </p>
+                                                                <p className="text-muted-foreground/50 text-xs">
+                                                                    Click 'Run Code' to see your results here
+                                                                </p>
+                                                            </div>
+                                                        </div>
+                                                    )}
+                                                </div>
+
+                                                {/* Floating particles */}
+                                                <div className="absolute top-4 right-4 w-2 h-2 bg-primary/30 rounded-full animate-ping" />
+                                                <div className="absolute bottom-6 left-6 w-1.5 h-1.5 bg-accent/40 rounded-full animate-pulse delay-500" />
+                                            </div>
+                                        )}
+                                    </div>
                                 </ScrollArea>
                             </div>
                         </Card>
@@ -2006,100 +2163,272 @@ export default function ExamPage() {
             </div>
             {/* Proctoring Panel (if active) */}
             {exam?.isExamProctored && (
-                <Card className="fixed bottom-4 right-4 z-50 w-64 bg-card/95 backdrop-blur-xl border-border shadow-2xl">
-                    <CardHeader className="pb-2">
-                        <CardTitle className="text-xs font-medium text-foreground flex items-center gap-2">
-                            <Camera className="w-3 h-3" />
-                            AI Proctoring Active
-                        </CardTitle>
-                    </CardHeader>
-                    <CardContent className="pt-0 space-y-3">
-                        <div className="relative">
-                            <video
-                                ref={videoRef}
-                                autoPlay
-                                playsInline
-                                muted
-                                width={160}
-                                height={120}
-                                className="rounded-lg border border-border bg-muted"
-                                onLoadedMetadata={() => {
-                                    console.log("Video ready with dimensions:",
-                                        videoRef.current?.videoWidth,
-                                        videoRef.current?.videoHeight
-                                    );
-                                    setVideoReady(true);
-                                }}
-                                onError={(e) => {
-                                    console.error("Video error:", e);
-                                    setCameraError("Video stream error");
-                                }}
-                            />
-                            <canvas
-                                ref={canvasRef}
-                                className="absolute top-0 left-0 rounded-lg pointer-events-none"
-                                style={{ width: '160px', height: '120px' }}
-                            />
-                        </div>
+                <Card className="fixed bottom-6 right-6 z-50 w-80 max-w-[calc(100vw-3rem)] overflow-hidden group transition-all duration-500 hover:shadow-2xl border-border/50 backdrop-blur-xl">
+                    <div className="absolute inset-0 bg-gradient-to-br from-card/95 via-card/98 to-card/95" />
+                    <div className="absolute inset-0 bg-gradient-to-tr from-red-500/[0.02] via-transparent to-amber-500/[0.02]" />
+                    <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-red-400/40 to-transparent" />
 
-                        {/* Enhanced Voice Detection Indicator */}
-                        <div className="space-y-2">
-                            <div className="flex items-center justify-between text-xs">
-                                <span className="text-muted-foreground">Audio Level:</span>
-                                <Progress
-                                    value={Math.min(audioLevel * 2, 100)}
-                                    className="w-16 h-2"
-                                />
+                    <div className="absolute top-4 right-4 w-20 h-20 bg-gradient-to-br from-red-500/5 to-amber-500/5 rounded-full blur-2xl opacity-50 animate-pulse" />
+                    <div className="absolute bottom-6 left-4 w-16 h-16 bg-gradient-to-tl from-amber-500/5 to-red-500/5 rounded-full blur-xl opacity-40 animate-pulse delay-1000" />
+
+                    <CardHeader className="relative z-10 bg-gradient-to-r from-red-50/80 via-amber-50/60 to-red-50/80 dark:from-red-950/60 dark:via-amber-950/40 dark:to-red-950/60 backdrop-blur-xl px-6 py-4 border-b border-border/30">
+                        <div className="flex items-center gap-4">
+                            <div className="relative group">
+                                <div className="absolute inset-0 bg-gradient-to-br from-red-500 to-amber-500 rounded-2xl blur-lg opacity-40 group-hover:opacity-60 transition-opacity duration-300" />
+                                <div className="relative w-12 h-12 bg-gradient-to-br from-red-500 to-amber-500 rounded-2xl flex items-center justify-center shadow-lg transform group-hover:scale-110 transition-all duration-300">
+                                    <svg className="w-6 h-6 text-white group-hover:rotate-12 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                                    </svg>
+                                    <div className="absolute -top-1 -right-1 w-4 h-4 bg-green-400 rounded-full animate-pulse shadow-lg flex items-center justify-center">
+                                        <div className="w-2 h-2 bg-white rounded-full" />
+                                    </div>
+                                </div>
                             </div>
 
-                            <div className="flex items-center justify-between text-xs">
-                                <span className="text-muted-foreground">Voice:</span>
-                                <div className="flex items-center gap-1">
-                                    <Progress
-                                        value={voiceConfidence * 100}
-                                        className="w-16 h-2"
+                            <div className="flex-1 min-w-0">
+                                <CardTitle className="text-base font-bold bg-gradient-to-r from-red-600 via-amber-600 to-red-600 bg-clip-text text-transparent dark:from-red-400 dark:via-amber-400 dark:to-red-400">
+                                    AI Proctoring Active
+                                </CardTitle>
+                                <p className="text-xs text-muted-foreground font-medium mt-1 flex items-center gap-2">
+                                    <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
+                                    Monitoring in progress
+                                </p>
+                            </div>
+
+                            <Badge className="px-3 py-1.5 text-xs font-bold bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-xl shadow-lg">
+                                <svg className="w-3 h-3 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                                SECURE
+                            </Badge>
+                        </div>
+                    </CardHeader>
+
+                    <CardContent className="relative z-10 p-6 space-y-6">
+                        <div className="relative group">
+                            <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-primary/5 to-accent/10 rounded-2xl blur-sm opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                            <div className="relative overflow-hidden rounded-2xl border-2 border-border/50 bg-gradient-to-br from-muted/30 to-muted/10 backdrop-blur-sm shadow-lg group-hover:shadow-xl transition-all duration-300">
+                                <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-primary/30 to-transparent" />
+
+                                <div className="relative aspect-[4/3] bg-gradient-to-br from-slate-900/90 to-slate-800/90">
+                                    <video
+                                        ref={videoRef}
+                                        autoPlay
+                                        playsInline
+                                        muted
+                                        className="w-full h-full object-cover rounded-xl"
+                                        onLoadedMetadata={() => {
+                                            console.log("Video ready with dimensions:",
+                                                videoRef.current?.videoWidth,
+                                                videoRef.current?.videoHeight
+                                            );
+                                            setVideoReady(true);
+                                        }}
+                                        onError={(e) => {
+                                            console.error("Video error:", e);
+                                            setCameraError("Video stream error");
+                                        }}
                                     />
-                                    <span className={`text-xs ${speakingDetected ? 'text-destructive' : 'text-primary'}`}>
-                                        {speakingDetected ? <AlertTriangle className="w-3 h-3" /> : <CheckCircle2 className="w-3 h-3" />}
-                                    </span>
+                                    <canvas
+                                        ref={canvasRef}
+                                        className="absolute top-0 left-0 w-full h-full pointer-events-none rounded-xl"
+                                    />
+
+                                    <div className="absolute top-3 left-3 flex items-center gap-2">
+                                        <div className="px-2 py-1 bg-black/60 backdrop-blur-sm rounded-lg border border-white/20">
+                                            <div className="flex items-center gap-1.5">
+                                                <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
+                                                <span className="text-white text-xs font-medium">REC</span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="absolute top-3 right-3">
+                                        <Badge variant="outline" className="px-2 py-1 text-xs bg-black/60 backdrop-blur-sm border-white/20 text-white">
+                                            <Camera className="w-3 h-3 mr-1" />
+                                            Live
+                                        </Badge>
+                                    </div>
+
+                                    <div className="absolute bottom-3 right-3">
+                                        <div className="px-2 py-1 bg-black/60 backdrop-blur-sm rounded-lg border border-white/20">
+                                            <span className="text-white text-xs font-mono">640×480</span>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
 
-                        <Separator />
-
-                        <div className="text-xs space-y-1">
-                            <div className={`flex items-center gap-2 ${noFaceDetectedCount > 5 ? 'text-destructive' : 'text-primary'}`}>
-                                <Circle className="w-2 h-2 fill-current" />
-                                Face: {noFaceDetectedCount > 0 ? 'Not Detected' : 'Detected'}
+                        <div className="space-y-4">
+                            <div className="flex items-center gap-3">
+                                <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-500 rounded-xl flex items-center justify-center shadow-md">
+                                    <Mic className="w-4 h-4 text-white" />
+                                </div>
+                                <span className="text-sm font-bold text-foreground">Audio Analysis</span>
                             </div>
-                            {multipleFacesCount > 0 && (
-                                <Alert variant="destructive" className="py-1">
-                                    <AlertTriangle className="w-3 h-3" />
-                                    <AlertDescription className="text-xs">Multiple faces detected!</AlertDescription>
-                                </Alert>
-                            )}
-                            {audioViolations > 0 && (
-                                <Alert variant="destructive" className="py-1">
-                                    <Mic className="w-3 h-3" />
-                                    <AlertDescription className="text-xs">Voice: {audioViolations}/3</AlertDescription>
-                                </Alert>
-                            )}
-                            {suspiciousObjectCount > 0 && (
-                                <Alert variant="destructive" className="py-1">
-                                    <Monitor className="w-3 h-3" />
-                                    <AlertDescription className="text-xs">Object: {lastSuspiciousActivity}</AlertDescription>
-                                </Alert>
-                            )}
+
+                            <div className="space-y-3">
+                                <div className="flex items-center justify-between">
+                                    <span className="text-xs font-medium text-muted-foreground">Audio Level:</span>
+                                    <div className="flex items-center gap-2">
+                                        <div className="w-20 h-2 bg-muted/50 rounded-full overflow-hidden backdrop-blur-sm border border-border/30">
+                                            <div
+                                                className="h-full bg-gradient-to-r from-green-400 via-yellow-400 to-red-400 transition-all duration-150 rounded-full relative overflow-hidden"
+                                                style={{ width: `${Math.min(audioLevel * 2, 100)}%` }}
+                                            >
+                                                <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/40 to-white/0 animate-pulse" />
+                                            </div>
+                                        </div>
+                                        <Badge variant="outline" className="px-2 py-0.5 text-xs font-mono bg-card/80 border-border/50">
+                                            {Math.round(audioLevel)}%
+                                        </Badge>
+                                    </div>
+                                </div>
+
+                                <div className="flex items-center justify-between">
+                                    <span className="text-xs font-medium text-muted-foreground">Voice Detection:</span>
+                                    <div className="flex items-center gap-2">
+                                        <div className="w-20 h-2 bg-muted/50 rounded-full overflow-hidden backdrop-blur-sm border border-border/30">
+                                            <div
+                                                className={`h-full transition-all duration-300 rounded-full relative overflow-hidden ${speakingDetected
+                                                        ? 'bg-gradient-to-r from-red-400 to-red-600'
+                                                        : 'bg-gradient-to-r from-primary/60 to-primary'
+                                                    }`}
+                                                style={{ width: `${voiceConfidence * 100}%` }}
+                                            >
+                                                <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/30 to-white/0 animate-pulse" />
+                                            </div>
+                                        </div>
+                                        <div className={`w-6 h-6 rounded-full flex items-center justify-center transition-all duration-200 ${speakingDetected
+                                                ? 'bg-red-100 dark:bg-red-950/50 text-red-600 dark:text-red-400'
+                                                : 'bg-primary/10 text-primary'
+                                            }`}>
+                                            {speakingDetected ? (
+                                                <AlertTriangle className="w-3 h-3" />
+                                            ) : (
+                                                <CheckCircle2 className="w-3 h-3" />
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
 
+                        <Separator className="bg-gradient-to-r from-transparent via-border to-transparent" />
+
+                        <div className="grid grid-cols-2 gap-3">
+                            <div className={`p-3 rounded-xl border-2 transition-all duration-300 ${noFaceDetectedCount > 5
+                                    ? 'border-red-300/50 bg-gradient-to-br from-red-50/80 to-rose-50/60 dark:from-red-950/40 dark:to-rose-950/20'
+                                    : 'border-green-300/50 bg-gradient-to-br from-green-50/80 to-emerald-50/60 dark:from-green-950/40 dark:to-emerald-950/20'
+                                }`}>
+                                <div className="flex items-center gap-2 mb-2">
+                                    <div className={`w-2 h-2 rounded-full ${noFaceDetectedCount > 5 ? 'bg-red-500' : 'bg-green-500'} animate-pulse`} />
+                                    <span className="text-xs font-bold text-foreground">Face Detection</span>
+                                </div>
+                                <div className="flex items-center justify-between">
+                                    <span className={`text-xs font-medium ${noFaceDetectedCount > 5 ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'}`}>
+                                        {noFaceDetectedCount > 0 ? 'Not Detected' : 'Active'}
+                                    </span>
+                                    <Badge variant="outline" className={`px-2 py-0.5 text-xs ${noFaceDetectedCount > 5 ? 'border-red-300 text-red-600 bg-red-50 dark:border-red-700 dark:text-red-400 dark:bg-red-950/30' : 'border-green-300 text-green-600 bg-green-50 dark:border-green-700 dark:text-green-400 dark:bg-green-950/30'
+                                        }`}>
+                                        {noFaceDetectedCount > 5 ? 'Warning' : 'OK'}
+                                    </Badge>
+                                </div>
+                            </div>
+
+                            <div className={`p-3 rounded-xl border-2 transition-all duration-300 ${suspiciousObjectCount > 0
+                                    ? 'border-amber-300/50 bg-gradient-to-br from-amber-50/80 to-orange-50/60 dark:from-amber-950/40 dark:to-orange-950/20'
+                                    : 'border-blue-300/50 bg-gradient-to-br from-blue-50/80 to-cyan-50/60 dark:from-blue-950/40 dark:to-cyan-950/20'
+                                }`}>
+                                <div className="flex items-center gap-2 mb-2">
+                                    <div className={`w-2 h-2 rounded-full ${suspiciousObjectCount > 0 ? 'bg-amber-500' : 'bg-blue-500'} animate-pulse`} />
+                                    <span className="text-xs font-bold text-foreground">Object Scan</span>
+                                </div>
+                                <div className="flex items-center justify-between">
+                                    <span className={`text-xs font-medium ${suspiciousObjectCount > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-blue-600 dark:text-blue-400'}`}>
+                                        {suspiciousObjectCount > 0 ? 'Detected' : 'Clear'}
+                                    </span>
+                                    <Badge variant="outline" className={`px-2 py-0.5 text-xs ${suspiciousObjectCount > 0 ? 'border-amber-300 text-amber-600 bg-amber-50 dark:border-amber-700 dark:text-amber-400 dark:bg-amber-950/30' : 'border-blue-300 text-blue-600 bg-blue-50 dark:border-blue-700 dark:text-blue-400 dark:bg-blue-950/30'
+                                        }`}>
+                                        {suspiciousObjectCount > 0 ? 'Alert' : 'Safe'}
+                                    </Badge>
+                                </div>
+                            </div>
+                        </div>
+
+                        {multipleFacesCount > 0 && (
+                            <Alert className="border-2 border-red-300/50 bg-gradient-to-r from-red-50/80 to-rose-50/60 dark:from-red-950/40 dark:to-rose-950/20 rounded-xl backdrop-blur-sm shadow-lg">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-8 h-8 bg-gradient-to-br from-red-500 to-rose-500 rounded-xl flex items-center justify-center shadow-md">
+                                        <AlertTriangle className="w-4 h-4 text-white" />
+                                    </div>
+                                    <AlertDescription className="text-sm font-medium text-red-700 dark:text-red-300">
+                                        Multiple faces detected in frame!
+                                    </AlertDescription>
+                                </div>
+                            </Alert>
+                        )}
+
+                        {audioViolations > 0 && (
+                            <Alert className="border-2 border-amber-300/50 bg-gradient-to-r from-amber-50/80 to-orange-50/60 dark:from-amber-950/40 dark:to-orange-950/20 rounded-xl backdrop-blur-sm shadow-lg">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-8 h-8 bg-gradient-to-br from-amber-500 to-orange-500 rounded-xl flex items-center justify-center shadow-md">
+                                        <Mic className="w-4 h-4 text-white" />
+                                    </div>
+                                    <AlertDescription className="text-sm font-medium text-amber-700 dark:text-amber-300">
+                                        Voice detected: {audioViolations}/3 warnings
+                                    </AlertDescription>
+                                </div>
+                            </Alert>
+                        )}
+
+                        {suspiciousObjectCount > 0 && (
+                            <Alert className="border-2 border-purple-300/50 bg-gradient-to-r from-purple-50/80 to-violet-50/60 dark:from-purple-950/40 dark:to-violet-950/20 rounded-xl backdrop-blur-sm shadow-lg">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-8 h-8 bg-gradient-to-br from-purple-500 to-violet-500 rounded-xl flex items-center justify-center shadow-md">
+                                        <Monitor className="w-4 h-4 text-white" />
+                                    </div>
+                                    <AlertDescription className="text-sm font-medium text-purple-700 dark:text-purple-300">
+                                        Suspicious object: {lastSuspiciousActivity}
+                                    </AlertDescription>
+                                </div>
+                            </Alert>
+                        )}
+
                         {cameraError && (
-                            <Alert variant="destructive">
-                                <AlertTriangle className="w-4 h-4" />
-                                <AlertDescription className="text-xs">{cameraError}</AlertDescription>
+                            <Alert className="border-2 border-red-400/50 bg-gradient-to-r from-red-100/80 to-rose-100/60 dark:from-red-950/60 dark:to-rose-950/40 rounded-xl backdrop-blur-sm shadow-lg">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-8 h-8 bg-gradient-to-br from-red-600 to-rose-600 rounded-xl flex items-center justify-center shadow-md">
+                                        <AlertTriangle className="w-4 h-4 text-white" />
+                                    </div>
+                                    <AlertDescription className="text-sm font-medium text-red-700 dark:text-red-300">
+                                        {cameraError}
+                                    </AlertDescription>
+                                </div>
                             </Alert>
                         )}
                     </CardContent>
+
+                    <div className="relative z-10 px-6 py-4 border-t border-border/30 bg-gradient-to-r from-muted/40 via-muted/20 to-muted/40 backdrop-blur-sm">
+                        <div className="flex items-center justify-between text-xs">
+                            <div className="flex items-center gap-3">
+                                <div className="flex items-center gap-2">
+                                    <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
+                                    <span className="text-muted-foreground font-medium">System Active</span>
+                                </div>
+                                <div className="w-px h-3 bg-border" />
+                                <div className="flex items-center gap-1">
+                                    <svg className="w-3 h-3 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                                    </svg>
+                                    <span className="text-muted-foreground font-mono">256-bit</span>
+                                </div>
+                            </div>
+                            <Badge variant="outline" className="px-2 py-1 text-xs bg-card/80 border-border/50 font-mono">
+                                v2.1.0
+                            </Badge>
+                        </div>
+                    </div>
                 </Card>
             )}
         </div>
