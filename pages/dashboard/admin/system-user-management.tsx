@@ -124,12 +124,13 @@ const SystemUserPage = () => {
         if (!selectedUser) return;
 
         try {
-            const response = await fetch(`/api/admin/system-user/${selectedUser.email}`, {
+            const response = await fetch(`/api/admin/update-user/`, {
                 method: 'PATCH',
                 headers: {
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
+                    email: selectedUser.email,
                     role: newRole
                 })
             });

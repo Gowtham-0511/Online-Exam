@@ -25,6 +25,7 @@ import {
     Loader2,
     BarChart3
 } from "lucide-react";
+import AttenderLayout from "./AttenderLayout";
 
 export default function AttenderDashboard() {
     const router = useRouter();
@@ -36,7 +37,7 @@ export default function AttenderDashboard() {
     const [alertMessage, setAlertMessage] = useState("");
     const [alertType, setAlertType] = useState<'error' | 'success' | 'warning'>('error');
     const [userRole, setUserRole] = useState<string | null>(null);
-    const [isInitializing, setIsInitializing] = useState(true);
+    const [isInitializing, setIsInitializing] = useState(false);
     const [isDarkMode, setIsDarkMode] = useState(false);
 
     const [showExamPopup, setShowExamPopup] = useState(false);
@@ -44,6 +45,8 @@ export default function AttenderDashboard() {
     const [fullScreenEnabled, setFullScreenEnabled] = useState(false);
     const [cameraEnabled, setCameraEnabled] = useState(false);
     const [microphoneEnabled, setMicrophoneEnabled] = useState(false);
+
+    const [userAssessments, setUserAssessments] = useState<any[]>([]);
 
     interface ExamValidationError {
         field: string;
@@ -111,12 +114,6 @@ export default function AttenderDashboard() {
                 const userData = await response.json();
                 setUserRole(userData.role);
 
-                if (userData.role !== 'attender') {
-                    showAlertMessage(`Access denied. This page is for attenders only. Your role: ${userData.role}`, 'error');
-                    setTimeout(() => {
-                        router.push('/');
-                    }, 2000);
-                }
             } catch (error) {
                 console.error('Error initializing user:', error);
                 showAlertMessage('Failed to initialize user account. Please try refreshing the page.', 'error');
@@ -127,6 +124,23 @@ export default function AttenderDashboard() {
 
         initializeUser();
     }, [session, status, router]);
+
+    useEffect(() => {
+        const fetchUserAssessments = async () => {
+            try {
+                const response = await fetch(`/api/attender/allowed-exam?email=${encodeURIComponent(session?.user?.email || "")}`);
+                if (response.ok) {
+                    const assessments = await response.json();
+                    console.log(assessments);
+                    setUserAssessments(assessments);
+                }
+            } catch (error) {
+                console.error('Error fetching assessments:', error);
+            }
+        };
+
+        fetchUserAssessments();
+    }, [])
 
     const validateExamId = (examId: string): ExamValidationResult => {
         const errors: ExamValidationError[] = [];
@@ -163,7 +177,7 @@ export default function AttenderDashboard() {
                 return;
             }
 
-            if (!session?.user?.email || userRole !== 'attender') {
+            if (!session?.user?.email) {
                 showAlertMessage('Please wait for user initialization to complete', 'warning');
                 return;
             }
@@ -171,7 +185,6 @@ export default function AttenderDashboard() {
             setIsLoading(true);
 
             console.log('Starting exam with ID:', examId);
-
 
             const fetchExamDetails = async () => {
                 try {
@@ -293,7 +306,7 @@ export default function AttenderDashboard() {
     }
 
     return (
-        <>
+        <AttenderLayout>
             <Head>
                 <title>SysRank - Attender Dashboard</title>
                 <link rel="icon" href="/logo.png" />
@@ -401,7 +414,7 @@ export default function AttenderDashboard() {
                                                 ? 'border-destructive focus-visible:ring-destructive'
                                                 : ''
                                                 }`}
-                                            disabled={isLoading || userRole !== 'attender'}
+                                            disabled={isLoading}
                                             aria-invalid={errors.length > 0}
                                             aria-describedby={errors.length > 0 ? "exam-id-error" : undefined}
                                         />
@@ -422,7 +435,7 @@ export default function AttenderDashboard() {
 
                                 <Button
                                     onClick={handleStartExam}
-                                    disabled={isLoading || userRole !== 'attender'}
+                                    disabled={isLoading}
                                     className="w-full"
                                     size="lg"
                                 >
@@ -431,8 +444,6 @@ export default function AttenderDashboard() {
                                             <Loader2 className="w-5 h-5 mr-2 animate-spin" />
                                             Starting Exam...
                                         </>
-                                    ) : userRole !== 'attender' ? (
-                                        'Access Restricted'
                                     ) : (
                                         <>
                                             Start Exam
@@ -608,6 +619,6 @@ export default function AttenderDashboard() {
                     </div>
                 )}
             </div>
-        </>
+        </AttenderLayout>
     );
 }

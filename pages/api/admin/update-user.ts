@@ -1,32 +1,37 @@
 import { NextApiRequest, NextApiResponse } from "next";
-import { getDatabase } from "@/lib/database";
-import { UserRole } from "@/lib/userOperations";
+import { getDBConnection } from "@/lib/database";
 
-export default function handler(req: NextApiRequest, res: NextApiResponse) {
-    if (req.method !== "PUT") return res.status(405).end();
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+    if (req.method !== "PATCH") return res.status(405).end();
 
     const { email, role } = req.body;
 
-    if (!email || !role) {
-        return res.status(400).json({ error: "Email and role are required" });
-    }
+    console.log("Request Body:", req.body);
 
-    if (!["attender", "examiner", "admin"].includes(role)) {
-        return res.status(400).json({ error: "Invalid role" });
+    if (!email || !role) {
+        return res.status(400).json({ error: "Missing email or role in request body" });
     }
 
     try {
-        const db = getDatabase();
-        const stmt = db.prepare(`UPDATE users SET role = ?, updated_at = datetime('now') WHERE email = ?`);
-        const result = stmt.run(role, email);
+        const db = await getDBConnection();
 
-        if (result.changes === 0) {
-            return res.status(404).json({ error: "User not found" });
-        }
+        const query = `
+            UPDATE Users
+            SET role = @role
+            WHERE email = @email
+        `;
 
-        return res.status(200).json({ success: true });
+        await db.request()
+            .input("email", email)
+            .input("role", role)
+            .query(query);
+
+        res.status(200).json({ message: "User role updated successfully" });
     } catch (error) {
         console.error("Error updating user role:", error);
-        res.status(500).json({ error: "Failed to update user role" });
+        res.status(500).json({
+            error: "Internal server error",
+            message: "Failed to update user role"
+        });
     }
 }

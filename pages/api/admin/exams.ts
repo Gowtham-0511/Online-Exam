@@ -8,7 +8,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         const db = await getDBConnection();
 
         const result = await db.query(`
-        SELECT * FROM Exams ORDER BY createdAt DESC
+            SELECT * FROM Exams ORDER BY createdAt DESC
         `);
 
         const exams = result.recordset.map((e) => ({
