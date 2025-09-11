@@ -23,6 +23,8 @@ const config: sql.config = {
   },
 };
 
+
+
 let pool: sql.ConnectionPool | null = null;
 
 export async function getDBConnection(): Promise<sql.ConnectionPool> {
