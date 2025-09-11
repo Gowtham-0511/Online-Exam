@@ -34,6 +34,12 @@ import {
     Loader2
 } from "lucide-react";
 
+interface QuestionOption {
+    id: number;
+    text: string;
+    isCorrect: boolean;
+}
+
 interface Question {
     solution: any;
     id: string;
@@ -42,6 +48,9 @@ interface Question {
     answer?: string;
     difficulty?: string;
     marks?: number;
+    type?: string;
+    options?: QuestionOption[];
+    correctAnswer?: number;
 }
 
 export default function ExaminerDashboard() {
@@ -80,6 +89,15 @@ export default function ExaminerDashboard() {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
 
+    const [selectedBatches, setSelectedBatches] = useState<string[]>([]);
+    const [availableBatches, setAvaileBatches] = useState<any[]>([]);
+    const [loadingBatches, setLoadingBatches] = useState(false);
+
+    const [batchTimes, setBatchTimes] = useState<{ [key: string]: { startTime: string, endTime: string } }>({});
+
+    const [questionType, setQuestionType] = useState("coding");
+    const [mcqQuestions, setMcqQuestions] = useState<any[]>([]);
+
     const resetForm = () => {
         setTitle("");
         setLanguage("python");
@@ -101,6 +119,9 @@ export default function ExaminerDashboard() {
             intermediate: { count: 0, marks: 0 },
             hard: { count: 0, marks: 0 }
         });
+        setSelectedBatches([]);
+        setAvaileBatches([]);
+        setBatchTimes({});
     };
 
     const handleCreateExam = useCallback(async () => {
@@ -137,33 +158,40 @@ export default function ExaminerDashboard() {
                     .split(",")
                     .map((email) => email.trim())
                     .filter(Boolean),
+                batchSchedules: selectedBatches.map(batchId => ({
+                    batchId,
+                    startTime: batchTimes[batchId]?.startTime || '',
+                    endTime: batchTimes[batchId]?.endTime || ''
+                }))
             };
 
-            try {
-                const response = await fetch("/api/assessment/create", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify(examData),
-                });
+            console.log(examData);
 
-                if (response.status === 409) {
-                    toast.error("An exam with this title already exists. Please choose a different title.");
-                    return;
-                }
+            // try {
+            //     const response = await fetch("/api/assessment/create", {
+            //         method: "POST",
+            //         headers: { "Content-Type": "application/json" },
+            //         body: JSON.stringify(examData),
+            //     });
 
-                if (!response.ok) throw new Error("Failed to create exam");
+            //     if (response.status === 409) {
+            //         toast.error("An exam with this title already exists. Please choose a different title.");
+            //         return;
+            //     }
 
-                setShowSuccess(true);
-                setTimeout(() => {
-                    setShowSuccess(false);
-                    resetForm();
-                }, 2000);
+            //     if (!response.ok) throw new Error("Failed to create exam");
 
-            } catch (error) {
-                console.error("Error saving exam data:", error);
-                toast.error("Failed to save exam data. Please try again.");
-                return;
-            }
+            //     setShowSuccess(true);
+            //     setTimeout(() => {
+            //         setShowSuccess(false);
+            //         resetForm();
+            //     }, 2000);
+
+            // } catch (error) {
+            //     console.error("Error saving exam data:", error);
+            //     toast.error("Failed to save exam data. Please try again.");
+            //     return;
+            // }
 
         } catch (error) {
             console.error("Error creating exam:", error);
@@ -172,13 +200,13 @@ export default function ExaminerDashboard() {
             setIsLoading(false);
             setCurrentStep(1);
         }
-    }, [title, questions, language, duration, session]);
+    }, [title, questions, language, duration, session, selectedBatches]);
 
     const languageOptions = [
         { value: "python", label: "Python", icon: "🐍" },
         { value: "sql", label: "SQL", icon: "🗄️" },
-        { value: "javascript", label: "JavaScript", icon: "⚡" },
-        { value: "java", label: "Java", icon: "☕" },
+        // { value: "javascript", label: "JavaScript", icon: "⚡" },
+        // { value: "java", label: "Java", icon: "☕" },
     ];
 
     const isFormValid = title.trim() !== "" && questions.some(q =>
@@ -187,7 +215,62 @@ export default function ExaminerDashboard() {
         q.question.trim() !== ""
     );
 
-    const fetchQuestions = async () => {
+    // const fetchQuestions = async () => {
+    //     if (beginnerCount + intermediateCount + expertCount === 0) {
+    //         setError('Please select at least one question');
+    //         return;
+    //     }
+
+    //     setLoading(true);
+    //     setError('');
+
+    //     try {
+    //         const res = await fetch(`/api/question-bank?language=${language}`);
+
+    //         if (!res.ok) {
+    //             throw new Error(`HTTP error! status: ${res.status}`);
+    //         }
+
+    //         const allQuestions = await res.json();
+
+    //         const beginner = allQuestions
+    //             .filter((q: { difficulty: string; }) => q.difficulty.toLocaleLowerCase() === "easy")
+    //             .slice(0, beginnerCount);
+
+    //         const intermediate = allQuestions
+    //             .filter((q: { difficulty: string; }) => q.difficulty.toLocaleLowerCase() === "medium")
+    //             .slice(0, intermediateCount);
+
+    //         const expert = allQuestions
+    //             .filter((q: { difficulty: string; }) => q.difficulty.toLocaleLowerCase() === "hard")
+    //             .slice(0, expertCount);
+
+    //         const selectedQuestions = [...beginner, ...intermediate, ...expert];
+
+    //         const mappedQuestions = selectedQuestions.map((q, index) => ({
+    //             id: `generated-q${index + 1}`,
+    //             question: q.questionText ?? q.question,
+    //             expectedOutput: q.expectedOutput ? q.expectedOutput.toString().trim() : '',
+    //             difficulty: q.difficulty,
+    //             marks: q.marks,
+    //             solution: q.solution !== undefined ? q.solution : undefined
+    //         }));
+
+    //         setQuestions(mappedQuestions);
+
+    //     } catch (err) {
+    //         console.error('Error fetching questions:', err);
+    //         if (err instanceof Error) {
+    //             setError(`Failed to fetch questions: ${err.message}`);
+    //         } else {
+    //             setError('Failed to fetch questions: Unknown error');
+    //         }
+    //     } finally {
+    //         setLoading(false);
+    //     }
+    // };
+
+    const fetchQuestions = async (): Promise<void> => {
         if (beginnerCount + intermediateCount + expertCount === 0) {
             setError('Please select at least one question');
             return;
@@ -197,35 +280,38 @@ export default function ExaminerDashboard() {
         setError('');
 
         try {
-            const res = await fetch(`/api/question-bank?language=${language}`);
+            const res = await fetch(`/api/questions?language=${language}&questionType=${questionType}`);
 
             if (!res.ok) {
                 throw new Error(`HTTP error! status: ${res.status}`);
             }
 
-            const allQuestions = await res.json();
+            const allQuestions: any[] = await res.json();
 
             const beginner = allQuestions
-                .filter((q: { difficulty: string; }) => q.difficulty === "easy")
+                .filter((q) => q.difficulty?.toLowerCase() === "easy")
                 .slice(0, beginnerCount);
 
             const intermediate = allQuestions
-                .filter((q: { difficulty: string; }) => q.difficulty === "medium")
+                .filter((q) => q.difficulty?.toLowerCase() === "medium")
                 .slice(0, intermediateCount);
 
             const expert = allQuestions
-                .filter((q: { difficulty: string; }) => q.difficulty === "hard")
+                .filter((q) => q.difficulty?.toLowerCase() === "hard")
                 .slice(0, expertCount);
 
             const selectedQuestions = [...beginner, ...intermediate, ...expert];
 
-            const mappedQuestions = selectedQuestions.map((q, index) => ({
+            const mappedQuestions: Question[] = selectedQuestions.map((q, index) => ({
                 id: `generated-q${index + 1}`,
                 question: q.questionText ?? q.question,
                 expectedOutput: q.expectedOutput ? q.expectedOutput.toString().trim() : '',
                 difficulty: q.difficulty,
                 marks: q.marks,
-                solution: q.solution !== undefined ? q.solution : undefined
+                solution: q.solution !== undefined ? q.solution : undefined,
+                type: q.questionType || questionType,
+                options: q.options || [],
+                correctAnswer: q.options ? q.options.findIndex((opt: QuestionOption) => opt.isCorrect) : undefined
             }));
 
             setQuestions(mappedQuestions);
@@ -239,6 +325,23 @@ export default function ExaminerDashboard() {
             }
         } finally {
             setLoading(false);
+        }
+    };
+
+    const fetchAvailableBatches = async () => {
+        setLoadingBatches(true);
+        try {
+            const response = await fetch('/api/admin/batch');
+            if (response.ok) {
+                const batches = await response.json();
+                console.log(batches);
+                setAvaileBatches(batches);
+            }
+        } catch (error) {
+            console.error('Error fetching batches:', error);
+            toast.error('Failed to load batches');
+        } finally {
+            setLoadingBatches(false);
         }
     };
 
@@ -266,8 +369,15 @@ export default function ExaminerDashboard() {
     const steps = [
         { number: 1, title: 'Basic Info', icon: Info },
         { number: 2, title: 'Questions', icon: FileText },
-        { number: 3, title: 'Review', icon: CheckCircle }
+        { number: 3, title: 'Assign Batch', icon: Users },
+        { number: 4, title: 'Review', icon: CheckCircle }
     ];
+
+    const deleteQuestion = (questionId: string) => {
+        setQuestions(prevQuestions =>
+            prevQuestions.filter(q => q.id !== questionId)
+        );
+    };
 
     return (
         <ExaminerLayout>
@@ -373,6 +483,29 @@ export default function ExaminerDashboard() {
                                         </div>
 
                                         <div className="space-y-2">
+                                            <Label htmlFor="questionType" className="text-sm font-medium">Question Type</Label>
+                                            <Select value={questionType} onValueChange={setQuestionType} disabled={isLoading}>
+                                                <SelectTrigger className="h-11">
+                                                    <SelectValue />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="coding">
+                                                        <div className="flex items-center gap-2">
+                                                            <Code className="w-4 h-4" />
+                                                            <span>Coding Questions</span>
+                                                        </div>
+                                                    </SelectItem>
+                                                    <SelectItem value="mcq">
+                                                        <div className="flex items-center gap-2">
+                                                            <FileText className="w-4 h-4" />
+                                                            <span>MCQ Questions</span>
+                                                        </div>
+                                                    </SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+
+                                        <div className="space-y-2">
                                             <Label htmlFor="duration" className="text-sm font-medium">Duration (minutes)</Label>
                                             <Input
                                                 id="duration"
@@ -404,43 +537,6 @@ export default function ExaminerDashboard() {
                                                 </div>
                                             </Card>
                                         </div>
-
-                                        <div className="space-y-2">
-                                            <Label htmlFor="startTime" className="text-sm font-medium">Start Time</Label>
-                                            <Input
-                                                id="startTime"
-                                                type="datetime-local"
-                                                value={startTime}
-                                                onChange={(e) => setStartTime(e.target.value)}
-                                                disabled={isLoading}
-                                                className="h-11"
-                                            />
-                                        </div>
-
-                                        <div className="space-y-2">
-                                            <Label htmlFor="endTime" className="text-sm font-medium">End Time</Label>
-                                            <Input
-                                                id="endTime"
-                                                type="datetime-local"
-                                                value={endTime}
-                                                onChange={(e) => setEndTime(e.target.value)}
-                                                disabled={isLoading}
-                                                className="h-11"
-                                            />
-                                        </div>
-                                    </div>
-
-                                    <div className="space-y-2">
-                                        <Label htmlFor="allowedUsers" className="text-sm font-medium">Allowed Users (optional)</Label>
-                                        <Textarea
-                                            id="allowedUsers"
-                                            placeholder="Enter comma-separated emails or leave empty for all users"
-                                            value={allowedUsersRaw}
-                                            onChange={(e) => setAllowedUsersRaw(e.target.value)}
-                                            disabled={isLoading}
-                                            className="resize-none"
-                                            rows={3}
-                                        />
                                     </div>
 
                                     <div className="flex justify-end pt-4">
@@ -542,8 +638,8 @@ export default function ExaminerDashboard() {
                                                 </>
                                             ) : (
                                                 <>
-                                                    <Code className="w-4 h-4 mr-2" />
-                                                    Fetch Questions
+                                                    {questionType === 'mcq' ? <FileText className="w-4 h-4 mr-2" /> : <Code className="w-4 h-4 mr-2" />}
+                                                    Fetch {questionType === 'mcq' ? 'MCQ' : 'Coding'} Questions
                                                 </>
                                             )}
                                         </Button>
@@ -602,7 +698,7 @@ export default function ExaminerDashboard() {
                                                             <div className="flex items-center justify-between">
                                                                 <div className="flex items-center gap-3">
                                                                     <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold text-white ${q.difficulty === 'easy' ? 'bg-green-500' :
-                                                                        q.difficulty === 'medium' ? 'bg-yellow-500' : 'bg-red-500'
+                                                                        q.difficulty?.toLocaleLowerCase() === 'medium' ? 'bg-yellow-500' : 'bg-red-500'
                                                                         }`}>
                                                                         {index + 1}
                                                                     </div>
@@ -610,9 +706,20 @@ export default function ExaminerDashboard() {
                                                                         {q.difficulty}
                                                                     </Badge>
                                                                 </div>
-                                                                {q.marks && (
-                                                                    <Badge variant="outline">{q.marks} marks</Badge>
-                                                                )}
+                                                                <div className="flex items-center gap-2">
+                                                                    {q.marks && (
+                                                                        <Badge variant="outline">{q.marks} marks</Badge>
+                                                                    )}
+                                                                    <Button
+                                                                        variant="ghost"
+                                                                        size="sm"
+                                                                        onClick={() => deleteQuestion(q.id)}
+                                                                        className="text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20"
+                                                                        title="Delete question"
+                                                                    >
+                                                                        <Trash2 className="w-4 h-4" />
+                                                                    </Button>
+                                                                </div>
                                                             </div>
                                                         </CardHeader>
                                                         <CardContent className="space-y-4">
@@ -627,6 +734,28 @@ export default function ExaminerDashboard() {
                                                                     />
                                                                 </Card>
                                                             </div>
+
+                                                            {q.type === 'mcq' && q.options && q.options.length > 0 && (
+                                                                <div>
+                                                                    <Label className="text-sm font-semibold mb-2 block">Options:</Label>
+                                                                    <div className="space-y-2">
+                                                                        {q.options.map((option: QuestionOption, optIndex: number) => (
+                                                                            <Card key={option.id || optIndex} className={`p-3 ${option.isCorrect ? 'bg-green-50 border-green-200 dark:bg-green-900/20 dark:border-green-800' : 'bg-background'}`}>
+                                                                                <div className="flex items-center gap-3">
+                                                                                    <div className={`w-6 h-6 rounded-full flex items-center justify-center text-sm font-medium ${option.isCorrect ? 'bg-green-500 text-white' : 'bg-muted text-muted-foreground'
+                                                                                        }`}>
+                                                                                        {String.fromCharCode(65 + optIndex)}
+                                                                                    </div>
+                                                                                    <span className="text-sm">{option.text}</span>
+                                                                                    {option.isCorrect && (
+                                                                                        <Badge className="ml-auto bg-green-500 hover:bg-green-600">Correct</Badge>
+                                                                                    )}
+                                                                                </div>
+                                                                            </Card>
+                                                                        ))}
+                                                                    </div>
+                                                                </div>
+                                                            )}
 
                                                             {q.expectedOutput && (
                                                                 <div>
@@ -654,6 +783,8 @@ export default function ExaminerDashboard() {
                                         </Card>
                                     )}
 
+
+
                                     <div className="flex justify-between pt-4">
                                         <Button variant="outline" onClick={() => setCurrentStep(1)}>
                                             <ArrowLeft className="w-4 h-4 mr-2" />
@@ -664,6 +795,215 @@ export default function ExaminerDashboard() {
                                             disabled={!questions.some(q => q.question?.trim())}
                                             className="px-8"
                                         >
+                                            Next: Assign Batch
+                                            <ArrowRight className="w-4 h-4 ml-2" />
+                                        </Button>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Step 3: Batch Assignment */}
+                            {currentStep === 3 && (
+                                <div className="space-y-8">
+                                    <div className="text-center space-y-2">
+                                        <div className="w-16 h-16 bg-primary/10 rounded-2xl mx-auto flex items-center justify-center">
+                                            <Users className="w-8 h-8 text-primary" />
+                                        </div>
+                                        <h2 className="text-2xl font-semibold text-foreground">Assign to Batches</h2>
+                                        <p className="text-muted-foreground">Select which batches can access this exam</p>
+                                    </div>
+
+                                    {/* Fetch Batches Button */}
+                                    {availableBatches.length === 0 && (
+                                        <div className="text-center">
+                                            <Button
+                                                onClick={fetchAvailableBatches}
+                                                disabled={loadingBatches}
+                                                size="lg"
+                                                className="px-8"
+                                            >
+                                                {loadingBatches ? (
+                                                    <>
+                                                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                                        Loading Batches...
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <Users className="w-4 h-4 mr-2" />
+                                                        Load Available Batches
+                                                    </>
+                                                )}
+                                            </Button>
+                                        </div>
+                                    )}
+
+                                    {/* Batch Selection */}
+                                    {availableBatches.length > 0 && (
+                                        <div className="space-y-6">
+                                            <Card>
+                                                <CardHeader>
+                                                    <CardTitle className="flex items-center gap-2">
+                                                        <Users className="w-5 h-5" />
+                                                        Available Batches ({availableBatches.length})
+                                                    </CardTitle>
+                                                    <CardDescription>
+                                                        Select the batches and set their exam schedule
+                                                    </CardDescription>
+                                                </CardHeader>
+                                                <CardContent>
+                                                    <div className="space-y-4">
+                                                        {availableBatches.map((batch) => (
+                                                            <Card
+                                                                key={batch.Id}
+                                                                className={`transition-all duration-200 ${selectedBatches.includes(batch.Id)
+                                                                    ? 'ring-2 ring-primary bg-primary/5'
+                                                                    : ''
+                                                                    }`}
+                                                            >
+                                                                <CardContent className="p-4">
+                                                                    <div className="flex items-start justify-between mb-4">
+                                                                        <div className="flex items-center gap-3">
+                                                                            <div
+                                                                                className={`w-5 h-5 rounded-full border-2 flex items-center justify-center cursor-pointer ${selectedBatches.includes(batch.Id)
+                                                                                    ? 'bg-primary border-primary'
+                                                                                    : 'border-muted-foreground'
+                                                                                    }`}
+                                                                                onClick={() => {
+                                                                                    setSelectedBatches(prev =>
+                                                                                        prev.includes(batch.Id)
+                                                                                            ? prev.filter(id => id !== batch.Id)
+                                                                                            : [...prev, batch.Id]
+                                                                                    );
+                                                                                    if (!selectedBatches.includes(batch.Id)) {
+                                                                                        setBatchTimes(prev => ({
+                                                                                            ...prev,
+                                                                                            [batch.Id]: { startTime: '', endTime: '' }
+                                                                                        }));
+                                                                                    } else {
+                                                                                        setBatchTimes(prev => {
+                                                                                            const { [batch.Id]: removed, ...rest } = prev;
+                                                                                            return rest;
+                                                                                        });
+                                                                                    }
+                                                                                }}
+                                                                            >
+                                                                                {selectedBatches.includes(batch.Id) && (
+                                                                                    <CheckCircle className="w-3 h-3 text-primary-foreground" />
+                                                                                )}
+                                                                            </div>
+                                                                            <div>
+                                                                                <h3 className="font-semibold">{batch.Name}</h3>
+                                                                                <p className="text-sm text-muted-foreground">
+                                                                                    {batch.EmployeeCount || 0} Employees
+                                                                                </p>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+
+                                                                    {selectedBatches.includes(batch.Id) && (
+                                                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t">
+                                                                            <div className="space-y-2">
+                                                                                <Label className="text-sm font-medium">Start Time</Label>
+                                                                                <Input
+                                                                                    type="datetime-local"
+                                                                                    value={batchTimes[batch.Id]?.startTime || ''}
+                                                                                    onChange={(e) => setBatchTimes(prev => ({
+                                                                                        ...prev,
+                                                                                        [batch.Id]: {
+                                                                                            ...prev[batch.Id],
+                                                                                            startTime: e.target.value
+                                                                                        }
+                                                                                    }))}
+                                                                                    className="h-10"
+                                                                                />
+                                                                            </div>
+                                                                            <div className="space-y-2">
+                                                                                <Label className="text-sm font-medium">End Time</Label>
+                                                                                <Input
+                                                                                    type="datetime-local"
+                                                                                    value={batchTimes[batch.Id]?.endTime || ''}
+                                                                                    onChange={(e) => setBatchTimes(prev => ({
+                                                                                        ...prev,
+                                                                                        [batch.Id]: {
+                                                                                            ...prev[batch.Id],
+                                                                                            endTime: e.target.value
+                                                                                        }
+                                                                                    }))}
+                                                                                    className="h-10"
+                                                                                />
+                                                                            </div>
+                                                                        </div>
+                                                                    )}
+                                                                </CardContent>
+                                                            </Card>
+                                                        ))}
+                                                    </div>
+
+                                                    {selectedBatches.length > 0 && (
+                                                        <div className="mt-6 p-4 bg-primary/10 rounded-lg">
+                                                            <div className="flex items-center gap-2 mb-2">
+                                                                <CheckCircle className="w-4 h-4 text-primary" />
+                                                                <span className="font-medium">Selected Batches ({selectedBatches.length})</span>
+                                                            </div>
+                                                            <div className="space-y-2">
+                                                                {selectedBatches.map(batchId => {
+                                                                    const batch = availableBatches.find(b => b.Id === batchId);
+                                                                    const times = batchTimes[batchId];
+                                                                    return (
+                                                                        <div key={batchId} className="flex items-center justify-between text-sm">
+                                                                            <Badge variant="default">{batch?.Name || batchId}</Badge>
+                                                                            <span className="text-muted-foreground">
+                                                                                {times?.startTime ? new Date(times.startTime).toLocaleString() : 'No start time'} -
+                                                                                {times?.endTime ? new Date(times.endTime).toLocaleString() : 'No end time'}
+                                                                            </span>
+                                                                        </div>
+                                                                    );
+                                                                })}
+                                                            </div>
+                                                        </div>
+                                                    )}
+
+                                                    <div className="mt-4 flex gap-2">
+                                                        <Button
+                                                            variant="outline"
+                                                            size="sm"
+                                                            onClick={() => {
+                                                                setSelectedBatches(availableBatches.map(b => b.Id));
+                                                                const newTimes: { [key: string]: { startTime: string, endTime: string } } = {};
+                                                                availableBatches.forEach(batch => {
+                                                                    newTimes[batch.Id] = { startTime: '', endTime: '' };
+                                                                });
+                                                                setBatchTimes(newTimes);
+                                                            }}
+                                                        >
+                                                            Select All
+                                                        </Button>
+                                                        <Button
+                                                            variant="outline"
+                                                            size="sm"
+                                                            onClick={() => {
+                                                                setSelectedBatches([]);
+                                                                setBatchTimes({});
+                                                            }}
+                                                        >
+                                                            Clear All
+                                                        </Button>
+                                                    </div>
+                                                </CardContent>
+                                            </Card>
+                                        </div>
+                                    )}
+
+                                    <div className="flex justify-between pt-4">
+                                        <Button variant="outline" onClick={() => setCurrentStep(2)}>
+                                            <ArrowLeft className="w-4 h-4 mr-2" />
+                                            Back
+                                        </Button>
+                                        <Button
+                                            onClick={() => setCurrentStep(4)}
+                                            disabled={selectedBatches.length === 0}
+                                            className="px-8"
+                                        >
                                             Next: Review
                                             <ArrowRight className="w-4 h-4 ml-2" />
                                         </Button>
@@ -671,8 +1011,8 @@ export default function ExaminerDashboard() {
                                 </div>
                             )}
 
-                            {/* Step 3: Review */}
-                            {currentStep === 3 && (
+                            {/* Step 4: Review */}
+                            {currentStep === 4 && (
                                 <div className="space-y-8">
                                     <div className="text-center space-y-2">
                                         <div className="w-16 h-16 bg-primary/10 rounded-2xl mx-auto flex items-center justify-center">
@@ -766,7 +1106,7 @@ export default function ExaminerDashboard() {
                                             <CardContent>
                                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                                     {['easy', 'medium', 'hard'].map((difficulty) => {
-                                                        const count = questions.filter(q => q.difficulty === difficulty).length;
+                                                        const count = questions.filter(q => q.difficulty?.toLocaleLowerCase() === difficulty).length;
                                                         const percentage = questions.length ? (count / questions.length) * 100 : 0;
 
                                                         return (
@@ -788,8 +1128,74 @@ export default function ExaminerDashboard() {
                                         </Card>
                                     )}
 
+                                    {/* Batch Schedules */}
+                                    {selectedBatches.length > 0 && (
+                                        <Card>
+                                            <CardHeader>
+                                                <CardTitle className="flex items-center gap-2">
+                                                    <Users className="w-5 h-5" />
+                                                    Batch Schedules ({selectedBatches.length})
+                                                </CardTitle>
+                                                <CardDescription>
+                                                    Exam schedule for each assigned batch
+                                                </CardDescription>
+                                            </CardHeader>
+                                            <CardContent>
+                                                <div className="space-y-4">
+                                                    {selectedBatches.map(batchId => {
+                                                        const batch = availableBatches.find(b => b.Id === batchId);
+                                                        const times = batchTimes[batchId];
+                                                        return (
+                                                            <Card key={batchId} className="bg-muted/30">
+                                                                <CardContent className="p-4">
+                                                                    <div className="flex items-center justify-between">
+                                                                        <div className="space-y-1">
+                                                                            <h4 className="font-semibold">{batch?.Name || batchId}</h4>
+                                                                            <p className="text-sm text-muted-foreground">
+                                                                                {batch?.EmployeeCount || 0} Employees
+                                                                            </p>
+                                                                        </div>
+                                                                        <div className="text-right space-y-1">
+                                                                            <div className="flex items-center gap-2 text-sm">
+                                                                                <Calendar className="w-4 h-4" />
+                                                                                <span className="font-medium">
+                                                                                    {times?.startTime ?
+                                                                                        new Date(times.startTime).toLocaleDateString() + ' ' +
+                                                                                        new Date(times.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                                                                                        : 'No start time set'
+                                                                                    }
+                                                                                </span>
+                                                                            </div>
+                                                                            <div className="flex items-center gap-2 text-sm">
+                                                                                <Clock className="w-4 h-4" />
+                                                                                <span className="font-medium">
+                                                                                    {times?.endTime ?
+                                                                                        new Date(times.endTime).toLocaleDateString() + ' ' +
+                                                                                        new Date(times.endTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                                                                                        : 'No end time set'
+                                                                                    }
+                                                                                </span>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                    {times?.startTime && times?.endTime && (
+                                                                        <div className="mt-3 p-2 bg-primary/10 rounded text-sm">
+                                                                            <span className="text-primary font-medium">
+                                                                                Duration: {Math.floor((new Date(times.endTime).getTime() - new Date(times.startTime).getTime()) / (1000 * 60 * 60))} hours &nbsp; {Math.floor(((new Date(times.endTime).getTime() - new Date(times.startTime).getTime()) % (1000 * 60 * 60)) / (1000 * 60))} minutes
+                                                                            </span>
+                                                                        </div>
+                                                                    )}
+                                                                </CardContent>
+                                                            </Card>
+                                                        );
+                                                    })}
+                                                </div>
+                                            </CardContent>
+                                        </Card>
+                                    )}
+
                                     <div className="flex justify-between pt-4">
-                                        <Button variant="outline" onClick={() => setCurrentStep(2)}>
+                                        <Button variant="outline" onClick={() => setCurrentStep(3)}>
                                             <ArrowLeft className="w-4 h-4 mr-2" />
                                             Back
                                         </Button>

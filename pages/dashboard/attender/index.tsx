@@ -198,18 +198,6 @@ const index = () => {
                                                                 <span>{new Date(exam.startTime).toLocaleTimeString([], { year: 'numeric', month: '2-digit', day: '2-digit' })} - {new Date(exam.endTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                                                             </div>
                                                         ) : null}
-                                                        {exam.participants ? (
-                                                            <div className="flex items-center space-x-1">
-                                                                <Users className="h-4 w-4" />
-                                                                <span>{exam.participants} participants</span>
-                                                            </div>
-                                                        ) : null}
-                                                        {/* {exam.startTime && exam.endTime ? (
-                                                            <div className="flex items-center space-x-1">
-                                                                <Clock className="h-4 w-4" />
-                                                                <span>{new Date(exam.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} - {new Date(exam.endTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                                                            </div>
-                                                        ) : null} */}
                                                     </div>
                                                 </div>
                                             </div>

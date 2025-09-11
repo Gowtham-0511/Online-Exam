@@ -4,12 +4,10 @@ import CodeEditor from "../../components/CodeEditor";
 import { useSession } from "next-auth/react";
 import { FilesetResolver, FaceDetector, ObjectDetector } from "@mediapipe/tasks-vision";
 import { toast } from "react-hot-toast";
-import { useTheme } from "next-themes";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { Progress } from "@/components/ui/progress";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -22,32 +20,26 @@ import {
     ChevronLeft,
     ChevronRight,
     Mic,
-    Camera,
     AlertTriangle,
     CheckCircle2,
-    Circle,
     Terminal,
     FileCode,
-    User,
     Monitor,
     Moon,
     Sun,
-    Laptop,
-    Database,
-    Table,
-    Columns,
-    Settings,
-    Maximize2,
-    Minimize2
-
 } from "lucide-react";
 
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuTrigger
-} from "@/components/ui/dropdown-menu";
+declare global {
+    interface Window {
+        initialScreenInfo?: {
+            width: number;
+            height: number;
+            availWidth: number;
+            availHeight: number;
+        };
+    }
+}
+
 export default function ExamPage() {
     const [exam, setExam] = useState<any>(null);
     const [code, setCode] = useState("");
@@ -111,9 +103,18 @@ export default function ExamPage() {
     const [selectedDatabase, setSelectedDatabase] = useState<string>("");
     const [schemaLoading, setSchemaLoading] = useState(false);
 
-    const { theme, setTheme } = useTheme();
-    const [isFullscreen, setIsFullscreen] = useState(false);
-    const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+
+    const [tabSwitchViolations, setTabSwitchViolations] = useState(0);
+    const [lastTabSwitchTime, setLastTabSwitchTime] = useState<string>("");
+    const [isTabVisible, setIsTabVisible] = useState(true);
+    const [screenChangeViolations, setScreenChangeViolations] = useState(0);
+    const [lastScreenChangeTime, setLastScreenChangeTime] = useState<string>("");
+
+
+    const tabSwitchViolationsRef = useRef(0);
+    const screenChangeViolationsRef = useRef(0);
+    const lastVisibilityChangeRef = useRef(Date.now());
+    const visibilityTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
     type ExamQuestion = {
         id: string;
@@ -234,6 +235,261 @@ export default function ExamPage() {
         };
     }, [examStarted]);
 
+    useEffect(() => {
+        if (!examStarted || hasSubmittedRef.current) return;
+
+        // Enhanced visibility change handler with debouncing
+        const handleVisibilityChange = () => {
+            const now = Date.now();
+            const timeSinceLastChange = now - lastVisibilityChangeRef.current;
+
+            // Debounce rapid visibility changes (ignore if < 500ms apart)
+            if (timeSinceLastChange < 500) return;
+
+            lastVisibilityChangeRef.current = now;
+
+            if (document.hidden) {
+                setIsTabVisible(false);
+
+                // Clear any existing timeout
+                if (visibilityTimeoutRef.current) {
+                    clearTimeout(visibilityTimeoutRef.current);
+                }
+
+                // Set a timeout to register violation after 1 second of being hidden
+                visibilityTimeoutRef.current = setTimeout(() => {
+                    if (document.hidden && !hasSubmittedRef.current) {
+                        tabSwitchViolationsRef.current += 1;
+                        const newCount = tabSwitchViolationsRef.current;
+                        const timestamp = new Date().toLocaleTimeString();
+
+                        setTabSwitchViolations(newCount);
+                        setLastTabSwitchTime(timestamp);
+
+                        console.log(`Tab switch violation detected. Count: ${newCount}/3 at ${timestamp}`);
+
+                        if (newCount >= 3) {
+                            handleDisqualification(`Tab switching violations - switched tabs ${newCount} times`);
+                        } else {
+                            toast.error(`⚠️ Tab switching detected. Warning ${newCount}/3`);
+                        }
+                    }
+                }, 1000);
+            } else {
+                setIsTabVisible(true);
+
+                // Clear timeout if user returns quickly
+                if (visibilityTimeoutRef.current) {
+                    clearTimeout(visibilityTimeoutRef.current);
+                    visibilityTimeoutRef.current = null;
+                }
+            }
+        };
+
+        // Enhanced blur handler for window focus detection
+        const handleBlur = (e: FocusEvent) => {
+            // Ignore blur events from within the same page (e.g., clicking on inputs)
+            if (e.relatedTarget && document.contains(e.relatedTarget as Node)) {
+                return;
+            }
+
+            if (examStarted && !hasSubmittedRef.current) {
+                tabSwitchViolationsRef.current += 1;
+                const newCount = tabSwitchViolationsRef.current;
+                const timestamp = new Date().toLocaleTimeString();
+
+                setTabSwitchViolations(newCount);
+                setLastTabSwitchTime(timestamp);
+
+                console.log(`Window blur violation detected. Count: ${newCount}/3 at ${timestamp}`);
+
+                if (newCount >= 3) {
+                    handleDisqualification(`Window focus violations - lost focus ${newCount} times`);
+                } else {
+                    toast.error(`⚠️ Window focus lost. Warning ${newCount}/3`);
+                }
+            }
+        };
+
+        // Enhanced screen change detection
+        const handleScreenChange = () => {
+            if (!examStarted || hasSubmittedRef.current) return;
+
+            screenChangeViolationsRef.current += 1;
+            const newCount = screenChangeViolationsRef.current;
+            const timestamp = new Date().toLocaleTimeString();
+
+            setScreenChangeViolations(newCount);
+            setLastScreenChangeTime(timestamp);
+
+            console.log(`Screen change violation detected. Count: ${newCount}/3 at ${timestamp}`);
+
+            if (newCount >= 3) {
+                handleDisqualification(`Screen configuration changes - detected ${newCount} screen changes`);
+            } else {
+                toast.error(`⚠️ Screen configuration changed. Warning ${newCount}/3`);
+            }
+        };
+
+        // Enhanced fullscreen change handler
+        const handleFullscreenChange = () => {
+            if (!document.fullscreenElement && examStarted && !hasSubmittedRef.current) {
+                console.log("Fullscreen exited - registering violation");
+
+                tabSwitchViolationsRef.current += 1;
+                const newCount = tabSwitchViolationsRef.current;
+                const timestamp = new Date().toLocaleTimeString();
+
+                setTabSwitchViolations(newCount);
+                setLastTabSwitchTime(timestamp);
+
+                if (newCount >= 3) {
+                    handleDisqualification(`Fullscreen violations - exited fullscreen ${newCount} times`);
+                } else {
+                    toast.error(`⚠️ Fullscreen exited. Warning ${newCount}/3`);
+
+                    // Try to re-enter fullscreen after a brief delay
+                    setTimeout(() => {
+                        if (!hasSubmittedRef.current) {
+                            document.documentElement.requestFullscreen().catch(() => {
+                                console.log("Failed to re-enter fullscreen");
+                            });
+                        }
+                    }, 1000);
+                }
+            }
+        };
+
+        // Mouse leave detection (indicates potential screen switching)
+        const handleMouseLeave = (e: MouseEvent) => {
+            // Only trigger if mouse leaves through the edges (not just moving within page)
+            if (e.clientY <= 0 || e.clientX <= 0 ||
+                e.clientX >= window.innerWidth || e.clientY >= window.innerHeight) {
+
+                if (examStarted && !hasSubmittedRef.current) {
+                    console.log("Mouse left window boundaries - potential screen switch");
+
+                    // Add a small delay to avoid false positives from quick mouse movements
+                    setTimeout(() => {
+                        if (!document.hasFocus() && !hasSubmittedRef.current) {
+                            screenChangeViolationsRef.current += 1;
+                            const newCount = screenChangeViolationsRef.current;
+                            const timestamp = new Date().toLocaleTimeString();
+
+                            setScreenChangeViolations(newCount);
+                            setLastScreenChangeTime(timestamp);
+
+                            if (newCount >= 3) {
+                                handleDisqualification(`Multiple screen usage - mouse left window ${newCount} times`);
+                            } else {
+                                toast.error(`⚠️ Multiple screen usage detected. Warning ${newCount}/3`);
+                            }
+                        }
+                    }, 500);
+                }
+            }
+        };
+
+        // Keyboard shortcuts detection for Alt+Tab, Cmd+Tab, etc.
+        const handleKeyDown = (e: KeyboardEvent) => {
+            // Detect Alt+Tab (Windows) or Cmd+Tab (Mac) combinations
+            const isAltTab = e.altKey && e.key === 'Tab';
+            const isCmdTab = e.metaKey && e.key === 'Tab';
+            const isWindowsKey = e.key === 'Meta' || e.key === 'Super';
+
+            if (isAltTab || isCmdTab || isWindowsKey) {
+                e.preventDefault();
+
+                if (examStarted && !hasSubmittedRef.current) {
+                    tabSwitchViolationsRef.current += 1;
+                    const newCount = tabSwitchViolationsRef.current;
+                    const timestamp = new Date().toLocaleTimeString();
+
+                    setTabSwitchViolations(newCount);
+                    setLastTabSwitchTime(timestamp);
+
+                    console.log(`Task switching key combination detected. Count: ${newCount}/3`);
+
+                    if (newCount >= 3) {
+                        handleDisqualification(`Task switching violations - used shortcuts ${newCount} times`);
+                    } else {
+                        toast.error(`⚠️ Task switching prevented. Warning ${newCount}/3`);
+                    }
+                }
+            }
+        };
+
+        // Monitor screen resolution changes
+        const handleResize = () => {
+            if (examStarted && !hasSubmittedRef.current) {
+                // Debounce resize events
+                setTimeout(() => {
+                    const currentScreen = {
+                        width: window.screen.width,
+                        height: window.screen.height,
+                        availWidth: window.screen.availWidth,
+                        availHeight: window.screen.availHeight
+                    };
+
+                    // Store initial screen info if not exists
+                    if (!window.initialScreenInfo) {
+                        window.initialScreenInfo = currentScreen;
+                        return;
+                    }
+
+                    // Check if screen configuration changed significantly
+                    const screenChanged =
+                        Math.abs(currentScreen.width - window.initialScreenInfo.width) > 100 ||
+                        Math.abs(currentScreen.height - window.initialScreenInfo.height) > 100 ||
+                        Math.abs(currentScreen.availWidth - window.initialScreenInfo.availWidth) > 100 ||
+                        Math.abs(currentScreen.availHeight - window.initialScreenInfo.availHeight) > 100;
+
+                    if (screenChanged) {
+                        handleScreenChange();
+                        window.initialScreenInfo = currentScreen;
+                    }
+                }, 1000);
+            }
+        };
+
+        // Add event listeners
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+        window.addEventListener('blur', handleBlur);
+        window.addEventListener('focus', () => setIsTabVisible(true));
+        document.addEventListener('fullscreenchange', handleFullscreenChange);
+        document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
+        document.addEventListener('mozfullscreenchange', handleFullscreenChange);
+        document.addEventListener('mouseleave', handleMouseLeave);
+        document.addEventListener('keydown', handleKeyDown);
+        window.addEventListener('resize', handleResize);
+
+        // Screen configuration monitoring
+        if (screen.orientation) {
+            screen.orientation.addEventListener('change', handleScreenChange);
+        }
+
+        // Cleanup function
+        return () => {
+            document.removeEventListener('visibilitychange', handleVisibilityChange);
+            window.removeEventListener('blur', handleBlur);
+            window.removeEventListener('focus', () => setIsTabVisible(true));
+            document.removeEventListener('fullscreenchange', handleFullscreenChange);
+            document.removeEventListener('webkitfullscreenchange', handleFullscreenChange);
+            document.removeEventListener('mozfullscreenchange', handleFullscreenChange);
+            document.removeEventListener('mouseleave', handleMouseLeave);
+            document.removeEventListener('keydown', handleKeyDown);
+            window.removeEventListener('resize', handleResize);
+
+            if (screen.orientation) {
+                screen.orientation.removeEventListener('change', handleScreenChange);
+            }
+
+            if (visibilityTimeoutRef.current) {
+                clearTimeout(visibilityTimeoutRef.current);
+            }
+        };
+    }, [examStarted]);
+
     const onFullscreenChange = () => {
         if (!document.fullscreenElement && examStarted && !hasSubmittedRef.current) {
             console.log("Fullscreen exited - disqualifying");
@@ -241,10 +497,6 @@ export default function ExamPage() {
             handleSubmitWithDisqualification(true);
         }
     };
-
-    // ["fullscreenchange", "webkitfullscreenchange", "mozfullscreenchange"].forEach(evt =>
-    //     document.addEventListener(evt, onFullscreenChange)
-    // );
 
     useEffect(() => {
         if (timeLeft <= 0 && exam) {
@@ -268,39 +520,45 @@ export default function ExamPage() {
 
             try {
                 const vision = await FilesetResolver.forVisionTasks(
-                    "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.0/wasm"
+                    "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm"
                 );
 
-                // Initialize Face Detector
                 const faceDetector = await FaceDetector.createFromOptions(vision, {
                     baseOptions: {
                         modelAssetPath: "https://storage.googleapis.com/mediapipe-models/face_detector/blaze_face_short_range/float16/1/blaze_face_short_range.tflite",
                         delegate: "GPU"
                     },
-                    runningMode: "VIDEO"
+                    runningMode: "VIDEO",
+                    minDetectionConfidence: 0.5,
+                    minSuppressionThreshold: 0.3
                 });
 
-                // Initialize Object Detector
                 const objectDetector = await ObjectDetector.createFromOptions(vision, {
                     baseOptions: {
                         modelAssetPath: "https://storage.googleapis.com/mediapipe-models/object_detector/efficientdet_lite0/float16/1/efficientdet_lite0.tflite",
                         delegate: "GPU"
                     },
                     runningMode: "VIDEO",
-                    scoreThreshold: 0.3,
-                    maxResults: 10
+                    scoreThreshold: 0.5,
+                    maxResults: 5
                 });
 
                 setFaceDetector(faceDetector);
                 setObjectDetector(objectDetector);
                 setFaceDetectionActive(true);
+
+                console.log("MediaPipe detectors initialized successfully");
             } catch (error) {
-                console.error("Failed to initialize detection:", error);
+                console.error("Failed to initialize MediaPipe detection:", error);
+                setFaceDetectionActive(false);
+                setCameraError("AI detection unavailable - continuing with basic monitoring");
             }
         };
 
-        initializeDetection();
-    }, [exam?.isExamProctored]);
+        if (exam?.isExamProctored && videoReady) {
+            setTimeout(initializeDetection, 2000);
+        }
+    }, [exam?.isExamProctored, videoReady]);
 
     useEffect(() => {
         const initializeAudioMonitoring = async () => {
@@ -309,8 +567,8 @@ export default function ExamPage() {
             try {
                 const stream = await navigator.mediaDevices.getUserMedia({
                     audio: {
-                        echoCancellation: true,
-                        noiseSuppression: true,
+                        echoCancellation: false,
+                        noiseSuppression: false,
                         autoGainControl: false,
                         sampleRate: 44100,
                         channelCount: 1
@@ -318,12 +576,16 @@ export default function ExamPage() {
                 });
 
                 const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+
+                if (audioCtx.state === 'suspended') {
+                    await audioCtx.resume();
+                }
+
                 const source = audioCtx.createMediaStreamSource(stream);
                 const analyserNode = audioCtx.createAnalyser();
 
-                // Optimized settings for voice detection
                 analyserNode.fftSize = 2048;
-                analyserNode.smoothingTimeConstant = 0.3;
+                analyserNode.smoothingTimeConstant = 0.8;
                 analyserNode.minDecibels = -90;
                 analyserNode.maxDecibels = -10;
 
@@ -333,28 +595,42 @@ export default function ExamPage() {
                 setMicrophone(source);
                 setAnalyser(analyserNode);
 
+                console.log("Audio monitoring initialized successfully");
             } catch (error) {
                 console.error("Audio monitoring initialization failed:", error);
-                setLastAudioViolation("Microphone access denied");
+                setLastAudioViolation("Microphone access denied or unavailable");
             }
         };
 
-        initializeAudioMonitoring();
+        if (exam?.isExamProctored) {
+            setTimeout(initializeAudioMonitoring, 1000);
+        }
 
         return () => {
-            if (audioContext) {
+            if (audioContext && audioContext.state !== 'closed') {
                 audioContext.close();
             }
         };
     }, [exam?.isExamProctored]);
 
+
+    useEffect(() => {
+        if (exam?.questions && answers.length > 0 && !examStarted) {
+            console.log("Auto-starting exam - proctoring will begin");
+            setExamStarted(true);
+        }
+    }, [exam, answers, examStarted]);
+
     useEffect(() => {
         let animationFrame: number;
         const confidenceBuffer: number[] = [];
-        const bufferSize = 10;
+        const bufferSize = 20;
 
         const monitorAudio = () => {
-            if (!analyser || !examStarted || !audioContext) return;
+            if (!analyser || !examStarted || !audioContext) {
+                console.log("Audio monitoring skipped - missing analyser or context");
+                return;
+            }
 
             const bufferLength = analyser.frequencyBinCount;
             const frequencyData = new Uint8Array(bufferLength);
@@ -368,7 +644,7 @@ export default function ExamPage() {
 
             const hasVoiceActivity = detectVoiceActivity(frequencyData, timeData);
 
-            if (hasVoiceActivity) {
+            if (hasVoiceActivity && average > 10) {
                 const voiceScore = analyzeVoicePattern(frequencyData, audioContext.sampleRate);
 
                 confidenceBuffer.push(voiceScore);
@@ -379,10 +655,15 @@ export default function ExamPage() {
                 const avgConfidence = confidenceBuffer.reduce((sum, val) => sum + val, 0) / confidenceBuffer.length;
                 setVoiceConfidence(avgConfidence);
 
-                const voiceThreshold = 0.6;
-                const minConfidenceFrames = 5;
+                console.log(`Voice analysis - Level: ${average.toFixed(1)}, Confidence: ${avgConfidence.toFixed(2)}`);
 
-                if (avgConfidence > voiceThreshold && confidenceBuffer.length >= minConfidenceFrames && !speakingDetected) {
+                const voiceThreshold = 0.7;
+                const minConfidenceFrames = 8;
+
+                if (avgConfidence > voiceThreshold &&
+                    confidenceBuffer.length >= minConfidenceFrames &&
+                    !speakingDetected) {
+
                     setSpeakingDetected(true);
                     audioViolationsRef.current += 1;
                     const newCount = audioViolationsRef.current;
@@ -394,13 +675,15 @@ export default function ExamPage() {
                     if (newCount >= 3) {
                         handleDisqualification("Multiple voice violations - speaking detected");
                     } else {
-                        toast.error(`🗣️ Human voice detected. Warning ${newCount}/3`);
+                        if (typeof toast !== 'undefined') {
+                            toast.error(`Voice detected. Warning ${newCount}/3`);
+                        }
                     }
 
                     setTimeout(() => {
                         setSpeakingDetected(false);
                         confidenceBuffer.length = 0;
-                    }, 3000);
+                    }, 5000);
                 }
             } else {
                 if (confidenceBuffer.length > 0) {
@@ -415,6 +698,7 @@ export default function ExamPage() {
         };
 
         if (analyser && examStarted) {
+            console.log("Starting audio monitoring loop");
             monitorAudio();
         }
 
@@ -426,45 +710,110 @@ export default function ExamPage() {
     }, [analyser, examStarted, speakingDetected, audioContext]);
 
     useEffect(() => {
-        let intervalId: NodeJS.Timeout;
+        let detectionInterval: NodeJS.Timeout;
 
         if (faceDetectionActive && faceDetector && objectDetector && examStarted && videoReady) {
+            console.log("Starting detection loops");
+
             setTimeout(() => {
-                intervalId = setInterval(() => {
+                detectionInterval = setInterval(() => {
                     detectFaces();
                     detectObjects();
                 }, 1000);
-            }, 1000);
+            }, 2000);
+        } else {
+            console.log("Detection not started - missing requirements:", {
+                faceDetectionActive,
+                hasFaceDetector: !!faceDetector,
+                hasObjectDetector: !!objectDetector,
+                examStarted,
+                videoReady
+            });
         }
 
         return () => {
-            if (intervalId) clearInterval(intervalId);
+            if (detectionInterval) {
+                console.log("Stopping detection interval");
+                clearInterval(detectionInterval);
+            }
         };
     }, [faceDetectionActive, faceDetector, objectDetector, examStarted, videoReady]);
 
-    useEffect(() => {
-        const fetchDatabaseSchema = async () => {
-            if (exam?.language !== "sql") return;
+    // useEffect(() => {
+    //     const fetchDatabaseSchema = async () => {
+    //         if (exam?.language !== "sql") return;
 
-            setSchemaLoading(true);
-            try {
-                const response = await fetch("/api/database-schema");
-                if (response.ok) {
-                    const schema = await response.json();
-                    setDatabases(schema.databases || []);
-                    if (schema.databases?.length > 0) {
-                        setSelectedDatabase(schema.databases[0].name);
-                    }
-                }
-            } catch (error) {
-                console.error("Failed to fetch database schema:", error);
-            } finally {
-                setSchemaLoading(false);
+    //         setSchemaLoading(true);
+    //         try {
+    //             const response = await fetch("/api/database-schema");
+    //             if (response.ok) {
+    //                 const schema = await response.json();
+    //                 setDatabases(schema.databases || []);
+    //                 if (schema.databases?.length > 0) {
+    //                     setSelectedDatabase(schema.databases[0].name);
+    //                 }
+    //             }
+    //         } catch (error) {
+    //             console.error("Failed to fetch database schema:", error);
+    //         } finally {
+    //             setSchemaLoading(false);
+    //         }
+    //     };
+
+    //     fetchDatabaseSchema();
+    // }, [exam?.language]);
+
+    useEffect(() => {
+        const video = videoRef.current;
+        if (!video) return;
+
+        const handleVideoReady = () => {
+            if (video.videoWidth > 0 && video.videoHeight > 0 && video.readyState >= 2) {
+                console.log("Video ready:", video.videoWidth, "x", video.videoHeight);
+                setVideoReady(true);
             }
         };
 
-        fetchDatabaseSchema();
-    }, [exam?.language]);
+        video.addEventListener('loadedmetadata', handleVideoReady);
+        video.addEventListener('loadeddata', handleVideoReady);
+        video.addEventListener('canplay', handleVideoReady);
+
+        const checkVideoReady = setInterval(() => {
+            if (video.videoWidth > 0 && video.videoHeight > 0) {
+                handleVideoReady();
+                clearInterval(checkVideoReady);
+            }
+        }, 500);
+
+        return () => {
+            clearInterval(checkVideoReady);
+            video.removeEventListener('loadedmetadata', handleVideoReady);
+            video.removeEventListener('loadeddata', handleVideoReady);
+            video.removeEventListener('canplay', handleVideoReady);
+        };
+    }, []);
+
+    useEffect(() => {
+        const logStatus = () => {
+            console.log("Proctoring Status:", {
+                examProctored: exam?.isExamProctored,
+                examStarted,
+                videoReady,
+                faceDetectionActive,
+                hasFaceDetector: !!faceDetector,
+                hasObjectDetector: !!objectDetector,
+                hasAudioContext: !!audioContext,
+                hasAnalyser: !!analyser,
+                videoWidth: videoRef.current?.videoWidth,
+                videoHeight: videoRef.current?.videoHeight,
+                videoReadyState: videoRef.current?.readyState
+            });
+        };
+
+        const statusInterval = setInterval(logStatus, 10000);
+
+        return () => clearInterval(statusInterval);
+    }, [exam?.isExamProctored, examStarted, videoReady, faceDetectionActive, faceDetector, objectDetector, audioContext, analyser]);
 
     handleContextMenuRef.current = (e) => {
         e.preventDefault();
@@ -582,6 +931,10 @@ export default function ExamPage() {
         if (handleKeyDownRef.current) {
             document.removeEventListener("keydown", handleKeyDownRef.current);
         }
+        if (visibilityTimeoutRef.current) {
+            clearTimeout(visibilityTimeoutRef.current);
+            visibilityTimeoutRef.current = null;
+        }
         handleContextMenuRef.current = null;
         handleVisibilityChangeRef.current = null;
         handleFsChangeRef.current = null;
@@ -612,6 +965,13 @@ export default function ExamPage() {
         setLastAudioViolation("");
         document.onkeydown = null;
         document.oncontextmenu = null;
+        tabSwitchViolationsRef.current = 0;
+        screenChangeViolationsRef.current = 0;
+        setTabSwitchViolations(0);
+        setScreenChangeViolations(0);
+        setLastTabSwitchTime("");
+        setLastScreenChangeTime("");
+        setIsTabVisible(true);
     };
 
     const formatTimeReadable = (seconds: number) => {
@@ -749,7 +1109,7 @@ export default function ExamPage() {
             const res = await fetch("/api/run-sql", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ query: code, database: selectedDatabase }),
+                body: JSON.stringify({ query: code, database: "SysRankDB" }),
             });
 
             const data = await res.json();
@@ -808,21 +1168,11 @@ export default function ExamPage() {
         return "text-destructive";
     };
 
-    const getProgressValue = () => {
-        const totalTime = (exam?.duration || 0) * 60;
-        return ((totalTime - timeLeft) / totalTime) * 100;
-    };
-
     const getProgressWidth = () => {
         const totalTime = exam.duration * 60;
         return ((totalTime - timeLeft) / totalTime) * 100;
     };
 
-    const getTimerBgColor = () => {
-        if (timeLeft > 300) return "from-emerald-50 to-green-50 border-emerald-200";
-        if (timeLeft > 60) return "from-amber-50 to-yellow-50 border-amber-200";
-        return "from-rose-50 to-red-50 border-rose-200";
-    };
 
     const isQuestionAnswered = (index: number) => {
         return answers[index] && answers[index].trim() !== "";
@@ -841,21 +1191,32 @@ export default function ExamPage() {
     };
 
     const detectFaces = async () => {
-        if (!videoRef.current || !faceDetector || !canvasRef.current) return;
+        if (!videoRef.current || !faceDetector || !canvasRef.current) {
+            console.log("Face detection skipped - missing refs or detector");
+            return;
+        }
 
         const video = videoRef.current;
+        const canvas = canvasRef.current;
 
         if (!video.videoWidth || !video.videoHeight || video.readyState < 2) {
-            console.log("Video not ready yet, skipping detection");
+            console.log("Video not ready for face detection");
             return;
         }
 
         try {
-            const detections = faceDetector.detectForVideo(video, performance.now());
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+
+            const startTime = performance.now();
+            const detections = faceDetector.detectForVideo(video, startTime);
+
+            console.log(`Face detection completed: ${detections.detections.length} faces found`);
 
             if (detections.detections.length === 0) {
                 setNoFaceDetectedCount(prev => {
                     const newCount = prev + 1;
+                    console.log(`No face detected count: ${newCount}`);
                     if (newCount >= 10) {
                         handleDisqualification("No face detected for extended period");
                     }
@@ -865,6 +1226,7 @@ export default function ExamPage() {
             } else if (detections.detections.length > 1) {
                 setMultipleFacesCount(prev => {
                     const newCount = prev + 1;
+                    console.log(`Multiple faces count: ${newCount}`);
                     if (newCount >= 5) {
                         handleDisqualification("Multiple faces detected");
                     }
@@ -883,38 +1245,50 @@ export default function ExamPage() {
     };
 
     const detectObjects = async () => {
-        if (!videoRef.current || !objectDetector || !canvasRef.current) return;
+        if (!videoRef.current || !objectDetector || !canvasRef.current) {
+            console.log("Object detection skipped - missing refs or detector");
+            return;
+        }
 
         const video = videoRef.current;
 
         if (!video.videoWidth || !video.videoHeight || video.readyState < 2) {
+            console.log("Video not ready for object detection");
             return;
         }
 
         try {
-            const detections = objectDetector.detectForVideo(video, performance.now());
+            const startTime = performance.now();
+            const detections = objectDetector.detectForVideo(video, startTime);
 
-            // Suspicious objects to look for
+            console.log(`Object detection completed: ${detections.detections.length} objects found`);
+
             const suspiciousObjects = [
-                'cell phone', 'mobile phone', 'phone', 'smartphone',
-                'book', 'laptop', 'computer', 'tablet',
-                'paper', 'notebook', 'calculator',
-                'headphones', 'earbuds'
+                'cell phone', 'mobile phone', 'phone', 'smartphone', 'iphone',
+                'book', 'laptop', 'computer', 'tablet', 'keyboard',
+                'paper', 'notebook', 'calculator', 'mouse',
+                'headphones', 'earbuds', 'earphones'
             ];
 
             const currentDetections: string[] = [];
             let foundSuspicious = false;
+            let suspiciousItem = '';
 
             detections.detections.forEach(detection => {
                 detection.categories.forEach(category => {
-                    const objectName = category.categoryName.toLowerCase();
-                    currentDetections.push(objectName);
+                    if (category.score > 0.6) {
+                        const objectName = category.categoryName.toLowerCase();
+                        currentDetections.push(objectName);
 
-                    if (suspiciousObjects.some(suspicious =>
-                        objectName.includes(suspicious) || suspicious.includes(objectName)
-                    )) {
-                        foundSuspicious = true;
-                        setLastSuspiciousActivity(objectName);
+                        console.log(`Detected object: ${objectName} (confidence: ${category.score})`);
+
+                        if (suspiciousObjects.some(suspicious =>
+                            objectName.includes(suspicious) || suspicious.includes(objectName)
+                        )) {
+                            foundSuspicious = true;
+                            suspiciousItem = objectName;
+                            console.log(`Suspicious object detected: ${objectName}`);
+                        }
                     }
                 });
             });
@@ -922,10 +1296,12 @@ export default function ExamPage() {
             setDetectedObjects(currentDetections);
 
             if (foundSuspicious) {
+                setLastSuspiciousActivity(suspiciousItem);
                 setSuspiciousObjectCount(prev => {
                     const newCount = prev + 1;
-                    if (newCount >= 3) { // 3 seconds of suspicious object
-                        handleDisqualification(`Suspicious object detected: ${lastSuspiciousActivity}`);
+                    console.log(`Suspicious object count: ${newCount}`);
+                    if (newCount >= 3) {
+                        handleDisqualification(`Suspicious object detected: ${suspiciousItem}`);
                     }
                     return newCount;
                 });
@@ -933,7 +1309,6 @@ export default function ExamPage() {
                 setSuspiciousObjectCount(0);
             }
 
-            // Draw object detection boxes
             drawObjectDetections(detections.detections);
 
         } catch (error) {
@@ -993,16 +1368,25 @@ export default function ExamPage() {
         const ctx = canvas.getContext('2d');
         if (!ctx) return;
 
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
+        if (canvas.width !== video.videoWidth || canvas.height !== video.videoHeight) {
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+        }
 
         ctx.clearRect(0, 0, canvas.width, canvas.height);
-        ctx.strokeStyle = detections.length === 1 ? '#00ff00' : '#ff0000';
-        ctx.lineWidth = 2;
 
-        detections.forEach(detection => {
+        ctx.strokeStyle = detections.length === 1 ? '#00ff00' : '#ff0000';
+        ctx.lineWidth = 3;
+        ctx.font = '16px Arial';
+        ctx.fillStyle = detections.length === 1 ? '#00ff00' : '#ff0000';
+
+        detections.forEach((detection, index) => {
             const bbox = detection.boundingBox;
+
             ctx.strokeRect(bbox.originX, bbox.originY, bbox.width, bbox.height);
+
+            const label = `Face ${index + 1}`;
+            ctx.fillText(label, bbox.originX, bbox.originY - 10);
         });
     };
 
@@ -1014,31 +1398,29 @@ export default function ExamPage() {
         const ctx = canvas.getContext('2d');
         if (!ctx) return;
 
-        // Set canvas size to match video
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
-
-        // Clear previous drawings
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-
         detections.forEach(detection => {
             const bbox = detection.boundingBox;
             const category = detection.categories[0];
 
-            if (category.score > 0.3) {
-                // Draw bounding box
+            if (category.score > 0.6) {
                 ctx.strokeStyle = '#ff6b6b';
                 ctx.lineWidth = 2;
                 ctx.strokeRect(bbox.originX, bbox.originY, bbox.width, bbox.height);
 
-                // Draw label
                 ctx.fillStyle = '#ff6b6b';
-                ctx.font = '12px Arial';
+                ctx.font = '14px Arial';
                 const label = `${category.categoryName} (${(category.score * 100).toFixed(0)}%)`;
-                ctx.fillText(label, bbox.originX, bbox.originY - 5);
+
+                const textWidth = ctx.measureText(label).width;
+                ctx.fillStyle = 'rgba(255, 107, 107, 0.8)';
+                ctx.fillRect(bbox.originX, bbox.originY - 25, textWidth + 10, 20);
+
+                ctx.fillStyle = 'white';
+                ctx.fillText(label, bbox.originX + 5, bbox.originY - 10);
             }
         });
     };
+
 
     const analyzeVoicePattern = (frequencyData: Uint8Array, sampleRate: number) => {
         const binSize = sampleRate / frequencyData.length;
@@ -1346,12 +1728,12 @@ export default function ExamPage() {
             {/* Main Content */}
             <div className="pt-32 pb-8 px-4">
                 <div className="max-w-full mx-auto">
-                    <div className={`grid gap-6 h-[calc(100vh-180px)] ${exam.language === 'sql'
+                    <div className={`grid gap-6 h-[calc(100vh-180px)] ${exam.language === 'sqla'
                         ? 'grid-cols-1 xl:grid-cols-4'
                         : 'grid-cols-1 xl:grid-cols-2'
                         }`}>
                         {/* Question Panel */}
-                        <Card className={`relative overflow-hidden flex flex-col group transition-all duration-500 hover:shadow-2xl border-border/50 backdrop-blur-xl ${exam.language === 'sql' ? 'xl:col-span-2' : ''}`}>
+                        <Card className={`relative overflow-hidden flex flex-col group transition-all duration-500 hover:shadow-2xl border-border/50 backdrop-blur-xl`}>
                             {/* Animated background layers */}
                             <div className="absolute inset-0 bg-gradient-to-br from-card/95 via-card/98 to-card/95" />
                             <div className="absolute inset-0 bg-gradient-to-tr from-primary/[0.02] via-transparent to-accent/[0.02]" />
@@ -1485,36 +1867,39 @@ export default function ExamPage() {
                             </CardHeader>
 
                             {/* Question Content Area */}
-                            <CardContent className="relative z-10 flex-1 p-8 overflow-y-auto">
+                            <CardContent className="relative z-10 flex-1 p-8 overflow-y-auto w-full">
                                 {exam.questions && exam.questions[activeQuestionIndex] && (
                                     <div className="space-y-8">
-                                        {/* Enhanced Question Statement */}
-                                        <div className="relative group">
-                                            <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-primary/[0.02] to-accent/[0.02] rounded-2xl blur-sm" />
-                                            <Alert className="relative border-2 border-primary/20 bg-gradient-to-br from-card/95 via-card/98 to-card/95 backdrop-blur-sm rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 overflow-hidden">
-                                                {/* Decorative elements */}
-                                                <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-primary/40 to-transparent" />
-                                                <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-accent/40 to-transparent" />
+                                        <Card className="group relative overflow-hidden border-0 bg-gradient-to-br from-background via-muted/20 to-primary/5 backdrop-blur-sm transition-all duration-500 hover:shadow-2xl hover:shadow-primary/10">
+                                            <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-accent/10 opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
 
-                                                <div className="flex items-start gap-6 p-6">
-                                                    {/* Question number badge */}
-                                                    <div className="relative group flex-shrink-0">
-                                                        <div className="absolute inset-0 bg-systech-gradient rounded-2xl blur-md opacity-50 group-hover:opacity-70 transition-opacity duration-300" />
-                                                        <div className="relative w-12 h-12 bg-systech-gradient rounded-2xl flex items-center justify-center text-white font-bold text-lg shadow-lg group-hover:scale-110 transition-transform duration-300">
+                                            <CardContent className="relative p-6">
+                                                <div className="flex items-start gap-4">
+                                                    <div className="relative flex-shrink-0">
+                                                        <div className="absolute inset-0 bg-gradient-to-br from-primary to-primary/80 rounded-2xl blur-sm opacity-60 group-hover:opacity-100 transition-all duration-300" />
+                                                        <Badge
+                                                            variant="secondary"
+                                                            className="relative h-14 w-14 rounded-2xl bg-gradient-to-br from-primary to-primary/90 text-primary-foreground font-bold text-lg border-0 shadow-lg hover:scale-105 transition-transform duration-300 flex items-center justify-center"
+                                                        >
                                                             {activeQuestionIndex + 1}
+                                                        </Badge>
+                                                        <div className="absolute inset-0 bg-gradient-to-br from-primary/30 to-primary/10 rounded-2xl animate-pulse opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                                                    </div>
+
+                                                    {/* Question content */}
+                                                    <div className="flex-1 space-y-2">
+                                                        <div className="prose prose-neutral dark:prose-invert max-w-none">
+                                                            <div
+                                                                className="text-lg leading-relaxed text-foreground/95 font-medium break-words [&>img]:max-w-md [&>img]:w-full [&>img]:h-auto [&>img]:rounded-xl [&>img]:shadow-md [&>img]:mt-4 [&>img]:border [&>img]:border-border/30 [&>p]:mb-4 [&>h1]:text-xl [&>h2]:text-lg [&>h3]:text-base [&>ul]:list-disc [&>ol]:list-decimal [&>li]:ml-4"
+                                                                dangerouslySetInnerHTML={{ __html: exam.questions[activeQuestionIndex].question }}
+                                                            />
                                                         </div>
                                                     </div>
-
-                                                    {/* Question text */}
-                                                    <div className="flex-1">
-                                                        <AlertDescription
-                                                            className="text-lg leading-relaxed text-foreground/90 font-medium [&>img]:max-w-md [&>img]:w-full [&>img]:h-auto [&>img]:rounded-xl [&>img]:shadow-md [&>img]:mt-4 [&>img]:border [&>img]:border-border/30"
-                                                            dangerouslySetInnerHTML={{ __html: exam.questions[activeQuestionIndex].question }}
-                                                        />
-                                                    </div>
                                                 </div>
-                                            </Alert>
-                                        </div>
+
+                                                <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-primary/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                                            </CardContent>
+                                        </Card>
 
                                         {/* Enhanced Answer Input Section */}
                                         <div className="space-y-4">
@@ -1628,250 +2013,6 @@ export default function ExamPage() {
                             </div>
                         </Card>
 
-                        {/* SQL Schema Side Panel - Only for SQL exams */}
-                        {exam.language === 'sql' && (
-                            <Card className="relative overflow-hidden flex flex-col group backdrop-blur-xl border-border/50 hover:shadow-2xl transition-all duration-500">
-                                {/* Dynamic background layers */}
-                                <div className="absolute inset-0 bg-gradient-to-br from-card/95 via-card/98 to-card/95" />
-                                <div className="absolute inset-0 bg-gradient-to-bl from-blue-500/[0.02] via-transparent to-cyan-500/[0.02]" />
-                                <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-blue-400/40 to-transparent" />
-
-                                {/* Floating database icons */}
-                                <div className="absolute top-6 right-6 w-24 h-24 bg-gradient-to-br from-blue-500/5 to-cyan-500/5 rounded-full blur-2xl opacity-60 animate-pulse" />
-                                <div className="absolute bottom-12 left-4 w-16 h-16 bg-gradient-to-tl from-cyan-500/5 to-blue-500/5 rounded-full blur-xl opacity-40 animate-pulse delay-1000" />
-
-                                {/* Enhanced Header */}
-                                <CardHeader className="relative z-10 bg-gradient-to-r from-blue-50/80 via-cyan-50/60 to-blue-50/80 dark:from-blue-950/60 dark:via-cyan-950/40 dark:to-blue-950/60 backdrop-blur-xl px-6 py-5 border-b border-border/30">
-                                    <div className="flex items-center gap-4">
-                                        {/* Database icon with animations */}
-                                        <div className="relative group">
-                                            <div className="absolute inset-0 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-2xl blur-lg opacity-30 group-hover:opacity-50 transition-opacity duration-300" />
-                                            <div className="relative w-12 h-12 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-2xl flex items-center justify-center shadow-lg transform group-hover:scale-110 group-hover:rotate-6 transition-all duration-300">
-                                                <svg className="w-6 h-6 text-white group-hover:scale-110 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 7v10c0 2.21 1.79 4 4 4h8c0-2.21-1.79-4-4-4H4V7z" />
-                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 7c0-2.21 1.79-4 4-4h8c2.21 0 4 1.79 4 4v10c0 2.21-1.79 4-4 4" />
-                                                </svg>
-                                                {/* Connection indicator dots */}
-                                                <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-400 rounded-full animate-pulse shadow-sm" />
-                                            </div>
-                                        </div>
-
-                                        <div className="flex-1">
-                                            <CardTitle className="text-lg font-bold bg-gradient-to-r from-blue-600 via-cyan-600 to-blue-600 bg-clip-text text-transparent dark:from-blue-400 dark:via-cyan-400 dark:to-blue-400">
-                                                Database Schema
-                                            </CardTitle>
-                                            <p className="text-sm text-muted-foreground font-medium mt-1 flex items-center gap-2">
-                                                <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
-                                                Connected & Ready
-                                            </p>
-                                        </div>
-
-                                        {/* Schema stats */}
-                                        <div className="flex items-center gap-2">
-                                            <Badge variant="outline" className="px-2 py-1 text-xs bg-blue-50/80 dark:bg-blue-950/50 border-blue-200/50 dark:border-blue-800/50 text-blue-700 dark:text-blue-300">
-                                                <Database className="w-3 h-3 mr-1" />
-                                                {databases.length}
-                                            </Badge>
-                                            <Badge variant="outline" className="px-2 py-1 text-xs bg-cyan-50/80 dark:bg-cyan-950/50 border-cyan-200/50 dark:border-cyan-800/50 text-cyan-700 dark:text-cyan-300">
-                                                <Table className="w-3 h-3 mr-1" />
-                                                {databases.find(db => db.name === selectedDatabase)?.tables?.length || 0}
-                                            </Badge>
-                                        </div>
-                                    </div>
-                                </CardHeader>
-
-                                <CardContent className="relative z-10 flex-1 p-0 overflow-hidden">
-                                    {schemaLoading ? (
-                                        <div className="flex flex-col items-center justify-center h-48 space-y-4">
-                                            <div className="relative">
-                                                <div className="w-12 h-12 border-4 border-blue-200 dark:border-blue-800 border-t-blue-500 dark:border-t-blue-400 rounded-full animate-spin" />
-                                                <div className="absolute inset-0 w-12 h-12 border-4 border-cyan-200/50 dark:border-cyan-800/50 border-b-cyan-500 dark:border-b-cyan-400 rounded-full animate-spin reverse-spin" />
-                                            </div>
-                                            <p className="text-sm text-muted-foreground animate-pulse">Loading schema...</p>
-                                        </div>
-                                    ) : (
-                                        <div className="h-full flex flex-col">
-                                            {/* Enhanced Database Selector */}
-                                            <div className="p-4 border-b border-border/30 bg-gradient-to-r from-muted/40 via-muted/20 to-muted/40 backdrop-blur-sm">
-                                                <div className="space-y-2">
-                                                    <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide flex items-center gap-2">
-                                                        <Settings className="w-3 h-3" />
-                                                        Active Database
-                                                    </label>
-                                                    <div className="relative group">
-                                                        <select
-                                                            value={selectedDatabase}
-                                                            onChange={(e) => setSelectedDatabase(e.target.value)}
-                                                            className="w-full px-4 py-3 text-sm border-2 border-border/50 rounded-xl bg-gradient-to-r from-background/80 to-background/60 text-foreground focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400/50 transition-all duration-300 hover:border-primary/30 appearance-none cursor-pointer backdrop-blur-sm"
-                                                        >
-                                                            {databases.map(db => (
-                                                                <option key={db.name} value={db.name} className="bg-background">
-                                                                    {db.name}
-                                                                </option>
-                                                            ))}
-                                                        </select>
-                                                        <div className="absolute right-3 top-1/2 transform -translate-y-1/2 pointer-events-none">
-                                                            <svg className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                                                            </svg>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-
-                                            {/* Enhanced Schema Explorer */}
-                                            <ScrollArea className="flex-1 overflow-y-auto">
-                                                <div className="p-4 space-y-4">
-                                                    {databases.find(db => db.name === selectedDatabase)?.tables?.map((table: any, tableIndex: number) => (
-                                                        <div
-                                                            key={table.name}
-                                                            className="relative group border-2 border-border/30 rounded-2xl overflow-hidden bg-gradient-to-br from-card/90 via-card/95 to-card/90 backdrop-blur-sm hover:shadow-lg hover:border-blue-300/50 dark:hover:border-blue-700/50 transition-all duration-300"
-                                                        >
-                                                            {/* Table header with enhanced styling */}
-                                                            <div className="bg-gradient-to-r from-blue-50/60 via-cyan-50/40 to-blue-50/60 dark:from-blue-950/40 dark:via-cyan-950/20 dark:to-blue-950/40 px-4 py-3 border-b border-border/30 backdrop-blur-sm">
-                                                                <div className="flex items-center justify-between">
-                                                                    <div className="flex items-center gap-3">
-                                                                        {/* Table icon with index indicator */}
-                                                                        <div className="relative">
-                                                                            <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-lg flex items-center justify-center shadow-md group-hover:scale-110 transition-transform duration-300">
-                                                                                <Table className="w-4 h-4 text-white" />
-                                                                            </div>
-                                                                            <div className="absolute -top-1 -right-1 w-4 h-4 bg-gradient-to-br from-accent to-accent/80 rounded-full flex items-center justify-center">
-                                                                                <span className="text-xs font-bold text-white">{tableIndex + 1}</span>
-                                                                            </div>
-                                                                        </div>
-
-                                                                        <div>
-                                                                            <h4 className="font-bold text-base text-foreground group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors duration-300">
-                                                                                {table.name}
-                                                                            </h4>
-                                                                            <p className="text-xs text-muted-foreground">
-                                                                                {table.columns?.length} columns • Click to explore
-                                                                            </p>
-                                                                        </div>
-                                                                    </div>
-
-                                                                    <Badge variant="secondary" className="px-3 py-1.5 text-xs font-bold bg-gradient-to-r from-secondary to-secondary/80 border border-border/50 rounded-full">
-                                                                        <Columns className="w-3 h-3 mr-1" />
-                                                                        {table.columns?.length}
-                                                                    </Badge>
-                                                                </div>
-                                                            </div>
-
-                                                            {/* Enhanced columns list */}
-                                                            <div className="max-h-48 overflow-y-auto">
-                                                                {table.columns?.map((column: any, colIndex: number) => (
-                                                                    <div
-                                                                        key={column.name}
-                                                                        className="group/column px-4 py-3 hover:bg-gradient-to-r hover:from-blue-50/50 hover:to-cyan-50/30 dark:hover:from-blue-950/30 dark:hover:to-cyan-950/20 cursor-pointer transition-all duration-200 border-b border-border/20 last:border-b-0"
-                                                                        onClick={() => {
-                                                                            const columnRef = `${table.name}.${column.name}`;
-                                                                            const newCode = code ? `${code}\n-- ${columnRef}` : `-- ${columnRef}`;
-                                                                            setCode(newCode);
-                                                                            updateAnswer(activeQuestionIndex, newCode);
-                                                                        }}
-                                                                        title={`Click to add ${table.name}.${column.name} to your query`}
-                                                                    >
-                                                                        <div className="flex items-center justify-between">
-                                                                            <div className="flex items-center gap-3 min-w-0 flex-1">
-                                                                                {/* Column type indicator */}
-                                                                                <div className="relative">
-                                                                                    <div className="w-6 h-6 bg-gradient-to-br from-cyan-400 to-blue-500 rounded-lg flex items-center justify-center shadow-sm">
-                                                                                        <div className="w-2 h-2 bg-white rounded-full" />
-                                                                                    </div>
-                                                                                    <div className="absolute -top-0.5 -right-0.5 w-3 h-3 bg-gradient-to-br from-accent to-accent/80 rounded-full flex items-center justify-center">
-                                                                                        <span className="text-xs font-bold text-white">{colIndex + 1}</span>
-                                                                                    </div>
-                                                                                </div>
-
-                                                                                <div className="min-w-0 flex-1">
-                                                                                    <div className="flex items-center gap-2">
-                                                                                        <span className="text-sm font-mono font-semibold text-foreground truncate group-hover/column:text-blue-600 dark:group-hover/column:text-blue-400 transition-colors duration-200">
-                                                                                            {column.name}
-                                                                                        </span>
-                                                                                        <div className="w-1 h-1 bg-muted-foreground/40 rounded-full" />
-                                                                                    </div>
-                                                                                    <p className="text-xs text-muted-foreground mt-0.5">
-                                                                                        Click to insert into query
-                                                                                    </p>
-                                                                                </div>
-                                                                            </div>
-
-                                                                            <Badge
-                                                                                variant="outline"
-                                                                                className="px-2 py-1 text-xs font-mono bg-gradient-to-r from-muted/60 to-muted/40 border-border/50 rounded-lg group-hover/column:border-blue-300/50 dark:group-hover/column:border-blue-700/50 transition-all duration-200 flex-shrink-0 ml-2"
-                                                                            >
-                                                                                {column.type}
-                                                                            </Badge>
-                                                                        </div>
-                                                                    </div>
-                                                                ))}
-                                                            </div>
-
-                                                            {/* Enhanced Quick Actions */}
-                                                            <div className="p-3 bg-gradient-to-r from-muted/40 via-muted/20 to-muted/40 border-t border-border/30 backdrop-blur-sm">
-                                                                <div className="grid grid-cols-2 gap-2">
-                                                                    <Button
-                                                                        variant="outline"
-                                                                        size="sm"
-                                                                        onClick={() => {
-                                                                            const selectQuery = `SELECT * FROM ${table.name};`;
-                                                                            setCode(selectQuery);
-                                                                            updateAnswer(activeQuestionIndex, selectQuery);
-                                                                        }}
-                                                                        className="text-xs px-3 py-2 h-8 rounded-lg border-border/50 hover:border-blue-300/50 dark:hover:border-blue-700/50 hover:bg-blue-50/50 dark:hover:bg-blue-950/30 transition-all duration-200 group/btn"
-                                                                    >
-                                                                        <svg className="w-3 h-3 mr-1.5 group-hover/btn:scale-110 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                                                                        </svg>
-                                                                        SELECT *
-                                                                    </Button>
-                                                                    <Button
-                                                                        variant="outline"
-                                                                        size="sm"
-                                                                        onClick={() => {
-                                                                            const describeQuery = `DESCRIBE ${table.name};`;
-                                                                            setCode(describeQuery);
-                                                                            updateAnswer(activeQuestionIndex, describeQuery);
-                                                                        }}
-                                                                        className="text-xs px-3 py-2 h-8 rounded-lg border-border/50 hover:border-cyan-300/50 dark:hover:border-cyan-700/50 hover:bg-cyan-50/50 dark:hover:bg-cyan-950/30 transition-all duration-200 group/btn"
-                                                                    >
-                                                                        <svg className="w-3 h-3 mr-1.5 group-hover/btn:scale-110 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                                                                        </svg>
-                                                                        DESCRIBE
-                                                                    </Button>
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            </ScrollArea>
-                                        </div>
-                                    )}
-                                </CardContent>
-
-                                {/* Enhanced Footer with connection status */}
-                                <div className="relative z-10 px-4 py-3 border-t border-border/30 bg-gradient-to-r from-muted/40 via-muted/20 to-muted/40 backdrop-blur-sm">
-                                    <div className="flex items-center justify-between text-xs">
-                                        <div className="flex items-center gap-2">
-                                            <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
-                                            <span className="text-muted-foreground font-medium">Database Connected</span>
-                                        </div>
-                                        <div className="flex items-center gap-3">
-                                            <span className="text-muted-foreground">
-                                                Total Tables: {databases.find(db => db.name === selectedDatabase)?.tables?.length || 0}
-                                            </span>
-                                            <div className="w-px h-3 bg-border" />
-                                            <span className="text-muted-foreground">
-                                                Active: {selectedDatabase}
-                                            </span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </Card>
-                        )}
 
                         {/* Code Editor Panel */}
                         <Card className="relative overflow-hidden flex flex-col group transition-all duration-500 hover:shadow-2xl border-border/50 backdrop-blur-xl">
@@ -2171,39 +2312,6 @@ export default function ExamPage() {
                     <div className="absolute top-4 right-4 w-20 h-20 bg-gradient-to-br from-red-500/5 to-amber-500/5 rounded-full blur-2xl opacity-50 animate-pulse" />
                     <div className="absolute bottom-6 left-4 w-16 h-16 bg-gradient-to-tl from-amber-500/5 to-red-500/5 rounded-full blur-xl opacity-40 animate-pulse delay-1000" />
 
-                    <CardHeader className="relative z-10 bg-gradient-to-r from-red-50/80 via-amber-50/60 to-red-50/80 dark:from-red-950/60 dark:via-amber-950/40 dark:to-red-950/60 backdrop-blur-xl px-6 py-4 border-b border-border/30">
-                        <div className="flex items-center gap-4">
-                            <div className="relative group">
-                                <div className="absolute inset-0 bg-gradient-to-br from-red-500 to-amber-500 rounded-2xl blur-lg opacity-40 group-hover:opacity-60 transition-opacity duration-300" />
-                                <div className="relative w-12 h-12 bg-gradient-to-br from-red-500 to-amber-500 rounded-2xl flex items-center justify-center shadow-lg transform group-hover:scale-110 transition-all duration-300">
-                                    <svg className="w-6 h-6 text-white group-hover:rotate-12 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                                    </svg>
-                                    <div className="absolute -top-1 -right-1 w-4 h-4 bg-green-400 rounded-full animate-pulse shadow-lg flex items-center justify-center">
-                                        <div className="w-2 h-2 bg-white rounded-full" />
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div className="flex-1 min-w-0">
-                                <CardTitle className="text-base font-bold bg-gradient-to-r from-red-600 via-amber-600 to-red-600 bg-clip-text text-transparent dark:from-red-400 dark:via-amber-400 dark:to-red-400">
-                                    AI Proctoring Active
-                                </CardTitle>
-                                <p className="text-xs text-muted-foreground font-medium mt-1 flex items-center gap-2">
-                                    <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
-                                    Monitoring in progress
-                                </p>
-                            </div>
-
-                            <Badge className="px-3 py-1.5 text-xs font-bold bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-xl shadow-lg">
-                                <svg className="w-3 h-3 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                </svg>
-                                SECURE
-                            </Badge>
-                        </div>
-                    </CardHeader>
-
                     <CardContent className="relative z-10 p-6 space-y-6">
                         <div className="relative group">
                             <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-primary/5 to-accent/10 rounded-2xl blur-sm opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
@@ -2243,16 +2351,9 @@ export default function ExamPage() {
                                         </div>
                                     </div>
 
-                                    <div className="absolute top-3 right-3">
-                                        <Badge variant="outline" className="px-2 py-1 text-xs bg-black/60 backdrop-blur-sm border-white/20 text-white">
-                                            <Camera className="w-3 h-3 mr-1" />
-                                            Live
-                                        </Badge>
-                                    </div>
-
                                     <div className="absolute bottom-3 right-3">
                                         <div className="px-2 py-1 bg-black/60 backdrop-blur-sm rounded-lg border border-white/20">
-                                            <span className="text-white text-xs font-mono">640×480</span>
+                                            <span className="text-white text-xs font-mono">640x480</span>
                                         </div>
                                     </div>
                                 </div>
@@ -2291,8 +2392,8 @@ export default function ExamPage() {
                                         <div className="w-20 h-2 bg-muted/50 rounded-full overflow-hidden backdrop-blur-sm border border-border/30">
                                             <div
                                                 className={`h-full transition-all duration-300 rounded-full relative overflow-hidden ${speakingDetected
-                                                        ? 'bg-gradient-to-r from-red-400 to-red-600'
-                                                        : 'bg-gradient-to-r from-primary/60 to-primary'
+                                                    ? 'bg-gradient-to-r from-red-400 to-red-600'
+                                                    : 'bg-gradient-to-r from-primary/60 to-primary'
                                                     }`}
                                                 style={{ width: `${voiceConfidence * 100}%` }}
                                             >
@@ -2300,8 +2401,8 @@ export default function ExamPage() {
                                             </div>
                                         </div>
                                         <div className={`w-6 h-6 rounded-full flex items-center justify-center transition-all duration-200 ${speakingDetected
-                                                ? 'bg-red-100 dark:bg-red-950/50 text-red-600 dark:text-red-400'
-                                                : 'bg-primary/10 text-primary'
+                                            ? 'bg-red-100 dark:bg-red-950/50 text-red-600 dark:text-red-400'
+                                            : 'bg-primary/10 text-primary'
                                             }`}>
                                             {speakingDetected ? (
                                                 <AlertTriangle className="w-3 h-3" />
@@ -2318,8 +2419,8 @@ export default function ExamPage() {
 
                         <div className="grid grid-cols-2 gap-3">
                             <div className={`p-3 rounded-xl border-2 transition-all duration-300 ${noFaceDetectedCount > 5
-                                    ? 'border-red-300/50 bg-gradient-to-br from-red-50/80 to-rose-50/60 dark:from-red-950/40 dark:to-rose-950/20'
-                                    : 'border-green-300/50 bg-gradient-to-br from-green-50/80 to-emerald-50/60 dark:from-green-950/40 dark:to-emerald-950/20'
+                                ? 'border-red-300/50 bg-gradient-to-br from-red-50/80 to-rose-50/60 dark:from-red-950/40 dark:to-rose-950/20'
+                                : 'border-green-300/50 bg-gradient-to-br from-green-50/80 to-emerald-50/60 dark:from-green-950/40 dark:to-emerald-950/20'
                                 }`}>
                                 <div className="flex items-center gap-2 mb-2">
                                     <div className={`w-2 h-2 rounded-full ${noFaceDetectedCount > 5 ? 'bg-red-500' : 'bg-green-500'} animate-pulse`} />
@@ -2337,8 +2438,8 @@ export default function ExamPage() {
                             </div>
 
                             <div className={`p-3 rounded-xl border-2 transition-all duration-300 ${suspiciousObjectCount > 0
-                                    ? 'border-amber-300/50 bg-gradient-to-br from-amber-50/80 to-orange-50/60 dark:from-amber-950/40 dark:to-orange-950/20'
-                                    : 'border-blue-300/50 bg-gradient-to-br from-blue-50/80 to-cyan-50/60 dark:from-blue-950/40 dark:to-cyan-950/20'
+                                ? 'border-amber-300/50 bg-gradient-to-br from-amber-50/80 to-orange-50/60 dark:from-amber-950/40 dark:to-orange-950/20'
+                                : 'border-blue-300/50 bg-gradient-to-br from-blue-50/80 to-cyan-50/60 dark:from-blue-950/40 dark:to-cyan-950/20'
                                 }`}>
                                 <div className="flex items-center gap-2 mb-2">
                                     <div className={`w-2 h-2 rounded-full ${suspiciousObjectCount > 0 ? 'bg-amber-500' : 'bg-blue-500'} animate-pulse`} />
@@ -2408,27 +2509,6 @@ export default function ExamPage() {
                             </Alert>
                         )}
                     </CardContent>
-
-                    <div className="relative z-10 px-6 py-4 border-t border-border/30 bg-gradient-to-r from-muted/40 via-muted/20 to-muted/40 backdrop-blur-sm">
-                        <div className="flex items-center justify-between text-xs">
-                            <div className="flex items-center gap-3">
-                                <div className="flex items-center gap-2">
-                                    <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
-                                    <span className="text-muted-foreground font-medium">System Active</span>
-                                </div>
-                                <div className="w-px h-3 bg-border" />
-                                <div className="flex items-center gap-1">
-                                    <svg className="w-3 h-3 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                                    </svg>
-                                    <span className="text-muted-foreground font-mono">256-bit</span>
-                                </div>
-                            </div>
-                            <Badge variant="outline" className="px-2 py-1 text-xs bg-card/80 border-border/50 font-mono">
-                                v2.1.0
-                            </Badge>
-                        </div>
-                    </div>
                 </Card>
             )}
         </div>

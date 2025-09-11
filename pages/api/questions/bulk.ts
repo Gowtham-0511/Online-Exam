@@ -19,14 +19,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                 .input("difficulty", q.difficulty)
                 .input("marks", q.marks)
                 .input("language", q.language)
-                .input("jobId", q.jobId)
-                .input("skillId", q.skillId)
                 .input("createdBy", q.createdBy)
                 .query(`
                 INSERT INTO Questions (
-                    questionText, expectedOutput, difficulty, marks, language, jobId, skillId, createdBy
+                    questionText, expectedOutput, difficulty, marks, language, createdBy
                 ) VALUES (
-                    @questionText, @expectedOutput, @difficulty, @marks, @language, @jobId, @skillId, @createdBy
+                    @questionText, @expectedOutput, @difficulty, @marks, @language, @createdBy
                 )
                 `);
         }

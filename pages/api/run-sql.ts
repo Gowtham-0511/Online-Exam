@@ -7,10 +7,10 @@ const DATABRICKS_HOST = process.env.DATABRICKS_HOSTNAME!;
 const WAREHOUSE_ID = process.env.DATABRICKS_WAREHOUSE_ID!;
 
 const baseConfig: Partial<sql.config> = {
-    user: "SysRankUser",
-    password: "SysR@nk123",
-    server: "SSIC-SQL-01",
-    database: "SysRank",
+    user: "SysPortalAdmin",
+    password: "spa@Systech2o23",
+    server: "sysportaldbs.database.windows.net",
+    database: "SysRankDB",
     options: {
         encrypt: true,
         trustServerCertificate: true,
@@ -43,7 +43,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
         console.log(columns);
         console.log(rows);
-        
+
 
         // // Step 1: Create a SQL execution request
         // const response = await axios.post(

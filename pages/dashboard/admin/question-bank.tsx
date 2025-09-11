@@ -4,7 +4,6 @@ import toast from "react-hot-toast";
 import { useSession } from "next-auth/react";
 import AdminLayout from "./layout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -12,6 +11,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
 import { Progress } from '@/components/ui/progress';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import {
     BookOpen,
     Code,
@@ -29,20 +30,34 @@ import {
     Zap,
     Target,
     Award,
-    Layers
+    Layers,
+    Download,
+    List,
+    X,
+    Check
 } from 'lucide-react';
+
+interface MCQOption {
+    id: string;
+    text: string;
+    isCorrect: boolean;
+}
 
 interface QuestionInput {
     id?: number;
     questionText: string;
-    expectedOutput: string;
+    expectedOutput?: string;
     difficulty: string;
     marks: number;
-    language: string;
+    language?: string;
     jobId: number;
     skillId: number;
     imageUrl?: string;
     imageAltText?: string;
+    questionType: 'coding' | 'mcq';
+    options?: MCQOption[];
+    correctAnswer?: string;
+    explanation?: string;
 }
 
 interface RichTextEditorProps {
@@ -51,7 +66,6 @@ interface RichTextEditorProps {
     placeholder?: string;
 }
 
-// Enhanced Rich Text Editor Component
 const RichTextEditor = ({ value, onChange, placeholder = "Write your question here..." }: RichTextEditorProps) => {
     const editorRef = useRef<HTMLDivElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -172,6 +186,112 @@ const RichTextEditor = ({ value, onChange, placeholder = "Write your question he
     );
 };
 
+
+const MCQOptionsEditor = ({ options, onChange }: { options: MCQOption[]; onChange: (options: MCQOption[]) => void }) => {
+    const addOption = () => {
+        const newOption: MCQOption = {
+            id: `option_${Date.now()}`,
+            text: '',
+            isCorrect: false
+        };
+        onChange([...options, newOption]);
+    };
+
+    const removeOption = (id: string) => {
+        if (options.length > 2) {
+            onChange(options.filter(option => option.id !== id));
+        } else {
+            toast.error("MCQ must have at least 2 options");
+        }
+    };
+
+    const updateOption = (id: string, field: keyof MCQOption, value: string | boolean) => {
+        onChange(options.map(option =>
+            option.id === id ? { ...option, [field]: value } : option
+        ));
+    };
+
+    const setCorrectAnswer = (id: string) => {
+        onChange(options.map(option => ({
+            ...option,
+            isCorrect: option.id === id
+        })));
+    };
+
+    return (
+        <div className="space-y-4">
+            <div className="flex items-center justify-between">
+                <Label className="text-sm font-semibold flex items-center gap-2">
+                    <List className="h-4 w-4" />
+                    Answer Options
+                </Label>
+                <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={addOption}
+                    className="gap-2"
+                    disabled={options.length >= 6}
+                >
+                    <Plus className="h-3 w-3" />
+                    Add Option
+                </Button>
+            </div>
+
+            <RadioGroup value={options.find(o => o.isCorrect)?.id || ""}>
+                {options.map((option, index) => (
+                    <Card key={option.id} className="border-2 border-dashed border-muted-foreground/20">
+                        <CardContent className="p-4">
+                            <div className="flex items-center gap-3">
+                                <div className="flex items-center gap-2">
+                                    <span className="text-sm font-medium text-muted-foreground w-8">
+                                        {String.fromCharCode(65 + index)}.
+                                    </span>
+                                    <RadioGroupItem
+                                        value={option.id}
+                                        onClick={() => setCorrectAnswer(option.id)}
+                                        className="cursor-pointer"
+                                        title="Mark as correct answer"
+                                    />
+                                </div>
+
+                                <Input
+                                    placeholder={`Option ${String.fromCharCode(65 + index)}`}
+                                    value={option.text}
+                                    onChange={(e) => updateOption(option.id, 'text', e.target.value)}
+                                    className="flex-1"
+                                />
+
+                                {option.isCorrect && (
+                                    <div className="flex items-center gap-1 px-2 py-1 bg-green-100 dark:bg-green-900 rounded-md">
+                                        <Check className="h-3 w-3 text-green-600" />
+                                        <span className="text-xs text-green-700 dark:text-green-300">Correct</span>
+                                    </div>
+                                )}
+
+                                <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => removeOption(option.id)}
+                                    className="h-8 w-8 p-0 hover:bg-red-100 hover:text-red-600"
+                                    disabled={options.length <= 2}
+                                >
+                                    <X className="h-3 w-3" />
+                                </Button>
+                            </div>
+                        </CardContent>
+                    </Card>
+                ))}
+            </RadioGroup>
+
+            <p className="text-xs text-muted-foreground">
+                Click the radio button next to an option to mark it as the correct answer.
+            </p>
+        </div>
+    );
+};
+
 export default function QuestionBankPage() {
     const { data: session } = useSession();
 
@@ -183,6 +303,11 @@ export default function QuestionBankPage() {
         language: "python",
         jobId: 1,
         skillId: 1,
+        questionType: 'coding',
+        options: [
+            { id: 'option_1', text: '', isCorrect: false },
+            { id: 'option_2', text: '', isCorrect: false }
+        ]
     });
 
     const [filters, setFilters] = useState({
@@ -190,20 +315,20 @@ export default function QuestionBankPage() {
         language: "",
         difficulty: "",
         jobId: "",
-        skillId: ""
+        skillId: "",
+        questionType: ""
     });
 
     const [file, setFile] = useState<File | null>(null);
     const [preview, setPreview] = useState<QuestionInput[]>([]);
     const [uploading, setUploading] = useState(false);
     const [questions, setQuestions] = useState<QuestionInput[]>([]);
-    const [editMode, setEditMode] = useState<number | null>(null);
-    const [editData, setEditData] = useState<any>({});
 
     const fetchFilteredQuestions = async () => {
         const params = new URLSearchParams(filters as any).toString();
         const res = await fetch(`/api/questions?${params}`);
         const data = await res.json();
+        console.log(data);
         setQuestions(data);
     };
 
@@ -233,7 +358,7 @@ export default function QuestionBankPage() {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
-                questions: preview.map((q) => ({ ...q, createdBy: "admin@example.com" })),
+                questions: preview.map((q) => ({ ...q, createdBy: session?.user?.email })),
             }),
         });
         if (res.ok) {
@@ -251,8 +376,36 @@ export default function QuestionBankPage() {
 
         const content = question.questionText;
 
+        console.log(question);
+
         if (!content || !content.replace(/<(.|\n)*?>/g, '').trim()) {
             toast.error("Please enter the question text!");
+            return;
+        }
+
+        // Validate MCQ specific fields
+        if (question.questionType === 'mcq') {
+            if (!question.options || question.options.length < 2) {
+                toast.error("MCQ must have at least 2 options!");
+                return;
+            }
+
+            const hasCorrectAnswer = question.options.some(option => option.isCorrect);
+            if (!hasCorrectAnswer) {
+                toast.error("Please mark one option as correct!");
+                return;
+            }
+
+            const emptyOptions = question.options.filter(option => !option.text.trim());
+            if (emptyOptions.length > 0) {
+                toast.error("Please fill in all option texts!");
+                return;
+            }
+        }
+
+        // Validate coding question specific fields
+        if (question.questionType === 'coding' && !question.expectedOutput) {
+            toast.error("Please enter the expected output for coding questions!");
             return;
         }
 
@@ -269,11 +422,20 @@ export default function QuestionBankPage() {
         });
 
         if (res.ok) {
-            toast.success("Question added");
-            setQuestion({ ...question, questionText: "", expectedOutput: "" });
+            toast.success("Question added successfully!");
+            setQuestion({
+                ...question,
+                questionText: "",
+                expectedOutput: "",
+                explanation: "",
+                options: [
+                    { id: 'option_1', text: '', isCorrect: false },
+                    { id: 'option_2', text: '', isCorrect: false }
+                ]
+            });
             fetchFilteredQuestions();
         } else {
-            toast.error("Failed to add");
+            toast.error("Failed to add question");
         }
     };
 
@@ -286,18 +448,65 @@ export default function QuestionBankPage() {
     const languageConfig = {
         python: { emoji: '🐍', name: 'Python' },
         sql: { emoji: '🗄️', name: 'SQL' },
-        javascript: { emoji: '💛', name: 'JavaScript' },
-        java: { emoji: '☕', name: 'Java' },
-        cpp: { emoji: '⚡', name: 'C++' },
-        csharp: { emoji: '🔷', name: 'C#' },
-        go: { emoji: '🐹', name: 'Go' },
-        rust: { emoji: '🦀', name: 'Rust' }
+        javascript: { emoji: '💛', name: 'JavaScript' }
+    };
+
+    interface TemplateQuestion {
+        questionText: string;
+        expectedOutput?: string;
+        difficulty: string;
+        marks: number;
+        language?: string;
+        questionType: string;
+        options?: string;
+        correctAnswer?: string;
+        explanation?: string;
+    }
+
+    const downloadTemplate = (): void => {
+        const templateData: TemplateQuestion[] = [
+            {
+                questionText: "Write a function to reverse a string",
+                expectedOutput: "function reverseString(str) { return str.split('').reverse().join(''); }",
+                difficulty: "Easy",
+                marks: 5,
+                language: "JavaScript",
+                questionType: "coding",
+                explanation: "This function splits the string into characters, reverses the array, then joins them back."
+            },
+            {
+                questionText: "What is the time complexity of binary search?",
+                difficulty: "Medium",
+                marks: 2,
+                questionType: "mcq",
+                options: "O(n)|O(log n)|O(n^2)|O(1)",
+                correctAnswer: "O(log n)",
+                explanation: "Binary search divides the search space in half with each comparison."
+            }
+        ];
+
+        const headers: (keyof TemplateQuestion)[] = ['questionText', 'expectedOutput', 'difficulty', 'marks', 'language', 'questionType', 'options', 'correctAnswer', 'explanation'];
+        const csvContent: string = [
+            headers.join(','),
+            ...templateData.map(row =>
+                headers.map(header => `"${row[header] || ''}"`).join(',')
+            )
+        ].join('\n');
+
+        const blob: Blob = new Blob([csvContent], { type: 'text/csv' });
+        const url: string = window.URL.createObjectURL(blob);
+        const a: HTMLAnchorElement = document.createElement('a');
+        a.href = url;
+        a.download = 'questions_template.csv';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
     };
 
     return (
         <AdminLayout>
             <div className="min-h-screen p-6 space-y-6">
-                {/* Header Section */}
                 <div className="text-center space-y-4">
                     <div className="flex items-center justify-center gap-3">
                         <div className="p-3 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl shadow-lg">
@@ -308,14 +517,13 @@ export default function QuestionBankPage() {
                                 Question Bank
                             </h1>
                             <p className="text-muted-foreground text-lg">
-                                Create and manage coding challenges with style
+                                Create and manage coding challenges & MCQs with style
                             </p>
                         </div>
                         <Sparkles className="h-6 w-6 text-purple-500 animate-pulse" />
                     </div>
                 </div>
 
-                {/* Stats Cards */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                     <Card className="border-2 border-dashed border-blue-200 dark:border-blue-800 hover:border-blue-400 dark:hover:border-blue-600 transition-colors">
                         <CardContent className="p-6">
@@ -333,10 +541,12 @@ export default function QuestionBankPage() {
                         <CardContent className="p-6">
                             <div className="flex items-center justify-between">
                                 <div>
-                                    <p className="text-sm font-medium text-muted-foreground">This Session</p>
-                                    <p className="text-3xl font-bold text-green-600">0</p>
+                                    <p className="text-sm font-medium text-muted-foreground">Coding Questions</p>
+                                    <p className="text-3xl font-bold text-green-600">
+                                        {questions.filter(q => q.questionType.toLocaleLowerCase() === 'coding').length}
+                                    </p>
                                 </div>
-                                <Plus className="h-8 w-8 text-green-500" />
+                                <Code className="h-8 w-8 text-green-500" />
                             </div>
                         </CardContent>
                     </Card>
@@ -345,30 +555,52 @@ export default function QuestionBankPage() {
                         <CardContent className="p-6">
                             <div className="flex items-center justify-between">
                                 <div>
-                                    <p className="text-sm font-medium text-muted-foreground">Bulk Uploaded</p>
-                                    <p className="text-3xl font-bold text-purple-600">{preview.length}</p>
+                                    <p className="text-sm font-medium text-muted-foreground">MCQ Questions</p>
+                                    <p className="text-3xl font-bold text-purple-600">
+                                        {questions.filter(q => q.questionType.toLocaleLowerCase() === 'mcq').length}
+                                    </p>
                                 </div>
-                                <FileSpreadsheet className="h-8 w-8 text-purple-500" />
+                                <List className="h-8 w-8 text-purple-500" />
                             </div>
                         </CardContent>
                     </Card>
                 </div>
 
-                {/* Manual Form */}
                 <Card className="border-2 border-dashed border-muted-foreground/20 hover:border-primary/50 transition-colors">
                     <CardHeader className="pb-4">
                         <CardTitle className="flex items-center gap-2 text-xl">
                             <div className="p-2 bg-gradient-to-br from-green-500 to-emerald-600 rounded-lg shadow-lg">
                                 <Plus className="h-5 w-5 text-white" />
                             </div>
-                            Add Single Question
+                            Add New Question
                         </CardTitle>
                         <CardDescription>
-                            Create detailed coding questions with rich text formatting and images
+                            Create coding challenges or multiple choice questions with rich formatting
                         </CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-6">
                         <form onSubmit={handleManualSubmit} className="space-y-6">
+                            {/* Question Type Selection */}
+                            <div className="space-y-2">
+                                <Label className="text-sm font-semibold">Question Type</Label>
+                                <Tabs
+                                    value={question.questionType}
+                                    onValueChange={(value) => setQuestion({ ...question, questionType: value as 'coding' | 'mcq' })}
+                                    className="w-full"
+                                >
+                                    <TabsList className="grid w-full grid-cols-2">
+                                        <TabsTrigger value="coding" className="flex items-center gap-2">
+                                            <Code className="h-4 w-4" />
+                                            Coding Question
+                                        </TabsTrigger>
+                                        <TabsTrigger value="mcq" className="flex items-center gap-2">
+                                            <List className="h-4 w-4" />
+                                            MCQ Question
+                                        </TabsTrigger>
+                                    </TabsList>
+                                </Tabs>
+                            </div>
+
                             {/* Question Text */}
                             <div className="space-y-2">
                                 <Label className="text-sm font-semibold flex items-center gap-2">
@@ -378,28 +610,33 @@ export default function QuestionBankPage() {
                                 <RichTextEditor
                                     value={question.questionText}
                                     onChange={(content: any) => setQuestion({ ...question, questionText: content })}
-                                    placeholder="Write your coding question here. Use the toolbar to format text and add images..."
+                                    placeholder={`Write your ${question.questionType.toLocaleLowerCase() === 'coding' ? 'coding' : 'MCQ'} question here. Use the toolbar to format text and add images...`}
                                 />
                             </div>
 
-                            {/* Expected Output */}
-                            <div className="space-y-2">
-                                <Label className="text-sm font-semibold flex items-center gap-2">
-                                    <Code className="h-4 w-4" />
-                                    Expected Output
-                                </Label>
-                                <Textarea
-                                    required
-                                    placeholder="Enter the expected output for this question..."
-                                    className="min-h-[100px] font-mono text-sm border-2 border-dashed resize-none"
-                                    value={question.expectedOutput}
-                                    onChange={(e) => setQuestion({ ...question, expectedOutput: e.target.value })}
+                            {/* Conditional Fields Based on Question Type */}
+                            {question.questionType.toLocaleLowerCase() === 'coding' ? (
+                                <div className="space-y-2">
+                                    <Label className="text-sm font-semibold flex items-center gap-2">
+                                        <Code className="h-4 w-4" />
+                                        Expected Output / Solution
+                                    </Label>
+                                    <Textarea
+                                        required
+                                        placeholder="Enter the expected output or solution for this coding question..."
+                                        className="min-h-[100px] font-mono text-sm border-2 border-dashed resize-none"
+                                        value={question.expectedOutput}
+                                        onChange={(e) => setQuestion({ ...question, expectedOutput: e.target.value })}
+                                    />
+                                </div>
+                            ) : (
+                                <MCQOptionsEditor
+                                    options={question.options || []}
+                                    onChange={(options) => setQuestion({ ...question, options })}
                                 />
-                            </div>
+                            )}
 
-                            {/* Form Fields Grid */}
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                {/* Difficulty */}
                                 <div className="space-y-2">
                                     <Label className="text-sm font-semibold">Difficulty</Label>
                                     <Select
@@ -425,7 +662,6 @@ export default function QuestionBankPage() {
                                     </Select>
                                 </div>
 
-                                {/* Marks */}
                                 <div className="space-y-2">
                                     <Label className="text-sm font-semibold">Marks</Label>
                                     <Input
@@ -439,7 +675,6 @@ export default function QuestionBankPage() {
                                     />
                                 </div>
 
-                                {/* Language */}
                                 <div className="space-y-2">
                                     <Label className="text-sm font-semibold">Programming Language</Label>
                                     <Select
@@ -460,20 +695,18 @@ export default function QuestionBankPage() {
                                 </div>
                             </div>
 
-                            {/* Submit Button */}
                             <Button
                                 type="submit"
                                 size="lg"
                                 className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-semibold py-6 shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-[1.02]"
                             >
                                 <Save className="h-5 w-5 mr-2" />
-                                Save Question
+                                Save {question.questionType.toLocaleLowerCase() === 'coding' ? 'Coding' : 'MCQ'} Question
                             </Button>
                         </form>
                     </CardContent>
                 </Card>
 
-                {/* Bulk Upload Section */}
                 <Card className="border-2 border-dashed border-muted-foreground/20 hover:border-primary/50 transition-colors">
                     <CardHeader className="pb-4">
                         <CardTitle className="flex items-center gap-2 text-xl">
@@ -483,8 +716,22 @@ export default function QuestionBankPage() {
                             Bulk Upload (CSV)
                         </CardTitle>
                         <CardDescription>
-                            Upload multiple questions at once using CSV format
+                            Upload multiple questions at once using CSV format (supports both coding and MCQ questions)
                         </CardDescription>
+                        <div className="flex items-center justify-between mb-4">
+                            <p className="text-sm text-muted-foreground">
+                                Need help formatting your CSV? Download our template with examples of both question types.
+                            </p>
+                            <Button
+                                onClick={downloadTemplate}
+                                variant="outline"
+                                size="sm"
+                                className="gap-2"
+                            >
+                                <Download className="h-4 w-4" />
+                                Download Template
+                            </Button>
+                        </div>
                     </CardHeader>
                     <CardContent className="space-y-4">
                         <div className="flex flex-col sm:flex-row gap-4">
@@ -530,11 +777,22 @@ export default function QuestionBankPage() {
                         {preview.length > 0 && !uploading && (
                             <Card className="border-green-200 dark:border-green-800 bg-green-50/50 dark:bg-green-950/50">
                                 <CardContent className="p-4">
-                                    <div className="flex items-center gap-2">
+                                    <div className="flex items-center gap-2 mb-4">
                                         <CheckCircle className="h-5 w-5 text-green-600" />
                                         <span className="text-green-800 dark:text-green-200 font-medium">
                                             Preview: {preview.length} questions ready for upload
                                         </span>
+                                    </div>
+
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
+                                        <div className="flex items-center gap-2">
+                                            <Code className="h-4 w-4 text-blue-600" />
+                                            <span>Coding: {preview.filter(q => q.questionType.toLocaleLowerCase() === 'coding').length}</span>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <List className="h-4 w-4 text-purple-600" />
+                                            <span>MCQ: {preview.filter(q => q.questionType.toLocaleLowerCase() === 'mcq').length}</span>
+                                        </div>
                                     </div>
                                 </CardContent>
                             </Card>

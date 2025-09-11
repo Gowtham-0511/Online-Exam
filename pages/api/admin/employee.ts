@@ -8,7 +8,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         const db = await getDBConnection();
 
         const result = await db.query(`
-            SELECT * FROM Employees ORDER BY Email
+            SELECT Id, EmployeeId, Name, Email, Department, Position FROM Employees ORDER BY Email
         `);
 
         res.status(200).json(result);

@@ -6,10 +6,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const { email } = req.query;
 
-    console.log(email);
-
-    console.log("Received email:", email);
-
     try {
         const db = await getDBConnection();
         const result = await db

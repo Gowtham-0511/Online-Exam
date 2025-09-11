@@ -80,6 +80,7 @@ const ViewExams: React.FC = () => {
                 const response = await fetch(`/api/attender/allowed-exam?email=${encodeURIComponent(session?.user?.email || "")}`);
                 if (response.ok) {
                     const assessments = await response.json();
+                    console.log(assessments);
                     setExams(assessments);
                 } else {
                     setError('Failed to fetch exams');
@@ -148,11 +149,20 @@ const ViewExams: React.FC = () => {
     };
 
     const isExamActive = (exam: Exam): boolean => {
-        if (!exam.startTime || !exam.endTime) return true;
-        const now = new Date();
-        const start = new Date(exam.startTime);
-        const end = new Date(exam.endTime);
-        return now >= start && now <= end;
+        // if (!exam.startTime || !exam.endTime) return true;
+
+        // const now = new Date();
+        // const start = new Date(exam.startTime);
+        // const end = new Date(exam.endTime);
+
+        // // Add debugging logs
+        // console.log('Current time:', now.toISOString());
+        // console.log('Exam start time:', start.toISOString());
+        // console.log('Exam end time:', end.toISOString());
+        // console.log('Is active:', now >= start && now <= end);
+
+        // return now >= start && now <= end;
+        return true;
     };
 
     const getExamStatus = (exam: Exam): { status: string; color: string } => {
@@ -423,10 +433,13 @@ const ViewExams: React.FC = () => {
                                                     <span className="font-medium text-foreground">{totalMarks}</span>
                                                 </div>
 
-                                                <div className="flex items-center gap-2 text-sm">
-                                                    <Users className="h-4 w-4 text-systech-primary" />
-                                                    <span className="text-muted-foreground">Participants:</span>
-                                                    <span className="font-medium text-foreground">{exam.participants}</span>
+                                                <div className="flex gap-2 flex-wrap">
+                                                    {exam.isExamProctored && (
+                                                        <Badge variant="outline" className="text-xs">
+                                                            <Shield className="h-3 w-3 mr-1" />
+                                                            Proctored
+                                                        </Badge>
+                                                    )}
                                                 </div>
                                             </div>
 
@@ -443,20 +456,7 @@ const ViewExams: React.FC = () => {
                                             </div>
 
                                             {/* Exam Features */}
-                                            <div className="flex gap-2 flex-wrap">
-                                                {exam.isExamProctored && (
-                                                    <Badge variant="outline" className="text-xs">
-                                                        <Shield className="h-3 w-3 mr-1" />
-                                                        Proctored
-                                                    </Badge>
-                                                )}
-                                                {exam.isGeneratedFromExcel && (
-                                                    <Badge variant="outline" className="text-xs">
-                                                        <FileText className="h-3 w-3 mr-1" />
-                                                        Excel Generated
-                                                    </Badge>
-                                                )}
-                                            </div>
+
 
                                             {/* Exam Timing */}
                                             {(exam.startTime || exam.endTime) && (

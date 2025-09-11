@@ -25,7 +25,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             questionConfig,
             startTime,
             endTime,
-            allowedUsers
+            allowedUsers,
+            batchSchedules
         } = req.body;
 
         const db = await getDBConnection();
@@ -41,7 +42,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         }
 
         // Insert new exam
-        await db
+        const result = await db
             .request()
             .input("title", examId)
             .input("language", language)
@@ -69,7 +70,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                 startTime,
                 endTime,
                 allowedUsers
-                ) VALUES (
+                ) OUTPUT INSERTED.Id VALUES (
                 @title,
                 @language,
                 @duration,
@@ -84,6 +85,35 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                 @allowedUsers
                 )
             `);
+
+        console.log(result.recordset);
+
+        const assessmentId = result.recordset[0].Id;
+
+        if (batchSchedules && batchSchedules.length > 0) {
+            for (const schedule of batchSchedules) {
+                await db
+                    .request()
+                    .input("assessmentId", assessmentId)
+                    .input("batchId", schedule.batchId)
+                    .input("startTime", schedule.startTime ? new Date(schedule.startTime).toISOString() : null)
+                    .input("endTime", schedule.endTime ? new Date(schedule.endTime).toISOString() : null)
+                    .query(`
+                    INSERT INTO AssessmentBatchMapping (
+                        assessmentId,
+                        batchId,
+                        startTime,
+                        endTime
+                    ) VALUES (
+                        @assessmentId,
+                        @batchId,
+                        @startTime,
+                        @endTime
+                    )
+                `);
+            }
+        }
+
 
         res.status(200).json({ success: true });
     } catch (error) {
