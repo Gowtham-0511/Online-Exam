@@ -116,6 +116,8 @@ export default function ExamPage() {
     const lastVisibilityChangeRef = useRef(Date.now());
     const visibilityTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
+    const [isSubmitting, setIsSubmitting] = useState(false);
+
     type ExamQuestion = {
         id: string;
         question: string;
@@ -844,7 +846,7 @@ export default function ExamPage() {
         const isForbiddenKey =
             e.key === 'F12' ||
             (e.ctrlKey && e.shiftKey && ['I', 'J', 'C'].includes(e.key)) ||
-            (e.ctrlKey && ['u', 'U', 'a', 'A', 'c', 'C', 'v', 'V', 'p', 'P'].includes(e.key)) ||
+            (e.ctrlKey && ['u', 'U', 'a', 'A', 'c', 'C', 'v', 'V', 'p', 'P', 'x', 'X', 'z', 'Z', 'y', 'Y'].includes(e.key)) ||
             e.key === 'PrintScreen';
 
         if (isForbiddenKey) {
@@ -859,7 +861,7 @@ export default function ExamPage() {
                 handleSubmitWithDisqualification(true);
                 router.push("/dashboard/attender");
             } else {
-                toast.error(`🚫 Invalid key. Warning ${newCount}/3`);
+                toast.error(`🚫 Invalid key combination. Warning ${newCount}/3`);
             }
         }
     };
@@ -987,14 +989,18 @@ export default function ExamPage() {
             return `${remainingSeconds}s`;
         }
     };
+    
 
     const handleSubmit = async () => {
-
         if (hasSubmittedRef.current) return;
 
         hasSubmittedRef.current = true;
+        setIsSubmitting(true);
 
-        if (!exam || !session) return;
+        if (!exam || !session) {
+            setIsSubmitting(false);
+            return;
+        }
 
         console.log(isDisqualified, "isDisqualified");
 
@@ -1004,28 +1010,105 @@ export default function ExamPage() {
 
         const answersWithQuestionIds = answers.map((answer, index) => ({
             questionId: shuffledQuestions[index]?.id || index,
+            question: shuffledQuestions[index]?.question || '',
             answer: answer,
+            marks: shuffledQuestions[index]?.marks || 0,
             originalIndex: index
         }));
 
-        await fetch("/api/submissions", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-                examId: examIdStr,
-                email,
-                userName,
-                answers,
-                answersWithQuestionIds,
-                disqualified: isDisqualified,
-                code,
-            }),
-        });
+        try {
+            let evaluationResult = null;
+            try {
+                const response = await fetch("http://localhost:5678/webhook/evaluate", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ answersWithQuestionIds })
+                });
+                evaluationResult = await response.text();
+                console.log(evaluationResult);
+            } catch (error) {
+                console.error("Evaluation failed:", error);
+            }
 
-        await cleanupExamEnvironment(); // ✅
-        router.push("/dashboard/attender");
+            await fetch("/api/submissions", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    examId: examIdStr,
+                    email,
+                    userName,
+                    answers,
+                    evaluationResult,
+                    disqualified: isDisqualified,
+                    code,
+                }),
+            });
 
+            await cleanupExamEnvironment();
+            setIsSubmitting(false);
+            router.push("/dashboard/attender");
+
+        } catch (error) {
+            console.error("Submission failed:", error);
+            setIsSubmitting(false);
+        }
     };
+
+    // const handleSubmit = async () => {
+
+    //     if (hasSubmittedRef.current) return;
+
+    //     hasSubmittedRef.current = true;
+    //     setIsSubmitting(true);
+
+    //     if (!exam || !session) return;
+
+    //     console.log(isDisqualified, "isDisqualified");
+
+    //     const email = session.user?.email || "unknown";
+    //     const userName = session.user?.name || "Anonymous";
+    //     const examIdStr = examId?.toString() || "unknown";
+
+    //     const answersWithQuestionIds = answers.map((answer, index) => ({
+    //         questionId: shuffledQuestions[index]?.id || index,
+    //         question: shuffledQuestions[index]?.question || '',
+    //         answer: answer,
+    //         marks: shuffledQuestions[index]?.marks || 0,
+    //         originalIndex: index
+    //     }));
+
+    //     let evaluationResult = null;
+    //     try {
+    //         const response = await fetch("http://localhost:5678/webhook/evaluate", {
+    //             method: "POST",
+    //             headers: { "Content-Type": "application/json" },
+    //             body: JSON.stringify({ answersWithQuestionIds })
+    //         });
+    //         evaluationResult = await response.text();
+    //         console.log(evaluationResult);
+    //     } catch (error) {
+    //         console.error(error);
+    //     }
+
+    //     await fetch("/api/submissions", {
+    //         method: "POST",
+    //         headers: { "Content-Type": "application/json" },
+    //         body: JSON.stringify({
+    //             examId: examIdStr,
+    //             email,
+    //             userName,
+    //             answers,
+    //             evaluationResult,
+    //             disqualified: isDisqualified,
+    //             code,
+    //         }),
+    //     });
+
+    //     await cleanupExamEnvironment();
+    //     setIsSubmitting(false);
+    //     router.push("/dashboard/attender");
+
+    // };
 
     const handleSubmitWithDisqualification = async (disqualifiedFlag = isDisqualified) => {
 
@@ -1043,6 +1126,7 @@ export default function ExamPage() {
 
         const answersWithQuestionIds = answers.map((answer, index) => ({
             questionId: shuffledQuestions[index]?.id || index,
+            question: shuffledQuestions[index]?.question || '',
             answer: answer,
             originalIndex: index
         }));
@@ -1421,7 +1505,6 @@ export default function ExamPage() {
         });
     };
 
-
     const analyzeVoicePattern = (frequencyData: Uint8Array, sampleRate: number) => {
         const binSize = sampleRate / frequencyData.length;
 
@@ -1707,18 +1790,25 @@ export default function ExamPage() {
                         {/* Enhanced Submit Button */}
                         <Button
                             onClick={handleSubmit}
-                            className="relative px-10 py-4 bg-gradient-to-r from-primary via-primary/90 to-primary text-white font-bold text-lg rounded-2xl transition-all duration-500 hover:scale-105 hover:shadow-2xl hover:shadow-primary/40 group overflow-hidden border border-primary/20"
+                            disabled={isSubmitting}
+                            className="relative px-10 py-4 bg-gradient-to-r from-primary via-primary/90 to-primary text-white font-bold text-lg rounded-2xl transition-all duration-500 hover:scale-105 hover:shadow-2xl hover:shadow-primary/40 group overflow-hidden border border-primary/20 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
                         >
-                            {/* Animated background */}
                             <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 translate-x-[-200%] group-hover:translate-x-[200%] transition-transform duration-1000" />
 
-                            {/* Button content */}
                             <div className="relative flex items-center gap-3">
-                                <Send className="w-5 h-5 group-hover:rotate-12 group-hover:scale-110 transition-transform duration-300" />
-                                <span>Submit Exam</span>
+                                {isSubmitting ? (
+                                    <>
+                                        <div className="w-5 h-5 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                                        <span>Submitting...</span>
+                                    </>
+                                ) : (
+                                    <>
+                                        <Send className="w-5 h-5 group-hover:rotate-12 group-hover:scale-110 transition-transform duration-300" />
+                                        <span>Submit Exam</span>
+                                    </>
+                                )}
                             </div>
 
-                            {/* Glow effect */}
                             <div className="absolute inset-0 rounded-2xl bg-primary/20 blur-lg scale-110 opacity-0 group-hover:opacity-100 transition-opacity duration-500 -z-10" />
                         </Button>
                     </div>
@@ -1987,28 +2077,6 @@ export default function ExamPage() {
                                             </span>
                                         </div>
                                     </div>
-
-                                    {/* Quick navigation */}
-                                    <div className="flex items-center gap-2">
-                                        <span className="text-xs text-muted-foreground">Quick jump:</span>
-                                        <div className="flex gap-1">
-                                            {Array.from({ length: Math.min(5, exam.questions?.length || 0) }, (_, i) => (
-                                                <button
-                                                    key={i}
-                                                    onClick={() => setActiveQuestionIndex(i)}
-                                                    className={`w-2 h-2 rounded-full transition-all duration-200 ${i === activeQuestionIndex
-                                                        ? 'bg-primary scale-125'
-                                                        : isQuestionAnswered(i)
-                                                            ? 'bg-primary/60 hover:bg-primary/80'
-                                                            : 'bg-muted-foreground/30 hover:bg-muted-foreground/50'
-                                                        }`}
-                                                />
-                                            ))}
-                                            {exam.questions?.length > 5 && (
-                                                <span className="text-xs text-muted-foreground ml-1">...</span>
-                                            )}
-                                        </div>
-                                    </div>
                                 </div>
                             </div>
                         </Card>
@@ -2266,9 +2334,9 @@ export default function ExamPage() {
                                                 <div className="text-center space-y-3">
                                                     {output ? (
                                                         <div className="space-y-2">
-                                                            <div className="w-12 h-12 bg-gradient-to-br from-primary to-accent rounded-2xl flex items-center justify-center mx-auto shadow-lg">
+                                                            {/* <div className="w-12 h-12 bg-gradient-to-br from-primary to-accent rounded-2xl flex items-center justify-center mx-auto shadow-lg">
                                                                 <Terminal className="w-6 h-6 text-white" />
-                                                            </div>
+                                                            </div> */}
                                                             <pre className="text-sm text-muted-foreground font-mono whitespace-pre-wrap break-words text-left max-w-full">
                                                                 {output}
                                                             </pre>
@@ -2510,6 +2578,55 @@ export default function ExamPage() {
                         )}
                     </CardContent>
                 </Card>
+            )}
+
+            {isSubmitting && (
+                <div className="fixed inset-0 bg-background/95 backdrop-blur-md z-[100] flex items-center justify-center">
+                    <Card className="w-full max-w-md mx-4 overflow-hidden">
+                        <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-accent/5 to-primary/10 animate-pulse" />
+
+                        <CardContent className="relative p-8">
+                            <div className="flex flex-col items-center gap-6">
+                                <div className="relative">
+                                    <div className="w-20 h-20 border-4 border-primary/30 border-t-primary rounded-full animate-spin" />
+                                    <div className="absolute inset-0 w-20 h-20 border-4 border-accent/20 border-b-accent rounded-full animate-spin reverse"
+                                        style={{ animationDelay: "300ms", animationDirection: "reverse" }} />
+
+                                    <div className="absolute inset-0 flex items-center justify-center">
+                                        <div className="w-10 h-10 bg-systech-gradient rounded-xl flex items-center justify-center shadow-lg">
+                                            <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                                                    d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                                            </svg>
+                                        </div>
+                                    </div>
+
+                                    <div className="absolute -top-2 -right-2 w-4 h-4 bg-accent rounded-full animate-bounce" />
+                                    <div className="absolute -bottom-2 -left-2 w-3 h-3 bg-primary rounded-full animate-bounce delay-500" />
+                                </div>
+
+                                <div className="text-center space-y-3">
+                                    <h3 className="text-2xl font-bold bg-gradient-to-r from-primary via-accent to-primary bg-clip-text text-transparent animate-pulse">
+                                        AI Evaluating Your Exam
+                                    </h3>
+                                    <p className="text-muted-foreground font-medium">
+                                        Our advanced AI is carefully analyzing your responses...
+                                    </p>
+
+                                    <div className="flex items-center justify-center gap-2 mt-4">
+                                        <div className="w-2 h-2 bg-primary rounded-full animate-bounce" />
+                                        <div className="w-2 h-2 bg-primary rounded-full animate-bounce delay-100" />
+                                        <div className="w-2 h-2 bg-primary rounded-full animate-bounce delay-200" />
+                                    </div>
+
+                                    <p className="text-xs text-muted-foreground mt-2">
+                                        Please wait while we process your submission
+                                    </p>
+                                </div>
+                            </div>
+                        </CardContent>
+                    </Card>
+                </div>
             )}
         </div>
     );

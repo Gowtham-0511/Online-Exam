@@ -88,9 +88,9 @@ const index = () => {
 
     const stats = {
         totalExams: 15,
-        averageScore: 83.2,
-        bestRank: 2,
-        currentStreak: 5
+        averageScore: "-",
+        bestRank: "-",
+        currentStreak: "-"
     }
 
     const getDifficultyColor = (difficulty: string) => {
@@ -176,7 +176,7 @@ const index = () => {
                                             <Calendar className="h-5 w-5 text-primary" />
                                             <CardTitle>Upcoming Exams</CardTitle>
                                         </div>
-                                        <Button variant="outline" size="sm">
+                                        <Button variant="outline" size="sm" onClick={() => window.location.href = '/dashboard/attender/view-exams'}>
                                             View All
                                         </Button>
                                     </div>
@@ -292,23 +292,23 @@ const index = () => {
                                     <div className="space-y-3">
                                         <div className="flex justify-between items-center">
                                             <span className="text-sm font-medium">Overall Progress</span>
-                                            <span className="text-sm text-muted-foreground">83%</span>
+                                            <span className="text-sm text-muted-foreground">-</span>
                                         </div>
-                                        <Progress value={83} className="h-2" />
+                                        <Progress value={0} className="h-2" />
                                     </div>
 
                                     <div className="space-y-3">
                                         <div className="flex justify-between items-center">
                                             <span className="text-sm font-medium">This Month</span>
-                                            <span className="text-sm text-muted-foreground">+12%</span>
+                                            <span className="text-sm text-muted-foreground">-</span>
                                         </div>
-                                        <Progress value={67} className="h-2" />
+                                        <Progress value={0} className="h-2" />
                                     </div>
 
                                     <div className="pt-2 border-t">
                                         <div className="flex items-center justify-between text-sm">
                                             <span className="text-muted-foreground">Exams Completed</span>
-                                            <span className="font-semibold">{upcomingExams.length}</span>
+                                            <span className="font-semibold">-</span>
                                         </div>
                                         <div className="flex items-center justify-between text-sm mt-1">
                                             <span className="text-muted-foreground">Average Score</span>

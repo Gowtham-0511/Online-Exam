@@ -167,31 +167,31 @@ export default function ExaminerDashboard() {
 
             console.log(examData);
 
-            // try {
-            //     const response = await fetch("/api/assessment/create", {
-            //         method: "POST",
-            //         headers: { "Content-Type": "application/json" },
-            //         body: JSON.stringify(examData),
-            //     });
+            try {
+                const response = await fetch("/api/assessment/create", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(examData),
+                });
 
-            //     if (response.status === 409) {
-            //         toast.error("An exam with this title already exists. Please choose a different title.");
-            //         return;
-            //     }
+                if (response.status === 409) {
+                    toast.error("An exam with this title already exists. Please choose a different title.");
+                    return;
+                }
 
-            //     if (!response.ok) throw new Error("Failed to create exam");
+                if (!response.ok) throw new Error("Failed to create exam");
 
-            //     setShowSuccess(true);
-            //     setTimeout(() => {
-            //         setShowSuccess(false);
-            //         resetForm();
-            //     }, 2000);
+                setShowSuccess(true);
+                setTimeout(() => {
+                    setShowSuccess(false);
+                    resetForm();
+                }, 2000);
 
-            // } catch (error) {
-            //     console.error("Error saving exam data:", error);
-            //     toast.error("Failed to save exam data. Please try again.");
-            //     return;
-            // }
+            } catch (error) {
+                console.error("Error saving exam data:", error);
+                toast.error("Failed to save exam data. Please try again.");
+                return;
+            }
 
         } catch (error) {
             console.error("Error creating exam:", error);

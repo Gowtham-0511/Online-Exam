@@ -447,8 +447,19 @@ const ViewExams: React.FC = () => {
                                             <div className="space-y-2">
                                                 <p className="text-sm font-medium text-foreground">Difficulty Breakdown:</p>
                                                 <div className="flex gap-2 flex-wrap">
-                                                    {questions.map((q, index) => (
-                                                        <Badge key={index} variant="outline" className={`${getDifficultyColor(q.difficulty)} text-xs`}>
+                                                    {[...Object.values(
+                                                        questions.reduce((acc, q) => {
+                                                            if (!acc[q.difficulty]) {
+                                                                acc[q.difficulty] = q;
+                                                            }
+                                                            return acc;
+                                                        }, {} as Record<string, typeof questions[0]>)
+                                                    )].map((q, index) => (
+                                                        <Badge
+                                                            key={index}
+                                                            variant="outline"
+                                                            className={`${getDifficultyColor(q.difficulty)} text-xs`}
+                                                        >
                                                             {q.difficulty} ({q.marks}pts)
                                                         </Badge>
                                                     ))}
@@ -507,7 +518,7 @@ const ViewExams: React.FC = () => {
                                         <h3 className="font-semibold text-lg">{examData.title}</h3>
                                         <div className="text-sm text-muted-foreground space-y-1">
                                             <p>Duration: {formatDuration(examData.duration) || 'Not specified'}</p>
-                                            <p>Questions: {parseQuestions(examData.questions).length}</p>
+                                            <p>Questions: {examData.questions.length}</p>
                                             <p>Total Marks: {calculateTotalMarks(parseQuestions(examData.questions))}</p>
                                         </div>
                                     </div>

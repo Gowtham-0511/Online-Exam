@@ -19,7 +19,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             email,
             userName,
             answers,
-            answersWithQuestionIds,
+            evaluationResult,
             disqualified = false,
             code,
         } = req.body;
@@ -33,9 +33,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             .input('userName', userName)
             .input('answers', sql.NVarChar(sql.MAX), JSON.stringify(answers ?? []))
             .input(
-                'answersWithQuestionIds',
+                'evaluationResult',
                 sql.NVarChar(sql.MAX),
-                JSON.stringify(answersWithQuestionIds ?? []),
+                JSON.stringify(evaluationResult ?? []),
             )
             .input('code', code)
             .input('disqualified', disqualified ? 1 : 0)
@@ -46,7 +46,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                 )
                 OUTPUT INSERTED.id
                 VALUES (
-                @email, @examId, @userName, @answers, @answersWithQuestionIds, @code, @disqualified, @submittedAt
+                @email, @examId, @userName, @answers, @evaluationResult, @code, @disqualified, @submittedAt
                 )
             `);
 

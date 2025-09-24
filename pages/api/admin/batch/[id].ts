@@ -1,5 +1,3 @@
-// Create this file at: /pages/api/admin/batch/[id].ts
-
 import { NextApiRequest, NextApiResponse } from "next";
 import { getDBConnection } from "@/lib/database";
 
