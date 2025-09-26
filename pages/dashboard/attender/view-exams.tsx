@@ -22,10 +22,30 @@ import {
     CheckCircle,
     AlertCircle,
     Info,
-    ArrowRight
+    ArrowRight,
+    Zap,
+    Target,
+    Brain,
+    Award,
+    Lock,
+    Unlock,
+    Monitor,
+    Camera,
+    Mic,
+    MicOff,
+    VideoOff,
+    Video,
+    Maximize,
+    X,
+    ChevronRight,
+    TrendingUp,
+    Activity,
+    Code2,
+    Layers
 } from 'lucide-react';
 import AttenderLayout from './AttenderLayout';
 import { useRouter } from "next/router";
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 
 interface Question {
@@ -98,13 +118,78 @@ const ViewExams: React.FC = () => {
         }
     }, [session?.user?.email]);
 
+    const getLanguageConfig = (language: string) => {
+        const configs = {
+            python: {
+                icon: Code2,
+                color: 'from-blue-500 to-blue-600',
+                bgColor: 'bg-blue-50 dark:bg-blue-950/30',
+                textColor: 'text-blue-700 dark:text-blue-300',
+                borderColor: 'border-blue-200 dark:border-blue-800'
+            },
+            javascript: {
+                icon: Zap,
+                color: 'from-yellow-500 to-orange-500',
+                bgColor: 'bg-yellow-50 dark:bg-yellow-950/30',
+                textColor: 'text-yellow-700 dark:text-yellow-300',
+                borderColor: 'border-yellow-200 dark:border-yellow-800'
+            },
+            java: {
+                icon: Activity,
+                color: 'from-red-500 to-red-600',
+                bgColor: 'bg-destructive/10 dark:bg-red-950/30',
+                textColor: 'text-red-700 dark:text-red-300',
+                borderColor: 'border-red-200 dark:border-red-800'
+            },
+            cpp: {
+                icon: Layers,
+                color: 'from-purple-500 to-purple-600',
+                bgColor: 'bg-purple-50 dark:bg-purple-950/30',
+                textColor: 'text-purple-700 dark:text-purple-300',
+                borderColor: 'border-purple-200 dark:border-purple-800'
+            },
+            c: {
+                icon: Code,
+                color: 'from-gray-500 to-gray-600',
+                bgColor: 'bg-gray-50 dark:bg-gray-950/30',
+                textColor: 'text-gray-700 dark:text-gray-300',
+                borderColor: 'border-gray-200 dark:border-gray-800'
+            }
+        };
+        return configs[language.toLowerCase() as keyof typeof configs] || configs.c;
+    };
+
+    const getDifficultyConfig = (difficulty: string) => {
+        const configs = {
+            easy: {
+                color: 'from-green-500 to-emerald-500',
+                bgColor: 'bg-green-50 dark:bg-green-950/30',
+                textColor: 'text-green-700 dark:text-green-300',
+                icon: Target
+            },
+            medium: {
+                color: 'from-yellow-500 to-orange-500',
+                bgColor: 'bg-yellow-50 dark:bg-yellow-950/30',
+                textColor: 'text-yellow-700 dark:text-yellow-300',
+                icon: Brain
+            },
+            hard: {
+                color: 'from-red-500 to-red-600',
+                bgColor: 'bg-destructive/10 dark:bg-red-950/30',
+                textColor: 'text-red-700 dark:text-red-300',
+                icon: Zap
+            }
+        };
+        return configs[difficulty.toLowerCase() as keyof typeof configs] || configs.easy;
+    };
+
     const getLanguageColor = (language: string) => {
         const colors = {
-            python: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300',
+            python: 'bg-accent/10 text-blue-800 dark:bg-blue-900 dark:text-blue-300',
             javascript: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300',
-            java: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300',
+            java: 'bg-red-100 text-red-800 dark:bg-destructive dark:text-red-300',
             cpp: 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300',
-            c: 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300',
+            c: 'bg-gray-100 text-gray-800 dark:bg-muted dark:text-gray-300',
             default: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300'
         };
         return colors[language.toLowerCase() as keyof typeof colors] || colors.default;
@@ -114,7 +199,7 @@ const ViewExams: React.FC = () => {
         const colors = {
             easy: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300',
             medium: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300',
-            hard: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300'
+            hard: 'bg-red-100 text-red-800 dark:bg-destructive dark:text-red-300'
         };
         return colors[difficulty.toLowerCase() as keyof typeof colors] || colors.easy;
     };
@@ -149,25 +234,20 @@ const ViewExams: React.FC = () => {
     };
 
     const isExamActive = (exam: Exam): boolean => {
-        // if (!exam.startTime || !exam.endTime) return true;
-
-        // const now = new Date();
-        // const start = new Date(exam.startTime);
-        // const end = new Date(exam.endTime);
-
-        // // Add debugging logs
-        // console.log('Current time:', now.toISOString());
-        // console.log('Exam start time:', start.toISOString());
-        // console.log('Exam end time:', end.toISOString());
-        // console.log('Is active:', now >= start && now <= end);
-
-        // return now >= start && now <= end;
-        return true;
+        if (!exam.startTime || !exam.endTime) return true;
+        const now = new Date();
+        const start = new Date(exam.startTime);
+        const end = new Date(exam.endTime);
+        return now >= start && now <= end;
     };
 
-    const getExamStatus = (exam: Exam): { status: string; color: string } => {
+    const getExamStatus = (exam: Exam): { status: string; color: string; bgColor: string } => {
         if (!exam.startTime || !exam.endTime) {
-            return { status: 'Available', color: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300' };
+            return {
+                status: 'Available',
+                color: 'text-green-700 dark:text-green-300',
+                bgColor: 'bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-800'
+            };
         }
 
         const now = new Date();
@@ -175,37 +255,57 @@ const ViewExams: React.FC = () => {
         const end = new Date(exam.endTime);
 
         if (now < start) {
-            return { status: 'Upcoming', color: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300' };
+            return {
+                status: 'Upcoming',
+                color: 'text-blue-700 dark:text-blue-300',
+                bgColor: 'bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-800'
+            };
         } else if (now > end) {
-            return { status: 'Expired', color: 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300' };
+            return {
+                status: 'Expired',
+                color: 'text-gray-700 dark:text-gray-400',
+                bgColor: 'bg-gray-50 dark:bg-gray-950/30 border-gray-200 dark:border-gray-700'
+            };
         } else {
-            return { status: 'Active', color: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300' };
+            return {
+                status: 'Active',
+                color: 'text-green-700 dark:text-green-300',
+                bgColor: 'bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-800'
+            };
         }
     };
 
-    const handelStartExam = async (examId: any) => {
-        const fetchExamDetails = async () => {
-            try {
-                const response = await fetch(`/api/assessment/${encodeURIComponent(examId)}`, { method: 'GET' });
-                if (!response.ok) {
-                    if (response.status === 404) {
-                        throw new Error('Exam not found or no longer available');
-                    } else {
-                        throw new Error('Failed to fetch exam details');
-                    }
-                }
-                const examData = await response.json();
-                console.log('Fetched exam data:', examData);
+    // const handelStartExam = async (examId: any) => {
+    //     const fetchExamDetails = async () => {
+    //         try {
+    //             const response = await fetch(`/api/assessment/${encodeURIComponent(examId)}`, { method: 'GET' });
+    //             if (!response.ok) {
+    //                 if (response.status === 404) {
+    //                     throw new Error('Exam not found or no longer available');
+    //                 } else {
+    //                     throw new Error('Failed to fetch exam details');
+    //                 }
+    //             }
+    //             const examData = await response.json();
+    //             console.log('Fetched exam data:', examData);
 
-                setExamData(examData);
-                setShowExamPopup(true);
-            } catch (error) {
-                console.error('Error fetching exam details:', error);
-                setError('Failed to load exam details');
-            }
-        };
+    //             setExamData(examData);
+    //             setShowExamPopup(true);
+    //         } catch (error) {
+    //             console.error('Error fetching exam details:', error);
+    //             setError('Failed to load exam details');
+    //         }
+    //     };
 
-        await fetchExamDetails();
+    //     await fetchExamDetails();
+    // };
+
+    const handleStartExam = (examId: any) => {
+        const exam = exams.find(e => e.id === examId);
+        if (exam) {
+            setExamData(exam);
+            setShowExamPopup(true);
+        }
     };
 
     const enableFullScreen = async () => {
@@ -222,8 +322,7 @@ const ViewExams: React.FC = () => {
             const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
             setCameraEnabled(true);
             setMicrophoneEnabled(true);
-            // You might want to store the stream for later use
-            stream.getTracks().forEach(track => track.stop()); // Stop for now, will restart when exam begins
+            stream.getTracks().forEach(track => track.stop());
         } catch (error) {
             console.error('Failed to enable camera/microphone:', error);
         }
@@ -231,21 +330,15 @@ const ViewExams: React.FC = () => {
 
     const canStartExam = (): boolean => {
         if (!examData) return false;
-
         const basicRequirements = fullScreenEnabled;
-
         if (examData.isExamProctored) {
             return basicRequirements && cameraEnabled && microphoneEnabled;
         }
-
         return basicRequirements;
     };
 
     const startExam = () => {
         if (canStartExam()) {
-            // Navigate to exam page or start exam logic
-            console.log('Starting exam:', examData?.title);
-            // You can add navigation logic here
             router.push(`/exam/${examData?.title}`)
             setShowExamPopup(false);
         }
@@ -253,39 +346,42 @@ const ViewExams: React.FC = () => {
 
     if (loading) {
         return (
-            <div className="min-h-screen bg-background">
-                <div className="container mx-auto px-4 py-8">
-                    <div className="mb-8">
-                        <Skeleton className="h-8 w-64 mb-4" />
-                        <Skeleton className="h-4 w-96" />
-                    </div>
-                    <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-                        {[1, 2, 3].map((i) => (
-                            <Card key={i} className="h-80">
-                                <CardHeader>
-                                    <Skeleton className="h-6 w-3/4" />
-                                    <Skeleton className="h-4 w-1/2" />
-                                </CardHeader>
-                                <CardContent>
-                                    <div className="space-y-3">
-                                        <Skeleton className="h-4 w-full" />
-                                        <Skeleton className="h-4 w-2/3" />
-                                        <Skeleton className="h-10 w-full" />
-                                    </div>
-                                </CardContent>
-                            </Card>
-                        ))}
+            <AttenderLayout>
+                <div className="min-h-screen bg-gradient-to-br from-background">
+                    <div className="container mx-auto px-4 py-8 max-w-7xl">
+                        <div className="mb-8">
+                            <Skeleton className="h-12 w-64 mb-4" />
+                            <Skeleton className="h-6 w-96" />
+                        </div>
+                        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                            {[1, 2, 3].map((i) => (
+                                <Card key={i} className="h-96 animate-pulse">
+                                    <CardHeader>
+                                        <Skeleton className="h-8 w-3/4" />
+                                        <Skeleton className="h-4 w-1/2" />
+                                    </CardHeader>
+                                    <CardContent>
+                                        <div className="space-y-4">
+                                            <Skeleton className="h-4 w-full" />
+                                            <Skeleton className="h-4 w-2/3" />
+                                            <Skeleton className="h-12 w-full" />
+                                        </div>
+                                    </CardContent>
+                                </Card>
+                            ))}
+                        </div>
                     </div>
                 </div>
-            </div>
+            </AttenderLayout>
         );
     }
 
     if (error) {
         return (
-            <div className="min-h-screen bg-background flex items-center justify-center">
-                <Alert className="max-w-md">
-                    <AlertDescription>
+            <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 flex items-center justify-center">
+                <Alert className="max-w-md border-red-200 dark:border-red-800">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertDescription className="text-red-700 dark:text-red-300">
                         {error}. Please try refreshing the page.
                     </AlertDescription>
                 </Alert>
@@ -293,208 +389,242 @@ const ViewExams: React.FC = () => {
         );
     }
 
+    const totalActiveExams = exams.filter(exam => isExamActive(exam)).length;
+    const totalProctoredExams = exams.filter(exam => exam.isExamProctored).length;
+    const totalLanguages = new Set(exams.map(exam => exam.language)).size;
+
     return (
         <AttenderLayout>
-            <div className="min-h-screen bg-background">
-                <div className="container mx-auto px-4 py-8">
-                    {/* Header Section */}
-                    <div className="mb-8">
-                        <div className="flex items-center gap-3 mb-4">
-                            <div className="p-2 rounded-lg bg-systech-gradient">
-                                <Trophy className="h-6 w-6 text-white" />
-                            </div>
-                            <div>
-                                <h1 className="text-3xl font-bold text-foreground">Available Exams</h1>
-                                <p className="text-muted-foreground">
-                                    Welcome back, {session?.user?.name || session?.user?.email}! Ready to showcase your skills?
-                                </p>
+            <div className="min-h-screen bg-gradient-to-br from-background">
+                <div className="container mx-auto px-4 py-8 max-w-7xl">
+                    <div className="mb-12">
+                        <div className="relative overflow-hidden rounded-3xl  bg-gradient-to-br from-background">
+                            <div className="absolute inset-0 bg-grid-white/[0.1] bg-[size:20px_20px]" />
+                            <div className="relative flex items-center justify-between">
+                                <div className="flex items-center space-x-3 mb-2">
+                                    {/* <Avatar className="h-12 w-12 ring-2 ring-primary/20">
+                                        <AvatarImage src={session?.user?.image || ""} />
+                                        <AvatarFallback className="bg-primary text-primary-foreground font-semibold">
+                                            {session?.user?.name?.charAt(0).toUpperCase() || "U"}
+                                        </AvatarFallback>
+                                    </Avatar> */}
+                                    <div>
+                                        <h1 className="text-4xl font-bold mb-2 bg-systech-gradient bg-clip-text text-transparent">Available Assessments</h1>
+                                        <p className="text-muted-foreground text-lg">
+                                            Welcome back, {session?.user?.name?.split(' ')[0] || 'Coder'}! Ready to code your way to success?
+                                        </p>
+                                    </div>
+                                </div>
                             </div>
                         </div>
-
-                        {exams.length > 0 && (
-                            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-                                <Card className="bg-card/50 backdrop-blur-sm">
-                                    <CardContent className="p-4">
-                                        <div className="flex items-center gap-2">
-                                            <BookOpen className="h-5 w-5 text-systech-primary" />
-                                            <div>
-                                                <p className="text-sm text-muted-foreground">Total Exams</p>
-                                                <p className="text-2xl font-bold text-foreground">{exams.length}</p>
-                                            </div>
-                                        </div>
-                                    </CardContent>
-                                </Card>
-
-                                <Card className="bg-card/50 backdrop-blur-sm">
-                                    <CardContent className="p-4">
-                                        <div className="flex items-center gap-2">
-                                            <Play className="h-5 w-5 text-green-600" />
-                                            <div>
-                                                <p className="text-sm text-muted-foreground">Active</p>
-                                                <p className="text-2xl font-bold text-foreground">
-                                                    {exams.filter(exam => isExamActive(exam)).length}
-                                                </p>
-                                            </div>
-                                        </div>
-                                    </CardContent>
-                                </Card>
-
-                                <Card className="bg-card/50 backdrop-blur-sm">
-                                    <CardContent className="p-4">
-                                        <div className="flex items-center gap-2">
-                                            <Shield className="h-5 w-5 text-orange-600" />
-                                            <div>
-                                                <p className="text-sm text-muted-foreground">Proctored</p>
-                                                <p className="text-2xl font-bold text-foreground">
-                                                    {exams.filter(exam => exam.isExamProctored).length}
-                                                </p>
-                                            </div>
-                                        </div>
-                                    </CardContent>
-                                </Card>
-
-                                <Card className="bg-card/50 backdrop-blur-sm">
-                                    <CardContent className="p-4">
-                                        <div className="flex items-center gap-2">
-                                            <Code className="h-5 w-5 text-purple-600" />
-                                            <div>
-                                                <p className="text-sm text-muted-foreground">Languages</p>
-                                                <p className="text-2xl font-bold text-foreground">
-                                                    {new Set(exams.map(exam => exam.language)).size}
-                                                </p>
-                                            </div>
-                                        </div>
-                                    </CardContent>
-                                </Card>
-                            </div>
-                        )}
                     </div>
 
-                    {/* Exams Grid */}
+                    {exams.length > 0 && (
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-8">
+                            <Card className="group hover:shadow-xl transition-all duration-300 bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-950/50 dark:to-emerald-950/50 border-green-200 dark:border-green-800">
+                                <CardContent className="p-6">
+                                    <div className="flex items-center justify-between">
+                                        <div>
+                                            <p className="text-sm font-medium text-green-600 dark:text-green-400 mb-1">Active Exams</p>
+                                            <p className="text-3xl font-bold text-green-700 dark:text-green-300">{totalActiveExams}</p>
+                                        </div>
+                                        <div className="p-3 rounded-full bg-green-100 dark:bg-green-900/50 group-hover:scale-110 transition-transform">
+                                            <Play className="h-6 w-6 text-green-600 dark:text-green-400" />
+                                        </div>
+                                    </div>
+                                </CardContent>
+                            </Card>
+
+                            <Card className="group hover:shadow-xl transition-all duration-300 bg-gradient-to-br from-orange-50 to-red-50 dark:from-orange-950/50 dark:to-red-950/50 border-orange-200 dark:border-orange-800">
+                                <CardContent className="p-6">
+                                    <div className="flex items-center justify-between">
+                                        <div>
+                                            <p className="text-sm font-medium text-orange-600 dark:text-orange-400 mb-1">Proctored</p>
+                                            <p className="text-3xl font-bold text-orange-700 dark:text-orange-300">{totalProctoredExams}</p>
+                                        </div>
+                                        <div className="p-3 rounded-full bg-orange-100 dark:bg-orange-900/50 group-hover:scale-110 transition-transform">
+                                            <Shield className="h-6 w-6 text-orange-600 dark:text-orange-400" />
+                                        </div>
+                                    </div>
+                                </CardContent>
+                            </Card>
+
+                            <Card className="group hover:shadow-xl transition-all duration-300 bg-gradient-to-br from-purple-50 to-indigo-50 dark:from-purple-950/50 dark:to-indigo-950/50 border-purple-200 dark:border-purple-800">
+                                <CardContent className="p-6">
+                                    <div className="flex items-center justify-between">
+                                        <div>
+                                            <p className="text-sm font-medium text-purple-600 dark:text-purple-400 mb-1">Languages</p>
+                                            <p className="text-3xl font-bold text-purple-700 dark:text-purple-300">{totalLanguages}</p>
+                                        </div>
+                                        <div className="p-3 rounded-full bg-purple-100 dark:bg-purple-900/50 group-hover:scale-110 transition-transform">
+                                            <Code className="h-6 w-6 text-purple-600 dark:text-purple-400" />
+                                        </div>
+                                    </div>
+                                </CardContent>
+                            </Card>
+                        </div>
+                    )}
+
                     {exams.length === 0 ? (
-                        <div className="flex flex-col items-center justify-center py-12">
-                            <div className="p-4 rounded-full bg-muted mb-4">
-                                <FileText className="h-8 w-8 text-muted-foreground" />
+                        <div className="flex flex-col items-center justify-center py-20">
+                            <div className="p-6 rounded-full bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-900 mb-6">
+                                <FileText className="h-12 w-12 text-gray-400 dark:text-gray-600" />
                             </div>
-                            <h3 className="text-lg font-semibold text-foreground mb-2">No Exams Available</h3>
+                            <h3 className="text-2xl font-semibold text-foreground mb-3">No Exams Available</h3>
                             <p className="text-muted-foreground text-center max-w-md">
-                                You don't have any exams assigned at the moment. Check back later or contact your administrator.
+                                You don't have any exams assigned at the moment. Check back later or contact your administrator for more information.
                             </p>
                         </div>
                     ) : (
-                        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                        <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
                             {exams.map((exam) => {
                                 const questions = parseQuestions(exam.questions);
-                                const questionConfig = parseQuestionConfig(exam.questionConfig);
                                 const totalMarks = calculateTotalMarks(questions);
                                 const examStatus = getExamStatus(exam);
-                                const allowedUsers = JSON.parse(exam.allowedUsers || '[]');
+                                const langConfig = getLanguageConfig(exam.language);
+                                const LangIcon = langConfig.icon;
 
                                 return (
-                                    <Card key={exam.id} className="group hover:shadow-lg transition-all duration-300 bg-card/80 backdrop-blur-sm border border-border/50 hover:border-systech-primary/30">
-                                        <CardHeader className="pb-4">
-                                            <div className="flex items-start justify-between">
-                                                <div className="flex items-center gap-2 mb-2">
-                                                    <div className="p-1.5 rounded-md bg-systech-gradient">
-                                                        <Code className="h-4 w-4 text-white" />
+                                    <Card key={exam.id} className="group hover:shadow-2xl hover:-translate-y-2 transition-all duration-500 bg-white/80 dark:bg-muted/80 backdrop-blur-sm border-0 shadow-lg overflow-hidden">
+                                        <div className={`h-2 bg-gradient-to-r ${langConfig.color}`} />
+
+                                        <CardHeader className="pb-4 relative">
+                                            <div className="flex items-start justify-between mb-4">
+                                                <div className="flex items-center gap-3">
+                                                    <div className={`p-2.5 rounded-xl bg-gradient-to-r ${langConfig.color} shadow-lg`}>
+                                                        <LangIcon className="h-5 w-5 text-white" />
                                                     </div>
-                                                    <Badge className={getLanguageColor(exam.language)}>
+                                                    <Badge className={`${langConfig.bgColor} ${langConfig.textColor} border-0 font-medium px-3 py-1`}>
                                                         {exam.language.toUpperCase()}
                                                     </Badge>
                                                 </div>
-                                                <Badge className={examStatus.color}>
+                                                <Badge className={`${examStatus.bgColor} ${examStatus.color} border font-medium px-3 py-1`}>
                                                     {examStatus.status}
                                                 </Badge>
                                             </div>
 
-                                            <CardTitle className="text-xl font-bold text-foreground group-hover:text-systech-primary transition-colors">
+                                            <CardTitle className="text-xl font-bold text-foreground group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors leading-tight">
                                                 {exam.title}
                                             </CardTitle>
+
+                                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                                <User className="h-4 w-4" />
+                                                <span>Created by {exam.createdBy}</span>
+                                            </div>
                                         </CardHeader>
 
-                                        <CardContent className="space-y-4">
-                                            {/* Exam Details */}
+                                        <CardContent className="space-y-6">
+                                            {/* Key Metrics */}
                                             <div className="grid grid-cols-2 gap-4">
-                                                <div className="flex items-center gap-2 text-sm">
-                                                    <Timer className="h-4 w-4 text-systech-primary" />
-                                                    <span className="text-muted-foreground">Duration:</span>
-                                                    <span className="font-medium text-foreground">{formatDuration(exam.duration)}</span>
+                                                <div className="flex items-center gap-2 p-3 rounded-xl bg-gray-50 dark:bg-gray-800/50">
+                                                    <Timer className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                                                    <div>
+                                                        <p className="text-xs text-muted-foreground">Duration</p>
+                                                        <p className="font-bold text-foreground">{formatDuration(exam.duration)}</p>
+                                                    </div>
                                                 </div>
 
-                                                <div className="flex items-center gap-2 text-sm">
-                                                    <FileText className="h-4 w-4 text-systech-primary" />
-                                                    <span className="text-muted-foreground">Questions:</span>
-                                                    <span className="font-medium text-foreground">{questions.length}</span>
+                                                <div className="flex items-center gap-2 p-3 rounded-xl bg-gray-50 dark:bg-gray-800/50">
+                                                    <Star className="h-4 w-4 text-yellow-600 dark:text-yellow-400" />
+                                                    <div>
+                                                        <p className="text-xs text-muted-foreground">Total Marks</p>
+                                                        <p className="font-bold text-foreground">{totalMarks}</p>
+                                                    </div>
                                                 </div>
 
-                                                <div className="flex items-center gap-2 text-sm">
-                                                    <Star className="h-4 w-4 text-systech-primary" />
-                                                    <span className="text-muted-foreground">Total Marks:</span>
-                                                    <span className="font-medium text-foreground">{totalMarks}</span>
-                                                </div>
-
-                                                <div className="flex gap-2 flex-wrap">
-                                                    {exam.isExamProctored && (
-                                                        <Badge variant="outline" className="text-xs">
-                                                            <Shield className="h-3 w-3 mr-1" />
-                                                            Proctored
-                                                        </Badge>
-                                                    )}
+                                                <div className="flex items-center gap-2 p-3 rounded-xl bg-gray-50 dark:bg-gray-800/50">
+                                                    <FileText className="h-4 w-4 text-green-600 dark:text-green-400" />
+                                                    <div>
+                                                        <p className="text-xs text-muted-foreground">Questions</p>
+                                                        <p className="font-bold text-foreground">{questions.length}</p>
+                                                    </div>
                                                 </div>
                                             </div>
 
-                                            {/* Question Difficulty Breakdown */}
-                                            <div className="space-y-2">
-                                                <p className="text-sm font-medium text-foreground">Difficulty Breakdown:</p>
+                                            <div className="space-y-3">
+                                                <p className="text-sm font-semibold text-foreground">Difficulty Distribution</p>
                                                 <div className="flex gap-2 flex-wrap">
-                                                    {[...Object.values(
+                                                    {Object.entries(
                                                         questions.reduce((acc, q) => {
-                                                            if (!acc[q.difficulty]) {
-                                                                acc[q.difficulty] = q;
-                                                            }
+                                                            acc[q.difficulty] = (acc[q.difficulty] || 0) + 1;
                                                             return acc;
-                                                        }, {} as Record<string, typeof questions[0]>)
-                                                    )].map((q, index) => (
-                                                        <Badge
-                                                            key={index}
-                                                            variant="outline"
-                                                            className={`${getDifficultyColor(q.difficulty)} text-xs`}
-                                                        >
-                                                            {q.difficulty} ({q.marks}pts)
-                                                        </Badge>
-                                                    ))}
+                                                        }, {} as Record<string, number>)
+                                                    ).map(([difficulty, count]) => {
+                                                        const diffConfig = getDifficultyConfig(difficulty);
+                                                        const DiffIcon = diffConfig.icon;
+                                                        return (
+                                                            <Badge
+                                                                key={difficulty}
+                                                                className={`${diffConfig.bgColor} ${diffConfig.textColor} border-0 px-3 py-1.5 flex items-center gap-1.5`}
+                                                            >
+                                                                <DiffIcon className="h-3 w-3" />
+                                                                {difficulty} ({count})
+                                                            </Badge>
+                                                        );
+                                                    })}
                                                 </div>
                                             </div>
 
-                                            {/* Exam Features */}
+                                            <div className="flex gap-2 flex-wrap">
+                                                {exam.isExamProctored && (
+                                                    <Badge className="bg-orange-50 dark:bg-orange-950/30 text-orange-700 dark:text-orange-300 border-orange-200 dark:border-orange-800 px-2 py-1">
+                                                        <Shield className="h-3 w-3 mr-1" />
+                                                        Proctored
+                                                    </Badge>
+                                                )}
+                                                {exam.isGeneratedFromExcel && (
+                                                    <Badge className="bg-blue-50 dark:bg-blue-950/30 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800 px-2 py-1">
+                                                        <FileText className="h-3 w-3 mr-1" />
+                                                        Auto-Generated
+                                                    </Badge>
+                                                )}
+                                            </div>
 
-
-                                            {/* Exam Timing */}
                                             {(exam.startTime || exam.endTime) && (
-                                                <div className="text-xs text-muted-foreground space-y-1 p-3 bg-muted/30 rounded-md">
-                                                    {exam.startTime && (
-                                                        <div className="flex items-center gap-2">
-                                                            <Calendar className="h-3 w-3" />
-                                                            <span>Starts: {new Date(exam.startTime).toLocaleString()}</span>
-                                                        </div>
-                                                    )}
-                                                    {exam.endTime && (
-                                                        <div className="flex items-center gap-2">
-                                                            <Clock className="h-3 w-3" />
-                                                            <span>Ends: {new Date(exam.endTime).toLocaleString()}</span>
-                                                        </div>
-                                                    )}
+                                                <div className="p-4 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/30 dark:to-indigo-950/30 rounded-xl border border-blue-200 dark:border-blue-800">
+                                                    <div className="space-y-2">
+                                                        {exam.startTime && (
+                                                            <div className="flex items-center gap-2 text-xs">
+                                                                <Calendar className="h-3 w-3 text-blue-600 dark:text-blue-400" />
+                                                                <span className="text-blue-700 dark:text-blue-300 font-medium">
+                                                                    Starts: {new Date(exam.startTime).toLocaleString()}
+                                                                </span>
+                                                            </div>
+                                                        )}
+                                                        {exam.endTime && (
+                                                            <div className="flex items-center gap-2 text-xs">
+                                                                <Clock className="h-3 w-3 text-blue-600 dark:text-blue-400" />
+                                                                <span className="text-blue-700 dark:text-blue-300 font-medium">
+                                                                    Ends: {new Date(exam.endTime).toLocaleString()}
+                                                                </span>
+                                                            </div>
+                                                        )}
+                                                    </div>
                                                 </div>
                                             )}
 
-                                            {/* Action Button */}
                                             <Button
-                                                className="w-full bg-systech-gradient hover:opacity-90 text-white font-medium transition-all duration-300 group-hover:scale-[1.02]"
+                                                className={`w-full h-12 font-semibold text-white shadow-lg transition-all duration-300 ${isExamActive(exam)
+                                                    ? `bg-gradient-to-r ${langConfig.color} hover:shadow-xl hover:scale-[1.02] group-hover:shadow-2xl`
+                                                    : 'bg-gray-400 dark:bg-gray-600 cursor-not-allowed opacity-50'
+                                                    }`}
                                                 disabled={!isExamActive(exam)}
-                                                onClick={() => handelStartExam(exam.title)}
+                                                onClick={() => handleStartExam(exam.id)}
                                             >
-                                                <Play className="h-4 w-4 mr-2" />
-                                                {isExamActive(exam) ? 'Start Exam' : 'Exam Unavailable'}
+                                                <div className="flex items-center gap-2">
+                                                    {isExamActive(exam) ? (
+                                                        <>
+                                                            <Play className="h-5 w-5" />
+                                                            <span>Start Challenge</span>
+                                                            <ChevronRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
+                                                        </>
+                                                    ) : (
+                                                        <>
+                                                            <Lock className="h-4 w-4" />
+                                                            <span>Exam Unavailable</span>
+                                                        </>
+                                                    )}
+                                                </div>
                                             </Button>
                                         </CardContent>
                                     </Card>
@@ -503,101 +633,217 @@ const ViewExams: React.FC = () => {
                         </div>
                     )}
 
-                    {/* Exam Details Popup */}
                     {showExamPopup && examData && (
-                        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-                            <Card className="w-full max-w-md">
-                                <CardHeader className="text-center">
-                                    <CardTitle className="text-xl">Exam Details</CardTitle>
-                                    <CardDescription>Review exam information and requirements</CardDescription>
+                        <div className="fixed inset-0 bg-black/60 backdrop-blur-md flex items-center justify-center z-50 p-4 animate-in fade-in duration-300">
+                            <Card className="w-full max-w-2xl max-h-[90vh] overflow-y-auto bg-white/95 dark:bg-muted/95 backdrop-blur-xl border-0 shadow-2xl animate-in zoom-in-95 duration-300">
+                                <CardHeader className="text-center pb-6 relative">
+                                    <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        className="absolute right-4 top-4 h-8 w-8 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800"
+                                        onClick={() => setShowExamPopup(false)}
+                                    >
+                                        <X className="h-4 w-4" />
+                                    </Button>
+
+                                    <div className="mb-4">
+                                        <div className="p-4 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 mx-auto w-fit mb-4">
+                                            <Monitor className="h-8 w-8 text-white" />
+                                        </div>
+                                        <CardTitle className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                                            Ready to Begin?
+                                        </CardTitle>
+                                        <CardDescription className="text-base mt-2">
+                                            Complete the setup requirements to start your coding challenge
+                                        </CardDescription>
+                                    </div>
                                 </CardHeader>
 
-                                <CardContent className="space-y-6">
-                                    {/* Exam Info */}
-                                    <div className="space-y-3">
-                                        <h3 className="font-semibold text-lg">{examData.title}</h3>
-                                        <div className="text-sm text-muted-foreground space-y-1">
-                                            <p>Duration: {formatDuration(examData.duration) || 'Not specified'}</p>
-                                            <p>Questions: {examData.questions.length}</p>
-                                            <p>Total Marks: {calculateTotalMarks(parseQuestions(examData.questions))}</p>
+                                <CardContent className="space-y-8">
+                                    <div className="p-6 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/30 dark:to-indigo-950/30 rounded-2xl border border-blue-200 dark:border-blue-800">
+                                        <h3 className="font-bold text-lg text-blue-900 dark:text-blue-100 mb-4 flex items-center gap-2">
+                                            <Award className="h-5 w-5" />
+                                            {examData.title}
+                                        </h3>
+
+                                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                            <div className="text-center p-3 bg-white/60 dark:bg-gray-800/60 rounded-xl">
+                                                <Timer className="h-5 w-5 mx-auto text-blue-600 dark:text-blue-400 mb-1" />
+                                                <p className="text-xs text-muted-foreground">Duration</p>
+                                                <p className="font-bold text-sm">{formatDuration(examData.duration)}</p>
+                                            </div>
+
+                                            <div className="text-center p-3 bg-white/60 dark:bg-gray-800/60 rounded-xl">
+                                                <FileText className="h-5 w-5 mx-auto text-green-600 dark:text-green-400 mb-1" />
+                                                <p className="text-xs text-muted-foreground">Questions</p>
+                                                <p className="font-bold text-sm">{parseQuestions(examData.questions).length}</p>
+                                            </div>
+
+                                            <div className="text-center p-3 bg-white/60 dark:bg-gray-800/60 rounded-xl">
+                                                <Star className="h-5 w-5 mx-auto text-yellow-600 dark:text-yellow-400 mb-1" />
+                                                <p className="text-xs text-muted-foreground">Total Marks</p>
+                                                <p className="font-bold text-sm">{calculateTotalMarks(parseQuestions(examData.questions))}</p>
+                                            </div>
+
+                                            <div className="text-center p-3 bg-white/60 dark:bg-gray-800/60 rounded-xl">
+                                                <Code className="h-5 w-5 mx-auto text-purple-600 dark:text-purple-400 mb-1" />
+                                                <p className="text-xs text-muted-foreground">Language</p>
+                                                <p className="font-bold text-sm">{examData.language.toUpperCase()}</p>
+                                            </div>
                                         </div>
                                     </div>
 
-                                    <Separator />
+                                    <Separator className="my-6" />
 
-                                    {/* Requirements Section */}
-                                    <div className="space-y-4">
-                                        <h4 className="font-semibold">Requirements:</h4>
+                                    <div className="space-y-6">
+                                        <h4 className="font-bold text-lg flex items-center gap-2">
+                                            <CheckCircle className="h-5 w-5 text-green-600" />
+                                            Setup Requirements
+                                        </h4>
 
-                                        {/* Full Screen Requirement */}
-                                        <div className="flex items-center justify-between p-3 border rounded-lg">
-                                            <div className="flex items-center space-x-3">
-                                                {fullScreenEnabled ? (
-                                                    <CheckCircle className="w-5 h-5 text-green-500" />
-                                                ) : (
-                                                    <AlertCircle className="w-5 h-5 text-orange-500" />
-                                                )}
-                                                <span className="text-sm">Full Screen Mode</span>
-                                            </div>
-                                            {!fullScreenEnabled && (
-                                                <Button size="sm" onClick={enableFullScreen}>
-                                                    Enable
-                                                </Button>
-                                            )}
-                                        </div>
-
-                                        {/* Proctored Exam Requirements */}
-                                        {examData.isExamProctored && (
-                                            <div className="flex items-center justify-between p-3 border rounded-lg">
-                                                <div className="flex items-center space-x-3">
-                                                    {cameraEnabled && microphoneEnabled ? (
-                                                        <CheckCircle className="w-5 h-5 text-green-500" />
-                                                    ) : (
-                                                        <AlertCircle className="w-5 h-5 text-orange-500" />
-                                                    )}
-                                                    <span className="text-sm">Camera & Microphone</span>
+                                        <div className={`p-4 rounded-xl border-2 transition-all duration-300 ${fullScreenEnabled
+                                            ? 'bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-800'
+                                            : 'bg-orange-50 dark:bg-orange-950/30 border-orange-200 dark:border-orange-800'
+                                            }`}>
+                                            <div className="flex items-center justify-between">
+                                                <div className="flex items-center gap-4">
+                                                    <div className={`p-2 rounded-full ${fullScreenEnabled
+                                                        ? 'bg-green-100 dark:bg-green-900/50'
+                                                        : 'bg-orange-100 dark:bg-orange-900/50'
+                                                        }`}>
+                                                        {fullScreenEnabled ? (
+                                                            <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400" />
+                                                        ) : (
+                                                            <Maximize className="h-5 w-5 text-orange-600 dark:text-orange-400" />
+                                                        )}
+                                                    </div>
+                                                    <div>
+                                                        <h5 className="font-semibold text-sm">Full Screen Mode</h5>
+                                                        <p className="text-xs text-muted-foreground">
+                                                            {fullScreenEnabled
+                                                                ? 'Full screen mode is active'
+                                                                : 'Click to enable full screen for distraction-free experience'
+                                                            }
+                                                        </p>
+                                                    </div>
                                                 </div>
-                                                {(!cameraEnabled || !microphoneEnabled) && (
-                                                    <Button size="sm" onClick={enableCameraAndMicrophone}>
+                                                {!fullScreenEnabled && (
+                                                    <Button
+                                                        size="sm"
+                                                        onClick={enableFullScreen}
+                                                        className="bg-orange-600 hover:bg-orange-700 text-white"
+                                                    >
                                                         Enable
                                                     </Button>
                                                 )}
                                             </div>
+                                        </div>
+
+                                        {examData.isExamProctored && (
+                                            <div className={`p-4 rounded-xl border-2 transition-all duration-300 ${cameraEnabled && microphoneEnabled
+                                                ? 'bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-800'
+                                                : 'bg-orange-50 dark:bg-orange-950/30 border-orange-200 dark:border-orange-800'
+                                                }`}>
+                                                <div className="flex items-center justify-between">
+                                                    <div className="flex items-center gap-4">
+                                                        <div className={`p-2 rounded-full ${cameraEnabled && microphoneEnabled
+                                                            ? 'bg-green-100 dark:bg-green-900/50'
+                                                            : 'bg-orange-100 dark:bg-orange-900/50'
+                                                            }`}>
+                                                            {cameraEnabled && microphoneEnabled ? (
+                                                                <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400" />
+                                                            ) : (
+                                                                <div className="flex items-center gap-1">
+                                                                    {cameraEnabled ? (
+                                                                        <Video className="h-4 w-4 text-green-600" />
+                                                                    ) : (
+                                                                        <VideoOff className="h-4 w-4 text-orange-600 dark:text-orange-400" />
+                                                                    )}
+                                                                    {microphoneEnabled ? (
+                                                                        <Mic className="h-4 w-4 text-green-600" />
+                                                                    ) : (
+                                                                        <MicOff className="h-4 w-4 text-orange-600 dark:text-orange-400" />
+                                                                    )}
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                        <div>
+                                                            <h5 className="font-semibold text-sm">Camera & Microphone</h5>
+                                                            <p className="text-xs text-muted-foreground">
+                                                                {cameraEnabled && microphoneEnabled
+                                                                    ? 'Camera and microphone permissions granted'
+                                                                    : 'Enable camera and microphone for proctored exam'
+                                                                }
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                    {(!cameraEnabled || !microphoneEnabled) && (
+                                                        <Button
+                                                            size="sm"
+                                                            onClick={enableCameraAndMicrophone}
+                                                            className="bg-orange-600 hover:bg-orange-700 text-white"
+                                                        >
+                                                            Enable
+                                                        </Button>
+                                                    )}
+                                                </div>
+                                            </div>
                                         )}
 
                                         {examData.isExamProctored && (
-                                            <Alert>
-                                                <Info className="w-4 h-4" />
-                                                <AlertDescription className="text-xs">
-                                                    This exam is proctored. Your camera and microphone will be active during the exam.
+                                            <Alert className="border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-950/30">
+                                                <Shield className="h-4 w-4 text-blue-600" />
+                                                <AlertDescription className="text-blue-700 dark:text-blue-300 text-sm">
+                                                    <strong>Proctored Exam Notice:</strong> This exam is monitored for security. Your camera and microphone will be active throughout the session. Any suspicious activity will be recorded and reviewed.
                                                 </AlertDescription>
                                             </Alert>
                                         )}
                                     </div>
 
-                                    {/* Action Buttons */}
-                                    <div className="flex space-x-3 pt-4">
+                                    <div className="flex gap-4 pt-6">
                                         <Button
                                             variant="outline"
                                             onClick={() => setShowExamPopup(false)}
-                                            className="flex-1"
+                                            className="flex-1 h-12 border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800"
                                         >
+                                            <X className="h-4 w-4 mr-2" />
                                             Cancel
                                         </Button>
+
                                         <Button
                                             onClick={startExam}
                                             disabled={!canStartExam()}
-                                            className="flex-1 bg-systech-gradient hover:opacity-90"
+                                            className={`flex-1 h-12 font-semibold transition-all duration-300 ${canStartExam()
+                                                ? 'bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white shadow-lg hover:shadow-xl hover:scale-[1.02]'
+                                                : 'bg-gray-400 dark:bg-gray-600 text-gray-200 cursor-not-allowed opacity-50'
+                                                }`}
                                         >
                                             {canStartExam() ? (
                                                 <>
-                                                    Start Exam
-                                                    <ArrowRight className="w-4 h-4 ml-2" />
+                                                    <Play className="h-5 w-5 mr-2" />
+                                                    Start Coding Challenge
+                                                    <ArrowRight className="h-4 w-4 ml-2" />
                                                 </>
                                             ) : (
-                                                'Complete Requirements'
+                                                <>
+                                                    <AlertCircle className="h-4 w-4 mr-2" />
+                                                    Complete Requirements First
+                                                </>
                                             )}
                                         </Button>
+                                    </div>
+
+                                    <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
+                                        <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
+                                            <div className={`w-2 h-2 rounded-full ${fullScreenEnabled ? 'bg-green-500' : 'bg-gray-300'}`} />
+                                            <span>Full Screen</span>
+                                            {examData.isExamProctored && (
+                                                <>
+                                                    <div className={`w-2 h-2 rounded-full ${cameraEnabled && microphoneEnabled ? 'bg-green-500' : 'bg-gray-300'}`} />
+                                                    <span>Camera & Mic</span>
+                                                </>
+                                            )}
+                                        </div>
                                     </div>
                                 </CardContent>
                             </Card>

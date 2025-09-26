@@ -989,7 +989,7 @@ export default function ExamPage() {
             return `${remainingSeconds}s`;
         }
     };
-    
+
 
     const handleSubmit = async () => {
         if (hasSubmittedRef.current) return;
@@ -2607,7 +2607,7 @@ export default function ExamPage() {
 
                                 <div className="text-center space-y-3">
                                     <h3 className="text-2xl font-bold bg-gradient-to-r from-primary via-accent to-primary bg-clip-text text-transparent animate-pulse">
-                                        AI Evaluating Your Exam
+                                        SysRank Evaluating Your Exam
                                     </h3>
                                     <p className="text-muted-foreground font-medium">
                                         Our advanced AI is carefully analyzing your responses...

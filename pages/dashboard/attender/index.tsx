@@ -2,28 +2,36 @@ import React, { useEffect, useState } from 'react'
 import AttenderLayout from './AttenderLayout'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
+import { Badge } from '@/components/ui/badge'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { Separator } from '@/components/ui/separator'
 import {
     BookOpen,
-    Clock,
     Trophy,
     TrendingUp,
     Calendar,
-    PlayCircle,
-    CheckCircle2,
-    Star,
+    Award,
+    Clock,
     Users,
     Target,
+    Zap,
+    Star,
+    ChevronRight,
+    BarChart3,
+    Activity,
+    Code,
     Brain,
-    Award
+    Timer,
+    PlayCircle,
+    CheckCircle2,
+    AlertCircle
 } from 'lucide-react'
 import { useSession } from "next-auth/react";
 
 const index = () => {
-
     const { data: session, status } = useSession();
+
     type Exam = {
         id: React.Key | null | undefined;
         title: string;
@@ -38,36 +46,6 @@ const index = () => {
     };
 
     const [upcomingExams, setUpcomingExams] = useState<Exam[]>([]);
-
-    const recentResults = [
-        {
-            id: 1,
-            exam: "Object Oriented Programming",
-            score: 85,
-            maxScore: 100,
-            rank: 12,
-            totalParticipants: 156,
-            date: "2025-08-28"
-        },
-        {
-            id: 2,
-            exam: "Computer Networks",
-            score: 92,
-            maxScore: 100,
-            rank: 5,
-            totalParticipants: 134,
-            date: "2025-08-25"
-        },
-        {
-            id: 3,
-            exam: "Operating Systems",
-            score: 78,
-            maxScore: 100,
-            rank: 23,
-            totalParticipants: 189,
-            date: "2025-08-20"
-        }
-    ]
 
     useEffect(() => {
         const fetchUserAssessments = async () => {
@@ -87,311 +65,345 @@ const index = () => {
     }, [session])
 
     const stats = {
-        totalExams: 15,
+        totalExams: upcomingExams.length || 0,
         averageScore: "-",
         bestRank: "-",
-        currentStreak: "-"
+        currentStreak: "-",
+        completedExams: 0,
+        skillRating: 1200
     }
 
     const getDifficultyColor = (difficulty: string) => {
-        switch (difficulty.toLowerCase()) {
-            case 'easy': return 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400'
-            case 'medium': return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400'
-            case 'hard': return 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400'
-            default: return 'bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-400'
+        switch (difficulty?.toLowerCase()) {
+            case 'easy': return 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400';
+            case 'medium': return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400';
+            case 'hard': return 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400';
+            default: return 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400';
         }
-    }
+    };
 
-    const getScoreColor = (score: number) => {
-        if (score >= 90) return 'text-green-600 dark:text-green-400'
-        if (score >= 75) return 'text-blue-600 dark:text-blue-400'
-        if (score >= 60) return 'text-yellow-600 dark:text-yellow-400'
-        return 'text-red-600 dark:text-red-400'
-    }
+    const formatDateTime = (startTime: string, endTime: string) => {
+        const start = new Date(startTime);
+        const end = new Date(endTime);
+        const startDate = start.toLocaleDateString();
+        const startTimeStr = start.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        const endTimeStr = end.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        return `${startDate} • ${startTimeStr} - ${endTimeStr}`;
+    };
 
     return (
         <AttenderLayout>
-            <div className="min-h-screen bg-gradient-to-br from-background via-muted/20 to-background">
-                <div className="container mx-auto px-4 py-8">
-                    {/* Welcome Header */}
-                    <div className="mb-8">
-                        <div className="flex items-center justify-between mb-6">
-                            <div>
-                                <h1 className="text-4xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-                                    Welcome to SysRank
-                                </h1>
-                                <p className="text-muted-foreground text-lg mt-2">
-                                    Ready to test your knowledge and climb the rankings?
-                                </p>
+            <div className="min-h-screen bg-gradient-to-br from-background via-card to-muted/30">
+                <div className="container mx-auto px-6 py-8 max-w-7xl">
+                    {/* Header Section */}
+                    <div className="mb-10">
+                        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between mb-8">
+                            <div className="mb-6 lg:mb-0">
+                                <div className="flex items-center space-x-3 mb-2">
+                                    {/* <Avatar className="h-12 w-12 ring-2 ring-primary/20">
+                                        <AvatarImage src={session?.user?.image || ""} />
+                                        <AvatarFallback className="bg-primary text-primary-foreground font-semibold">
+                                            {session?.user?.name?.charAt(0).toUpperCase() || "U"}
+                                        </AvatarFallback>
+                                    </Avatar> */}
+                                    <div>
+                                        <h1 className="text-3xl lg:text-4xl font-bold bg-systech-gradient bg-clip-text text-transparent">
+                                            Welcome back, {session?.user?.name?.split(' ')[0] || 'Coder'}!
+                                        </h1>
+                                        <p className="text-muted-foreground text-lg">
+                                            Ready to ace your next challenge?
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="flex items-center space-x-3">
+                                <Badge variant="secondary" className="px-4 py-2 text-sm font-medium">
+                                    <Star className="h-4 w-4 mr-2" />
+                                    Skill Rating: {stats.skillRating}
+                                </Badge>
+                                <Button
+                                    onClick={() => window.location.href = '/dashboard/attender/view-exams'}
+                                    className="bg-primary hover:bg-primary/90 shadow-lg"
+                                >
+                                    <Code className="h-4 w-4 mr-2" />
+                                    Browse All Exams
+                                </Button>
                             </div>
                         </div>
 
-                        {/* Quick Stats */}
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-                            <Card className="bg-gradient-to-br from-blue-50 to-blue-100/50 dark:from-blue-950/50 dark:to-blue-900/20 border-blue-200 dark:border-blue-800">
-                                <CardContent className="p-4">
-                                    <div className="flex items-center space-x-2">
-                                        <BookOpen className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                        {/* Stats Grid */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                            <Card className="relative overflow-hidden border-0 shadow-lg bg-systech-gradient text-white">
+                                <CardContent className="p-6">
+                                    <div className="flex items-center justify-between">
                                         <div>
-                                            <p className="text-sm text-muted-foreground">Total Exams</p>
-                                            <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">{upcomingExams.length}</p>
+                                            <p className="text-white/80 text-sm font-medium">Available Exams</p>
+                                            <p className="text-3xl font-bold mt-1">{stats.totalExams}</p>
                                         </div>
+                                        <BookOpen className="h-8 w-8 text-white/70" />
+                                    </div>
+                                    <div className="mt-4 flex items-center text-white/80 text-sm">
+                                        <TrendingUp className="h-4 w-4 mr-1" />
+                                        Ready to start
                                     </div>
                                 </CardContent>
+                                <div className="absolute -right-4 -top-4 h-16 w-16 rounded-full bg-white/10"></div>
                             </Card>
 
-                            <Card className="bg-gradient-to-br from-green-50 to-green-100/50 dark:from-green-950/50 dark:to-green-900/20 border-green-200 dark:border-green-800">
-                                <CardContent className="p-4">
-                                    <div className="flex items-center space-x-2">
-                                        <TrendingUp className="h-5 w-5 text-green-600 dark:text-green-400" />
+                            <Card className="relative overflow-hidden border-0 shadow-lg bg-gradient-to-br from-emerald-500 to-emerald-600 text-white">
+                                <CardContent className="p-6">
+                                    <div className="flex items-center justify-between">
                                         <div>
-                                            <p className="text-sm text-muted-foreground">Avg. Score</p>
-                                            <p className="text-2xl font-bold text-green-600 dark:text-green-400">{stats.averageScore}%</p>
+                                            <p className="text-white/80 text-sm font-medium">Average Score</p>
+                                            <p className="text-3xl font-bold mt-1">{stats.averageScore}<span className="text-xl">%</span></p>
                                         </div>
+                                        <Target className="h-8 w-8 text-white/70" />
+                                    </div>
+                                    <div className="mt-4 flex items-center text-white/80 text-sm">
+                                        <Activity className="h-4 w-4 mr-1" />
+                                        Keep improving
                                     </div>
                                 </CardContent>
+                                <div className="absolute -right-4 -top-4 h-16 w-16 rounded-full bg-white/10"></div>
                             </Card>
 
-                            <Card className="bg-gradient-to-br from-purple-50 to-purple-100/50 dark:from-purple-950/50 dark:to-purple-900/20 border-purple-200 dark:border-purple-800">
-                                <CardContent className="p-4">
-                                    <div className="flex items-center space-x-2">
-                                        <Trophy className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+                            <Card className="relative overflow-hidden border-0 shadow-lg bg-gradient-to-br from-purple-500 to-purple-600 text-white">
+                                <CardContent className="p-6">
+                                    <div className="flex items-center justify-between">
                                         <div>
-                                            <p className="text-sm text-muted-foreground">Best Rank</p>
-                                            <p className="text-2xl font-bold text-purple-600 dark:text-purple-400">#{stats.bestRank}</p>
+                                            <p className="text-white/80 text-sm font-medium">Best Rank</p>
+                                            <p className="text-3xl font-bold mt-1">#{stats.bestRank}</p>
                                         </div>
+                                        <Trophy className="h-8 w-8 text-white/70" />
+                                    </div>
+                                    <div className="mt-4 flex items-center text-white/80 text-sm">
+                                        <Zap className="h-4 w-4 mr-1" />
+                                        Aim higher
                                     </div>
                                 </CardContent>
+                                <div className="absolute -right-4 -top-4 h-16 w-16 rounded-full bg-white/10"></div>
+                            </Card>
+
+                            <Card className="relative overflow-hidden border-0 shadow-lg bg-gradient-to-br from-orange-500 to-orange-600 text-white">
+                                <CardContent className="p-6">
+                                    <div className="flex items-center justify-between">
+                                        <div>
+                                            <p className="text-white/80 text-sm font-medium">Current Streak</p>
+                                            <p className="text-3xl font-bold mt-1">{stats.currentStreak}</p>
+                                        </div>
+                                        <Award className="h-8 w-8 text-white/70" />
+                                    </div>
+                                    <div className="mt-4 flex items-center text-white/80 text-sm">
+                                        <CheckCircle2 className="h-4 w-4 mr-1" />
+                                        Keep it up
+                                    </div>
+                                </CardContent>
+                                <div className="absolute -right-4 -top-4 h-16 w-16 rounded-full bg-white/10"></div>
                             </Card>
                         </div>
                     </div>
 
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    {/* Main Content Grid */}
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                         {/* Upcoming Exams */}
                         <div className="lg:col-span-2">
-                            <Card className="h-fit">
-                                <CardHeader>
+                            <Card className="border shadow-xl bg-card/50 backdrop-blur-sm">
+                                <CardHeader className="pb-4">
                                     <div className="flex items-center justify-between">
-                                        <div className="flex items-center space-x-2">
-                                            <Calendar className="h-5 w-5 text-primary" />
-                                            <CardTitle>Upcoming Exams</CardTitle>
+                                        <div className="flex items-center space-x-3">
+                                            <div className="p-2 bg-primary/10 rounded-lg">
+                                                <Calendar className="h-5 w-5 text-primary" />
+                                            </div>
+                                            <div>
+                                                <CardTitle className="text-xl">Upcoming Exams</CardTitle>
+                                                <CardDescription className="mt-1">
+                                                    {upcomingExams.length} exams scheduled
+                                                </CardDescription>
+                                            </div>
                                         </div>
-                                        <Button variant="outline" size="sm" onClick={() => window.location.href = '/dashboard/attender/view-exams'}>
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            onClick={() => window.location.href = '/dashboard/attender/view-exams'}
+                                            className="text-primary hover:text-primary/90 hover:bg-primary/10"
+                                        >
                                             View All
+                                            <ChevronRight className="h-4 w-4 ml-1" />
                                         </Button>
                                     </div>
-                                    <CardDescription>
-                                        Don't miss your scheduled examinations
-                                    </CardDescription>
                                 </CardHeader>
                                 <CardContent className="space-y-4">
-                                    {upcomingExams && upcomingExams.length > 0 ? upcomingExams.map((exam) => (
-                                        <div key={exam.id} className="p-4 border rounded-lg hover:bg-muted/50 transition-colors">
-                                            <div className="flex items-start justify-between mb-3">
-                                                <div className="flex-1">
-                                                    <h3 className="font-semibold text-lg mb-1">{exam.title}</h3>
-                                                    <p className="text-sm text-muted-foreground mb-2">{exam.language}</p>
-                                                    <div className="flex items-center space-x-4 text-sm text-muted-foreground">
-                                                        {exam.startTime && exam.endTime ? (
-                                                            <div className="flex items-center space-x-1">
-                                                                <Calendar className="h-4 w-4" />
-                                                                <span>{new Date(exam.startTime).toLocaleTimeString([], { year: 'numeric', month: '2-digit', day: '2-digit' })} - {new Date(exam.endTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                                    {upcomingExams && upcomingExams.length > 0 ? (
+                                        <div className="space-y-4 max-h-96 overflow-y-auto">
+                                            {upcomingExams.map((exam, index) => (
+                                                <div key={exam.id} className="group relative">
+                                                    <Card className="p-6 border hover:border-primary/50 transition-all duration-300 hover:shadow-md cursor-pointer bg-card/80 hover:bg-card">
+                                                        <div className="flex items-start justify-between">
+                                                            <div className="flex-1">
+                                                                <div className="flex items-center space-x-3 mb-3">
+                                                                    <div className="p-2 bg-primary/10 rounded-lg group-hover:bg-primary/20 transition-colors">
+                                                                        <Brain className="h-5 w-5 text-primary" />
+                                                                    </div>
+                                                                    <div>
+                                                                        <h3 className="font-semibold text-lg text-foreground group-hover:text-primary transition-colors">
+                                                                            {exam.title}
+                                                                        </h3>
+                                                                        <div className="flex items-center space-x-2 mt-1">
+                                                                            <Badge variant="outline" className="text-xs">
+                                                                                <Code className="h-3 w-3 mr-1" />
+                                                                                {exam.language}
+                                                                            </Badge>
+                                                                            <Badge className={`text-xs ${getDifficultyColor(exam.difficulty)}`}>
+                                                                                {exam.difficulty || 'Medium'}
+                                                                            </Badge>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+
+                                                                <div className="space-y-2 text-sm text-muted-foreground">
+                                                                    {exam.startTime && exam.endTime && (
+                                                                        <div className="flex items-center space-x-2">
+                                                                            <Calendar className="h-4 w-4" />
+                                                                            <span>{formatDateTime(exam.startTime, exam.endTime)}</span>
+                                                                        </div>
+                                                                    )}
+                                                                    <div className="flex items-center space-x-4">
+                                                                        <div className="flex items-center space-x-2">
+                                                                            <Timer className="h-4 w-4" />
+                                                                            <span>{exam.duration} minutes</span>
+                                                                        </div>
+                                                                        {exam.participants > 0 && (
+                                                                            <div className="flex items-center space-x-2">
+                                                                                <Users className="h-4 w-4" />
+                                                                                <span>{exam.participants} participants</span>
+                                                                            </div>
+                                                                        )}
+                                                                    </div>
+                                                                </div>
                                                             </div>
-                                                        ) : null}
-                                                    </div>
+                                                            <Button size="sm" className="opacity-0 group-hover:opacity-100 transition-opacity">
+                                                                <PlayCircle className="h-4 w-4 mr-1" />
+                                                                Start
+                                                            </Button>
+                                                        </div>
+                                                    </Card>
                                                 </div>
-                                            </div>
-                                            <div className="text-xs text-muted-foreground">
-                                                Duration: {exam.duration} Mins
-                                            </div>
+                                            ))}
                                         </div>
-                                    )) : (
-                                        <div className="text-center text-muted-foreground py-4">
-                                            No upcoming exams found.
+                                    ) : (
+                                        <div className="text-center py-12">
+                                            <div className="p-4 bg-muted/30 rounded-full w-16 h-16 mx-auto mb-4 flex items-center justify-center">
+                                                <AlertCircle className="h-8 w-8 text-muted-foreground" />
+                                            </div>
+                                            <h3 className="text-lg font-medium text-muted-foreground mb-2">No upcoming exams</h3>
+                                            <p className="text-muted-foreground mb-4">Check back later or browse available exams</p>
+                                            <Button variant="outline" onClick={() => window.location.href = '/dashboard/attender/view-exams'}>
+                                                Browse Exams
+                                            </Button>
                                         </div>
                                     )}
                                 </CardContent>
                             </Card>
-
-                            {/* Recent Activity */}
-                            {/* <Card className="mt-6">
-                                <CardHeader>
-                                    <div className="flex items-center space-x-2">
-                                        <Brain className="h-5 w-5 text-primary" />
-                                        <CardTitle>Recent Results</CardTitle>
-                                    </div>
-                                    <CardDescription>
-                                        Your latest exam performances
-                                    </CardDescription>
-                                </CardHeader>
-                                <CardContent className="space-y-4">
-                                    {recentResults.map((result) => (
-                                        <div key={result.id} className="p-4 border rounded-lg">
-                                            <div className="flex items-center justify-between mb-3">
-                                                <div>
-                                                    <h3 className="font-semibold">{result.exam}</h3>
-                                                    <p className="text-sm text-muted-foreground">{result.date}</p>
-                                                </div>
-                                                <div className="text-right">
-                                                    <p className={`text-lg font-bold ${getScoreColor(result.score)}`}>
-                                                        {result.score}/{result.maxScore}
-                                                    </p>
-                                                    <p className="text-sm text-muted-foreground">
-                                                        Rank #{result.rank} of {result.totalParticipants}
-                                                    </p>
-                                                </div>
-                                            </div>
-                                            <div className="space-y-2">
-                                                <div className="flex justify-between text-sm">
-                                                    <span>Score Progress</span>
-                                                    <span>{result.score}%</span>
-                                                </div>
-                                                <Progress value={result.score} className="h-2" />
-                                            </div>
-                                        </div>
-                                    ))}
-                                </CardContent>
-                            </Card> */}
                         </div>
 
                         {/* Sidebar */}
                         <div className="space-y-6">
-                            {/* Quick Actions */}
-                            {/* <Card>
-                                <CardHeader>
+                            {/* Performance Card */}
+                            <Card className="border shadow-xl bg-card/50 backdrop-blur-sm">
+                                <CardHeader className="pb-4">
                                     <CardTitle className="flex items-center space-x-2">
-                                        <Target className="h-5 w-5" />
-                                        <span>Quick Actions</span>
+                                        <div className="p-2 bg-primary/10 rounded-lg">
+                                            <BarChart3 className="h-5 w-5 text-primary" />
+                                        </div>
+                                        <span>Performance Overview</span>
                                     </CardTitle>
                                 </CardHeader>
-                                <CardContent className="space-y-3">
-                                    <Button className="w-full bg-systech-gradient text-white hover:opacity-90" size="lg">
-                                        <PlayCircle className="h-4 w-4 mr-2" />
-                                        Take Practice Test
-                                    </Button>
-                                    <Button variant="outline" className="w-full" size="lg">
-                                        <BookOpen className="h-4 w-4 mr-2" />
-                                        Browse Exams
-                                    </Button>
-                                    <Button variant="outline" className="w-full" size="lg">
-                                        <Trophy className="h-4 w-4 mr-2" />
-                                        View Rankings
-                                    </Button>
-                                </CardContent>
-                            </Card> */}
-
-                            {/* Performance Overview */}
-                            <Card>
-                                <CardHeader>
-                                    <CardTitle className="flex items-center space-x-2">
-                                        <Award className="h-5 w-5" />
-                                        <span>Performance</span>
-                                    </CardTitle>
-                                </CardHeader>
-                                <CardContent className="space-y-4">
-                                    <div className="space-y-3">
-                                        <div className="flex justify-between items-center">
-                                            <span className="text-sm font-medium">Overall Progress</span>
-                                            <span className="text-sm text-muted-foreground">-</span>
+                                <CardContent className="space-y-6">
+                                    <div className="space-y-4">
+                                        <div>
+                                            <div className="flex justify-between items-center mb-2">
+                                                <span className="text-sm font-medium">Overall Progress</span>
+                                                <span className="text-sm text-muted-foreground">0%</span>
+                                            </div>
+                                            <Progress value={0} className="h-3 bg-muted">
+                                                <div className="h-full bg-systech-gradient rounded-full" />
+                                            </Progress>
                                         </div>
-                                        <Progress value={0} className="h-2" />
+
+                                        <div>
+                                            <div className="flex justify-between items-center mb-2">
+                                                <span className="text-sm font-medium">This Month</span>
+                                                <span className="text-sm text-muted-foreground">0%</span>
+                                            </div>
+                                            <Progress value={0} className="h-3 bg-muted">
+                                                <div className="h-full bg-gradient-to-r from-emerald-500 to-primary rounded-full" />
+                                            </Progress>
+                                        </div>
                                     </div>
 
-                                    <div className="space-y-3">
-                                        <div className="flex justify-between items-center">
-                                            <span className="text-sm font-medium">This Month</span>
-                                            <span className="text-sm text-muted-foreground">-</span>
-                                        </div>
-                                        <Progress value={0} className="h-2" />
-                                    </div>
+                                    <Separator />
 
-                                    <div className="pt-2 border-t">
-                                        <div className="flex items-center justify-between text-sm">
-                                            <span className="text-muted-foreground">Exams Completed</span>
-                                            <span className="font-semibold">-</span>
+                                    <div className="space-y-3">
+                                        <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                                            <div className="flex items-center space-x-3">
+                                                <CheckCircle2 className="h-5 w-5 text-emerald-500" />
+                                                <span className="text-sm font-medium">Completed</span>
+                                            </div>
+                                            <span className="text-lg font-bold">{stats.completedExams}</span>
                                         </div>
-                                        <div className="flex items-center justify-between text-sm mt-1">
-                                            <span className="text-muted-foreground">Average Score</span>
-                                            <span className="font-semibold">{stats.averageScore}%</span>
+
+                                        <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                                            <div className="flex items-center space-x-3">
+                                                <Target className="h-5 w-5 text-primary" />
+                                                <span className="text-sm font-medium">Avg. Score</span>
+                                            </div>
+                                            <span className="text-lg font-bold">{stats.averageScore}%</span>
+                                        </div>
+
+                                        <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                                            <div className="flex items-center space-x-3">
+                                                <Trophy className="h-5 w-5 text-yellow-500" />
+                                                <span className="text-sm font-medium">Best Rank</span>
+                                            </div>
+                                            <span className="text-lg font-bold">#{stats.bestRank}</span>
                                         </div>
                                     </div>
                                 </CardContent>
                             </Card>
 
-                            {/* Leaderboard Preview */}
-                            {/* <Card>
-                                <CardHeader>
-                                    <CardTitle className="flex items-center space-x-2">
-                                        <Trophy className="h-5 w-5" />
-                                        <span>Top Performers</span>
-                                    </CardTitle>
-                                    <CardDescription>This week's leaderboard</CardDescription>
-                                </CardHeader>
-                                <CardContent className="space-y-3">
-                                    {[
-                                        { name: "Alex Chen", score: 97.5, rank: 1 },
-                                        { name: "Sarah Kumar", score: 95.2, rank: 2 },
-                                        { name: "You", score: 92.8, rank: 3, isCurrentUser: true }
-                                    ].map((user, index) => (
-                                        <div key={index} className={`flex items-center space-x-3 p-2 rounded-lg ${user.isCurrentUser ? 'bg-primary/10 border border-primary/20' : ''}`}>
-                                            <div className="flex items-center justify-center w-6 h-6 rounded-full bg-muted text-xs font-bold">
-                                                {user.rank}
-                                            </div>
-                                            <Avatar className="h-8 w-8">
-                                                <AvatarFallback className="text-xs">
-                                                    {user.name.split(' ').map(n => n[0]).join('')}
-                                                </AvatarFallback>
-                                            </Avatar>
-                                            <div className="flex-1">
-                                                <p className="text-sm font-medium">{user.name}</p>
-                                                <p className="text-xs text-muted-foreground">{user.score}% avg</p>
-                                            </div>
-                                            {user.rank === 1 && <Trophy className="h-4 w-4 text-yellow-500" />}
-                                        </div>
-                                    ))}
-                                </CardContent>
-                            </Card> */}
-
-                            {/* Achievements */}
-                            {/* <Card>
-                                <CardHeader>
-                                    <CardTitle className="flex items-center space-x-2">
-                                        <Star className="h-5 w-5" />
-                                        <span>Recent Achievements</span>
+                            {/* Quick Actions */}
+                            <Card className="border shadow-xl bg-primary/5 backdrop-blur-sm">
+                                <CardHeader className="pb-4">
+                                    <CardTitle className="flex items-center space-x-2 text-primary">
+                                        <Zap className="h-5 w-5" />
+                                        <span>Quick Actions</span>
                                     </CardTitle>
                                 </CardHeader>
                                 <CardContent className="space-y-3">
-                                    <div className="flex items-center space-x-3 p-2 rounded-lg bg-yellow-50 dark:bg-yellow-950/20">
-                                        <div className="w-8 h-8 rounded-full bg-yellow-500 flex items-center justify-center">
-                                            <Star className="h-4 w-4 text-white" />
-                                        </div>
-                                        <div>
-                                            <p className="text-sm font-medium">5-Day Streak!</p>
-                                            <p className="text-xs text-muted-foreground">Keep it up!</p>
-                                        </div>
-                                    </div>
-
-                                    <div className="flex items-center space-x-3 p-2 rounded-lg bg-green-50 dark:bg-green-950/20">
-                                        <div className="w-8 h-8 rounded-full bg-green-500 flex items-center justify-center">
-                                            <CheckCircle2 className="h-4 w-4 text-white" />
-                                        </div>
-                                        <div>
-                                            <p className="text-sm font-medium">Top 10 Rank</p>
-                                            <p className="text-xs text-muted-foreground">In Computer Networks</p>
-                                        </div>
-                                    </div>
-
-                                    <div className="flex items-center space-x-3 p-2 rounded-lg bg-blue-50 dark:bg-blue-950/20">
-                                        <div className="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center">
-                                            <Brain className="h-4 w-4 text-white" />
-                                        </div>
-                                        <div>
-                                            <p className="text-sm font-medium">Quick Learner</p>
-                                            <p className="text-xs text-muted-foreground">15 exams completed</p>
-                                        </div>
-                                    </div>
+                                    <Button
+                                        className="w-full justify-start"
+                                        variant="outline"
+                                        onClick={() => window.location.href = '/dashboard/attender/view-exams'}
+                                    >
+                                        <BookOpen className="h-4 w-4 mr-2" />
+                                        Browse All Exams
+                                    </Button>
+                                    <Button
+                                        className="w-full justify-start"
+                                        variant="outline"
+                                    >
+                                        <BarChart3 className="h-4 w-4 mr-2" />
+                                        View Statistics
+                                    </Button>
+                                    <Button
+                                        className="w-full justify-start"
+                                        variant="outline"
+                                    >
+                                        <Trophy className="h-4 w-4 mr-2" />
+                                        Leaderboard
+                                    </Button>
                                 </CardContent>
-                            </Card> */}
+                            </Card>
                         </div>
                     </div>
                 </div>
