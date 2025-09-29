@@ -11,7 +11,6 @@ import sql from 'mssql';
 //   },
 // };
 
-
 const config: sql.config = {
   user: "SysPortalAdmin",
   password: "spa@Systech2o23",
@@ -19,11 +18,15 @@ const config: sql.config = {
   database: "SysRankDB",
   options: {
     encrypt: true,
-    trustServerCertificate: true,
+    trustServerCertificate: false,
+    enableArithAbort: true,
+  },
+  pool: {
+    max: 10,
+    min: 0,
+    idleTimeoutMillis: 30000,
   },
 };
-
-
 
 let pool: sql.ConnectionPool | null = null;
 
