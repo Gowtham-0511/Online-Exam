@@ -24,6 +24,15 @@ interface Employee {
     isSelected?: boolean
 }
 
+interface ExternalUser {
+    id: string
+    name: string
+    email: string
+    role: string
+    created_at: string
+    updated_at: string
+}
+
 interface Batch {
     id: string
     name: string
@@ -55,6 +64,9 @@ const BatchManagementPage: React.FC = () => {
     const [isEditDialogOpen, setIsEditDialogOpen] = useState<boolean>(false)
     const [editBatchName, setEditBatchName] = useState<string>('')
     const [editSelectedEmployees, setEditSelectedEmployees] = useState<Set<string>>(new Set())
+
+    const [externalUsers, setExternalUsers] = useState<ExternalUser[]>([])
+    const [showExternalUsers, setShowExternalUsers] = useState<boolean>(false)
 
     const toCamelCase = (str: string) => {
         return str
@@ -104,6 +116,31 @@ const BatchManagementPage: React.FC = () => {
             }
         };
 
+        const getExternalUsers = async () => {
+            try {
+                const res = await fetch('/api/admin/external-users', {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Cache-Control': 'no-cache',
+                    },
+                    credentials: 'same-origin'
+                });
+
+                if (!res.ok) {
+                    throw new Error(`HTTP error! status: ${res.status}`);
+                }
+
+                const data = await res.json();
+                console.log('External users data:', data);
+                setExternalUsers(data.recordset || data || []);
+            } catch (error) {
+                console.error('Error fetching external users:', error);
+                setExternalUsers([]);
+            }
+        };
+        getExternalUsers();
+
         const getBatch = async () => {
             try {
                 const res = await fetch('/api/admin/batch', {
@@ -139,12 +176,25 @@ const BatchManagementPage: React.FC = () => {
         getEmployee();
     }, []);
 
-    const departments = Array.from(new Set(employees.map(emp => emp.Department)))
+    const departments = Array.from(new Set([
+        ...employees.map(emp => emp.Department),
+        ...externalUsers.map(user => user.role)
+    ]))
 
-    const filteredEmployees = employees.filter(employee => {
-        const matchesSearch = employee.Name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            employee.Email.toLowerCase().includes(searchTerm.toLowerCase())
-        const matchesDepartment = departmentFilter === 'all' || employee.Department === departmentFilter
+    const displayUsers = showExternalUsers
+        ? externalUsers.map(user => ({
+            Id: user.id,
+            Name: user.name,
+            Email: user.email,
+            Department: user.role,
+            Position: user.role
+        }))
+        : employees;
+
+    const filteredEmployees = displayUsers.filter(user => {
+        const matchesSearch = user.Name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            user.Email.toLowerCase().includes(searchTerm.toLowerCase())
+        const matchesDepartment = departmentFilter === 'all' || user.Department === departmentFilter
         return matchesSearch && matchesDepartment
     })
 
@@ -184,13 +234,25 @@ const BatchManagementPage: React.FC = () => {
         try {
             await new Promise(resolve => setTimeout(resolve, 1500))
 
-            const selectedEmployeesList = employees.filter(emp => selectedEmployees.has(emp.Id))
+            // Get selected users from the appropriate list
+            const selectedUsersList = showExternalUsers
+                ? externalUsers
+                    .filter(user => selectedEmployees.has(user.id))
+                    .map(user => ({
+                        Id: user.id,
+                        Name: user.name,
+                        Email: user.email,
+                        Department: user.role,
+                        Position: user.role
+                    }))
+                : employees.filter(emp => selectedEmployees.has(emp.Id));
+
             const newBatch: Batch = {
                 id: Date.now().toString(),
                 name: batchName,
                 createdAt: new Date().toISOString(),
                 employeeCount: selectedEmployees.size,
-                employees: selectedEmployeesList
+                employees: selectedUsersList
             }
 
             const response = await fetch('/api/admin/batch', {
@@ -215,7 +277,7 @@ const BatchManagementPage: React.FC = () => {
 
             setNotification({
                 type: 'success',
-                message: `Batch "${batchName}" created successfully with ${selectedEmployees.size} employees`
+                message: `Batch "${batchName}" created successfully with ${selectedEmployees.size} ${showExternalUsers ? 'external users' : 'employees'}`
             })
             setTimeout(() => setNotification(null), 5000)
         } catch (error) {
@@ -278,12 +340,24 @@ const BatchManagementPage: React.FC = () => {
         try {
             await new Promise(resolve => setTimeout(resolve, 1500))
 
-            const selectedEmployeesList = employees.filter(emp => editSelectedEmployees.has(emp.Id))
+            // Get selected users from the appropriate list
+            const selectedUsersList = showExternalUsers
+                ? externalUsers
+                    .filter(user => editSelectedEmployees.has(user.id))
+                    .map(user => ({
+                        Id: user.id,
+                        Name: user.name,
+                        Email: user.email,
+                        Department: user.role,
+                        Position: user.role
+                    }))
+                : employees.filter(emp => editSelectedEmployees.has(emp.Id));
+
             const updatedBatch: Batch = {
                 ...selectedBatchForEdit!,
                 name: editBatchName,
                 employeeCount: editSelectedEmployees.size,
-                employees: selectedEmployeesList
+                employees: selectedUsersList
             }
 
             const response = await fetch(`/api/admin/batch/${selectedBatchForEdit!.id}`, {
@@ -311,7 +385,7 @@ const BatchManagementPage: React.FC = () => {
 
             setNotification({
                 type: 'success',
-                message: `Batch "${editBatchName}" updated successfully with ${editSelectedEmployees.size} employees`
+                message: `Batch "${editBatchName}" updated successfully with ${editSelectedEmployees.size} ${showExternalUsers ? 'external users' : 'employees'}`
             })
             setTimeout(() => setNotification(null), 5000)
         } catch (error) {
@@ -376,6 +450,28 @@ const BatchManagementPage: React.FC = () => {
                                         Create a new batch and assign employees from your Azure AD directory
                                     </DialogDescription>
                                 </DialogHeader>
+
+                                {/* User Type Toggle */}
+                                <div className="flex items-center space-x-2 p-3 rounded-lg border bg-muted/30">
+                                    <Button
+                                        type="button"
+                                        variant={!showExternalUsers ? "default" : "outline"}
+                                        size="sm"
+                                        onClick={() => setShowExternalUsers(false)}
+                                        className="flex-1"
+                                    >
+                                        Internal Users
+                                    </Button>
+                                    <Button
+                                        type="button"
+                                        variant={showExternalUsers ? "default" : "outline"}
+                                        size="sm"
+                                        onClick={() => setShowExternalUsers(true)}
+                                        className="flex-1"
+                                    >
+                                        External Users
+                                    </Button>
+                                </div>
 
                                 <div className="space-y-6">
                                     {/* Batch Name Input */}

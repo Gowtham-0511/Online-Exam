@@ -1,13 +1,11 @@
+// Updated user-management.tsx with Bulk Upload feature
 import React, { useEffect, useState } from 'react';
 import AdminLayout from './layout';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Checkbox } from '@/components/ui/checkbox';
 import {
     Table,
     TableBody,
@@ -17,21 +15,6 @@ import {
     TableRow,
 } from '@/components/ui/table';
 import {
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogFooter,
-    DialogHeader,
-    DialogTitle,
-} from '@/components/ui/dialog';
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from '@/components/ui/select';
-import {
     DropdownMenu,
     DropdownMenuContent,
     DropdownMenuItem,
@@ -40,22 +23,33 @@ import {
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
+import {
+    Alert,
+    AlertDescription,
+} from '@/components/ui/alert';
+import {
     Users,
     Search,
-    Filter,
-    Calendar,
-    Clock,
     Mail,
-    UserCheck,
     UserX,
     Play,
     CheckCircle2,
     Circle,
     MoreVertical,
-    CalendarClock,
     Sparkles,
     ChevronLeft,
-    ChevronRight
+    ChevronRight,
+    Upload,
+    FileSpreadsheet,
+    AlertCircle,
+    CheckCircle,
+    Loader2
 } from 'lucide-react';
 
 interface User {
@@ -66,6 +60,14 @@ interface User {
     schedule_end?: string;
 }
 
+interface UploadResult {
+    success: boolean;
+    message: string;
+    inserted?: number;
+    failed?: number;
+    errors?: string[];
+}
+
 const UsersPage: React.FC = () => {
     const [users, setUsers] = useState<User[]>([]);
     const [loading, setLoading] = useState(true);
@@ -73,12 +75,10 @@ const UsersPage: React.FC = () => {
     const [usersPerPage] = useState(10);
     const [statusFilter, setStatusFilter] = useState<number | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
-    const [multiSelect, setMultiSelect] = useState(false);
-    const [selectedUser, setSelectedUser] = useState<User | null>(null);
-    const [selectedUsers, setSelectedUsers] = useState<User[]>([]);
-    const [startTime, setStartTime] = useState('');
-    const [endTime, setEndTime] = useState('');
-    const [scheduleModalOpen, setScheduleModalOpen] = useState(false);
+    const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
+    const [uploadFile, setUploadFile] = useState<File | null>(null);
+    const [uploading, setUploading] = useState(false);
+    const [uploadResult, setUploadResult] = useState<UploadResult | null>(null);
 
     useEffect(() => {
         fetchUsers();
@@ -99,14 +99,80 @@ const UsersPage: React.FC = () => {
         }
     };
 
-    // Function to determine user status based on your business logic
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            const validTypes = [
+                'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                'application/vnd.ms-excel'
+            ];
+            if (validTypes.includes(file.type) || file.name.endsWith('.xlsx') || file.name.endsWith('.xls')) {
+                setUploadFile(file);
+                setUploadResult(null);
+            } else {
+                setUploadResult({
+                    success: false,
+                    message: 'Please upload a valid Excel file (.xlsx or .xls)'
+                });
+            }
+        }
+    };
+
+    const handleBulkUpload = async () => {
+        if (!uploadFile) return;
+
+        setUploading(true);
+        setUploadResult(null);
+
+        const formData = new FormData();
+        formData.append('file', uploadFile);
+
+        try {
+            const response = await fetch('/api/admin/users/bulk-upload', {
+                method: 'POST',
+                body: formData,
+            });
+
+            const result = await response.json();
+
+            if (response.ok) {
+                setUploadResult({
+                    success: true,
+                    message: result.message,
+                    inserted: result.inserted,
+                    failed: result.failed
+                });
+                fetchUsers();
+            } else {
+                setUploadResult({
+                    success: false,
+                    message: result.message || 'Upload failed',
+                    errors: result.errors
+                });
+            }
+        } catch (error) {
+            setUploadResult({
+                success: false,
+                message: 'An error occurred during upload. Please try again.'
+            });
+        } finally {
+            setUploading(false);
+        }
+    };
+
+    const handleCloseDialog = () => {
+        setUploadDialogOpen(false);
+        setUploadFile(null);
+        setUploadResult(null);
+    };
+
     const getUserStatus = (user: User): number => {
         if (user.is_active) {
-            return 1; // Active
+            return 1;
         } else if (user.schedule_start && user.schedule_end) {
-            return 2; // Completed
+            return 2;
         } else {
-            return 0; // Inactive
+            return 0;
         }
     };
 
@@ -137,13 +203,10 @@ const UsersPage: React.FC = () => {
     };
 
     const filteredUsers = users.filter(user => {
-        // Filter by status
         if (statusFilter !== null) {
             const userStatus = getUserStatus(user);
             if (userStatus !== statusFilter) return false;
         }
-
-        // Filter by search term
         if (searchTerm && !user.name?.toLowerCase().includes(searchTerm.toLowerCase()) && !user.email.toLowerCase().includes(searchTerm.toLowerCase())) return false;
 
         return true;
@@ -155,74 +218,9 @@ const UsersPage: React.FC = () => {
     const totalPages = Math.ceil(filteredUsers.length / usersPerPage);
 
     const paginate = (pageNumber: number) => setCurrentPage(pageNumber);
-
-    const handleStatusFilter = (status: string) => {
-        setStatusFilter(status === 'all' ? null : parseInt(status));
-        setCurrentPage(1);
-    };
-
     const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setSearchTerm(e.target.value);
         setCurrentPage(1);
-    };
-
-    const handleCheckboxChange = (user: User) => {
-        if (multiSelect) {
-            setSelectedUsers((prev) =>
-                prev.some((u) => u.email === user.email)
-                    ? prev.filter((u) => u.email !== user.email)
-                    : [...prev, user]
-            );
-        } else {
-            setSelectedUser(user);
-            setSelectedUsers([user]);
-        }
-        setScheduleModalOpen(true);
-    };
-
-    const handleScheduleSubmit = async () => {
-        if (!startTime || !endTime) {
-            alert("Please enter both start and end time.");
-            return;
-        }
-
-        const userEmails = multiSelect ? selectedUsers.map(user => user.email) : [selectedUser?.email];
-        const scheduleData = {
-            useremails: userEmails,
-            scheduleStart: startTime,
-            scheduleEnd: endTime,
-        };
-
-        try {
-            const response = await fetch('/api/admin/users/schedule', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(scheduleData),
-            });
-
-            if (!response.ok) {
-                throw new Error('Network response was not ok');
-            }
-
-            const data = await response.json();
-            console.log('Schedule saved successfully:', data);
-            closeModal();
-            fetchUsers();
-        } catch (error) {
-            console.error('Error saving schedule:', error);
-            alert('Failed to save schedule. Please try again.');
-        }
-    };
-
-    const closeModal = () => {
-        setSelectedUser(null);
-        setSelectedUsers([]);
-        setStartTime('');
-        setEndTime('');
-        setMultiSelect(false);
-        setScheduleModalOpen(false);
     };
 
     const getInitials = (name?: string, email?: string) => {
@@ -231,23 +229,6 @@ const UsersPage: React.FC = () => {
         }
         return email ? email.slice(0, 2).toUpperCase() : 'U';
     };
-
-    const formatDateTime = (dateTime?: string) => {
-        if (!dateTime) return 'N/A';
-        return new Date(dateTime).toLocaleString('en-US', {
-            month: 'short',
-            day: 'numeric',
-            year: 'numeric',
-            hour: 'numeric',
-            minute: '2-digit',
-            hour12: true
-        });
-    };
-
-    // Stats calculation
-    const activeUsers = users.filter(user => getUserStatus(user) === 1).length;
-    const completedUsers = users.filter(user => getUserStatus(user) === 2).length;
-    const inactiveUsers = users.filter(user => getUserStatus(user) === 0).length;
 
     return (
         <AdminLayout>
@@ -266,67 +247,20 @@ const UsersPage: React.FC = () => {
                             Manage exam candidates and schedules with advanced controls
                         </p>
                     </div>
-                    <div className="flex items-center gap-2">
-                        <Button
-                            variant="outline"
-                            onClick={() => setMultiSelect(!multiSelect)}
-                            className={multiSelect ? 'bg-systech-primary text-white' : ''}
-                        >
-                            <Calendar className="h-4 w-4 mr-2" />
-                            {multiSelect ? 'Exit Multi-Select' : 'Bulk Schedule'}
-                        </Button>
-                    </div>
-                </div>
+                    <Button
+                        onClick={() => setUploadDialogOpen(true)}
+                        className="
+                            bg-blue-600 text-white 
+                            hover:bg-blue-700 
+                            dark:bg-blue-500 dark:hover:bg-blue-600 
+                            px-4 py-2 rounded 
+                            flex items-center gap-2
+                        "
+                    >
+                        <Upload className="h-4 w-4" />
+                        Bulk Upload Users
+                    </Button>
 
-                {/* Stats Cards */}
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                    <Card className="border-border/50">
-                        <CardContent className="p-6">
-                            <div className="flex items-center justify-between">
-                                <div>
-                                    <p className="text-sm font-medium text-muted-foreground">Total Candidates</p>
-                                    <p className="text-2xl font-bold text-systech-primary">{users.length}</p>
-                                </div>
-                                <Users className="h-8 w-8 text-systech-primary" />
-                            </div>
-                        </CardContent>
-                    </Card>
-
-                    <Card className="border-border/50">
-                        <CardContent className="p-6">
-                            <div className="flex items-center justify-between">
-                                <div>
-                                    <p className="text-sm font-medium text-muted-foreground">Active</p>
-                                    <p className="text-2xl font-bold text-blue-600">{activeUsers}</p>
-                                </div>
-                                <Play className="h-8 w-8 text-blue-600" />
-                            </div>
-                        </CardContent>
-                    </Card>
-
-                    <Card className="border-border/50">
-                        <CardContent className="p-6">
-                            <div className="flex items-center justify-between">
-                                <div>
-                                    <p className="text-sm font-medium text-muted-foreground">Completed</p>
-                                    <p className="text-2xl font-bold text-green-600">{completedUsers}</p>
-                                </div>
-                                <CheckCircle2 className="h-8 w-8 text-green-600" />
-                            </div>
-                        </CardContent>
-                    </Card>
-
-                    <Card className="border-border/50">
-                        <CardContent className="p-6">
-                            <div className="flex items-center justify-between">
-                                <div>
-                                    <p className="text-sm font-medium text-muted-foreground">Inactive</p>
-                                    <p className="text-2xl font-bold text-gray-500">{inactiveUsers}</p>
-                                </div>
-                                <Circle className="h-8 w-8 text-gray-500" />
-                            </div>
-                        </CardContent>
-                    </Card>
                 </div>
 
                 {/* Filters and Search */}
@@ -343,19 +277,6 @@ const UsersPage: React.FC = () => {
                                         className="pl-10 border-border/50 focus:border-systech-primary"
                                     />
                                 </div>
-
-                                <Select value={statusFilter?.toString() || 'all'} onValueChange={handleStatusFilter}>
-                                    <SelectTrigger className="w-[180px] border-border/50">
-                                        <Filter className="h-4 w-4 mr-2" />
-                                        <SelectValue placeholder="Filter by status" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="all">All Status</SelectItem>
-                                        <SelectItem value="1">Active</SelectItem>
-                                        <SelectItem value="0">Inactive</SelectItem>
-                                        <SelectItem value="2">Completed</SelectItem>
-                                    </SelectContent>
-                                </Select>
                             </div>
 
                             <div className="text-sm text-muted-foreground">
@@ -372,9 +293,6 @@ const UsersPage: React.FC = () => {
                             <Users className="h-5 w-5" />
                             Candidates List
                         </CardTitle>
-                        <CardDescription>
-                            {multiSelect ? 'Select multiple candidates to schedule exams in bulk' : 'Click on inactive candidates to schedule exams'}
-                        </CardDescription>
                     </CardHeader>
                     <CardContent className="p-0">
                         {loading ? (
@@ -408,8 +326,6 @@ const UsersPage: React.FC = () => {
                                     <TableRow>
                                         <TableHead>Candidate</TableHead>
                                         <TableHead>Email</TableHead>
-                                        <TableHead>Schedule</TableHead>
-                                        <TableHead>Status</TableHead>
                                         <TableHead className="w-[100px]">Actions</TableHead>
                                     </TableRow>
                                 </TableHeader>
@@ -444,59 +360,6 @@ const UsersPage: React.FC = () => {
                                                     </div>
                                                 </TableCell>
                                                 <TableCell>
-                                                    {user.is_active ? (
-                                                        <div className="space-y-1 text-sm">
-                                                            <div className="flex items-center gap-2">
-                                                                <Clock className="h-3 w-3 text-muted-foreground" />
-                                                                <span className="font-medium">Start:</span>
-                                                                <span>{formatDateTime(user.schedule_start)}</span>
-                                                            </div>
-                                                            <div className="flex items-center gap-2">
-                                                                <Clock className="h-3 w-3 text-muted-foreground" />
-                                                                <span className="font-medium">End:</span>
-                                                                <span>{formatDateTime(user.schedule_end)}</span>
-                                                            </div>
-                                                        </div>
-                                                    ) : (
-                                                        <div className="flex items-center gap-2">
-                                                            {isSelectable && (
-                                                                <Button
-                                                                    variant="ghost"
-                                                                    size="sm"
-                                                                    onClick={() => handleCheckboxChange(user)}
-                                                                    className={`
-                        px-3 py-2 rounded-full border-2 border-dashed transition-all duration-200 hover:scale-105
-                        ${multiSelect && selectedUsers.some((u) => u.email === user.email)
-                                                                            ? 'border-systech-primary bg-systech-primary/10 text-systech-primary'
-                                                                            : selectedUser?.email === user.email
-                                                                                ? 'border-systech-primary bg-systech-primary/10 text-systech-primary'
-                                                                                : 'border-gray-300 text-muted-foreground hover:border-systech-primary hover:text-systech-primary'
-                                                                        }
-                    `}
-                                                                >
-                                                                    <CalendarClock className="h-4 w-4 mr-2" />
-                                                                    <span className="text-sm font-medium">
-                                                                        {(multiSelect && selectedUsers.some((u) => u.email === user.email)) ||
-                                                                            selectedUser?.email === user.email
-                                                                            ? 'Selected'
-                                                                            : 'Schedule'
-                                                                        }
-                                                                    </span>
-                                                                </Button>
-                                                            )}
-                                                            {!isSelectable && (
-                                                                <span className="text-muted-foreground text-sm italic">Not available</span>
-                                                            )}
-                                                        </div>
-                                                    )}
-                                                </TableCell>
-                                                <TableCell>
-                                                    <Badge variant="secondary" className={`${statusInfo.color} border-0`}>
-                                                        <StatusIcon className="h-3 w-3 mr-1" />
-                                                        {statusInfo.label}
-                                                    </Badge>
-                                                </TableCell>
-                                                <TableCell>
                                                     <DropdownMenu>
                                                         <DropdownMenuTrigger asChild>
                                                             <Button variant="ghost" className="h-8 w-8 p-0">
@@ -505,11 +368,7 @@ const UsersPage: React.FC = () => {
                                                         </DropdownMenuTrigger>
                                                         <DropdownMenuContent align="end">
                                                             <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                                                            {/* <DropdownMenuItem>
-                                                                <Mail className="h-4 w-4 mr-2" />
-                                                                Send Email
-                                                            </DropdownMenuItem> */}
-                                                            {/* <DropdownMenuSeparator /> */}
+                                                            <DropdownMenuSeparator />
                                                             <DropdownMenuItem className="text-destructive">
                                                                 <UserX className="h-4 w-4 mr-2" />
                                                                 Remove Candidate
@@ -575,103 +434,106 @@ const UsersPage: React.FC = () => {
                     </Card>
                 )}
 
-                {/* Schedule Modal */}
-                <Dialog open={scheduleModalOpen} onOpenChange={setScheduleModalOpen}>
-                    <DialogContent className="sm:max-w-[500px]">
+                {/* Bulk Upload Dialog */}
+                <Dialog open={uploadDialogOpen} onOpenChange={handleCloseDialog}>
+                    <DialogContent className="sm:max-w-md">
                         <DialogHeader>
                             <DialogTitle className="flex items-center gap-2">
-                                <div className="p-2 bg-systech-gradient rounded-lg">
-                                    <CalendarClock className="h-4 w-4 text-white" />
-                                </div>
-                                Schedule Exam
+                                <FileSpreadsheet className="h-5 w-5 text-systech-primary" />
+                                Bulk Upload Users
                             </DialogTitle>
                             <DialogDescription>
-                                Set the exam schedule for selected candidate{multiSelect && selectedUsers.length > 1 ? 's' : ''}
+                                Upload an Excel file with columns: Name, Email, Phone Number
                             </DialogDescription>
                         </DialogHeader>
-
                         <div className="space-y-4 py-4">
                             <div className="space-y-2">
-                                <Label className="text-sm font-medium">Selected Candidate{multiSelect && selectedUsers.length > 1 ? 's' : ''}</Label>
-                                <div className="p-3 bg-muted/50 rounded-lg border max-h-32 overflow-y-auto">
-                                    {multiSelect ? (
-                                        <div className="flex flex-wrap gap-2">
-                                            {selectedUsers.map((user, i) => (
-                                                <Badge key={i} variant="secondary" className="bg-systech-primary text-white">
-                                                    {user.name || user.email}
-                                                </Badge>
-                                            ))}
-                                        </div>
+                                <label className="text-sm font-medium">
+                                    Select Excel File
+                                </label>
+                                <Input
+                                    type="file"
+                                    accept=".xlsx,.xls"
+                                    onChange={handleFileChange}
+                                    disabled={uploading}
+                                    className="cursor-pointer"
+                                />
+                                {uploadFile && (
+                                    <p className="text-sm text-muted-foreground flex items-center gap-2">
+                                        <FileSpreadsheet className="h-4 w-4" />
+                                        {uploadFile.name}
+                                    </p>
+                                )}
+                            </div>
+
+                            {uploadResult && (
+                                <Alert variant={uploadResult.success ? "default" : "destructive"}>
+                                    {uploadResult.success ? (
+                                        <CheckCircle className="h-4 w-4" />
                                     ) : (
-                                        <div className="flex items-center gap-3">
-                                            <Avatar className="h-8 w-8">
-                                                <AvatarImage src={`https://api.dicebear.com/7.x/initials/svg?seed=${selectedUser?.email}`} />
-                                                <AvatarFallback className="bg-systech-gradient text-white text-xs">
-                                                    {getInitials(selectedUser?.name, selectedUser?.email)}
-                                                </AvatarFallback>
-                                            </Avatar>
-                                            <div>
-                                                <div className="font-medium text-sm">{selectedUser?.name || 'Unnamed Candidate'}</div>
-                                                <div className="text-xs text-muted-foreground">{selectedUser?.email}</div>
-                                            </div>
-                                        </div>
+                                        <AlertCircle className="h-4 w-4" />
                                     )}
-                                </div>
-                            </div>
-
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div className="space-y-2">
-                                    <Label htmlFor="startTime" className="text-sm font-medium">
-                                        Start Time
-                                    </Label>
-                                    <Input
-                                        id="startTime"
-                                        type="datetime-local"
-                                        value={startTime}
-                                        onChange={(e) => setStartTime(e.target.value)}
-                                        className="border-border/50 focus:border-systech-primary"
-                                    />
-                                </div>
-
-                                <div className="space-y-2">
-                                    <Label htmlFor="endTime" className="text-sm font-medium">
-                                        End Time
-                                    </Label>
-                                    <Input
-                                        id="endTime"
-                                        type="datetime-local"
-                                        value={endTime}
-                                        onChange={(e) => setEndTime(e.target.value)}
-                                        className="border-border/50 focus:border-systech-primary"
-                                    />
-                                </div>
-                            </div>
-
-                            {startTime && endTime && (
-                                <div className="p-3 bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 rounded-lg">
-                                    <div className="text-sm font-medium text-green-800 dark:text-green-200 mb-1">
-                                        Exam Duration
-                                    </div>
-                                    <div className="text-xs text-green-600 dark:text-green-300">
-                                        {Math.round((new Date(endTime).getTime() - new Date(startTime).getTime()) / (1000 * 60))} minutes
-                                    </div>
-                                </div>
+                                    <AlertDescription>
+                                        {uploadResult.message}
+                                        {uploadResult.inserted !== undefined && (
+                                            <div className="mt-2 text-sm">
+                                                <p>Successfully inserted: {uploadResult.inserted}</p>
+                                                {uploadResult.failed! > 0 && (
+                                                    <p>Failed: {uploadResult.failed}</p>
+                                                )}
+                                            </div>
+                                        )}
+                                        {uploadResult.errors && uploadResult.errors.length > 0 && (
+                                            <div className="mt-2 text-sm space-y-1">
+                                                {uploadResult.errors.slice(0, 5).map((error, idx) => (
+                                                    <p key={idx}>• {error}</p>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </AlertDescription>
+                                </Alert>
                             )}
-                        </div>
 
-                        <DialogFooter>
-                            <Button variant="outline" onClick={closeModal}>
+                            <div className="bg-muted/50 p-4 rounded-lg">
+                                <p className="text-sm font-medium mb-2">Excel Format:</p>
+                                <ul className="text-sm text-muted-foreground space-y-1">
+                                    <li>• Column 1: Name (Full name of the user)</li>
+                                    <li>• Column 2: Email (Valid email address)</li>
+                                    <li>• Column 3: Phone Number (Will be used as password)</li>
+                                </ul>
+                            </div>
+                        </div>
+                        <div className="flex justify-end gap-2">
+                            <Button
+                                variant="outline"
+                                onClick={handleCloseDialog}
+                                disabled={uploading}
+                            >
                                 Cancel
                             </Button>
                             <Button
-                                onClick={handleScheduleSubmit}
-                                className="bg-systech-gradient hover:opacity-90"
-                                disabled={!startTime || !endTime}
+                                onClick={handleBulkUpload}
+                                disabled={!uploadFile || uploading}
+                                className="                            
+                                bg-blue-600 text-white 
+                                hover:bg-blue-700 
+                                dark:bg-blue-500 dark:hover:bg-blue-600 
+                                px-4 py-2 rounded 
+                                flex items-center gap-2"
                             >
-                                <Calendar className="h-4 w-4 mr-2" />
-                                Schedule Exam
+                                {uploading ? (
+                                    <>
+                                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                        Uploading...
+                                    </>
+                                ) : (
+                                    <>
+                                        <Upload className="h-4 w-4 mr-2" />
+                                        Upload
+                                    </>
+                                )}
                             </Button>
-                        </DialogFooter>
+                        </div>
                     </DialogContent>
                 </Dialog>
             </div>
@@ -679,4 +541,4 @@ const UsersPage: React.FC = () => {
     );
 };
 
-export default UsersPage;
+export default UsersPage

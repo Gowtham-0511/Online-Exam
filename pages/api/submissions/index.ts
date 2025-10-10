@@ -19,7 +19,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             email,
             userName,
             answers,
-            evaluationResult,
+            answersWithQuestionIds,
             disqualified = false,
             code,
         } = req.body;
@@ -35,7 +35,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             .input(
                 'evaluationResult',
                 sql.NVarChar(sql.MAX),
-                JSON.stringify(evaluationResult ?? []),
+                JSON.stringify(answersWithQuestionIds ?? []),
             )
             .input('code', code)
             .input('disqualified', disqualified ? 1 : 0)

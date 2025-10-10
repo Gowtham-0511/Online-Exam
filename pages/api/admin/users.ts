@@ -7,8 +7,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     try {
         const db = await getDBConnection();
         const result = await db.query(`
-        SELECT * FROM Candidates 
-        ORDER BY created_at DESC
+            SELECT * FROM ExternalUsers 
+            ORDER BY [createdAt] DESC
         `);
 
 

@@ -16,7 +16,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
         const user = createOrFetchUser(email, name);
 
-        res.status(200).json({ role: (await user).role }); 
+        res.status(200).json({ role: (await user).role });
     } catch (error) {
         console.error('Error in get-or-create user:', error);
         res.status(500).json({ error: 'Failed to create or fetch user' });

@@ -13,8 +13,20 @@ import {
     BarChart3,
     PlusCircle,
     FileText,
+    LogOut,
+    User,
+    Settings
 } from 'lucide-react';
 import ThemeToggle from '@/components/ThemeToggle';
+import { signOut } from 'next-auth/react';
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuLabel,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface MenuItem {
     id: string;
@@ -40,13 +52,13 @@ const menuItems: MenuItem[] = [
         icon: FileText,
         description: 'View all exams',
     },
-    {
-        id: 'viewResults',
-        navigation: 'examiner-submissions',
-        label: 'View Results',
-        icon: BarChart3,
-        description: 'View exam results',
-    }
+    // {
+    //     id: 'viewResults',
+    //     navigation: 'examiner-submissions',
+    //     label: 'View Results',
+    //     icon: BarChart3,
+    //     description: 'View exam results',
+    // }
 ];
 
 interface ExaminerLayoutProps {
@@ -186,6 +198,64 @@ export default function AttenderLayout({ children }: ExaminerLayoutProps) {
                 </div>
             </ScrollArea>
 
+            {/* <div className={cn(
+                "p-4 border-t transition-all duration-300",
+                isCollapsed ? "px-2" : ""
+            )}>
+                {status === 'loading' ? (
+                    <div className={cn(
+                        "flex items-center p-3 rounded-xl bg-muted transition-all duration-300",
+                        isCollapsed ? "justify-center space-x-0" : "space-x-3"
+                    )}>
+                        <Skeleton className="w-10 h-10 rounded-full flex-shrink-0" />
+                        {!isCollapsed && (
+                            <div className="flex-1 space-y-1">
+                                <Skeleton className="h-4 w-20" />
+                                <Skeleton className="h-3 w-24" />
+                            </div>
+                        )}
+                    </div>
+                ) : (
+                    <div className="space-y-2">
+                        <div className={cn(
+                            "flex items-center p-3 rounded-xl bg-muted transition-all duration-300",
+                            isCollapsed ? "justify-center space-x-0" : "space-x-3"
+                        )}>
+                            <Avatar className="w-10 h-10 ring-2 ring-blue-600/20 flex-shrink-0">
+                                <AvatarImage src={userImage || undefined} alt={userName} />
+                                <AvatarFallback className="bg-primary text-primary-foreground">
+                                    {userInitials}
+                                </AvatarFallback>
+                            </Avatar>
+                            {!isCollapsed && (
+                                <div className="flex-1 min-w-0">
+                                    <p className="text-sm font-medium text-foreground truncate">
+                                        {userName}
+                                    </p>
+                                    <p className="text-xs text-muted-foreground truncate">
+                                        {userEmail}
+                                    </p>
+                                </div>
+                            )}
+                        </div>
+                        <Button
+                            variant="ghost"
+                            className={cn(
+                                "w-full transition-all duration-200 hover:bg-destructive/10 hover:text-destructive",
+                                isCollapsed ? "justify-center px-3" : "justify-start px-4"
+                            )}
+                            onClick={() => signOut({ callbackUrl: '/' })}
+                        >
+                            <LogOut className={cn(
+                                "w-4 h-4",
+                                !isCollapsed ? "mr-3" : ""
+                            )} />
+                            {!isCollapsed && <span>Sign Out</span>}
+                        </Button>
+                    </div>
+                )}
+            </div> */}
+
             <div className={cn(
                 "p-4 border-t transition-all duration-300",
                 isCollapsed ? "px-2" : ""
@@ -204,27 +274,60 @@ export default function AttenderLayout({ children }: ExaminerLayoutProps) {
                         )}
                     </div>
                 ) : (
-                    <div className={cn(
-                        "flex items-center p-3 rounded-xl bg-muted transition-all duration-300",
-                        isCollapsed ? "justify-center space-x-0" : "space-x-3"
-                    )}>
-                        <Avatar className="w-10 h-10 ring-2 ring-blue-600/20 flex-shrink-0">
-                            <AvatarImage src={userImage || undefined} alt={userName} />
-                            <AvatarFallback className="bg-primary text-primary-foreground">
-                                {userInitials}
-                            </AvatarFallback>
-                        </Avatar>
-                        {!isCollapsed && (
-                            <div className="flex-1 min-w-0">
-                                <p className="text-sm font-medium text-foreground truncate">
-                                    {userName}
-                                </p>
-                                <p className="text-xs text-muted-foreground truncate">
-                                    {userEmail}
-                                </p>
-                            </div>
-                        )}
-                    </div>
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <button className={cn(
+                                "flex items-center p-3 rounded-xl bg-muted hover:bg-muted/80 transition-all duration-300 w-full cursor-pointer",
+                                isCollapsed ? "justify-center space-x-0" : "space-x-3"
+                            )}>
+                                <Avatar className="w-10 h-10 ring-2 ring-primary/20 flex-shrink-0">
+                                    <AvatarImage src={userImage || undefined} alt={userName} />
+                                    <AvatarFallback className="bg-primary text-primary-foreground">
+                                        {userInitials}
+                                    </AvatarFallback>
+                                </Avatar>
+                                {!isCollapsed && (
+                                    <div className="flex-1 min-w-0 text-left">
+                                        <p className="text-sm font-medium text-foreground truncate">
+                                            {userName}
+                                        </p>
+                                        <p className="text-xs text-muted-foreground truncate">
+                                            {userEmail}
+                                        </p>
+                                    </div>
+                                )}
+                            </button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent
+                            align="end"
+                            className="w-56"
+                            side={isCollapsed ? "right" : "top"}
+                        >
+                            <DropdownMenuLabel>
+                                <div className="flex flex-col space-y-1">
+                                    <p className="text-sm font-medium">{userName}</p>
+                                    <p className="text-xs text-muted-foreground">{userEmail}</p>
+                                </div>
+                            </DropdownMenuLabel>
+                            <DropdownMenuSeparator />
+                            {/* <DropdownMenuItem className="cursor-pointer">
+                                <User className="w-4 h-4 mr-2" />
+                                Profile
+                            </DropdownMenuItem>
+                            <DropdownMenuItem className="cursor-pointer">
+                                <Settings className="w-4 h-4 mr-2" />
+                                Settings
+                            </DropdownMenuItem> */}
+                            {/* <DropdownMenuSeparator /> */}
+                            <DropdownMenuItem
+                                className="cursor-pointer text-destructive focus:text-destructive focus:bg-destructive/10"
+                                onClick={() => signOut({ callbackUrl: '/' })}
+                            >
+                                <LogOut className="w-4 h-4 mr-2" />
+                                Sign Out
+                            </DropdownMenuItem>
+                        </DropdownMenuContent>
+                    </DropdownMenu>
                 )}
             </div>
         </div>

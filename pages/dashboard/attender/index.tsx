@@ -117,10 +117,10 @@ const index = () => {
                                 </div>
                             </div>
                             <div className="flex items-center space-x-3">
-                                <Badge variant="secondary" className="px-4 py-2 text-sm font-medium">
+                                {/* <Badge variant="secondary" className="px-4 py-2 text-sm font-medium">
                                     <Star className="h-4 w-4 mr-2" />
                                     Skill Rating: {stats.skillRating}
-                                </Badge>
+                                </Badge> */}
                                 <Button
                                     onClick={() => window.location.href = '/dashboard/attender/view-exams'}
                                     className="bg-primary hover:bg-primary/90 shadow-lg"

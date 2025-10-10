@@ -1,6 +1,29 @@
 import NextAuth, { NextAuthOptions } from "next-auth";
 import AzureADProvider from "next-auth/providers/azure-ad";
 import GoogleProvider from "next-auth/providers/google";
+import CredentialsProvider from "next-auth/providers/credentials";
+import { compare } from "bcryptjs";
+import { getDBConnection } from "@/lib/database";
+import sql from 'mssql';
+
+// Extend NextAuth types to include 'id' in session.user
+import { Session, User } from "next-auth";
+declare module "next-auth" {
+    interface Session {
+        user: {
+            id: string;
+            email?: string | null;
+            name?: string | null;
+            image?: string | null;
+        };
+    }
+    interface User {
+        id: string;
+        email?: string | null;
+        name?: string | null;
+        image?: string | null;
+    }
+}
 
 export const authOptions: NextAuthOptions = {
     providers: [
@@ -13,13 +36,73 @@ export const authOptions: NextAuthOptions = {
             clientId: process.env.GOOGLE_CLIENT_ID!,
             clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
         }),
+        CredentialsProvider({
+            name: "credentials",
+            credentials: {
+                email: { label: "Email", type: "email" },
+                password: { label: "Password", type: "password" }
+            },
+            async authorize(credentials) {
+                if (!credentials?.email || !credentials?.password) {
+                    throw new Error("Invalid credentials");
+                }
+
+                try {
+                    const pool = await getDBConnection();
+
+                    const result = await pool.request()
+                        .input('email', sql.VarChar, credentials.email)
+                        .query('SELECT id, email, name, password, role FROM ExternalUsers WHERE email = @email');
+
+                    const user = result.recordset[0];
+
+                    if (!user || !user.password) {
+                        throw new Error("Invalid credentials");
+                    }
+
+                    const isPasswordValid = await compare(credentials.password, user.password);
+
+                    if (!isPasswordValid) {
+                        throw new Error("Invalid credentials");
+                    }
+
+                    return {
+                        id: user.id.toString(),
+                        email: user.email,
+                        name: user.name,
+                    };
+                } catch (error) {
+                    console.error('Auth error:', error);
+                    throw new Error("Authentication failed");
+                }
+            }
+        })
     ],
+    session: {
+        strategy: "jwt",
+    },
+    pages: {
+        signIn: '/',
+    },
     secret: process.env.NEXTAUTH_SECRET,
     callbacks: {
         async signIn({ user, account, profile }) {
             return true;
         },
+        async jwt({ token, user }) {
+            if (user) {
+                token.id = user.id;
+                token.email = user.email;
+                token.name = user.name;
+            }
+            return token;
+        },
         async session({ session, token }) {
+            if (session.user) {
+                session.user.id = token.id as string;
+                session.user.email = token.email as string;
+                session.user.name = token.name as string;
+            }
             return session;
         },
     },
