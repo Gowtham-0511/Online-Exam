@@ -1,32 +1,28 @@
 import { NextApiRequest, NextApiResponse } from "next";
-import { getDBConnection } from '@/lib/database';
+import pool from "@/lib/db";
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
     if (req.method !== "GET") return res.status(405).end();
 
     const { email } = req.query;
+
     if (!email || typeof email !== "string") {
         return res.status(400).json({ error: "Missing email" });
     }
 
     try {
+        const query = `
+            SELECT *
+            FROM "Assessment"
+            WHERE "createdBy" = $1
+            ORDER BY "createdAt" DESC
+        `;
 
-        const db = await getDBConnection();
+        const result = await pool.query(query, [email]);
 
-        const result = await db
-            .request()
-            .input("email", email)
-            .query(`
-                SELECT * FROM assessment
-                WHERE createdBy = @email
-                ORDER BY createdAt DESC
-            `);
-
-        console.log("Fetched exams for user:", email, result.recordset);
-
-        res.status(200).json(result.recordset);
+        return res.status(200).json(result.rows);
     } catch (err) {
-        console.error("Error fetching user exams:", err);
-        res.status(500).json({ error: "Failed to fetch exams" });
+        console.error("❌ Error fetching user exams:", err);
+        return res.status(500).json({ error: "Failed to fetch exams" });
     }
 }

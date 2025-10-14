@@ -1,14 +1,9 @@
-import { memo, useEffect, useRef, useState, useMemo, useCallback } from "react";
+import { useEffect, useRef, useState, useMemo, useCallback } from "react";
 import { useRouter } from "next/router";
 import ProctoringMonitor from "@/components/exam/ProctoringMonitor";
 import { useSession } from "next-auth/react";
 import { toast } from "react-hot-toast";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Textarea } from "@/components/ui/textarea";
-import { Switch } from "@/components/ui/switch";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import { Card, CardContent } from "@/components/ui/card";
 import {
     Clock,
     Code,
@@ -18,21 +13,12 @@ import {
     ChevronRight,
     CheckCircle2,
     Terminal,
-    FileCode,
-    Monitor,
     Moon,
     Sun,
+    X,
+    Menu,
 } from "lucide-react";
-import dynamic from "next/dynamic";
-
-const CodeEditor = dynamic(() => import("../../components/CodeEditor"), {
-    ssr: false,
-    loading: () => (
-        <div className="flex items-center justify-center h-64">
-            <div className="w-8 h-8 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
-        </div>
-    ),
-});
+import { Editor } from "@monaco-editor/react";
 
 declare global {
     interface Window {
@@ -60,8 +46,11 @@ export default function ExamPage() {
     const [activeQuestionIndex, setActiveQuestionIndex] = useState(0);
     const [sqlResult, setSqlResult] = useState<{ columns: string[]; rows: any[][] } | null>(null);
     const [shuffledQuestions, setShuffledQuestions] = useState<any[]>([]);
+    const [sidebarOpen, setSidebarOpen] = useState(true);
 
-    const [editorTheme, setEditorTheme] = useState<"light" | "dark">("light");
+    const [editorTheme, setEditorTheme] = useState<"light" | "dark">("dark");
+
+    const [theme, setTheme] = useState<"light" | "dark">("dark");
 
     const [violations, setViolations] = useState(0);
     const [keyViolations, setKeyViolations] = useState(0);
@@ -83,7 +72,6 @@ export default function ExamPage() {
     const [screenChangeViolations, setScreenChangeViolations] = useState(0);
     const [lastScreenChangeTime, setLastScreenChangeTime] = useState<string>("");
 
-
     const tabSwitchViolationsRef = useRef(0);
     const screenChangeViolationsRef = useRef(0);
     const lastVisibilityChangeRef = useRef(Date.now());
@@ -91,24 +79,16 @@ export default function ExamPage() {
 
     const [isSubmitting, setIsSubmitting] = useState(false);
 
-    // Memoize time-related calculations
     const timeColor = useMemo(() => {
         if (timeLeft > 300) return "text-primary";
         if (timeLeft > 60) return "text-amber-600 dark:text-amber-400";
         return "text-destructive";
     }, [timeLeft]);
 
-    const progressWidth = useMemo(() => {
-        const totalTime = exam?.duration ? exam.duration * 60 : 0;
-        return totalTime > 0 ? ((totalTime - timeLeft) / totalTime) * 100 : 0;
-    }, [timeLeft, exam?.duration]);
-
-    // Memoize answered count
     const answeredCount = useMemo(() => {
         return answers.filter(answer => answer && answer.trim() !== "").length;
     }, [answers]);
 
-    // Memoize formatted time
     const formattedTime = useMemo(() => {
         const hours = Math.floor(timeLeft / 3600);
         const minutes = Math.floor((timeLeft % 3600) / 60);
@@ -132,30 +112,8 @@ export default function ExamPage() {
     }, []);
 
     const isQuestionAnswered = useCallback((index: number) => {
-        return answers[index] && answers[index].trim() !== "";
+        return !!(answers[index] && answers[index].trim() !== "");
     }, [answers]);
-
-    const navigateQuestion = useCallback((direction: 'prev' | 'next') => {
-        setActiveQuestionIndex(prev => {
-            if (direction === 'prev' && prev > 0) {
-                return prev - 1;
-            } else if (direction === 'next' && exam?.questions && prev < exam.questions.length - 1) {
-                return prev + 1;
-            }
-            return prev;
-        });
-    }, [exam?.questions]);
-
-    type ExamQuestion = {
-        id: string;
-        question: string;
-        expectedOutput: string;
-    };
-
-    type SqlResult = {
-        columns: string[];
-        rows: Record<string, any>[];
-    };
 
     const shuffleArrayWithSeed = (array: any, seed: any) => {
         const seededRandom = (seed: number) => {
@@ -174,6 +132,14 @@ export default function ExamPage() {
 
         return shuffled;
     };
+
+    useEffect(() => {
+        if (theme === "dark") {
+            document.documentElement.classList.add("dark");
+        } else {
+            document.documentElement.classList.remove("dark");
+        }
+    }, [theme]);
 
     useEffect(() => {
         const fetchExam = async () => {
@@ -495,30 +461,6 @@ export default function ExamPage() {
         }
     }, [exam, answers, examStarted]);
 
-    // useEffect(() => {
-    //     const fetchDatabaseSchema = async () => {
-    //         if (exam?.language !== "sql") return;
-
-    //         setSchemaLoading(true);
-    //         try {
-    //             const response = await fetch("/api/database-schema");
-    //             if (response.ok) {
-    //                 const schema = await response.json();
-    //                 setDatabases(schema.databases || []);
-    //                 if (schema.databases?.length > 0) {
-    //                     setSelectedDatabase(schema.databases[0].name);
-    //                 }
-    //             }
-    //         } catch (error) {
-    //             console.error("Failed to fetch database schema:", error);
-    //         } finally {
-    //             setSchemaLoading(false);
-    //         }
-    //     };
-
-    //     fetchDatabaseSchema();
-    // }, [exam?.language]);
-
     handleContextMenuRef.current = (e) => {
         e.preventDefault();
         violationsRef.current += 1;
@@ -543,7 +485,6 @@ export default function ExamPage() {
         preventDefault: () => void;
         timeStamp: number;
     }) => {
-        const currentTime = Date.now();
 
         const isForbiddenKey =
             e.key === 'F12' ||
@@ -663,20 +604,8 @@ export default function ExamPage() {
         }));
 
         try {
-            // let evaluationResult = null;
-            // try {
-            //     const response = await fetch("http://localhost:5678/webhook/evaluate", {
-            //         method: "POST",
-            //         headers: { "Content-Type": "application/json" },
-            //         body: JSON.stringify({ answersWithQuestionIds })
-            //     });
-            //     evaluationResult = await response.text();
-            //     console.log(evaluationResult);
-            // } catch (error) {
-            //     console.error("Evaluation failed:", error);
-            // }
 
-            await fetch("/api/submissions", {
+            const result = await fetch("/api/submissions", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
@@ -690,6 +619,19 @@ export default function ExamPage() {
                 }),
             });
 
+            const finalResult = await result.json();
+
+            console.log(finalResult.submissionId, "submission result");
+
+            fetch("http://localhost:5678/webhook/feedback", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    output: answersWithQuestionIds,
+                    id: finalResult.submissionId
+                })
+            });
+
             await cleanupExamEnvironment();
             setIsSubmitting(false);
             router.push("/dashboard/attender");
@@ -700,61 +642,13 @@ export default function ExamPage() {
         }
     };
 
-    // const handleSubmit = async () => {
-
-    //     if (hasSubmittedRef.current) return;
-
-    //     hasSubmittedRef.current = true;
-    //     setIsSubmitting(true);
-
-    //     if (!exam || !session) return;
-
-    //     console.log(isDisqualified, "isDisqualified");
-
-    //     const email = session.user?.email || "unknown";
-    //     const userName = session.user?.name || "Anonymous";
-    //     const examIdStr = examId?.toString() || "unknown";
-
-    //     const answersWithQuestionIds = answers.map((answer, index) => ({
-    //         questionId: shuffledQuestions[index]?.id || index,
-    //         question: shuffledQuestions[index]?.question || '',
-    //         answer: answer,
-    //         marks: shuffledQuestions[index]?.marks || 0,
-    //         originalIndex: index
-    //     }));
-
-    //     let evaluationResult = null;
-    //     try {
-    //         const response = await fetch("http://localhost:5678/webhook/evaluate", {
-    //             method: "POST",
-    //             headers: { "Content-Type": "application/json" },
-    //             body: JSON.stringify({ answersWithQuestionIds })
-    //         });
-    //         evaluationResult = await response.text();
-    //         console.log(evaluationResult);
-    //     } catch (error) {
-    //         console.error(error);
-    //     }
-
-    //     await fetch("/api/submissions", {
-    //         method: "POST",
-    //         headers: { "Content-Type": "application/json" },
-    //         body: JSON.stringify({
-    //             examId: examIdStr,
-    //             email,
-    //             userName,
-    //             answers,
-    //             evaluationResult,
-    //             disqualified: isDisqualified,
-    //             code,
-    //         }),
-    //     });
-
-    //     await cleanupExamEnvironment();
-    //     setIsSubmitting(false);
-    //     router.push("/dashboard/attender");
-
-    // };
+    interface Question {
+        id: string;
+        question: string;
+        expectedOutput?: string;
+        marks: number;
+        [key: string]: any;
+    }
 
     const handleSubmitWithDisqualification = async (disqualifiedFlag = isDisqualified) => {
 
@@ -910,740 +804,278 @@ export default function ExamPage() {
     };
 
     return (
-        <div className="min-h-screen bg-background">
-            <div className="fixed top-0 left-0 right-0 z-50 h-24">
-                {/* Glassmorphism background with subtle gradient */}
-                <div className="absolute inset-0 bg-gradient-to-r from-background/95 via-background/98 to-background/95 backdrop-blur-2xl border-b border-border/30 shadow-lg shadow-black/5" />
+        <div className="h-screen flex flex-col bg-background">
+            {/* Top Header */}
+            <header className="h-16 border-b border-border bg-card flex items-center justify-between px-4 lg:px-6 flex-shrink-0">
+                <div className="flex items-center gap-4">
+                    <button
+                        onClick={() => setSidebarOpen(!sidebarOpen)}
+                        className="lg:hidden p-2 hover:bg-muted rounded-lg transition-colors"
+                    >
+                        {sidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+                    </button>
 
-                {/* Animated accent line */}
-                <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-primary/50 to-transparent" />
+                    <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center">
+                            <Code className="w-5 h-5 text-primary-foreground" />
+                        </div>
+                        <div className="hidden sm:block">
+                            <h1 className="text-lg font-bold text-foreground">{exam.title}</h1>
+                            <p className="text-xs text-muted-foreground">{exam.language.toUpperCase()} • {exam.questions.length} Questions</p>
+                        </div>
+                    </div>
+                </div>
 
-                <div className="relative h-full flex items-center justify-between px-8 lg:px-12">
-                    {/* Left Section - Logo & Exam Info */}
-                    <div className="flex items-center gap-8">
-                        {/* Enhanced Logo with floating effect */}
-                        <div className="relative group">
-                            <div className="absolute inset-0 bg-primary/20 rounded-3xl blur-xl group-hover:bg-primary/30 transition-all duration-500" />
-                            <div className="relative w-16 h-16 bg-gradient-to-br from-primary via-primary/90 to-primary/80 rounded-3xl flex items-center justify-center shadow-2xl transform hover:scale-110 hover:rotate-6 transition-all duration-500 group-hover:shadow-primary/25">
-                                <Code className="w-8 h-8 text-white transform group-hover:scale-110 transition-transform duration-300" />
-                                {/* Orbiting dots */}
-                                <div className="absolute -top-1 -right-1 w-3 h-3 bg-accent rounded-full animate-pulse shadow-lg" />
-                                <div className="absolute -bottom-1 -left-1 w-2 h-2 bg-secondary rounded-full animate-pulse delay-300 shadow-md" />
+                <div className="flex items-center gap-4">
+                    <div className={`flex items-center gap-2 px-4 py-2 rounded-lg border ${timeLeft <= 60 ? 'bg-destructive/10 border-destructive' :
+                        timeLeft <= 300 ? 'bg-amber-500/10 border-amber-500' :
+                            'bg-primary/10 border-primary'
+                        }`}>
+                        <Clock className={`w-4 h-4 ${timeColor}`} />
+                        <span className={`font-mono font-bold ${timeColor}`}>{formattedTime}</span>
+                    </div>
+
+                    <button
+                        onClick={handleSubmit}
+                        disabled={isSubmitting}
+                        className="px-6 py-2 bg-primary text-primary-foreground rounded-lg font-semibold hover:opacity-90 transition-opacity disabled:opacity-50 flex items-center gap-2"
+                    >
+                        {isSubmitting ? (
+                            <>
+                                <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                                Submitting...
+                            </>
+                        ) : (
+                            <>
+                                <Send className="w-4 h-4" />
+                                Submit
+                            </>
+                        )}
+                    </button>
+                </div>
+            </header>
+
+            <div className="flex-1 flex overflow-hidden">
+                {/* Sidebar - Question Navigation */}
+                <aside className={`${sidebarOpen ? 'w-64' : 'w-0'
+                    } lg:w-64 border-r border-border bg-card flex-shrink-0 overflow-hidden transition-all duration-300`}>
+                    <div className="h-full flex flex-col">
+                        <div className="p-4 border-b border-border">
+                            <div className="flex items-center justify-between mb-3">
+                                <h2 className="text-sm font-semibold text-foreground">Questions</h2>
+                                <span className="text-xs text-muted-foreground">{answeredCount}/{exam.questions.length}</span>
+                            </div>
+                            <div className="w-full h-2 bg-muted rounded-full overflow-hidden">
+                                <div
+                                    className="h-full bg-primary transition-all duration-300"
+                                    style={{ width: `${(answeredCount / exam.questions.length) * 100}%` }}
+                                />
                             </div>
                         </div>
 
-                        {/* Exam Information with enhanced typography */}
-                        <div className="space-y-3">
-                            <div className="flex items-center gap-4">
-                                <h1 className="text-3xl font-bold bg-gradient-to-r from-foreground via-foreground/90 to-foreground/80 bg-clip-text text-transparent">
-                                    {exam.title}
-                                </h1>
-                                {/* Live status indicator */}
-                                <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-green-50 dark:bg-green-950/50 border border-green-200 dark:border-green-800">
-                                    <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-                                    <span className="text-xs font-medium text-green-700 dark:text-green-300">LIVE</span>
-                                </div>
-                            </div>
+                        <div className="flex-1 overflow-y-auto p-2">
+                            <div className="space-y-1">
 
-                            {/* Enhanced metadata badges */}
-                            <div className="flex items-center gap-4">
-                                <div className="flex items-center gap-3">
-                                    <Badge
-                                        variant="secondary"
-                                        className="px-4 py-2 text-sm font-semibold rounded-2xl bg-primary/10 border border-primary/20 text-primary hover:bg-primary/15 transition-all duration-300 shadow-sm"
-                                    >
-                                        <Terminal className="w-4 h-4 mr-2" />
-                                        {exam.language?.toUpperCase()}
-                                    </Badge>
+                                {(exam.questions as Question[]).map((q: Question, index: number) => {
+                                    const isActive: boolean = activeQuestionIndex === index;
+                                    const isAnswered: boolean = isQuestionAnswered(index);
 
-                                    <div className="h-6 w-px bg-border/50" />
-
-                                    <div className="flex items-center gap-2 text-muted-foreground">
-                                        <FileCode className="w-4 h-4" />
-                                        <span className="font-medium">{exam.questions?.length} Questions</span>
-                                    </div>
-
-                                    <div className="h-6 w-px bg-border/50" />
-
-                                    {/* Progress indicator */}
-                                    <div className="flex items-center gap-3">
-                                        <div className="flex items-center gap-2">
-                                            <div className="w-8 h-8 rounded-full border-2 border-primary/20 flex items-center justify-center relative overflow-hidden">
-                                                <div
-                                                    className="absolute inset-0 bg-gradient-to-t from-primary to-primary/80 transition-all duration-700 ease-out"
-                                                    style={{
-                                                        transform: `translateY(${100 - (answeredCount / exam.questions?.length * 100)}%)`
-                                                    }}
-                                                />
-                                                <span className="text-xs font-bold text-foreground relative z-10">
-                                                    {answeredCount}
-                                                </span>
-                                            </div>
-                                            <span className="text-sm font-medium text-muted-foreground">
-                                                / {exam.questions?.length}
-                                            </span>
-                                        </div>
-
-                                        <Badge
-                                            variant="outline"
-                                            className={`px-3 py-1.5 rounded-xl border-2 transition-all duration-500 ${answeredCount === exam.questions?.length
-                                                ? 'bg-gradient-to-r from-green-50 to-emerald-50 border-green-300 text-green-700 shadow-green-100 shadow-md dark:from-green-950/50 dark:to-emerald-950/50 dark:border-green-700 dark:text-green-300'
-                                                : 'bg-gradient-to-r from-amber-50 to-orange-50 border-amber-300 text-amber-700 shadow-amber-100 shadow-md dark:from-amber-950/50 dark:to-orange-950/50 dark:border-amber-700 dark:text-amber-300'
+                                    return (
+                                        <button
+                                            key={index}
+                                            onClick={() => setActiveQuestionIndex(index)}
+                                            className={`w-full p-3 rounded-lg text-left transition-all ${isActive
+                                                ? 'bg-primary text-primary-foreground shadow-md'
+                                                : 'hover:bg-muted'
                                                 }`}
                                         >
-                                            {answeredCount === exam.questions?.length ? (
-                                                <CheckCircle2 className="w-3 h-3 mr-1.5" />
-                                            ) : (
-                                                <Clock className="w-3 h-3 mr-1.5" />
-                                            )}
-                                            {answeredCount === exam.questions?.length ? 'Complete' : 'In Progress'}
-                                        </Badge>
-                                    </div>
+                                            <div className="flex items-center justify-between">
+                                                <div className="flex items-center gap-3">
+                                                    <span className={`font-semibold ${isActive ? 'text-primary-foreground' : 'text-foreground'}`}>
+                                                        Q{index + 1}
+                                                    </span>
+                                                    {isAnswered && (
+                                                        <CheckCircle2 className={`w-4 h-4 ${isActive ? 'text-primary-foreground' : 'text-primary'
+                                                            }`} />
+                                                    )}
+                                                </div>
+                                                <span className={`text-xs ${isActive ? 'text-primary-foreground/80' : 'text-muted-foreground'
+                                                    }`}>
+                                                    {q.marks}pts
+                                                </span>
+                                            </div>
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        </div>
+
+                        <div className="p-4 border-t border-border bg-muted/50">
+                            <div className="space-y-2 text-xs">
+                                <div className="flex items-center justify-between">
+                                    <span className="text-muted-foreground">Answered</span>
+                                    <span className="font-semibold text-primary">{answeredCount}</span>
+                                </div>
+                                <div className="flex items-center justify-between">
+                                    <span className="text-muted-foreground">Unanswered</span>
+                                    <span className="font-semibold text-muted-foreground">{exam.questions.length - answeredCount}</span>
                                 </div>
                             </div>
                         </div>
                     </div>
+                </aside>
 
-                    {/* Right Section - Timer & Actions */}
-                    <div className="flex items-center gap-6">
-                        {/* Enhanced Timer with breathing animation */}
-                        <Card className={`relative overflow-hidden transition-all duration-700 shadow-2xl ${timeLeft <= 60
-                            ? 'border-red-400/60 shadow-red-500/30 bg-gradient-to-br from-red-50/80 to-rose-50/60 dark:from-red-950/40 dark:to-rose-950/20'
-                            : timeLeft <= 300
-                                ? 'border-amber-400/60 shadow-amber-500/30 bg-gradient-to-br from-amber-50/80 to-orange-50/60 dark:from-amber-950/40 dark:to-orange-950/20'
-                                : 'border-green-400/60 shadow-green-500/30 bg-gradient-to-br from-green-50/80 to-emerald-50/60 dark:from-green-950/40 dark:to-emerald-950/20'
-                            }`}>
-                            {/* Animated border */}
-                            <div className={`absolute inset-0 rounded-lg bg-gradient-to-r ${timeLeft <= 60 ? 'from-red-500/20 via-rose-500/20 to-red-500/20' :
-                                timeLeft <= 300 ? 'from-amber-500/20 via-orange-500/20 to-amber-500/20' :
-                                    'from-green-500/20 via-emerald-500/20 to-green-500/20'
-                                } opacity-50 animate-pulse`} />
-
-                            <CardContent className="relative px-8 py-4">
-                                <div className="flex items-center gap-4">
-                                    {/* Animated clock icon */}
-                                    <div className="relative">
-                                        <div className={`absolute inset-0 rounded-full blur-sm ${timeLeft <= 300 ? 'bg-current animate-ping opacity-30' : ''
-                                            }`} />
-                                        <Clock className={`w-6 h-6 relative z-10 ${timeColor} ${timeLeft <= 60 ? 'animate-bounce' : timeLeft <= 300 ? 'animate-pulse' : ''
-                                            }`} />
+                {/* Main Content Area */}
+                <main className="flex-1 flex flex-col overflow-hidden">
+                    {/* Question Display */}
+                    <div className="h-1/3 border-b border-border overflow-y-auto bg-card">
+                        <div className="p-6">
+                            <div className="flex items-center justify-between mb-4">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-8 h-8 bg-primary/10 text-primary rounded-lg flex items-center justify-center font-bold">
+                                        {activeQuestionIndex + 1}
                                     </div>
-
-                                    <div className="text-right">
-                                        <div className={`text-2xl font-mono font-bold tracking-wider ${timeColor} ${timeLeft <= 60 ? 'animate-pulse' : ''
-                                            }`}>
-                                            {formattedTime}
-                                        </div>
-                                        <div className="mt-2 relative">
-                                            {/* Enhanced progress bar with gradient */}
-                                            <div className="w-40 h-2.5 bg-muted/50 rounded-full overflow-hidden backdrop-blur-sm">
-                                                <div
-                                                    className={`h-full transition-all duration-1000 ease-out rounded-full relative overflow-hidden ${timeLeft <= 60
-                                                        ? 'bg-gradient-to-r from-red-500 via-rose-500 to-red-600'
-                                                        : timeLeft <= 300
-                                                            ? 'bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600'
-                                                            : 'bg-gradient-to-r from-green-500 via-emerald-500 to-green-600'
-                                                        }`}
-                                                    style={{ width: `${100 - progressWidth}%` }}
-                                                >
-                                                    {/* Shimmer effect */}
-                                                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent translate-x-[-100%] animate-pulse"
-                                                        style={{ animation: 'shimmer 2s infinite' }} />
-                                                </div>
-                                            </div>
-                                            <div className="text-xs text-muted-foreground mt-1 text-center">
-                                                Time Remaining
-                                            </div>
-                                        </div>
-                                    </div>
+                                    <h2 className="text-xl font-bold text-foreground">
+                                        Question {activeQuestionIndex + 1}
+                                    </h2>
+                                    <span className="px-3 py-1 bg-primary/10 text-primary text-sm font-medium rounded-full">
+                                        {exam.questions[activeQuestionIndex].marks} points
+                                    </span>
                                 </div>
-                            </CardContent>
-                        </Card>
 
-                        {/* Enhanced Submit Button */}
-                        <Button
-                            onClick={handleSubmit}
-                            disabled={isSubmitting}
-                            className="relative px-10 py-4 bg-gradient-to-r from-primary via-primary/90 to-primary text-white font-bold text-lg rounded-2xl transition-all duration-500 hover:scale-105 hover:shadow-2xl hover:shadow-primary/40 group overflow-hidden border border-primary/20 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
-                        >
-                            <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 translate-x-[-200%] group-hover:translate-x-[200%] transition-transform duration-1000" />
-
-                            <div className="relative flex items-center gap-3">
-                                {isSubmitting ? (
-                                    <>
-                                        <div className="w-5 h-5 border-2 border-current border-t-transparent rounded-full animate-spin" />
-                                        <span>Submitting...</span>
-                                    </>
-                                ) : (
-                                    <>
-                                        <Send className="w-5 h-5 group-hover:rotate-12 group-hover:scale-110 transition-transform duration-300" />
-                                        <span>Submit Exam</span>
-                                    </>
-                                )}
+                                <div className="flex items-center gap-2">
+                                    <button
+                                        onClick={() => setActiveQuestionIndex(Math.max(0, activeQuestionIndex - 1))}
+                                        disabled={activeQuestionIndex === 0}
+                                        className="p-2 hover:bg-muted rounded-lg transition-colors disabled:opacity-40"
+                                    >
+                                        <ChevronLeft className="w-5 h-5" />
+                                    </button>
+                                    <button
+                                        onClick={() => setActiveQuestionIndex(Math.min(exam.questions.length - 1, activeQuestionIndex + 1))}
+                                        disabled={activeQuestionIndex === exam.questions.length - 1}
+                                        className="p-2 hover:bg-muted rounded-lg transition-colors disabled:opacity-40"
+                                    >
+                                        <ChevronRight className="w-5 h-5" />
+                                    </button>
+                                </div>
                             </div>
 
-                            <div className="absolute inset-0 rounded-2xl bg-primary/20 blur-lg scale-110 opacity-0 group-hover:opacity-100 transition-opacity duration-500 -z-10" />
-                        </Button>
+                            <div
+                                className="prose prose-sm dark:prose-invert max-w-none text-foreground"
+                                dangerouslySetInnerHTML={{ __html: exam.questions[activeQuestionIndex].question }}
+                            />
+                        </div>
                     </div>
-                </div>
-            </div>
 
-            {/* Main Content */}
-            <div className="pt-32 pb-8 px-4">
-                <div className="max-w-full mx-auto">
-                    <div className={`grid gap-6 h-[calc(100vh-180px)] ${exam.language === 'sqla'
-                        ? 'grid-cols-1 xl:grid-cols-4'
-                        : 'grid-cols-1 xl:grid-cols-2'
-                        }`}>
-                        {/* Question Panel */}
-                        <Card className={`relative overflow-hidden flex flex-col group transition-all duration-500 hover:shadow-2xl border-border/50 backdrop-blur-xl`}>
-                            {/* Animated background layers */}
-                            <div className="absolute inset-0 bg-gradient-to-br from-card/95 via-card/98 to-card/95" />
-                            <div className="absolute inset-0 bg-gradient-to-tr from-primary/[0.02] via-transparent to-accent/[0.02]" />
-                            <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-primary/30 to-transparent" />
-
-                            {/* Floating geometric decorations */}
-                            <div className="absolute top-4 right-4 w-32 h-32 bg-gradient-to-br from-primary/5 to-accent/5 rounded-full blur-3xl opacity-50 animate-pulse" />
-                            <div className="absolute bottom-8 left-8 w-24 h-24 bg-gradient-to-tl from-accent/5 to-primary/5 rounded-full blur-2xl opacity-40 animate-pulse delay-1000" />
-
-                            {/* Question Header */}
-                            <CardHeader className="relative z-10 bg-gradient-to-r from-muted/60 via-muted/40 to-muted/60 backdrop-blur-xl px-8 py-6 border-b border-border/30">
-                                <div className="flex items-center justify-between mb-6">
-                                    <div className="flex items-center gap-4">
-                                        {/* Enhanced question icon */}
-                                        <div className="relative group">
-                                            <div className="absolute inset-0 bg-systech-gradient rounded-2xl blur-lg opacity-50 group-hover:opacity-70 transition-opacity duration-300" />
-                                            <div className="relative w-14 h-14 bg-systech-gradient rounded-2xl flex items-center justify-center shadow-lg transform group-hover:scale-110 transition-all duration-300">
-                                                <FileCode className="w-7 h-7 text-white group-hover:rotate-12 transition-transform duration-300" />
-                                                {/* Orbiting indicator */}
-                                                <div className="absolute -top-1 -right-1 w-4 h-4 bg-gradient-to-br from-accent to-accent/80 rounded-full shadow-lg animate-bounce" />
-                                            </div>
-                                        </div>
-
-                                        <div className="space-y-2">
-                                            <div className="flex items-center gap-3">
-                                                <CardTitle className="text-2xl font-bold bg-gradient-to-r from-foreground via-foreground/90 to-foreground/80 bg-clip-text text-transparent">
-                                                    Question {activeQuestionIndex + 1}
-                                                </CardTitle>
-                                                <div className="px-3 py-1 rounded-full bg-gradient-to-r from-muted to-muted/80 border border-border/50">
-                                                    <span className="text-sm font-medium text-muted-foreground">
-                                                        of {exam.questions?.length || 0}
-                                                    </span>
-                                                </div>
-                                            </div>
-                                            <p className="text-muted-foreground font-medium">Select and solve your questions</p>
-
-                                            {/* Progress indicators */}
-                                            <div className="flex items-center gap-4 mt-3">
-                                                <div className="flex items-center gap-2">
-                                                    <div className="w-3 h-3 rounded-full bg-gradient-to-r from-primary to-primary/80 shadow-sm" />
-                                                    <span className="text-xs font-medium text-muted-foreground">
-                                                        Current: {activeQuestionIndex + 1}
-                                                    </span>
-                                                </div>
-                                                <div className="w-px h-4 bg-border" />
-                                                <div className="flex items-center gap-2">
-                                                    <CheckCircle2 className="w-3 h-3 text-primary" />
-                                                    <span className="text-xs font-medium text-muted-foreground">
-                                                        Completed: {answeredCount}
-                                                    </span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    {/* Enhanced navigation controls */}
-                                    <div className="flex items-center gap-3">
-                                        <div className="flex items-center gap-2 p-1 rounded-xl bg-muted/50 border border-border/50 backdrop-blur-sm">
-                                            <Button
-                                                variant="ghost"
-                                                size="sm"
-                                                onClick={() => navigateQuestion('prev')}
-                                                disabled={activeQuestionIndex === 0}
-                                                className="h-10 w-10 p-0 hover:bg-primary/10 hover:text-primary disabled:opacity-40 transition-all duration-200 rounded-lg"
-                                            >
-                                                <ChevronLeft className="w-5 h-5" />
-                                            </Button>
-                                            <div className="w-px h-6 bg-border/50" />
-                                            <Button
-                                                variant="ghost"
-                                                size="sm"
-                                                onClick={() => navigateQuestion('next')}
-                                                disabled={activeQuestionIndex === exam.questions.length - 1}
-                                                className="h-10 w-10 p-0 hover:bg-primary/10 hover:text-primary disabled:opacity-40 transition-all duration-200 rounded-lg"
-                                            >
-                                                <ChevronRight className="w-5 h-5" />
-                                            </Button>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* Enhanced Question Tabs Navigation */}
-                                <div className="relative">
-                                    <ScrollArea className="max-h-20">
-                                        <div className="flex flex-wrap gap-3 pb-2">
-                                            {(exam.questions as ExamQuestion[]).map((_, index) => {
-                                                const isActive = activeQuestionIndex === index;
-                                                const isAnswered = isQuestionAnswered(index);
-
-                                                return (
-                                                    <Button
-                                                        key={index}
-                                                        variant={isActive ? "default" : "outline"}
-                                                        size="sm"
-                                                        onClick={() => setActiveQuestionIndex(index)}
-                                                        className={`relative flex items-center gap-3 px-4 py-2.5 rounded-xl font-semibold transition-all duration-300 group overflow-hidden ${isActive
-                                                            ? 'bg-systech-gradient text-white shadow-lg shadow-primary/25 scale-105 border-0'
-                                                            : 'hover:bg-muted/60 hover:border-primary/30 hover:scale-105 hover:shadow-md border-border/50'
-                                                            }`}
-                                                    >
-                                                        {/* Background animations for active state */}
-                                                        {isActive && (
-                                                            <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000" />
-                                                        )}
-
-                                                        <span className="relative z-10 font-bold text-base">
-                                                            {index + 1}
-                                                        </span>
-
-                                                        {isAnswered && (
-                                                            <div className={`relative z-10 w-4 h-4 rounded-full flex items-center justify-center ${isActive ? 'bg-white/20' : 'bg-primary/10'
-                                                                }`}>
-                                                                <CheckCircle2 className={`w-3 h-3 ${isActive ? 'text-white' : 'text-primary'}`} />
-                                                            </div>
-                                                        )}
-
-                                                        {/* Completion indicator dot */}
-                                                        {isAnswered && !isActive && (
-                                                            <div className="absolute -top-1 -right-1 w-3 h-3 bg-gradient-to-br from-primary to-primary/80 rounded-full border-2 border-background shadow-sm" />
-                                                        )}
-                                                    </Button>
-                                                );
-                                            })}
-                                        </div>
-                                    </ScrollArea>
-
-                                    {/* Scroll indicators */}
-                                    <div className="absolute left-0 top-0 bottom-0 w-8 bg-gradient-to-r from-muted/60 to-transparent pointer-events-none" />
-                                    <div className="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-muted/60 to-transparent pointer-events-none" />
-                                </div>
-                            </CardHeader>
-
-                            {/* Question Content Area */}
-                            <CardContent className="relative z-10 flex-1 p-8 overflow-y-auto w-full">
-                                {exam.questions && exam.questions[activeQuestionIndex] && (
-                                    <div className="space-y-8">
-                                        <Card className="group relative overflow-hidden border-0 bg-gradient-to-br from-background via-muted/20 to-primary/5 backdrop-blur-sm transition-all duration-500 hover:shadow-2xl hover:shadow-primary/10">
-                                            <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-accent/10 opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
-
-                                            <CardContent className="relative p-6">
-                                                <div className="flex items-start gap-4">
-                                                    <div className="relative flex-shrink-0">
-                                                        <div className="absolute inset-0 bg-gradient-to-br from-primary to-primary/80 rounded-2xl blur-sm opacity-60 group-hover:opacity-100 transition-all duration-300" />
-                                                        <Badge
-                                                            variant="secondary"
-                                                            className="relative h-14 w-14 rounded-2xl bg-gradient-to-br from-primary to-primary/90 text-primary-foreground font-bold text-lg border-0 shadow-lg hover:scale-105 transition-transform duration-300 flex items-center justify-center"
-                                                        >
-                                                            {activeQuestionIndex + 1}
-                                                        </Badge>
-                                                        <div className="absolute inset-0 bg-gradient-to-br from-primary/30 to-primary/10 rounded-2xl animate-pulse opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-                                                    </div>
-
-                                                    {/* Question content */}
-                                                    <div className="flex-1 space-y-2">
-                                                        <div className="prose prose-neutral dark:prose-invert max-w-none">
-                                                            <div
-                                                                className="text-lg leading-relaxed text-foreground/95 font-medium break-words [&>img]:max-w-md [&>img]:w-full [&>img]:h-auto [&>img]:rounded-xl [&>img]:shadow-md [&>img]:mt-4 [&>img]:border [&>img]:border-border/30 [&>p]:mb-4 [&>h1]:text-xl [&>h2]:text-lg [&>h3]:text-base [&>ul]:list-disc [&>ol]:list-decimal [&>li]:ml-4"
-                                                                dangerouslySetInnerHTML={{ __html: exam.questions[activeQuestionIndex].question }}
-                                                            />
-                                                        </div>
-                                                    </div>
-                                                </div>
-
-                                                <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-primary/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                                            </CardContent>
-                                        </Card>
-
-                                        {/* Enhanced Answer Input Section */}
-                                        <div className="space-y-4">
-                                            <div className="flex items-center justify-between">
-                                                <label className="text-lg font-semibold text-foreground flex items-center gap-3">
-                                                    <div className="w-2 h-2 bg-primary rounded-full animate-pulse" />
-                                                    Your Solution
-                                                </label>
-
-                                                {/* Input metadata */}
-                                                <div className="flex items-center gap-3">
-                                                    {isQuestionAnswered(activeQuestionIndex) && (
-                                                        <Badge variant="outline" className="px-3 py-1.5 bg-gradient-to-r from-primary/10 to-primary/5 text-primary border-primary/30 rounded-xl">
-                                                            <CheckCircle2 className="w-3 h-3 mr-2" />
-                                                            Answered
-                                                        </Badge>
-                                                    )}
-                                                    <Badge variant="secondary" className="px-3 py-1.5 rounded-xl bg-muted/60 border border-border/50">
-                                                        {(answers[activeQuestionIndex] || "").length} characters
-                                                    </Badge>
-                                                </div>
-                                            </div>
-
-                                            {/* Enhanced textarea with modern styling */}
-                                            <div className="relative group">
-                                                <div className="absolute inset-0 bg-gradient-to-br from-muted/40 via-muted/20 to-muted/40 rounded-2xl blur-sm opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                                                <div className="relative">
-                                                    <Textarea
-                                                        value={answers[activeQuestionIndex] || ""}
-                                                        onChange={(e) => {
-                                                            updateAnswer(activeQuestionIndex, e.target.value);
-                                                            setCode(e.target.value);
-                                                        }}
-                                                        className="min-h-80 font-mono text-base bg-gradient-to-br from-muted/30 via-muted/20 to-muted/30 backdrop-blur-sm border-2 border-border/30 focus:border-primary/50 focus:ring-2 focus:ring-primary/10 transition-all duration-300 resize-none rounded-2xl p-6 shadow-inner hover:shadow-lg"
-                                                        placeholder={`// Write your ${exam.language} code here...\n// Be creative and solve step by step`}
-                                                    />
-
-                                                    {/* Floating action indicators */}
-                                                    <div className="absolute bottom-4 right-4 flex items-center gap-3">
-                                                        {/* Save indicator */}
-                                                        <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full transition-all duration-300 ${answers[activeQuestionIndex] && answers[activeQuestionIndex].length > 0
-                                                            ? 'bg-primary/10 border border-primary/20 text-primary'
-                                                            : 'bg-muted/50 border border-border/30 text-muted-foreground'
-                                                            }`}>
-                                                            <div className={`w-2 h-2 rounded-full ${answers[activeQuestionIndex] && answers[activeQuestionIndex].length > 0
-                                                                ? 'bg-primary animate-pulse'
-                                                                : 'bg-muted-foreground/50'
-                                                                }`} />
-                                                            <span className="text-xs font-medium">
-                                                                {answers[activeQuestionIndex] && answers[activeQuestionIndex].length > 0 ? 'Saved' : 'Empty'}
-                                                            </span>
-                                                        </div>
-                                                    </div>
-
-                                                    {/* Syntax highlighting hint */}
-                                                    <div className="absolute top-4 right-4">
-                                                        <Badge variant="outline" className="px-2 py-1 text-xs bg-card/80 backdrop-blur-sm border-border/40">
-                                                            {exam.language?.toUpperCase()}
-                                                        </Badge>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                )}
-                            </CardContent>
-
-                            {/* Enhanced Footer with progress indicator */}
-                            <div className="relative z-10 px-8 py-4 border-t border-border/30 bg-gradient-to-r from-muted/40 via-muted/20 to-muted/40 backdrop-blur-sm">
-                                <div className="flex items-center justify-between">
-                                    {/* Progress visualization */}
-                                    <div className="flex items-center gap-4">
-                                        <div className="flex items-center gap-2">
-                                            <span className="text-sm font-medium text-muted-foreground">Progress:</span>
-                                            <div className="w-32 h-2 bg-muted rounded-full overflow-hidden">
-                                                <div
-                                                    className="h-full bg-systech-gradient transition-all duration-500 ease-out rounded-full relative overflow-hidden"
-                                                    style={{ width: `${(answeredCount / exam.questions?.length) * 100}%` }}
-                                                >
-                                                    <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/30 to-white/0 animate-pulse" />
-                                                </div>
-                                            </div>
-                                            <span className="text-sm font-bold text-foreground">
-                                                {Math.round((answeredCount / exam.questions?.length) * 100)}%
-                                            </span>
-                                        </div>
-                                    </div>
-                                </div>
+                    {/* Code Editor & Output */}
+                    <div className="flex-1 flex flex-col overflow-hidden">
+                        {/* Editor Header */}
+                        <div className="h-14 border-b border-border bg-muted/30 flex items-center justify-between px-4">
+                            <div className="flex items-center gap-3">
+                                <Terminal className="w-4 h-4 text-muted-foreground" />
+                                <span className="text-sm font-medium text-foreground">Code Editor</span>
+                                <span className="px-2 py-1 bg-primary/10 text-primary text-xs font-medium rounded">
+                                    {exam.language.toUpperCase()}
+                                </span>
                             </div>
-                        </Card>
 
-
-                        {/* Code Editor Panel */}
-                        <Card className="relative overflow-hidden flex flex-col group transition-all duration-500 hover:shadow-2xl border-border/50 backdrop-blur-xl">
-                            {/* Animated background layers */}
-                            <div className="absolute inset-0 bg-gradient-to-br from-card/95 via-card/98 to-card/95" />
-                            <div className="absolute inset-0 bg-gradient-to-tr from-primary/[0.02] via-transparent to-accent/[0.02]" />
-                            <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-primary/30 to-transparent" />
-
-                            {/* Floating geometric decorations */}
-                            <div className="absolute top-6 right-6 w-32 h-32 bg-gradient-to-br from-primary/5 to-accent/5 rounded-full blur-3xl opacity-50 animate-pulse" />
-                            <div className="absolute bottom-8 left-8 w-24 h-24 bg-gradient-to-tl from-accent/5 to-primary/5 rounded-full blur-2xl opacity-40 animate-pulse delay-1000" />
-
-                            {/* Enhanced Header Section */}
-                            <CardHeader className="relative z-10 bg-gradient-to-r from-muted/60 via-muted/40 to-muted/60 backdrop-blur-xl px-8 py-6 border-b border-border/30">
-                                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                                    <div className="flex items-center gap-4 flex-shrink-0">
-                                        {/* Enhanced Terminal Icon */}
-                                        <div className="relative group">
-                                            <div className="absolute inset-0 bg-systech-gradient rounded-2xl blur-lg opacity-50 group-hover:opacity-70 transition-opacity duration-300" />
-                                            <div className="relative w-14 h-14 bg-systech-gradient rounded-2xl flex items-center justify-center shadow-lg transform group-hover:scale-110 group-hover:rotate-6 transition-all duration-300">
-                                                <Terminal className="w-7 h-7 text-white group-hover:rotate-12 transition-transform duration-300" />
-                                                {/* Code indicator dots */}
-                                                <div className="absolute -top-1 -right-1 w-4 h-4 bg-gradient-to-br from-accent to-accent/80 rounded-full shadow-lg flex items-center justify-center">
-                                                    <div className="w-2 h-2 bg-white rounded-full animate-pulse" />
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        <div className="min-w-0 flex-1 space-y-2">
-                                            <div className="flex items-center gap-3">
-                                                <CardTitle className="text-2xl font-bold bg-gradient-to-r from-foreground via-foreground/90 to-foreground/80 bg-clip-text text-transparent">
-                                                    Code Editor
-                                                </CardTitle>
-                                                {/* Live coding indicator */}
-                                                <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-green-50 dark:bg-green-950/50 border border-green-200 dark:border-green-800">
-                                                    <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-                                                    <span className="text-xs font-medium text-green-700 dark:text-green-300">ACTIVE</span>
-                                                </div>
-                                            </div>
-                                            <p className="text-muted-foreground font-medium">Write and test your solution with real-time execution</p>
-
-                                            {/* Code stats */}
-                                            <div className="flex items-center gap-4 mt-2">
-                                                <div className="flex items-center gap-2">
-                                                    <div className="w-3 h-3 rounded-full bg-gradient-to-r from-primary to-primary/80 shadow-sm" />
-                                                    <span className="text-xs font-medium text-muted-foreground">
-                                                        Lines: {code.split('\n').length}
-                                                    </span>
-                                                </div>
-                                                <div className="w-px h-3 bg-border" />
-                                                <div className="flex items-center gap-2">
-                                                    <Code className="w-3 h-3 text-primary" />
-                                                    <span className="text-xs font-medium text-muted-foreground">
-                                                        Characters: {code.length}
-                                                    </span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    {/* Enhanced Action Controls */}
-                                    <div className="flex items-center gap-4">
-                                        {/* Run Button with enhanced styling */}
-                                        <Button
-                                            onClick={handleRun}
-                                            disabled={running}
-                                            className="relative px-8 py-3 bg-systech-gradient text-white font-bold text-lg rounded-2xl transition-all duration-500 hover:scale-105 hover:shadow-2xl hover:shadow-primary/40 group overflow-hidden border border-primary/20 disabled:opacity-50 disabled:transform-none"
-                                        >
-                                            {/* Animated background shimmer */}
-                                            <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 translate-x-[-200%] group-hover:translate-x-[200%] transition-transform duration-1000" />
-
-                                            {/* Button content */}
-                                            <div className="relative flex items-center gap-3">
-                                                {running ? (
-                                                    <>
-                                                        <div className="w-5 h-5 border-2 border-current border-t-transparent rounded-full animate-spin"></div>
-                                                        <span>Executing...</span>
-                                                    </>
-                                                ) : (
-                                                    <>
-                                                        <Play className="w-5 h-5 group-hover:rotate-12 group-hover:scale-110 transition-transform duration-300" />
-                                                        <span>Run Code</span>
-                                                    </>
-                                                )}
-                                            </div>
-
-                                            {/* Glow effect */}
-                                            <div className="absolute inset-0 rounded-2xl bg-primary/20 blur-lg scale-110 opacity-0 group-hover:opacity-100 transition-opacity duration-500 -z-10" />
-                                        </Button>
-
-                                        {/* Theme Toggle with enhanced styling */}
-                                        <div className="flex items-center gap-3 p-3 rounded-2xl bg-gradient-to-r from-muted/60 to-muted/40 border border-border/50 backdrop-blur-sm">
-                                            <div className="flex items-center gap-2">
-                                                <Sun className={`w-4 h-4 transition-all duration-300 ${editorTheme === 'light' ? 'text-amber-500 scale-110' : 'text-muted-foreground scale-90'}`} />
-                                                <Switch
-                                                    id="theme-switch"
-                                                    checked={editorTheme === 'dark'}
-                                                    onCheckedChange={() => setEditorTheme(prev => prev === 'dark' ? 'light' : 'dark')}
-                                                    className="data-[state=checked]:bg-systech-gradient"
-                                                />
-                                                <Moon className={`w-4 h-4 transition-all duration-300 ${editorTheme === 'dark' ? 'text-blue-400 scale-110' : 'text-muted-foreground scale-90'}`} />
-                                            </div>
-                                            <div className="w-px h-4 bg-border" />
-                                            <span className="text-xs font-medium text-muted-foreground">
-                                                {editorTheme === 'dark' ? 'Dark' : 'Light'}
-                                            </span>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* Enhanced Language Badge and Status */}
-                                <div className="flex items-center justify-between mt-4">
-                                    <div className="flex items-center gap-4">
-                                        <Badge className="px-4 py-2 text-sm font-bold bg-systech-gradient text-white rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300">
-                                            <FileCode className="w-4 h-4 mr-2" />
-                                            {exam.language?.toUpperCase()}
-                                        </Badge>
-
-                                        <div className="flex items-center gap-3">
-                                            <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-muted/50 border border-border/50">
-                                                <div className={`w-2 h-2 rounded-full ${code.length > 0 ? 'bg-primary animate-pulse' : 'bg-muted-foreground/50'}`} />
-                                                <span className="text-xs font-medium text-muted-foreground">
-                                                    {code.length > 0 ? 'Modified' : 'Empty'}
-                                                </span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </CardHeader>
-
-                            {/* Enhanced Code Editor Section */}
-                            <div className="relative z-10 h-80 overflow-hidden">
-                                {/* Editor border glow */}
-                                <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-accent/5 pointer-events-none" />
-                                <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-primary/20 to-transparent" />
-
-                                <div className="h-full bg-gradient-to-br from-muted/30 via-muted/10 to-muted/30 backdrop-blur-sm relative">
-                                    <CodeEditor
-                                        language={exam.language}
-                                        value={code}
-                                        onChange={(newCode) => {
-                                            setCode(newCode);
-                                            updateAnswer(activeQuestionIndex, newCode);
+                            <div className="flex items-center gap-3">
+                                <div className="flex items-center gap-2 px-3 py-1.5 bg-background border border-border rounded-lg">
+                                    <Sun className={`w-4 h-4 ${theme === 'light' ? 'text-amber-500' : 'text-muted-foreground'}`} />
+                                    <button
+                                        onClick={() => {
+                                            const newTheme = theme === 'dark' ? 'light' : 'dark';
+                                            setTheme(newTheme);
+                                            setEditorTheme(newTheme);
                                         }}
-                                        theme={editorTheme === "dark" ? "vs-dark" : "light"}
-                                    />
-
-                                    {/* Floating editor overlay */}
-                                    <div className="absolute top-4 right-4 flex items-center gap-2">
-                                        <Badge variant="outline" className="px-2 py-1 text-xs bg-card/80 backdrop-blur-sm border-border/40">
-                                            <Monitor className="w-3 h-3 mr-1" />
-                                            {editorTheme === 'dark' ? 'Dark Mode' : 'Light Mode'}
-                                        </Badge>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Enhanced Console Output Section */}
-                            <div className="relative z-10 bg-gradient-to-br from-card/90 via-card/95 to-card/90 border-t border-border/30">
-                                {/* Console Header */}
-                                <div className="px-6 py-4 border-b border-border/30 bg-gradient-to-r from-muted/40 via-muted/20 to-muted/40 backdrop-blur-sm">
-                                    <div className="flex items-center justify-between">
-                                        <div className="flex items-center gap-4">
-                                            {/* Terminal dots with animation */}
-                                            <div className="flex items-center gap-2">
-                                                <div className="w-3 h-3 bg-red-500 rounded-full shadow-sm animate-pulse"></div>
-                                                <div className="w-3 h-3 bg-amber-500 rounded-full shadow-sm animate-pulse delay-100"></div>
-                                                <div className="w-3 h-3 bg-green-500 rounded-full shadow-sm animate-pulse delay-200"></div>
-                                            </div>
-
-                                            <div className="flex items-center gap-3">
-                                                <div className="w-8 h-8 bg-gradient-to-br from-slate-600 to-slate-700 rounded-lg flex items-center justify-center shadow-md">
-                                                    <Terminal className="w-4 h-4 text-white" />
-                                                </div>
-                                                <div>
-                                                    <span className="text-sm font-bold text-foreground">Console Output</span>
-                                                    <p className="text-xs text-muted-foreground">Real-time execution results</p>
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        <div className="flex items-center gap-3">
-                                            {/* Output status indicator */}
-                                            <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full transition-all duration-300 ${output
-                                                ? 'bg-green-50 dark:bg-green-950/50 border border-green-200 dark:border-green-800 text-green-700 dark:text-green-300'
-                                                : 'bg-muted/50 border border-border/30 text-muted-foreground'
-                                                }`}>
-                                                <div className={`w-2 h-2 rounded-full ${output ? 'bg-green-500 animate-pulse' : 'bg-muted-foreground/50'
-                                                    }`} />
-                                                <span className="text-xs font-medium">
-                                                    {output ? 'Output Ready' : 'Awaiting Execution'}
-                                                </span>
-                                            </div>
-
-                                            {output && (
-                                                <Button
-                                                    variant="ghost"
-                                                    size="sm"
-                                                    onClick={() => setOutput("")}
-                                                    className="h-8 w-8 p-0 hover:bg-destructive/10 hover:text-destructive rounded-lg transition-all duration-200"
-                                                >
-                                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                                                    </svg>
-                                                </Button>
-                                            )}
-                                        </div>
-                                    </div>
+                                        className="relative w-10 h-5 bg-muted rounded-full transition-colors"
+                                    >
+                                        <div className={`absolute top-0.5 ${theme === 'dark' ? 'right-0.5' : 'left-0.5'} w-4 h-4 bg-primary rounded-full transition-all`} />
+                                    </button>
+                                    <Moon className={`w-4 h-4 ${theme === 'dark' ? 'text-blue-400' : 'text-muted-foreground'}`} />
                                 </div>
 
-                                {/* Console Content */}
-                                <ScrollArea className="h-48 relative">
-                                    <div className="p-6 bg-gradient-to-br from-muted/20 via-muted/10 to-muted/20">
-                                        {sqlResult ? (
-                                            <div className="relative overflow-hidden rounded-2xl border-2 border-border/30 bg-gradient-to-br from-card/95 to-card/80 backdrop-blur-sm shadow-lg">
-                                                {/* Table header glow */}
-                                                <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-primary/40 to-transparent" />
-
-                                                <div className="overflow-x-auto">
-                                                    <table className="w-full text-sm">
-                                                        <thead className="bg-gradient-to-r from-muted/80 via-muted/60 to-muted/80 backdrop-blur-sm">
-                                                            <tr>
-                                                                {sqlResult.columns.map((col, index) => (
-                                                                    <th key={index} className="px-4 py-3 text-left font-bold text-foreground border-r border-border/30 last:border-r-0">
-                                                                        <div className="flex items-center gap-2">
-                                                                            <div className="w-2 h-2 bg-primary rounded-full" />
-                                                                            {col}
-                                                                        </div>
-                                                                    </th>
-                                                                ))}
-                                                            </tr>
-                                                        </thead>
-                                                        <tbody>
-                                                            {sqlResult.rows.map((row, rowIndex) => (
-                                                                <tr key={rowIndex} className="hover:bg-gradient-to-r hover:from-primary/5 hover:to-accent/5 transition-all duration-200 border-b border-border/20 last:border-b-0">
-                                                                    {sqlResult.columns.map((col, colIndex) => (
-                                                                        <td key={colIndex} className="px-4 py-3 text-muted-foreground border-r border-border/20 last:border-r-0">
-                                                                            <div className="font-mono text-sm">
-                                                                                {String((row as Record<string, any>)[col]) || <span className="italic text-muted-foreground/60">null</span>}
-                                                                            </div>
-                                                                        </td>
-                                                                    ))}
-                                                                </tr>
-                                                            ))}
-                                                        </tbody>
-                                                    </table>
-                                                </div>
-                                            </div>
-                                        ) : (
-                                            <div className="relative min-h-32 rounded-2xl border-2 border-dashed border-border/30 bg-gradient-to-br from-muted/20 via-muted/10 to-muted/20 backdrop-blur-sm flex items-center justify-center">
-                                                <div className="text-center space-y-3">
-                                                    {output ? (
-                                                        <div className="space-y-2">
-                                                            {/* <div className="w-12 h-12 bg-gradient-to-br from-primary to-accent rounded-2xl flex items-center justify-center mx-auto shadow-lg">
-                                                                <Terminal className="w-6 h-6 text-white" />
-                                                            </div> */}
-                                                            <pre className="text-sm text-muted-foreground font-mono whitespace-pre-wrap break-words text-left max-w-full">
-                                                                {output}
-                                                            </pre>
-                                                        </div>
-                                                    ) : (
-                                                        <div className="space-y-3">
-                                                            <div className="w-16 h-16 bg-gradient-to-br from-muted/60 to-muted/40 rounded-2xl flex items-center justify-center mx-auto shadow-inner">
-                                                                <Play className="w-8 h-8 text-muted-foreground/60" />
-                                                            </div>
-                                                            <div className="space-y-1">
-                                                                <p className="text-muted-foreground/70 italic text-sm font-medium">
-                                                                    Ready for code execution
-                                                                </p>
-                                                                <p className="text-muted-foreground/50 text-xs">
-                                                                    Click 'Run Code' to see your results here
-                                                                </p>
-                                                            </div>
-                                                        </div>
-                                                    )}
-                                                </div>
-
-                                                {/* Floating particles */}
-                                                <div className="absolute top-4 right-4 w-2 h-2 bg-primary/30 rounded-full animate-ping" />
-                                                <div className="absolute bottom-6 left-6 w-1.5 h-1.5 bg-accent/40 rounded-full animate-pulse delay-500" />
-                                            </div>
-                                        )}
-                                    </div>
-                                </ScrollArea>
+                                <button
+                                    onClick={handleRun}
+                                    disabled={running}
+                                    className="px-4 py-2 bg-primary text-primary-foreground rounded-lg font-semibold hover:opacity-90 transition-opacity disabled:opacity-50 flex items-center gap-2"
+                                >
+                                    {running ? (
+                                        <>
+                                            <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                                            Running
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Play className="w-4 h-4" />
+                                            Run Code
+                                        </>
+                                    )}
+                                </button>
                             </div>
-                        </Card>
+                        </div>
+
+                        {/* Editor & Console Split */}
+                        <div className="flex-1 flex overflow-hidden">
+                            {/* Code Editor */}
+                            <div className="flex-1 overflow-hidden bg-background">
+                                <Editor
+                                    height="100%"
+                                    language={exam.language === 'sql' ? 'sql' : exam.language}
+                                    value={code}
+                                    onChange={(value) => {
+                                        const newCode = value || "";
+                                        setCode(newCode);
+                                        updateAnswer(activeQuestionIndex, newCode);
+                                    }}
+                                    theme={theme === 'dark' ? 'vs-dark' : 'light'}
+                                    options={{
+                                        minimap: { enabled: true },
+                                        fontSize: 14,
+                                        lineNumbers: 'on',
+                                        roundedSelection: false,
+                                        scrollBeyondLastLine: false,
+                                        automaticLayout: true,
+                                        tabSize: 4,
+                                        wordWrap: 'on',
+                                        formatOnPaste: true,
+                                        formatOnType: true,
+                                        suggestOnTriggerCharacters: true,
+                                        quickSuggestions: true,
+                                        folding: true,
+                                        bracketPairColorization: { enabled: true },
+                                    }}
+                                />
+                            </div>
+
+                            {/* Console Output */}
+                            <div className="w-2/5 border-l border-border bg-card flex flex-col">
+                                <div className="h-10 border-b border-border bg-muted/30 flex items-center px-4">
+                                    <div className="flex items-center gap-2">
+                                        <div className="w-3 h-3 bg-red-500 rounded-full" />
+                                        <div className="w-3 h-3 bg-amber-500 rounded-full" />
+                                        <div className="w-3 h-3 bg-green-500 rounded-full" />
+                                    </div>
+                                    <span className="ml-4 text-xs font-medium text-muted-foreground">Console</span>
+                                </div>
+
+                                <div className="flex-1 overflow-y-auto p-4 font-mono text-sm">
+                                    {output ? (
+                                        <pre className="text-foreground whitespace-pre-wrap">{output}</pre>
+                                    ) : (
+                                        <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground">
+                                            <Terminal className="w-12 h-12 mb-3 opacity-50" />
+                                            <p className="text-sm">Run your code to see output</p>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
                     </div>
-                </div>
+                </main>
             </div>
-            {/* Proctoring Panel (if active) */}
+
             {exam?.isExamProctored && (
                 <ProctoringMonitor
                     isExamProctored={exam?.isExamProctored || false}
@@ -1654,52 +1086,23 @@ export default function ExamPage() {
                 />
             )}
 
+            {/* Loading Overlay */}
             {isSubmitting && (
-                <div className="fixed inset-0 bg-background/95 backdrop-blur-md z-[100] flex items-center justify-center">
-                    <Card className="w-full max-w-md mx-4 overflow-hidden">
-                        <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-accent/5 to-primary/10 animate-pulse" />
-
-                        <CardContent className="relative p-8">
-                            <div className="flex flex-col items-center gap-6">
-                                <div className="relative">
-                                    <div className="w-20 h-20 border-4 border-primary/30 border-t-primary rounded-full animate-spin" />
-                                    <div className="absolute inset-0 w-20 h-20 border-4 border-accent/20 border-b-accent rounded-full animate-spin reverse"
-                                        style={{ animationDelay: "300ms", animationDirection: "reverse" }} />
-
-                                    <div className="absolute inset-0 flex items-center justify-center">
-                                        <div className="w-10 h-10 bg-systech-gradient rounded-xl flex items-center justify-center shadow-lg">
-                                            <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                                                    d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                                            </svg>
-                                        </div>
-                                    </div>
-
-                                    <div className="absolute -top-2 -right-2 w-4 h-4 bg-accent rounded-full animate-bounce" />
-                                    <div className="absolute -bottom-2 -left-2 w-3 h-3 bg-primary rounded-full animate-bounce delay-500" />
-                                </div>
-
-                                <div className="text-center space-y-3">
-                                    <h3 className="text-2xl font-bold bg-gradient-to-r from-primary via-accent to-primary bg-clip-text text-transparent animate-pulse">
-                                        SysRank Evaluating Your Exam
-                                    </h3>
-                                    <p className="text-muted-foreground font-medium">
-                                        Our advanced AI is carefully analyzing your responses...
-                                    </p>
-
-                                    <div className="flex items-center justify-center gap-2 mt-4">
-                                        <div className="w-2 h-2 bg-primary rounded-full animate-bounce" />
-                                        <div className="w-2 h-2 bg-primary rounded-full animate-bounce delay-100" />
-                                        <div className="w-2 h-2 bg-primary rounded-full animate-bounce delay-200" />
-                                    </div>
-
-                                    <p className="text-xs text-muted-foreground mt-2">
-                                        Please wait while we process your submission
-                                    </p>
+                <div className="fixed inset-0 bg-background/95 backdrop-blur-sm z-50 flex items-center justify-center">
+                    <div className="bg-card border border-border rounded-2xl p-8 shadow-2xl max-w-md w-full mx-4">
+                        <div className="flex flex-col items-center gap-4">
+                            <div className="relative">
+                                <div className="w-16 h-16 border-4 border-primary/30 border-t-primary rounded-full animate-spin" />
+                                <div className="absolute inset-0 flex items-center justify-center">
+                                    <Send className="w-6 h-6 text-primary" />
                                 </div>
                             </div>
-                        </CardContent>
-                    </Card>
+                            <div className="text-center">
+                                <h3 className="text-xl font-bold text-foreground mb-2">Submitting Your Exam</h3>
+                                <p className="text-sm text-muted-foreground">Please wait while we process your submission...</p>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             )}
         </div>

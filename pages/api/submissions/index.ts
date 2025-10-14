@@ -1,17 +1,18 @@
-import { NextApiRequest, NextApiResponse } from 'next';
-import { getDBConnection } from '@/lib/database';
-import sql from 'mssql';
+import { NextApiRequest, NextApiResponse } from "next";
+import pool from "@/lib/db";
 
 export const config = {
     api: {
         bodyParser: {
-            sizeLimit: '10mb',
+            sizeLimit: "10mb",
         },
     },
 };
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-    if (req.method !== 'POST') return res.status(405).end();
+    if (req.method !== "POST") {
+        return res.status(405).json({ error: "Method not allowed" });
+    }
 
     try {
         const {
@@ -24,37 +25,46 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             code,
         } = req.body;
 
-        const db = await getDBConnection();
+        if (!examId || !email || !userName) {
+            return res.status(400).json({
+                error: "Missing required fields: examId, email, userName",
+            });
+        }
 
-        const result = await db
-            .request()
-            .input('email', email)
-            .input('examId', examId)
-            .input('userName', userName)
-            .input('answers', sql.NVarChar(sql.MAX), JSON.stringify(answers ?? []))
-            .input(
-                'evaluationResult',
-                sql.NVarChar(sql.MAX),
-                JSON.stringify(answersWithQuestionIds ?? []),
+        const query = `
+            INSERT INTO "submissions" (
+                "email", 
+                "examId", 
+                "userName", 
+                "answers", 
+                "answersWithQuestionIds", 
+                "code", 
+                "disqualified", 
+                "submittedAt"
             )
-            .input('code', code)
-            .input('disqualified', disqualified ? 1 : 0)
-            .input('submittedAt', new Date().toISOString())
-            .query(`
-                INSERT INTO submissions (
-                email, examId, userName, answers, answersWithQuestionIds, code, disqualified, submittedAt
-                )
-                OUTPUT INSERTED.id
-                VALUES (
-                @email, @examId, @userName, @answers, @evaluationResult, @code, @disqualified, @submittedAt
-                )
-            `);
+            VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())
+            RETURNING "id";
+        `;
 
-        const submissionId = result.recordset?.[0]?.id;
+        const values = [
+            email,
+            examId,
+            userName,
+            JSON.stringify(answers ?? []),
+            JSON.stringify(answersWithQuestionIds ?? []),
+            code || null,
+            disqualified ? true : false,
+        ];
 
-        return res.status(200).json({ success: true, submissionId });
-    } catch (err) {
-        console.error('Submission error:', err);
-        return res.status(500).json({ error: 'Failed to save submission' });
+        const result = await pool.query(query, values);
+        const submissionId = result.rows[0]?.id;
+
+        return res.status(200).json({
+            success: true,
+            submissionId,
+        });
+    } catch (error) {
+        console.error("Submission error:", error);
+        return res.status(500).json({ error: "Failed to save submission" });
     }
 }

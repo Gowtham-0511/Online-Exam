@@ -1,79 +1,64 @@
 import { NextApiRequest, NextApiResponse } from "next";
-import { getDBConnection } from "@/lib/database";
+import pool from "@/lib/db";
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-    if (req.method === 'POST') {
+    if (req.method === "POST") {
         try {
-            const { id, name, createdAt, employeeCount, employees } = req.body;
+            const { name, createdAt, employeeCount, employees } = req.body;
 
             // Validate required fields
             if (!name || !employeeCount || !employees) {
                 return res.status(400).json({
-                    error: 'Missing required fields: name, employeeCount, employees'
+                    error: "Missing required fields: name, employeeCount, employees",
                 });
             }
 
-            const db = await getDBConnection();
-
-            interface Employee {
-                id: string;
-                name: string;
-                Avatar?: string;
-                [key: string]: any;
-            }
-
-            interface EmployeeWithoutAvatar extends Omit<Employee, 'Avatar'> { }
-
-            const employeesWithoutAvatar: EmployeeWithoutAvatar[] = employees.map((employee: Employee): EmployeeWithoutAvatar => {
-                const { Avatar, ...employeeWithoutAvatar } = employee;
-                return employeeWithoutAvatar;
+            // Remove Avatar from employees
+            const employeesWithoutAvatar = employees.map((emp: any) => {
+                const { Avatar, ...rest } = emp;
+                return rest;
             });
 
-            const request = db.request();
-            request.input('name', name);
-            request.input('employeeCount', employeeCount);
-            request.input('employees', JSON.stringify(employeesWithoutAvatar));
+            const query = `
+                INSERT INTO "Batch" ("Name", "EmployeeCount", "Employees", "CreatedAt")
+                VALUES ($1, $2, $3, $4)
+                RETURNING *;
+            `;
 
-            const result = await request.query(`
-                INSERT INTO Batch (Name, EmployeeCount, Employees) 
-                VALUES (@name, @employeeCount, @employees)
-            `);
+            const values = [
+                name,
+                employeeCount,
+                JSON.stringify(employeesWithoutAvatar),
+                createdAt || new Date(),
+            ];
 
-            console.log(result);
+            const result = await pool.query(query, values);
 
-            const newBatch = {
-                id: id,
-                name: name,
-                createdAt: createdAt,
-                employeeCount: employeeCount,
-                employees: employeesWithoutAvatar
-            };
+            console.log("Batch created:", result.rows[0]);
 
-            return res.status(201).json(newBatch);
-
+            return res.status(201).json(result.rows[0]);
         } catch (error) {
-            console.error('Error creating batch:', error);
-
-            // Send error response
+            console.error("Error creating batch:", error);
             return res.status(500).json({
-                error: 'Internal server error',
-                message: error instanceof Error ? error.message : 'Unknown error occurred'
+                error: "Internal server error",
+                message: error instanceof Error ? error.message : "Unknown error occurred",
             });
         }
     }
 
-    if (req.method === 'GET') {
+    if (req.method === "GET") {
         try {
-            const db = await getDBConnection();
-
-            const result = await db.query(`
-                SELECT * FROM Batch ORDER BY CreatedAt
-            `);
-
-            res.status(200).json(result.recordset);
+            const query = `
+                SELECT * FROM "Batch"
+                ORDER BY "CreatedAt" ASC;
+            `;
+            const result = await pool.query(query);
+            return res.status(200).json(result.rows);
         } catch (error) {
-            console.error("Error fetching batch:", error);
-            res.status(500).json({ error: "Failed to fetch Batch" });
+            console.error("Error fetching batches:", error);
+            return res.status(500).json({ error: "Failed to fetch Batch" });
         }
     }
+
+    return res.status(405).json({ error: "Method not allowed" });
 }

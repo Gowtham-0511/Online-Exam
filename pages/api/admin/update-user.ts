@@ -1,5 +1,6 @@
 import { NextApiRequest, NextApiResponse } from "next";
 import { getDBConnection } from "@/lib/database";
+import pool from "@/lib/db";
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
     if (req.method !== "PATCH") return res.status(405).end();
@@ -13,18 +14,23 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     try {
-        const db = await getDBConnection();
+        // const db = await getDBConnection();
 
         const query = `
             UPDATE Users
-            SET role = @role
-            WHERE email = @email
+            SET role = $1
+            WHERE email = $2
         `;
 
-        await db.request()
-            .input("email", email)
-            .input("role", role)
-            .query(query);
+        const values = [role, email];
+
+        await pool.query(query, values);
+
+
+        // await db.request()
+        //     .input("email", email)
+        //     .input("role", role)
+        //     .query(query);
 
         res.status(200).json({ message: "User role updated successfully" });
     } catch (error) {

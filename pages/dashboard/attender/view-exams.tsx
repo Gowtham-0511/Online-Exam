@@ -274,32 +274,7 @@ const ViewExams: React.FC = () => {
             };
         }
     };
-
-    // const handelStartExam = async (examId: any) => {
-    //     const fetchExamDetails = async () => {
-    //         try {
-    //             const response = await fetch(`/api/assessment/${encodeURIComponent(examId)}`, { method: 'GET' });
-    //             if (!response.ok) {
-    //                 if (response.status === 404) {
-    //                     throw new Error('Exam not found or no longer available');
-    //                 } else {
-    //                     throw new Error('Failed to fetch exam details');
-    //                 }
-    //             }
-    //             const examData = await response.json();
-    //             console.log('Fetched exam data:', examData);
-
-    //             setExamData(examData);
-    //             setShowExamPopup(true);
-    //         } catch (error) {
-    //             console.error('Error fetching exam details:', error);
-    //             setError('Failed to load exam details');
-    //         }
-    //     };
-
-    //     await fetchExamDetails();
-    // };
-
+    
     const handleStartExam = (examId: any) => {
         const exam = exams.find(e => e.id === examId);
         if (exam) {

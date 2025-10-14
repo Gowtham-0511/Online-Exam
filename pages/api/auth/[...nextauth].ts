@@ -3,8 +3,7 @@ import AzureADProvider from "next-auth/providers/azure-ad";
 import GoogleProvider from "next-auth/providers/google";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { compare } from "bcryptjs";
-import { getDBConnection } from "@/lib/database";
-import sql from 'mssql';
+import pool from "@/lib/db"; // ✅ PostgreSQL connection (pg Pool)
 
 // Extend NextAuth types to include 'id' in session.user
 import { Session, User } from "next-auth";
@@ -27,20 +26,25 @@ declare module "next-auth" {
 
 export const authOptions: NextAuthOptions = {
     providers: [
+        // ✅ Azure AD Provider
         AzureADProvider({
             clientId: process.env.AZURE_AD_CLIENT_ID!,
             clientSecret: process.env.AZURE_AD_CLIENT_SECRET!,
             tenantId: process.env.AZURE_AD_TENANT_ID!,
         }),
+
+        // ✅ Google Provider
         GoogleProvider({
             clientId: process.env.GOOGLE_CLIENT_ID!,
             clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
         }),
+
+        // ✅ Credentials Provider (Email/Password Login)
         CredentialsProvider({
             name: "credentials",
             credentials: {
                 email: { label: "Email", type: "email" },
-                password: { label: "Password", type: "password" }
+                password: { label: "Password", type: "password" },
             },
             async authorize(credentials) {
                 if (!credentials?.email || !credentials?.password) {
@@ -48,20 +52,21 @@ export const authOptions: NextAuthOptions = {
                 }
 
                 try {
-                    const pool = await getDBConnection();
+                    // Check user in PostgreSQL
+                    const result = await pool.query(
+                        `SELECT id, "email", "name", "password", "role"
+                         FROM "ExternalUsers"
+                         WHERE "email" = $1`,
+                        [credentials.email]
+                    );
 
-                    const result = await pool.request()
-                        .input('email', sql.VarChar, credentials.email)
-                        .query('SELECT id, email, name, password, role FROM ExternalUsers WHERE email = @email');
-
-                    const user = result.recordset[0];
+                    const user = result.rows[0];
 
                     if (!user || !user.password) {
                         throw new Error("Invalid credentials");
                     }
 
                     const isPasswordValid = await compare(credentials.password, user.password);
-
                     if (!isPasswordValid) {
                         throw new Error("Invalid credentials");
                     }
@@ -72,19 +77,23 @@ export const authOptions: NextAuthOptions = {
                         name: user.name,
                     };
                 } catch (error) {
-                    console.error('Auth error:', error);
+                    console.error("Auth error:", error);
                     throw new Error("Authentication failed");
                 }
-            }
-        })
+            },
+        }),
     ],
+
     session: {
         strategy: "jwt",
     },
+
     pages: {
-        signIn: '/',
+        signIn: "/", // your login page
     },
+
     secret: process.env.NEXTAUTH_SECRET,
+
     callbacks: {
         async signIn({ user, account, profile }) {
             return true;

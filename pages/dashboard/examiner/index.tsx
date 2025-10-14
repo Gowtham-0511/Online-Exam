@@ -7,13 +7,11 @@ import ExaminerLayout from "./ExaminerLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Progress } from "@/components/ui/progress";
-import { Separator } from "@/components/ui/separator";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
     Clock,
@@ -77,8 +75,8 @@ export default function ExaminerDashboard() {
     const [useExcelQuestions, setUseExcelQuestions] = useState(false);
     const [isExamProctored, setIsExamProctored] = useState(false);
 
-    const [startTime, setStartTime] = useState("");
-    const [endTime, setEndTime] = useState("");
+    // const [startTime, setStartTime] = useState("");
+    // const [endTime, setEndTime] = useState("");
     const [allowedUsersRaw, setAllowedUsersRaw] = useState("");
     const [currentStep, setCurrentStep] = useState(1);
 
@@ -97,6 +95,18 @@ export default function ExaminerDashboard() {
 
     const [questionType, setQuestionType] = useState("coding");
     const [mcqQuestions, setMcqQuestions] = useState<any[]>([]);
+
+    const [sqlServerType, setSqlServerType] = useState<'ssms' | 'postgres' | ''>('');
+    const [sqlCredentials, setSqlCredentials] = useState({
+        host: '',
+        port: '',
+        username: '',
+        password: '',
+        database: ''
+    });
+    const [savedCredentialId, setSavedCredentialId] = useState<string | null>(null);
+    const [testingConnection, setTestingConnection] = useState(false);
+    const [connectionStatus, setConnectionStatus] = useState<'success' | 'failed' | null>(null);
 
     const resetForm = () => {
         setTitle("");
@@ -122,85 +132,194 @@ export default function ExaminerDashboard() {
         setSelectedBatches([]);
         setAvaileBatches([]);
         setBatchTimes({});
+        setSqlServerType('');
+        setSqlCredentials({
+            host: '',
+            port: '',
+            username: '',
+            password: '',
+            database: ''
+        });
+        setConnectionStatus(null);
+        setSavedCredentialId(null);
     };
 
-    const handleCreateExam = useCallback(async () => {
-        const validQuestions = questions.filter(q => q.question && q.question.trim() !== "");
-
-        if (!title || !title.trim()) {
-            toast.error("Exam title is required.");
-            return;
-        }
-
-        if (validQuestions.length === 0) {
-            toast.error("Please add at least one question or generate questions from Excel.");
-            return;
-        }
-
-        setIsLoading(true);
+    const testSqlConnection = async () => {
+        setTestingConnection(true);
+        setConnectionStatus(null);
 
         try {
-            const examId = title.toLowerCase().replace(/\s+/g, "-");
+            const response = await fetch('/api/sql/test-connection', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    serverType: sqlServerType,
+                    credentials: sqlCredentials,
+                    saveCredentials: true,  // Flag to save credentials
+                    examTitle: title,
+                    createdBy: session?.user?.email
+                })
+            });
 
-            const examData = {
-                examId,
-                title,
-                language,
-                duration,
-                createdBy: session?.user?.email,
-                questions: validQuestions,
-                isExamProctored,
-                useExcelQuestions,
-                questionConfig,
-                startTime,
-                endTime,
-                allowedUsers: allowedUsersRaw
-                    .split(",")
-                    .map((email) => email.trim())
-                    .filter(Boolean),
-                batchSchedules: selectedBatches.map(batchId => ({
-                    batchId,
-                    startTime: batchTimes[batchId]?.startTime || '',
-                    endTime: batchTimes[batchId]?.endTime || ''
-                }))
-            };
+            const data = await response.json();
 
-            console.log(examData);
+            if (response.ok && data.success) {
+                setConnectionStatus('success');
+                setSavedCredentialId(data.credentialId);  // Save the credential ID
+                toast.success('Connection successful and credentials saved!');
+            } else {
+                setConnectionStatus('failed');
+                toast.error(data.message || 'Connection failed');
+            }
+        } catch (error) {
+            setConnectionStatus('failed');
+            toast.error('Failed to test connection');
+        } finally {
+            setTestingConnection(false);
+        }
+    };
 
-            try {
-                const response = await fetch("/api/assessment/create", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify(examData),
-                });
+    interface BatchTimes {
+        [key: string]: {
+            startTime: string;
+            endTime: string;
+        };
+    }
 
-                if (response.status === 409) {
-                    toast.error("An exam with this title already exists. Please choose a different title.");
-                    return;
-                }
+    interface ExamData {
+        examId: string;
+        title: string;
+        language: string;
+        sqlServerType?: string;
+        sqlCredentialId?: string;  // Changed from sqlCredentials to sqlCredentialId
+        duration: number;
+        createdBy: string | undefined;
+        questions: Question[];
+        isExamProctored: boolean;
+        useExcelQuestions: boolean;
+        questionConfig: typeof questionConfig;
+        allowedUsers: string[];
+        batchSchedules: {
+            batchId: string;
+            startTime: string;
+            endTime: string;
+        }[];
+    }
 
-                if (!response.ok) throw new Error("Failed to create exam");
+    const handleCreateExam = useCallback(
+        async (batchTimes: BatchTimes): Promise<void> => {
+            const validQuestions: Question[] = questions.filter(
+                (q) => q.question && q.question.trim() !== ""
+            );
 
-                setShowSuccess(true);
-                setTimeout(() => {
-                    setShowSuccess(false);
-                    resetForm();
-                }, 2000);
-
-            } catch (error) {
-                console.error("Error saving exam data:", error);
-                toast.error("Failed to save exam data. Please try again.");
+            if (!title || !title.trim()) {
+                toast.error("Exam title is required.");
                 return;
             }
 
-        } catch (error) {
-            console.error("Error creating exam:", error);
-            toast.error("Error creating exam. Please try again.");
-        } finally {
-            setIsLoading(false);
-            setCurrentStep(1);
-        }
-    }, [title, questions, language, duration, session, selectedBatches]);
+            if (validQuestions.length === 0) {
+                toast.error("Please add at least one question or generate questions from Excel.");
+                return;
+            }
+
+            setIsLoading(true);
+
+            const incompleteBatchSchedules: string[] = selectedBatches.filter((batchId) => {
+                const times = batchTimes[batchId];
+                return !times?.startTime || !times?.endTime;
+            });
+
+            if (incompleteBatchSchedules.length > 0) {
+                const batchNames = incompleteBatchSchedules
+                    .map((batchId) => {
+                        const batch = availableBatches.find((b) => b.Id === batchId);
+                        return batch?.Name || batchId;
+                    })
+                    .join(", ");
+
+                toast.error(`Please set start and end times for: ${batchNames}`);
+                return;
+            }
+
+            try {
+                const examId: string = title.toLowerCase().replace(/\s+/g, "-");
+
+                const examData: ExamData = {
+                    examId,
+                    title,
+                    language,
+                    ...(language === 'sql' && {
+                        sqlServerType,
+                        sqlCredentialId: savedCredentialId ?? undefined
+                    }),
+                    duration,
+                    createdBy: session?.user?.email ?? undefined,
+                    questions: validQuestions,
+                    isExamProctored,
+                    useExcelQuestions,
+                    questionConfig,
+                    allowedUsers: allowedUsersRaw
+                        .split(",")
+                        .map((email) => email.trim())
+                        .filter(Boolean),
+                    batchSchedules: selectedBatches.map((batchId) => ({
+                        batchId,
+                        startTime: batchTimes[batchId]?.startTime || "",
+                        endTime: batchTimes[batchId]?.endTime || "",
+                    })),
+                };
+
+                console.log(examData);
+
+                try {
+                    const response: Response = await fetch("/api/assessment/create", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify(examData),
+                    });
+
+                    if (response.status === 409) {
+                        toast.error("An exam with this title already exists. Please choose a different title.");
+                        return;
+                    }
+
+                    if (!response.ok) throw new Error("Failed to create exam");
+
+                    setShowSuccess(true);
+                    setTimeout(() => {
+                        setShowSuccess(false);
+                        resetForm();
+                    }, 2000);
+
+                } catch (error) {
+                    console.error("Error saving exam data:", error);
+                    toast.error("Failed to save exam data. Please try again.");
+                    return;
+                }
+
+            } catch (error) {
+                console.error("Error creating exam:", error);
+                toast.error("Error creating exam. Please try again.");
+            } finally {
+                setIsLoading(false);
+                setCurrentStep(1);
+            }
+        },
+        [
+            title,
+            questions,
+            language,
+            duration,
+            session,
+            selectedBatches,
+            availableBatches,
+            isExamProctored,
+            useExcelQuestions,
+            questionConfig,
+            allowedUsersRaw,
+            resetForm,
+        ]
+    );
 
     const languageOptions = [
         { value: "python", label: "Python", icon: "🐍" },
@@ -214,61 +333,6 @@ export default function ExaminerDashboard() {
         typeof q.question === 'string' &&
         q.question.trim() !== ""
     );
-
-    // const fetchQuestions = async () => {
-    //     if (beginnerCount + intermediateCount + expertCount === 0) {
-    //         setError('Please select at least one question');
-    //         return;
-    //     }
-
-    //     setLoading(true);
-    //     setError('');
-
-    //     try {
-    //         const res = await fetch(`/api/question-bank?language=${language}`);
-
-    //         if (!res.ok) {
-    //             throw new Error(`HTTP error! status: ${res.status}`);
-    //         }
-
-    //         const allQuestions = await res.json();
-
-    //         const beginner = allQuestions
-    //             .filter((q: { difficulty: string; }) => q.difficulty.toLocaleLowerCase() === "easy")
-    //             .slice(0, beginnerCount);
-
-    //         const intermediate = allQuestions
-    //             .filter((q: { difficulty: string; }) => q.difficulty.toLocaleLowerCase() === "medium")
-    //             .slice(0, intermediateCount);
-
-    //         const expert = allQuestions
-    //             .filter((q: { difficulty: string; }) => q.difficulty.toLocaleLowerCase() === "hard")
-    //             .slice(0, expertCount);
-
-    //         const selectedQuestions = [...beginner, ...intermediate, ...expert];
-
-    //         const mappedQuestions = selectedQuestions.map((q, index) => ({
-    //             id: `generated-q${index + 1}`,
-    //             question: q.questionText ?? q.question,
-    //             expectedOutput: q.expectedOutput ? q.expectedOutput.toString().trim() : '',
-    //             difficulty: q.difficulty,
-    //             marks: q.marks,
-    //             solution: q.solution !== undefined ? q.solution : undefined
-    //         }));
-
-    //         setQuestions(mappedQuestions);
-
-    //     } catch (err) {
-    //         console.error('Error fetching questions:', err);
-    //         if (err instanceof Error) {
-    //             setError(`Failed to fetch questions: ${err.message}`);
-    //         } else {
-    //             setError('Failed to fetch questions: Unknown error');
-    //         }
-    //     } finally {
-    //         setLoading(false);
-    //     }
-    // };
 
     const fetchQuestions = async (): Promise<void> => {
         if (beginnerCount + intermediateCount + expertCount === 0) {
@@ -519,6 +583,134 @@ export default function ExaminerDashboard() {
                                             />
                                         </div>
 
+                                        {language === 'sql' && (
+                                            <>
+                                                <div className="space-y-2">
+                                                    <Label htmlFor="sqlServerType" className="text-sm font-medium">SQL Server Type *</Label>
+                                                    <Select value={sqlServerType} onValueChange={(value) => setSqlServerType(value as 'ssms' | 'postgres' | '')} disabled={isLoading}>
+                                                        <SelectTrigger className="h-11">
+                                                            <SelectValue placeholder="Select SQL Server" />
+                                                        </SelectTrigger>
+                                                        <SelectContent>
+                                                            <SelectItem value="ssms">
+                                                                <div className="flex items-center gap-2">
+                                                                    <span>🗄️</span>
+                                                                    <span>SQL Server (SSMS)</span>
+                                                                </div>
+                                                            </SelectItem>
+                                                            <SelectItem value="postgres">
+                                                                <div className="flex items-center gap-2">
+                                                                    <span>🐘</span>
+                                                                    <span>PostgreSQL</span>
+                                                                </div>
+                                                            </SelectItem>
+                                                        </SelectContent>
+                                                    </Select>
+                                                </div>
+
+                                                {sqlServerType && (
+                                                    <div className="md:col-span-2 space-y-4">
+                                                        <Card className="border-primary/20">
+                                                            <CardHeader>
+                                                                <CardTitle className="text-sm font-medium flex items-center gap-2">
+                                                                    <Settings className="w-4 h-4" />
+                                                                    Database Connection Settings
+                                                                </CardTitle>
+                                                            </CardHeader>
+                                                            <CardContent className="space-y-4">
+                                                                <div className="grid grid-cols-2 gap-4">
+                                                                    <div className="space-y-2">
+                                                                        <Label htmlFor="host">Host/Server *</Label>
+                                                                        <Input
+                                                                            id="host"
+                                                                            value={sqlCredentials.host}
+                                                                            onChange={(e) => setSqlCredentials(prev => ({ ...prev, host: e.target.value }))}
+                                                                            placeholder="localhost"
+                                                                            className="h-10"
+                                                                        />
+                                                                    </div>
+                                                                    <div className="space-y-2">
+                                                                        <Label htmlFor="port">Port *</Label>
+                                                                        <Input
+                                                                            id="port"
+                                                                            value={sqlCredentials.port}
+                                                                            onChange={(e) => setSqlCredentials(prev => ({ ...prev, port: e.target.value }))}
+                                                                            placeholder={sqlServerType === 'postgres' ? '5432' : '1433'}
+                                                                            className="h-10"
+                                                                        />
+                                                                    </div>
+                                                                </div>
+                                                                <div className="space-y-2">
+                                                                    <Label htmlFor="database">Database Name *</Label>
+                                                                    <Input
+                                                                        id="database"
+                                                                        value={sqlCredentials.database}
+                                                                        onChange={(e) => setSqlCredentials(prev => ({ ...prev, database: e.target.value }))}
+                                                                        placeholder="database_name"
+                                                                        className="h-10"
+                                                                    />
+                                                                </div>
+                                                                <div className="grid grid-cols-2 gap-4">
+                                                                    <div className="space-y-2">
+                                                                        <Label htmlFor="username">Username *</Label>
+                                                                        <Input
+                                                                            id="username"
+                                                                            value={sqlCredentials.username}
+                                                                            onChange={(e) => setSqlCredentials(prev => ({ ...prev, username: e.target.value }))}
+                                                                            placeholder="username"
+                                                                            className="h-10"
+                                                                        />
+                                                                    </div>
+                                                                    <div className="space-y-2">
+                                                                        <Label htmlFor="password">Password *</Label>
+                                                                        <Input
+                                                                            id="password"
+                                                                            type="password"
+                                                                            value={sqlCredentials.password}
+                                                                            onChange={(e) => setSqlCredentials(prev => ({ ...prev, password: e.target.value }))}
+                                                                            placeholder="••••••••"
+                                                                            className="h-10"
+                                                                        />
+                                                                    </div>
+                                                                </div>
+                                                                <Button
+                                                                    type="button"
+                                                                    onClick={testSqlConnection}
+                                                                    disabled={testingConnection || !sqlCredentials.host || !sqlCredentials.port || !sqlCredentials.username || !sqlCredentials.password || !sqlCredentials.database}
+                                                                    className="w-full"
+                                                                    variant={connectionStatus === 'success' ? 'default' : 'outline'}
+                                                                >
+                                                                    {testingConnection ? (
+                                                                        <>
+                                                                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                                                            Testing Connection...
+                                                                        </>
+                                                                    ) : connectionStatus === 'success' ? (
+                                                                        <>
+                                                                            <CheckCircle className="w-4 h-4 mr-2" />
+                                                                            Connection Successful
+                                                                        </>
+                                                                    ) : (
+                                                                        <>
+                                                                            <RefreshCw className="w-4 h-4 mr-2" />
+                                                                            Test Connection
+                                                                        </>
+                                                                    )}
+                                                                </Button>
+                                                                {connectionStatus === 'failed' && (
+                                                                    <Alert variant="destructive">
+                                                                        <AlertDescription>
+                                                                            Connection failed. Please check your credentials and try again.
+                                                                        </AlertDescription>
+                                                                    </Alert>
+                                                                )}
+                                                            </CardContent>
+                                                        </Card>
+                                                    </div>
+                                                )}
+                                            </>
+                                        )}
+
                                         <div className="space-y-3">
                                             <Label className="text-sm font-medium">Exam Proctoring</Label>
                                             <Card className="p-4">
@@ -539,10 +731,25 @@ export default function ExaminerDashboard() {
                                         </div>
                                     </div>
 
+                                    {language === 'sql' && sqlServerType && (
+                                        <div className="space-y-1">
+                                            <Label className="text-sm font-medium text-muted-foreground">SQL Server</Label>
+                                            <div className="flex items-center gap-2">
+                                                <span>{sqlServerType === 'postgres' ? '🐘' : '🗄️'}</span>
+                                                <span className="font-semibold">
+                                                    {sqlServerType === 'postgres' ? 'PostgreSQL' : 'SQL Server (SSMS)'}
+                                                </span>
+                                            </div>
+                                            {savedCredentialId && (
+                                                <p className="text-xs text-muted-foreground">Credential ID: {savedCredentialId}</p>
+                                            )}
+                                        </div>
+                                    )}
+
                                     <div className="flex justify-end pt-4">
                                         <Button
                                             onClick={() => setCurrentStep(2)}
-                                            disabled={!title.trim()}
+                                            disabled={!title.trim() || (language === 'sql' && (!sqlServerType || connectionStatus !== 'success'))}
                                             className="px-8"
                                         >
                                             Next: Questions
@@ -877,11 +1084,11 @@ export default function ExaminerDashboard() {
                                                                                     if (!selectedBatches.includes(batch.Id)) {
                                                                                         setBatchTimes(prev => ({
                                                                                             ...prev,
-                                                                                            [batch.Id]: { startTime: '', endTime: '' }
+                                                                                            [batch.Id]: { startTime: '', endTime: '' } // Remove String()
                                                                                         }));
                                                                                     } else {
                                                                                         setBatchTimes(prev => {
-                                                                                            const { [batch.Id]: removed, ...rest } = prev;
+                                                                                            const { [batch.Id]: removed, ...rest } = prev; // Remove String()
                                                                                             return rest;
                                                                                         });
                                                                                     }
@@ -903,32 +1110,44 @@ export default function ExaminerDashboard() {
                                                                     {selectedBatches.includes(batch.Id) && (
                                                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t">
                                                                             <div className="space-y-2">
-                                                                                <Label className="text-sm font-medium">Start Time</Label>
+                                                                                <Label className="text-sm font-medium flex items-center gap-2">
+                                                                                    <Calendar className="w-4 h-4" />
+                                                                                    Start Time *
+                                                                                </Label>
                                                                                 <Input
                                                                                     type="datetime-local"
                                                                                     value={batchTimes[batch.Id]?.startTime || ''}
-                                                                                    onChange={(e) => setBatchTimes(prev => ({
-                                                                                        ...prev,
-                                                                                        [batch.Id]: {
-                                                                                            ...prev[batch.Id],
-                                                                                            startTime: e.target.value
-                                                                                        }
-                                                                                    }))}
+                                                                                    onChange={(e) => {
+                                                                                        console.log('Setting start time:', e.target.value);
+                                                                                        setBatchTimes(prev => ({
+                                                                                            ...prev,
+                                                                                            [batch.Id]: {
+                                                                                                ...prev[batch.Id],
+                                                                                                startTime: e.target.value
+                                                                                            }
+                                                                                        }));
+                                                                                    }}
                                                                                     className="h-10"
                                                                                 />
                                                                             </div>
                                                                             <div className="space-y-2">
-                                                                                <Label className="text-sm font-medium">End Time</Label>
+                                                                                <Label className="text-sm font-medium flex items-center gap-2">
+                                                                                    <Clock className="w-4 h-4" />
+                                                                                    End Time *
+                                                                                </Label>
                                                                                 <Input
                                                                                     type="datetime-local"
                                                                                     value={batchTimes[batch.Id]?.endTime || ''}
-                                                                                    onChange={(e) => setBatchTimes(prev => ({
-                                                                                        ...prev,
-                                                                                        [batch.Id]: {
-                                                                                            ...prev[batch.Id],
-                                                                                            endTime: e.target.value
-                                                                                        }
-                                                                                    }))}
+                                                                                    onChange={(e) => {
+                                                                                        console.log('Setting end time:', e.target.value);
+                                                                                        setBatchTimes(prev => ({
+                                                                                            ...prev,
+                                                                                            [batch.Id]: {
+                                                                                                ...prev[batch.Id],
+                                                                                                endTime: e.target.value
+                                                                                            }
+                                                                                        }));
+                                                                                    }}
                                                                                     className="h-10"
                                                                                 />
                                                                             </div>
@@ -1000,7 +1219,19 @@ export default function ExaminerDashboard() {
                                             Back
                                         </Button>
                                         <Button
-                                            onClick={() => setCurrentStep(4)}
+                                            onClick={() => {
+                                                const incompleteTimes = selectedBatches.some(batchId => {
+                                                    const times = batchTimes[batchId];
+                                                    return !times?.startTime || !times?.endTime;
+                                                });
+
+                                                if (incompleteTimes) {
+                                                    toast.error('Please set start and end times for all selected batches');
+                                                    return;
+                                                }
+
+                                                setCurrentStep(4);
+                                            }}
                                             disabled={selectedBatches.length === 0}
                                             className="px-8"
                                         >
@@ -1068,20 +1299,6 @@ export default function ExaminerDashboard() {
                                                         <span className="font-semibold">{isExamProctored ? 'Proctored' : 'Non-Proctored'}</span>
                                                     </div>
                                                 </div>
-
-                                                {(startTime || endTime) && (
-                                                    <div className="space-y-1">
-                                                        <Label className="text-sm font-medium text-muted-foreground">Schedule</Label>
-                                                        <div className="flex items-center gap-2">
-                                                            <Calendar className="w-4 h-4" />
-                                                            <span className="font-semibold text-sm">
-                                                                {startTime && new Date(startTime).toLocaleString()}
-                                                                {startTime && endTime && ' - '}
-                                                                {endTime && new Date(endTime).toLocaleString()}
-                                                            </span>
-                                                        </div>
-                                                    </div>
-                                                )}
 
                                                 {allowedUsersRaw.trim() && (
                                                     <div className="space-y-1">
@@ -1200,7 +1417,7 @@ export default function ExaminerDashboard() {
                                             Back
                                         </Button>
                                         <Button
-                                            onClick={handleCreateExam}
+                                            onClick={() => handleCreateExam(batchTimes)}
                                             disabled={isLoading || !isFormValid}
                                             size="lg"
                                             className="px-8"

@@ -108,8 +108,8 @@ const BatchManagementPage: React.FC = () => {
                 }
 
                 const data = await res.json();
-                console.log('Employee data:', data.recordset);
-                setEmployees(data.recordset || []);
+                console.log('Employee data:', data);
+                setEmployees(data || []);
             } catch (error) {
                 console.error('Error fetching employees:', error);
                 setEmployees([]);
@@ -160,9 +160,11 @@ const BatchManagementPage: React.FC = () => {
 
                 let camelCaseData = convertKeysToCamelCase(data);
 
-                camelCaseData = camelCaseData.map((batch: { employees: string }) => ({
+                camelCaseData = camelCaseData.map((batch: { employees: string | any[] }) => ({
                     ...batch,
-                    employees: batch.employees ? JSON.parse(batch.employees) : []
+                    employees: typeof batch.employees === 'string'
+                        ? JSON.parse(batch.employees)
+                        : (Array.isArray(batch.employees) ? batch.employees : [])
                 }));
 
                 setBatches(camelCaseData);
@@ -269,7 +271,17 @@ const BatchManagementPage: React.FC = () => {
 
             const createdBatch = await response.json()
 
-            setBatches(prev => [createdBatch, ...prev])
+            const convertedBatch = {
+                id: createdBatch.Id,
+                name: createdBatch.Name,
+                createdAt: createdBatch.CreatedAt,
+                employeeCount: createdBatch.EmployeeCount,
+                employees: typeof createdBatch.Employees === 'string'
+                    ? JSON.parse(createdBatch.Employees)
+                    : createdBatch.Employees
+            }
+
+            setBatches(prev => [convertedBatch, ...prev])
             console.log(batches);
             setBatchName('')
             setSelectedEmployees(new Set())
@@ -953,10 +965,10 @@ const BatchManagementPage: React.FC = () => {
                                             <div className="space-y-3">
                                                 <div className="flex items-center justify-between">
                                                     <span className="text-sm font-medium text-muted-foreground">Team Members</span>
-                                                    <span className="text-sm text-muted-foreground">{batch.employees.length} employees</span>
+                                                    <span className="text-sm text-muted-foreground">{batch.employees?.length || 0} employees</span>
                                                 </div>
                                                 <div className="flex -space-x-2">
-                                                    {batch.employees.slice(0, 4).map((employee) => (
+                                                    {(batch.employees || []).slice(0, 4).map((employee) => (
                                                         <Avatar key={employee.Id} className="h-8 w-8 border-2 border-background">
                                                             {/* <AvatarImage src={employee.Avatar} alt={employee.Name} /> */}
                                                             <AvatarFallback className="bg-primary/10 text-primary text-xs font-semibold">
@@ -964,9 +976,9 @@ const BatchManagementPage: React.FC = () => {
                                                             </AvatarFallback>
                                                         </Avatar>
                                                     ))}
-                                                    {batch.employees.length > 4 && (
+                                                    {(batch.employees?.length || 0) > 4 && (
                                                         <div className="flex h-8 w-8 items-center justify-center rounded-full border-2 border-background bg-muted text-xs font-medium text-muted-foreground">
-                                                            +{batch.employees.length - 4}
+                                                            +{(batch.employees?.length || 0) - 4}
                                                         </div>
                                                     )}
                                                 </div>
