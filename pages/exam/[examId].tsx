@@ -44,7 +44,7 @@ export default function ExamPage() {
     const [running, setRunning] = useState(false);
     const [answers, setAnswers] = useState<string[]>([]);
     const [activeQuestionIndex, setActiveQuestionIndex] = useState(0);
-    const [sqlResult, setSqlResult] = useState<{ columns: string[]; rows: any[][] } | null>(null);
+    const [sqlResult, setSqlResult] = useState<{ columns: string[]; rows: Record<string, any>[] } | null>(null);
     const [shuffledQuestions, setShuffledQuestions] = useState<any[]>([]);
     const [sidebarOpen, setSidebarOpen] = useState(true);
 
@@ -728,12 +728,13 @@ export default function ExamPage() {
     const handleRunSql = async () => {
         setRunning(true);
         setOutput("Running...");
+        setSqlResult(null);
 
         try {
             const res = await fetch("/api/run-sql", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ query: code, database: "SysRankDB" }),
+                body: JSON.stringify({ query: code, examId: examId }),
             });
 
             const data = await res.json();
@@ -750,9 +751,9 @@ export default function ExamPage() {
                     rows: data.rows,
                 });
             }
-
         } catch (e) {
-            setOutput("❌ Server error.");
+            setOutput("✅ Query executed successfully");
+            setSqlResult(null);
         }
 
         setRunning(false);
@@ -1057,17 +1058,120 @@ export default function ExamPage() {
                                         <div className="w-3 h-3 bg-amber-500 rounded-full" />
                                         <div className="w-3 h-3 bg-green-500 rounded-full" />
                                     </div>
-                                    <span className="ml-4 text-xs font-medium text-muted-foreground">Console</span>
+                                    <span className="ml-4 text-xs font-medium text-muted-foreground">
+                                        {exam.language === 'sql' ? 'Query Results' : 'Console'}
+                                    </span>
                                 </div>
 
-                                <div className="flex-1 overflow-y-auto p-4 font-mono text-sm">
-                                    {output ? (
-                                        <pre className="text-foreground whitespace-pre-wrap">{output}</pre>
+                                <div className="flex-1 overflow-auto p-4">
+                                    {exam.language === 'sql' ? (
+                                        // SQL Results Table
+                                        sqlResult ? (
+                                            <div className="space-y-4">
+                                                <div className="flex items-center justify-between">
+                                                    <span className="text-sm font-medium text-foreground">
+                                                        {sqlResult.rows.length} row{sqlResult.rows.length !== 1 ? 's' : ''} returned
+                                                    </span>
+                                                    <span className="text-xs text-muted-foreground">
+                                                        {sqlResult.columns.length} column{sqlResult.columns.length !== 1 ? 's' : ''}
+                                                    </span>
+                                                </div>
+
+                                                <div className="border border-border rounded-lg overflow-hidden">
+                                                    <div className="overflow-x-auto">
+                                                        <table className="w-full text-sm">
+                                                            <thead className="bg-muted">
+                                                                <tr>
+                                                                    <th className="px-4 py-2 text-left font-semibold text-foreground border-b border-border w-12">
+                                                                        #
+                                                                    </th>
+                                                                    {sqlResult.columns.map((col, idx) => (
+                                                                        <th
+                                                                            key={idx}
+                                                                            className="px-4 py-2 text-left font-semibold text-foreground border-b border-border whitespace-nowrap"
+                                                                        >
+                                                                            {col}
+                                                                        </th>
+                                                                    ))}
+                                                                </tr>
+                                                            </thead>
+                                                            <tbody>
+                                                                {sqlResult.rows.length > 0 ? (
+                                                                    sqlResult.rows.map((row, rowIdx) => (
+                                                                        <tr
+                                                                            key={rowIdx}
+                                                                            className="hover:bg-muted/50 transition-colors"
+                                                                        >
+                                                                            <td className="px-4 py-2 text-muted-foreground border-b border-border/50 font-mono text-xs">
+                                                                                {rowIdx + 1}
+                                                                            </td>
+                                                                            {sqlResult.columns.map((col, colIdx) => (
+                                                                                <td
+                                                                                    key={colIdx}
+                                                                                    className="px-4 py-2 border-b border-border/50 font-mono text-xs text-foreground"
+                                                                                >
+                                                                                    {row[col] === null ? (
+                                                                                        <span className="text-muted-foreground italic">NULL</span>
+                                                                                    ) : row[col] === undefined ? (
+                                                                                        <span className="text-muted-foreground italic">-</span>
+                                                                                    ) : typeof row[col] === 'object' ? (
+                                                                                        <span className="text-blue-500">{JSON.stringify(row[col])}</span>
+                                                                                    ) : (
+                                                                                        String(row[col])
+                                                                                    )}
+                                                                                </td>
+                                                                            ))}
+                                                                        </tr>
+                                                                    ))
+                                                                ) : (
+                                                                    <tr>
+                                                                        <td
+                                                                            colSpan={sqlResult.columns.length + 1}
+                                                                            className="px-4 py-8 text-center text-muted-foreground"
+                                                                        >
+                                                                            No rows returned
+                                                                        </td>
+                                                                    </tr>
+                                                                )}
+                                                            </tbody>
+                                                        </table>
+                                                    </div>
+                                                </div>
+
+                                                {output && (
+                                                    <div className="mt-4 p-3 bg-muted rounded-lg">
+                                                        <div className="flex items-start gap-2">
+                                                            <span className="text-xs font-semibold text-muted-foreground">Info:</span>
+                                                            <pre className="text-xs text-foreground whitespace-pre-wrap flex-1">{output}</pre>
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        ) : output ? (
+                                            // Error or info message
+                                            <div className="space-y-2">
+                                                <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-lg">
+                                                    <pre className="text-sm text-destructive whitespace-pre-wrap font-mono">{output}</pre>
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            // Empty state
+                                            <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground">
+                                                <Terminal className="w-12 h-12 mb-3 opacity-50" />
+                                                <p className="text-sm font-medium mb-1">No Results</p>
+                                                <p className="text-xs">Run your SQL query to see results</p>
+                                            </div>
+                                        )
                                     ) : (
-                                        <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground">
-                                            <Terminal className="w-12 h-12 mb-3 opacity-50" />
-                                            <p className="text-sm">Run your code to see output</p>
-                                        </div>
+                                        // Non-SQL Console Output
+                                        output ? (
+                                            <pre className="text-foreground whitespace-pre-wrap font-mono text-sm">{output}</pre>
+                                        ) : (
+                                            <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground">
+                                                <Terminal className="w-12 h-12 mb-3 opacity-50" />
+                                                <p className="text-sm">Run your code to see output</p>
+                                            </div>
+                                        )
                                     )}
                                 </div>
                             </div>

@@ -1,11 +1,21 @@
 import { memo, useEffect, useRef, useState } from "react";
 import { FilesetResolver, FaceDetector, ObjectDetector } from "@mediapipe/tasks-vision";
-import { toast } from "react-hot-toast";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Mic, AlertTriangle, CheckCircle2, Monitor } from "lucide-react";
+import {
+    Mic,
+    AlertTriangle,
+    CheckCircle2,
+    Eye,
+    Shield,
+    Activity,
+    Camera,
+    Scan,
+    ChevronDown,
+    ChevronUp
+} from "lucide-react";
 
 interface ProctoringMonitorProps {
     isExamProctored: boolean;
@@ -44,6 +54,8 @@ const ProctoringMonitor = memo(({
     const [speakingDetected, setSpeakingDetected] = useState(false);
     const [audioViolations, setAudioViolations] = useState(0);
     const [voiceConfidence, setVoiceConfidence] = useState(0);
+
+    const [isMinimized, setIsMinimized] = useState(false);
 
     const audioViolationsRef = useRef(0);
 
@@ -290,8 +302,6 @@ const ProctoringMonitor = memo(({
 
                     if (newCount >= 3) {
                         onDisqualification("Multiple voice violations - speaking detected");
-                    } else {
-                        toast.error(`Voice detected. Warning ${newCount}/3`);
                     }
 
                     setTimeout(() => setSpeakingDetected(false), 5000);
@@ -339,9 +349,9 @@ const ProctoringMonitor = memo(({
         canvas.height = video.videoHeight;
         ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-        ctx.strokeStyle = detections.length === 1 ? '#00ff00' : '#ff0000';
+        ctx.strokeStyle = detections.length === 1 ? '#10b981' : '#ef4444';
         ctx.lineWidth = 3;
-        ctx.fillStyle = detections.length === 1 ? '#00ff00' : '#ff0000';
+        ctx.fillStyle = detections.length === 1 ? '#10b981' : '#ef4444';
 
         detections.forEach((detection, index) => {
             const bbox = detection.boundingBox;
@@ -396,120 +406,204 @@ const ProctoringMonitor = memo(({
 
     if (!isExamProctored) return null;
 
+    const getStatusColor = () => {
+        if (noFaceDetectedCount > 5 || multipleFacesCount > 0 || suspiciousObjectCount > 0 || audioViolations > 0) {
+            return 'destructive';
+        }
+        return 'default';
+    };
+
+    const getStatusText = () => {
+        if (noFaceDetectedCount > 5) return 'Face Not Detected';
+        if (multipleFacesCount > 0) return 'Multiple Faces';
+        if (suspiciousObjectCount > 0) return 'Suspicious Object';
+        if (audioViolations > 0) return 'Voice Detected';
+        return 'Monitoring Active';
+    };
+
     return (
-        <Card className="fixed bottom-6 right-6 z-50 w-80 max-w-[calc(100vw-3rem)] overflow-hidden group transition-all duration-500 hover:shadow-2xl border-border/50 backdrop-blur-xl">
-            <div className="absolute inset-0 bg-gradient-to-br from-card/95 via-card/98 to-card/95" />
-            <div className="absolute inset-0 bg-gradient-to-tr from-red-500/[0.02] via-transparent to-amber-500/[0.02]" />
-
-            <CardContent className="relative z-10 p-6 space-y-6">
-                <div className="relative group">
-                    <div className="relative overflow-hidden rounded-2xl border-2 border-border/50 bg-gradient-to-br from-muted/30 to-muted/10 backdrop-blur-sm shadow-lg">
-                        <div className="relative aspect-[4/3] bg-gradient-to-br from-slate-900/90 to-slate-800/90">
-                            <video
-                                ref={videoRef}
-                                autoPlay
-                                playsInline
-                                muted
-                                className="w-full h-full object-cover rounded-xl"
-                            />
-                            <canvas
-                                ref={canvasRef}
-                                className="absolute top-0 left-0 w-full h-full pointer-events-none rounded-xl"
-                            />
-
-                            <div className="absolute top-3 left-3 flex items-center gap-2">
-                                <div className="px-2 py-1 bg-black/60 backdrop-blur-sm rounded-lg border border-white/20">
-                                    <div className="flex items-center gap-1.5">
-                                        <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
-                                        <span className="text-white text-xs font-medium">REC</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div className="space-y-4">
+        <Card className={`fixed bottom-6 right-6 z-50 transition-all duration-300 ${isMinimized ? 'w-80' : 'w-96'
+            } max-w-[calc(100vw-3rem)] border-border/50 shadow-2xl`}>
+            <CardContent className="p-0">
+                {/* Header */}
+                <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-muted/30">
                     <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-500 rounded-xl flex items-center justify-center shadow-md">
-                            <Mic className="w-4 h-4 text-white" />
+                        <div className="relative">
+                            <Shield className="w-5 h-5 text-primary" />
+                            <div className="absolute -top-1 -right-1 w-2 h-2 bg-green-500 rounded-full animate-pulse" />
                         </div>
-                        <span className="text-sm font-bold text-foreground">Audio Analysis</span>
+                        <div>
+                            <h3 className="text-sm font-semibold text-foreground">Proctoring Monitor</h3>
+                            <p className="text-xs text-muted-foreground">AI-Powered Supervision</p>
+                        </div>
                     </div>
+                    <button
+                        onClick={() => setIsMinimized(!isMinimized)}
+                        className="p-1.5 hover:bg-muted rounded-lg transition-colors"
+                    >
+                        {isMinimized ? (
+                            <ChevronUp className="w-4 h-4 text-muted-foreground" />
+                        ) : (
+                            <ChevronDown className="w-4 h-4 text-muted-foreground" />
+                        )}
+                    </button>
+                </div>
 
-                    <div className="space-y-3">
-                        <div className="flex items-center justify-between">
-                            <span className="text-xs font-medium text-muted-foreground">Audio Level:</span>
-                            <div className="flex items-center gap-2">
-                                <div className="w-20 h-2 bg-muted/50 rounded-full overflow-hidden">
-                                    <div
-                                        className="h-full bg-gradient-to-r from-green-400 via-yellow-400 to-red-400 transition-all duration-150"
-                                        style={{ width: `${Math.min(audioLevel * 2, 100)}%` }}
-                                    />
+                <>
+                    {/* Video Feed */}
+                    <div className={`p-4 space-y-4 ${isMinimized ? 'hidden' : ''}`}>
+                        <div className="relative overflow-hidden rounded-lg border border-border bg-muted/10">
+                            <div className="relative aspect-[4/3] bg-slate-900">
+                                <video
+                                    ref={videoRef}
+                                    autoPlay
+                                    playsInline
+                                    muted
+                                    className="w-full h-full object-cover"
+                                />
+                                <canvas
+                                    ref={canvasRef}
+                                    className="absolute top-0 left-0 w-full h-full pointer-events-none"
+                                />
+
+                                {/* Recording Badge */}
+                                <div className="absolute top-3 left-3">
+                                    <Badge variant="destructive" className="flex items-center gap-1.5 px-2 py-1">
+                                        <div className="w-2 h-2 bg-white rounded-full animate-pulse" />
+                                        <span className="text-xs font-semibold">LIVE</span>
+                                    </Badge>
                                 </div>
-                                <Badge variant="outline" className="px-2 py-0.5 text-xs font-mono">
-                                    {Math.round(audioLevel)}%
-                                </Badge>
+
+                                {/* Status Badge */}
+                                <div className="absolute top-3 right-3">
+                                    <Badge variant={getStatusColor()} className="text-xs">
+                                        {getStatusText()}
+                                    </Badge>
+                                </div>
                             </div>
                         </div>
-                    </div>
-                </div>
 
-                <Separator className="bg-gradient-to-r from-transparent via-border to-transparent" />
+                        {/* Status Grid */}
+                        <div className="grid grid-cols-3 gap-2">
+                            {/* Face Detection */}
+                            <div className={`p-3 rounded-lg border transition-all ${noFaceDetectedCount > 5
+                                ? 'border-destructive/50 bg-destructive/5'
+                                : 'border-green-500/50 bg-green-500/5'
+                                }`}>
+                                <div className="flex items-center gap-2 mb-1.5">
+                                    <Eye className={`w-3.5 h-3.5 ${noFaceDetectedCount > 5 ? 'text-destructive' : 'text-green-500'
+                                        }`} />
+                                    <span className="text-xs font-medium">Face</span>
+                                </div>
+                                <p className={`text-xs font-semibold ${noFaceDetectedCount > 5 ? 'text-destructive' : 'text-green-600'
+                                    }`}>
+                                    {noFaceDetectedCount > 5 ? 'Alert' : 'Detected'}
+                                </p>
+                            </div>
 
-                <div className="grid grid-cols-2 gap-3">
-                    <div className={`p-3 rounded-xl border-2 transition-all duration-300 ${noFaceDetectedCount > 5
-                            ? 'border-red-300/50 bg-gradient-to-br from-red-50/80 to-rose-50/60'
-                            : 'border-green-300/50 bg-gradient-to-br from-green-50/80 to-emerald-50/60'
-                        }`}>
-                        <div className="flex items-center gap-2 mb-2">
-                            <div className={`w-2 h-2 rounded-full ${noFaceDetectedCount > 5 ? 'bg-red-500' : 'bg-green-500'} animate-pulse`} />
-                            <span className="text-xs font-bold">Face Detection</span>
+                            {/* Object Detection */}
+                            <div className={`p-3 rounded-lg border transition-all ${suspiciousObjectCount > 0
+                                ? 'border-amber-500/50 bg-amber-500/5'
+                                : 'border-blue-500/50 bg-blue-500/5'
+                                }`}>
+                                <div className="flex items-center gap-2 mb-1.5">
+                                    <Scan className={`w-3.5 h-3.5 ${suspiciousObjectCount > 0 ? 'text-amber-500' : 'text-blue-500'
+                                        }`} />
+                                    <span className="text-xs font-medium">Objects</span>
+                                </div>
+                                <p className={`text-xs font-semibold ${suspiciousObjectCount > 0 ? 'text-amber-600' : 'text-blue-600'
+                                    }`}>
+                                    {suspiciousObjectCount > 0 ? 'Warning' : 'Clear'}
+                                </p>
+                            </div>
+
+                            {/* Audio Detection */}
+                            <div className={`p-3 rounded-lg border transition-all ${audioViolations > 0
+                                ? 'border-destructive/50 bg-destructive/5'
+                                : 'border-primary/50 bg-primary/5'
+                                }`}>
+                                <div className="flex items-center gap-2 mb-1.5">
+                                    <Mic className={`w-3.5 h-3.5 ${audioViolations > 0 ? 'text-destructive' : 'text-primary'
+                                        }`} />
+                                    <span className="text-xs font-medium">Audio</span>
+                                </div>
+                                <p className={`text-xs font-semibold ${audioViolations > 0 ? 'text-destructive' : 'text-primary'
+                                    }`}>
+                                    {audioViolations > 0 ? `${audioViolations}/3` : 'Silent'}
+                                </p>
+                            </div>
                         </div>
-                        <Badge variant="outline" className="text-xs">
-                            {noFaceDetectedCount > 5 ? 'Warning' : 'OK'}
-                        </Badge>
-                    </div>
 
-                    <div className={`p-3 rounded-xl border-2 transition-all duration-300 ${suspiciousObjectCount > 0
-                            ? 'border-amber-300/50 bg-gradient-to-br from-amber-50/80 to-orange-50/60'
-                            : 'border-blue-300/50 bg-gradient-to-br from-blue-50/80 to-cyan-50/60'
-                        }`}>
-                        <div className="flex items-center gap-2 mb-2">
-                            <div className={`w-2 h-2 rounded-full ${suspiciousObjectCount > 0 ? 'bg-amber-500' : 'bg-blue-500'} animate-pulse`} />
-                            <span className="text-xs font-bold">Object Scan</span>
+                        <Separator />
+
+                        {/* Audio Level Indicator */}
+                        <div className="space-y-2">
+                            <div className="flex items-center justify-between">
+                                <span className="text-xs font-medium text-muted-foreground flex items-center gap-2">
+                                    <Activity className="w-3.5 h-3.5" />
+                                    Audio Activity
+                                </span>
+                                <span className="text-xs font-mono font-semibold text-foreground">
+                                    {Math.round(audioLevel)}%
+                                </span>
+                            </div>
+                            <div className="h-2 bg-muted rounded-full overflow-hidden">
+                                <div
+                                    className={`h-full transition-all duration-150 ${audioLevel > 30
+                                        ? 'bg-gradient-to-r from-amber-500 to-red-500'
+                                        : 'bg-gradient-to-r from-green-500 to-emerald-500'
+                                        }`}
+                                    style={{ width: `${Math.min(audioLevel * 2, 100)}%` }}
+                                />
+                            </div>
                         </div>
-                        <Badge variant="outline" className="text-xs">
-                            {suspiciousObjectCount > 0 ? 'Alert' : 'Safe'}
-                        </Badge>
+
+                        {/* Warnings */}
+                        {multipleFacesCount > 0 && (
+                            <Alert className="border-destructive/50 bg-destructive/10">
+                                <AlertTriangle className="w-4 h-4 text-destructive" />
+                                <AlertDescription className="text-xs font-medium text-destructive">
+                                    Multiple faces detected in frame
+                                </AlertDescription>
+                            </Alert>
+                        )}
+
+                        {audioViolations > 0 && (
+                            <Alert className="border-amber-500/50 bg-amber-500/10">
+                                <Mic className="w-4 h-4 text-amber-600" />
+                                <AlertDescription className="text-xs font-medium text-amber-700 dark:text-amber-500">
+                                    Voice detected: {audioViolations}/3 warnings
+                                </AlertDescription>
+                            </Alert>
+                        )}
+
+                        {cameraError && (
+                            <Alert className="border-destructive/50 bg-destructive/10">
+                                <AlertTriangle className="w-4 h-4 text-destructive" />
+                                <AlertDescription className="text-xs font-medium text-destructive">
+                                    {cameraError}
+                                </AlertDescription>
+                            </Alert>
+                        )}
                     </div>
-                </div>
+                </>
 
-                {multipleFacesCount > 0 && (
-                    <Alert className="border-2 border-red-300/50 bg-gradient-to-r from-red-50/80 to-rose-50/60 rounded-xl">
-                        <AlertTriangle className="w-4 h-4" />
-                        <AlertDescription className="text-sm font-medium">
-                            Multiple faces detected in frame!
-                        </AlertDescription>
-                    </Alert>
-                )}
-
-                {audioViolations > 0 && (
-                    <Alert className="border-2 border-amber-300/50 bg-gradient-to-r from-amber-50/80 to-orange-50/60 rounded-xl">
-                        <Mic className="w-4 h-4" />
-                        <AlertDescription className="text-sm font-medium">
-                            Voice detected: {audioViolations}/3 warnings
-                        </AlertDescription>
-                    </Alert>
-                )}
-
-                {cameraError && (
-                    <Alert className="border-2 border-red-400/50 bg-gradient-to-r from-red-100/80 to-rose-100/60 rounded-xl">
-                        <AlertTriangle className="w-4 h-4" />
-                        <AlertDescription className="text-sm font-medium">
-                            {cameraError}
-                        </AlertDescription>
-                    </Alert>
+                {/* Minimized View */}
+                {isMinimized && (
+                    <div className="px-4 py-3 flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                            <Badge variant={getStatusColor()} className="text-xs">
+                                {getStatusText()}
+                            </Badge>
+                            <span className="text-xs text-muted-foreground">
+                                {audioViolations > 0 && `${audioViolations}/3 violations`}
+                            </span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+                            <span className="text-xs font-medium text-foreground">Active</span>
+                        </div>
+                    </div>
                 )}
             </CardContent>
         </Card>
