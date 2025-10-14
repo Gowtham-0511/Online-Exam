@@ -108,6 +108,10 @@ export default function ExaminerDashboard() {
     const [testingConnection, setTestingConnection] = useState(false);
     const [connectionStatus, setConnectionStatus] = useState<'success' | 'failed' | null>(null);
 
+    const [requiresFileHandling, setRequiresFileHandling] = useState(false);
+    const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
+    const [fileUploadError, setFileUploadError] = useState('');
+
     const resetForm = () => {
         setTitle("");
         setLanguage("python");
@@ -142,6 +146,9 @@ export default function ExaminerDashboard() {
         });
         setConnectionStatus(null);
         setSavedCredentialId(null);
+        setRequiresFileHandling(false);
+        setUploadedFiles([]);
+        setFileUploadError('');
     };
 
     const testSqlConnection = async () => {
@@ -179,6 +186,63 @@ export default function ExaminerDashboard() {
         }
     };
 
+    const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const files = e.target.files;
+        if (!files) return;
+
+        const excelFiles = Array.from(files).filter(file =>
+            file.name.endsWith('.xlsx') || file.name.endsWith('.xls') || file.name.endsWith('.csv')
+        );
+
+        if (excelFiles.length === 0) {
+            setFileUploadError('Please upload only Excel (.xlsx, .xls) or CSV files');
+            return;
+        }
+
+        setFileUploadError('');
+        setUploadedFiles(prev => [...prev, ...excelFiles]);
+    };
+
+    const uploadFilesToStorage = async (files: File[]): Promise<string[]> => {
+        const uploadedUrls: string[] = [];
+        const examId = title.toLowerCase().replace(/\s+/g, "-");
+
+        for (let i = 0; i < files.length; i++) {
+            const file = files[i];
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('examId', examId);
+
+            try {
+                toast.loading(`Uploading ${file.name} (${i + 1}/${files.length})...`, {
+                    id: 'file-upload'
+                });
+
+                const response = await fetch('/api/upload-exam-file', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (!response.ok) throw new Error('File upload failed');
+
+                const data = await response.json();
+                uploadedUrls.push(data.fileUrl);
+
+                toast.success(`${file.name} uploaded`, { id: 'file-upload' });
+            } catch (error) {
+                console.error('Error uploading file:', error);
+                toast.error(`Failed to upload ${file.name}`, { id: 'file-upload' });
+                throw error;
+            }
+        }
+
+        return uploadedUrls;
+    };
+
+    const removeFile = (index: number) => {
+        setUploadedFiles(prev => prev.filter((_, i) => i !== index));
+    };
+
     interface BatchTimes {
         [key: string]: {
             startTime: string;
@@ -191,7 +255,7 @@ export default function ExaminerDashboard() {
         title: string;
         language: string;
         sqlServerType?: string;
-        sqlCredentialId?: string;  // Changed from sqlCredentials to sqlCredentialId
+        sqlCredentialId?: string;
         duration: number;
         createdBy: string | undefined;
         questions: Question[];
@@ -204,6 +268,7 @@ export default function ExaminerDashboard() {
             startTime: string;
             endTime: string;
         }[];
+        requiresFileHandling?: boolean;
     }
 
     const handleCreateExam = useCallback(
@@ -238,11 +303,32 @@ export default function ExaminerDashboard() {
                     .join(", ");
 
                 toast.error(`Please set start and end times for: ${batchNames}`);
+                setIsLoading(false);
                 return;
             }
 
             try {
                 const examId: string = title.toLowerCase().replace(/\s+/g, "-");
+
+                let uploadedFileUrls: string[] = [];
+                let examFilesData: { name: string; url: string; size: number }[] = [];
+
+                // Upload files if required
+                if (requiresFileHandling && uploadedFiles.length > 0) {
+                    try {
+                        uploadedFileUrls = await uploadFilesToStorage(uploadedFiles);
+                        examFilesData = uploadedFileUrls.map((url, index) => ({
+                            name: uploadedFiles[index].name,
+                            url: url,
+                            size: uploadedFiles[index].size
+                        }));
+                        toast.success('Files uploaded successfully');
+                    } catch (error) {
+                        toast.error('Failed to upload files. Please try again.');
+                        setIsLoading(false);
+                        return;
+                    }
+                }
 
                 const examData: ExamData = {
                     examId,
@@ -252,6 +338,7 @@ export default function ExaminerDashboard() {
                         sqlServerType,
                         sqlCredentialId: savedCredentialId ?? undefined
                     }),
+                    requiresFileHandling,
                     duration,
                     createdBy: session?.user?.email ?? undefined,
                     questions: validQuestions,
@@ -271,6 +358,7 @@ export default function ExaminerDashboard() {
 
                 console.log(examData);
 
+                // Create exam
                 try {
                     const response: Response = await fetch("/api/assessment/create", {
                         method: "POST",
@@ -280,10 +368,35 @@ export default function ExaminerDashboard() {
 
                     if (response.status === 409) {
                         toast.error("An exam with this title already exists. Please choose a different title.");
+                        setIsLoading(false);
                         return;
                     }
 
                     if (!response.ok) throw new Error("Failed to create exam");
+
+                    // Save file references to database if files were uploaded
+                    if (examFilesData.length > 0) {
+                        try {
+                            const fileResponse = await fetch('/api/exam-files/save', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                    examId: examId,
+                                    files: examFilesData
+                                })
+                            });
+
+                            if (!fileResponse.ok) {
+                                console.error('Failed to save file references to database');
+                                toast.error('Exam created but failed to save file references');
+                            } else {
+                                toast.success('Exam created with files successfully!');
+                            }
+                        } catch (fileError) {
+                            console.error('Error saving file references:', fileError);
+                            toast.error('Exam created but failed to save file references');
+                        }
+                    }
 
                     setShowSuccess(true);
                     setTimeout(() => {
@@ -294,6 +407,7 @@ export default function ExaminerDashboard() {
                 } catch (error) {
                     console.error("Error saving exam data:", error);
                     toast.error("Failed to save exam data. Please try again.");
+                    setIsLoading(false);
                     return;
                 }
 
@@ -318,6 +432,10 @@ export default function ExaminerDashboard() {
             questionConfig,
             allowedUsersRaw,
             resetForm,
+            requiresFileHandling,
+            uploadedFiles,
+            sqlServerType,
+            savedCredentialId
         ]
     );
 
@@ -583,6 +701,106 @@ export default function ExaminerDashboard() {
                                             />
                                         </div>
 
+                                        {language === 'python' && (
+                                            <>
+                                                <div className="md:col-span-2 space-y-3">
+                                                    <Label className="text-sm font-medium">File Handling Required</Label>
+                                                    <Card className="p-4">
+                                                        <div className="flex items-center justify-between">
+                                                            <div className="flex items-center gap-3">
+                                                                <FileText className="w-4 h-4 text-muted-foreground" />
+                                                                <span className="text-sm font-medium">
+                                                                    {requiresFileHandling ? 'File Handling Enabled' : 'No File Handling'}
+                                                                </span>
+                                                            </div>
+                                                            <Switch
+                                                                checked={requiresFileHandling}
+                                                                onCheckedChange={setRequiresFileHandling}
+                                                                disabled={isLoading}
+                                                            />
+                                                        </div>
+                                                    </Card>
+                                                </div>
+
+                                                {requiresFileHandling && (
+                                                    <div className="md:col-span-2 space-y-4">
+                                                        <Card className="border-primary/20">
+                                                            <CardHeader>
+                                                                <CardTitle className="text-sm font-medium flex items-center gap-2">
+                                                                    <FileText className="w-4 h-4" />
+                                                                    Upload Excel/CSV Files
+                                                                </CardTitle>
+                                                                <CardDescription>
+                                                                    Upload one or multiple files that will be provided to students during the exam
+                                                                </CardDescription>
+                                                            </CardHeader>
+                                                            <CardContent className="space-y-4">
+                                                                <div className="flex items-center justify-center w-full">
+                                                                    <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer hover:bg-muted/50 transition-colors">
+                                                                        <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                                                                            <Plus className="w-8 h-8 mb-2 text-muted-foreground" />
+                                                                            <p className="mb-2 text-sm text-muted-foreground">
+                                                                                <span className="font-semibold">Click to upload</span> or drag and drop
+                                                                            </p>
+                                                                            <p className="text-xs text-muted-foreground">
+                                                                                Excel (.xlsx, .xls) or CSV files
+                                                                            </p>
+                                                                        </div>
+                                                                        <input
+                                                                            type="file"
+                                                                            className="hidden"
+                                                                            accept=".xlsx,.xls,.csv"
+                                                                            multiple
+                                                                            onChange={handleFileUpload}
+                                                                        />
+                                                                    </label>
+                                                                </div>
+
+                                                                {fileUploadError && (
+                                                                    <Alert variant="destructive">
+                                                                        <AlertDescription>{fileUploadError}</AlertDescription>
+                                                                    </Alert>
+                                                                )}
+
+                                                                {uploadedFiles.length > 0 && (
+                                                                    <div className="space-y-2">
+                                                                        <Label className="text-sm font-medium">
+                                                                            Uploaded Files ({uploadedFiles.length})
+                                                                        </Label>
+                                                                        <div className="space-y-2">
+                                                                            {uploadedFiles.map((file, index) => (
+                                                                                <Card key={index} className="p-3">
+                                                                                    <div className="flex items-center justify-between">
+                                                                                        <div className="flex items-center gap-3">
+                                                                                            <FileText className="w-4 h-4 text-primary" />
+                                                                                            <div>
+                                                                                                <p className="text-sm font-medium">{file.name}</p>
+                                                                                                <p className="text-xs text-muted-foreground">
+                                                                                                    {(file.size / 1024).toFixed(2)} KB
+                                                                                                </p>
+                                                                                            </div>
+                                                                                        </div>
+                                                                                        <Button
+                                                                                            variant="ghost"
+                                                                                            size="sm"
+                                                                                            onClick={() => removeFile(index)}
+                                                                                            className="text-destructive hover:text-destructive"
+                                                                                        >
+                                                                                            <Trash2 className="w-4 h-4" />
+                                                                                        </Button>
+                                                                                    </div>
+                                                                                </Card>
+                                                                            ))}
+                                                                        </div>
+                                                                    </div>
+                                                                )}
+                                                            </CardContent>
+                                                        </Card>
+                                                    </div>
+                                                )}
+                                            </>
+                                        )}
+
                                         {language === 'sql' && (
                                             <>
                                                 <div className="space-y-2">
@@ -746,16 +964,18 @@ export default function ExaminerDashboard() {
                                         </div>
                                     )}
 
-                                    <div className="flex justify-end pt-4">
-                                        <Button
-                                            onClick={() => setCurrentStep(2)}
-                                            disabled={!title.trim() || (language === 'sql' && (!sqlServerType || connectionStatus !== 'success'))}
-                                            className="px-8"
-                                        >
-                                            Next: Questions
-                                            <ArrowRight className="w-4 h-4 ml-2" />
-                                        </Button>
-                                    </div>
+                                    <Button
+                                        onClick={() => setCurrentStep(2)}
+                                        disabled={
+                                            !title.trim() ||
+                                            (language === 'sql' && (!sqlServerType || connectionStatus !== 'success')) ||
+                                            (language === 'python' && requiresFileHandling && uploadedFiles.length === 0)
+                                        }
+                                        className="px-8"
+                                    >
+                                        Next: Questions
+                                        <ArrowRight className="w-4 h-4 ml-2" />
+                                    </Button>
                                 </div>
                             )}
 
@@ -1312,6 +1532,67 @@ export default function ExaminerDashboard() {
                                             </div>
                                         </CardContent>
                                     </Card>
+
+                                    {language === 'python' && requiresFileHandling && uploadedFiles.length > 0 && (
+                                        <Card>
+                                            <CardHeader>
+                                                <CardTitle className="flex items-center gap-2">
+                                                    <FileText className="w-5 h-5" />
+                                                    Exam Files ({uploadedFiles.length})
+                                                </CardTitle>
+                                                <CardDescription>
+                                                    Files stored in: /exam-files/{title.toLowerCase().replace(/\s+/g, "-")}/
+                                                </CardDescription>
+                                            </CardHeader>
+                                            <CardContent>
+                                                <div className="space-y-2">
+                                                    {uploadedFiles.map((file, index) => (
+                                                        <Card key={index} className="p-3 bg-muted/30">
+                                                            <div className="flex items-center justify-between">
+                                                                <div className="flex items-center gap-3">
+                                                                    <FileText className="w-4 h-4 text-primary" />
+                                                                    <div className="flex-1">
+                                                                        <p className="text-sm font-medium">{file.name}</p>
+                                                                        <p className="text-xs text-muted-foreground">
+                                                                            {(file.size / 1024).toFixed(2)} KB
+                                                                        </p>
+                                                                    </div>
+                                                                </div>
+                                                                <Badge variant="secondary">Ready</Badge>
+                                                            </div>
+                                                        </Card>
+                                                    ))}
+                                                </div>
+                                                <Alert className="mt-4">
+                                                    <Info className="w-4 h-4" />
+                                                    <AlertDescription className="text-xs space-y-2">
+                                                        <p className="font-semibold">Students will access files using:</p>
+
+                                                        <div className="space-y-2 mt-2">
+                                                            <div>
+                                                                <p className="text-muted-foreground mb-1">Method 1: Using window.fs (Recommended)</p>
+                                                                <code className="bg-slate-900 text-green-400 px-2 py-1 rounded block">
+                                                                    {`data = window.fs.readFile('${uploadedFiles[0]?.name}', { encoding: 'utf8' })`}<br />
+                                                                    {`df = pd.read_csv(io.StringIO(data))`}
+                                                                </code>
+                                                            </div>
+
+                                                            <div>
+                                                                <p className="text-muted-foreground mb-1">Method 2: Direct URL (Alternative)</p>
+                                                                <code className="bg-slate-900 text-green-400 px-2 py-1 rounded block">
+                                                                    {`df = pd.read_csv('/exam-files/${title.toLowerCase().replace(/\s+/g, "-")}/${uploadedFiles[0]?.name}')`}
+                                                                </code>
+                                                            </div>
+                                                        </div>
+
+                                                        <p className="mt-2 text-muted-foreground italic">
+                                                            Available files: {uploadedFiles.map(f => f.name).join(', ')}
+                                                        </p>
+                                                    </AlertDescription>
+                                                </Alert>
+                                            </CardContent>
+                                        </Card>
+                                    )}
 
                                     {/* Question Breakdown */}
                                     {questions.length > 0 && (

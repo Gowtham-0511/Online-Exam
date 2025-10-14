@@ -17,8 +17,18 @@ import {
     Sun,
     X,
     Menu,
+    Database,
 } from "lucide-react";
 import { Editor } from "@monaco-editor/react";
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogHeader,
+    DialogTitle,
+    DialogTrigger,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 
 declare global {
     interface Window {
@@ -78,6 +88,18 @@ export default function ExamPage() {
     const visibilityTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
     const [isSubmitting, setIsSubmitting] = useState(false);
+
+    const [examFiles, setExamFiles] = useState<any[]>([]);
+
+    const [erDiagramUrl, setErDiagramUrl] = useState<string | { schemaData: any[], serverType: string } | null>(null);
+    const [schemaData, setSchemaData] = useState<{
+        schemaData: any[];
+        relationships: any[];
+        serverType: string;
+    } | null>(null);
+    const [showErDiagram, setShowErDiagram] = useState(false);
+    const [selectedTable, setSelectedTable] = useState<string | null>(null);
+    const [searchTerm, setSearchTerm] = useState("");
 
     const timeColor = useMemo(() => {
         if (timeLeft > 300) return "text-primary";
@@ -152,6 +174,26 @@ export default function ExamPage() {
                 return;
             }
             const data = await response.json();
+
+            if (data && data.language === 'python') {
+                const filesResponse = await fetch(`/api/exam-files/${examId}`);
+                if (filesResponse.ok) {
+                    const filesData = await filesResponse.json();
+                    setExamFiles(filesData.files || []);
+                }
+            }
+
+            if (data && data.language === 'sql') {
+                try {
+                    const schemaResponse = await fetch(`/api/sql/er-diagram?examId=${examId}`);
+                    if (schemaResponse.ok) {
+                        const schemaResult = await schemaResponse.json();
+                        setSchemaData(schemaResult);
+                    }
+                } catch (error) {
+                    console.error('Failed to fetch schema:', error);
+                }
+            }
 
 
             if (data) {
@@ -461,6 +503,19 @@ export default function ExamPage() {
         }
     }, [exam, answers, examStarted]);
 
+    useEffect(() => {
+        if (exam?.questions && answers[activeQuestionIndex] !== undefined) {
+            const currentAnswer = answers[activeQuestionIndex] || "";
+
+            if (!currentAnswer && exam.language === 'python' && examFiles.length > 0) {
+                const starterCode = `import pandas as pd\nimport numpy as np\n\n# Available files: ${examFiles.map(f => f.file_name).join(', ')}\n\n# Your code here:\n`;
+                setCode(starterCode);
+            } else {
+                setCode(currentAnswer);
+            }
+        }
+    }, [activeQuestionIndex, answers, exam, examFiles]);
+
     handleContextMenuRef.current = (e) => {
         e.preventDefault();
         violationsRef.current += 1;
@@ -713,7 +768,10 @@ export default function ExamPage() {
             const res = await fetch("/api/run-python", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ code }),
+                body: JSON.stringify({
+                    code,
+                    examId: examId?.toString()
+                }),
             });
 
             const data = await res.json();
@@ -921,6 +979,202 @@ export default function ExamPage() {
                                     <span className="text-muted-foreground">Unanswered</span>
                                     <span className="font-semibold text-muted-foreground">{exam.questions.length - answeredCount}</span>
                                 </div>
+
+                                {/* Add this Dialog */}
+                                {exam.language === 'sql' && schemaData && (
+                                    <>
+                                        <Button
+                                            variant="default"
+                                            size="sm"
+                                            className="w-full mt-3 text-xs"
+                                            onClick={() => setShowErDiagram(true)}
+                                        >
+                                            <Database className="w-3 h-3 mr-2" />
+                                            View Database Schema ({schemaData.schemaData.length} tables)
+                                        </Button>
+
+                                        {showErDiagram && (
+                                            <div
+                                                className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+                                                onClick={() => setShowErDiagram(false)}
+                                            >
+                                                <div
+                                                    className="bg-card border border-border rounded-lg w-[95vw] max-w-[1600px] h-[95vh] flex flex-col shadow-2xl"
+                                                    onClick={(e) => e.stopPropagation()}
+                                                >
+                                                    {/* Header */}
+                                                    <div className="p-4 sm:p-6 pb-3 sm:pb-4 border-b border-border flex-shrink-0">
+                                                        <div className="flex items-center justify-between">
+                                                            <div>
+                                                                <div className="flex items-center gap-2 text-base sm:text-lg font-semibold text-foreground">
+                                                                    <Database className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
+                                                                    <span className="truncate">Database Schema - {schemaData.serverType.toUpperCase()}</span>
+                                                                </div>
+                                                                <p className="text-xs sm:text-sm text-muted-foreground mt-1">
+                                                                    Interactive database schema with {schemaData.schemaData.length} tables and {schemaData.relationships.length} relationships
+                                                                </p>
+                                                            </div>
+                                                            <button
+                                                                onClick={() => setShowErDiagram(false)}
+                                                                className="p-2 hover:bg-muted rounded-lg transition-colors flex-shrink-0"
+                                                            >
+                                                                <X className="w-5 h-5 text-foreground" />
+                                                            </button>
+                                                        </div>
+                                                    </div>
+
+                                                    {/* Content */}
+                                                    <div className="flex-1 overflow-auto p-4 sm:p-6">
+                                                        <div className="space-y-4">
+                                                            {schemaData.schemaData
+                                                                .filter(table => {
+                                                                    if (!searchTerm) return true;
+                                                                    const searchLower = searchTerm.toLowerCase();
+                                                                    return table.table_name.toLowerCase().includes(searchLower) ||
+                                                                        table.columns.some((col: any) =>
+                                                                            col.column_name.toLowerCase().includes(searchLower)
+                                                                        );
+                                                                })
+                                                                .map((table: any, idx: number) => {
+                                                                    const isSelected = selectedTable === table.table_name;
+
+                                                                    return (
+                                                                        <div
+                                                                            key={idx}
+                                                                            className={`border rounded-lg overflow-hidden transition-all cursor-pointer hover:shadow-md ${isSelected ? 'ring-2 ring-primary shadow-lg bg-primary/5' : 'border-border hover:border-primary/50'
+                                                                                }`}
+                                                                            onClick={() => setSelectedTable(isSelected ? null : table.table_name)}
+                                                                        >
+                                                                            <div className="bg-muted/50 px-4 py-3 border-b border-border">
+                                                                                <h3 className="text-base font-bold text-foreground flex items-center gap-2">
+                                                                                    <Database className="w-4 h-4 text-primary" />
+                                                                                    {table.table_name}
+                                                                                </h3>
+                                                                            </div>
+
+                                                                            <div className="bg-card overflow-x-auto">
+                                                                                <table className="w-full text-sm">
+                                                                                    <thead className="bg-muted/50 sticky top-0 z-10">
+                                                                                        <tr>
+                                                                                            <th className="px-4 py-3 text-left font-semibold text-foreground border-b border-border">Column Name</th>
+                                                                                            <th className="px-4 py-3 text-left font-semibold text-foreground border-b border-border">Data Type</th>
+                                                                                            <th className="px-4 py-3 text-center font-semibold text-foreground border-b border-border">Constraints</th>
+                                                                                            <th className="px-4 py-3 text-center font-semibold text-foreground border-b border-border">Nullable</th>
+                                                                                        </tr>
+                                                                                    </thead>
+                                                                                    <tbody className="divide-y divide-border">
+                                                                                        {table.columns.map((col: any, colIdx: number) => {
+                                                                                            const matchesSearch = !searchTerm ||
+                                                                                                col.column_name.toLowerCase().includes(searchTerm.toLowerCase());
+
+                                                                                            return (
+                                                                                                <tr
+                                                                                                    key={colIdx}
+                                                                                                    className={`hover:bg-muted/50 transition-colors ${matchesSearch && searchTerm ? 'bg-amber-50 dark:bg-amber-950/20' : ''
+                                                                                                        }`}
+                                                                                                >
+                                                                                                    <td className="px-4 py-3 font-mono text-sm text-foreground">
+                                                                                                        <span className="truncate" title={col.column_name}>{col.column_name}</span>
+                                                                                                    </td>
+                                                                                                    <td className="px-4 py-3 text-muted-foreground">
+                                                                                                        <code className="bg-muted px-2 py-1 rounded text-xs">
+                                                                                                            {col.data_type}
+                                                                                                        </code>
+                                                                                                    </td>
+                                                                                                    <td className="px-4 py-3 text-center">
+                                                                                                        <div className="flex items-center justify-center gap-2">
+                                                                                                            {col.constraint_type === 'PRIMARY KEY' && (
+                                                                                                                <span className="text-primary text-base" title="Primary Key">🔑</span>
+                                                                                                            )}
+                                                                                                            {col.constraint_type === 'FOREIGN KEY' && (
+                                                                                                                <span className="text-blue-500 text-base" title="Foreign Key">🔗</span>
+                                                                                                            )}
+                                                                                                            {!col.constraint_type && <span className="text-muted-foreground">—</span>}
+                                                                                                        </div>
+                                                                                                    </td>
+                                                                                                    <td className="px-4 py-3 text-center">
+                                                                                                        {col.is_nullable ? (
+                                                                                                            <span className="text-green-500 text-base">✓</span>
+                                                                                                        ) : (
+                                                                                                            <span className="text-red-500 text-base">✗</span>
+                                                                                                        )}
+                                                                                                    </td>
+                                                                                                </tr>
+                                                                                            );
+                                                                                        })}
+                                                                                    </tbody>
+                                                                                </table>
+                                                                            </div>
+                                                                        </div>
+                                                                    );
+                                                                })}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </>
+                                )}
+
+                                {exam.language === 'python' && examFiles.length > 0 && (
+                                    <Dialog>
+                                        <DialogTrigger asChild>
+                                            <Button
+                                                variant="default"
+                                                size="sm"
+                                                className="w-full mt-3 text-xs"
+                                            >
+                                                <Terminal className="w-3 h-3 mr-2" />
+                                                View Files ({examFiles.length})
+                                            </Button>
+                                        </DialogTrigger>
+                                        <DialogContent className="sm:max-w-md">
+                                            <DialogHeader>
+                                                <DialogTitle className="flex items-center gap-2">
+                                                    <Terminal className="w-5 h-5 text-primary" />
+                                                    Available Files
+                                                </DialogTitle>
+                                                <DialogDescription>
+                                                    Files you can use in your Python code
+                                                </DialogDescription>
+                                            </DialogHeader>
+
+                                            <div className="space-y-3 max-h-96 overflow-y-auto py-4">
+                                                {examFiles.map((file, idx) => (
+                                                    <div key={idx} className="p-3 bg-muted/50 rounded-lg border border-border">
+                                                        <div className="flex items-center justify-between mb-2">
+                                                            <code className="text-sm font-mono text-primary font-semibold">
+                                                                {file.file_name}
+                                                            </code>
+                                                            <Button
+                                                                variant="outline"
+                                                                size="sm"
+                                                                onClick={() => {
+                                                                    navigator.clipboard.writeText(file.file_name);
+                                                                    toast.success('Filename copied!');
+                                                                }}
+                                                            >
+                                                                Copy
+                                                            </Button>
+                                                        </div>
+                                                        <p className="text-xs text-muted-foreground">
+                                                            Size: {(file.file_size / 1024).toFixed(2)} KB
+                                                        </p>
+                                                    </div>
+                                                ))}
+
+                                                {/* Usage Hint */}
+                                                <div className="mt-4 p-3 bg-primary/10 rounded-lg border border-primary/20">
+                                                    <p className="text-xs font-semibold text-foreground mb-2">💡 Usage Example:</p>
+                                                    <code className="text-xs bg-background px-2 py-1 rounded border border-border font-mono text-primary block">
+                                                        import pandas as pd{'\n'}
+                                                        df = pd.read_csv('filename.csv')
+                                                    </code>
+                                                </div>
+                                            </div>
+                                        </DialogContent>
+                                    </Dialog>
+                                )}
                             </div>
                         </div>
                     </div>
@@ -1019,6 +1273,7 @@ export default function ExamPage() {
 
                         {/* Editor & Console Split */}
                         <div className="flex-1 flex overflow-hidden">
+
                             {/* Code Editor */}
                             <div className="flex-1 overflow-hidden bg-background">
                                 <Editor
