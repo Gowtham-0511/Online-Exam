@@ -18,6 +18,7 @@ import {
     X,
     Menu,
     Database,
+    FileText,
 } from "lucide-react";
 import { Editor } from "@monaco-editor/react";
 import {
@@ -101,6 +102,142 @@ export default function ExamPage() {
     const [selectedTable, setSelectedTable] = useState<string | null>(null);
     const [searchTerm, setSearchTerm] = useState("");
 
+    const [mcqAnswers, setMcqAnswers] = useState<{ [key: number]: number }>({});
+
+    const [questionFilter, setQuestionFilter] = useState<'all' | 'coding' | 'mcq'>('all');
+
+    const [flaggedQuestions, setFlaggedQuestions] = useState<Set<number>>(new Set());
+    const [showSubmitSummary, setShowSubmitSummary] = useState(false);
+
+    const [lastSaved, setLastSaved] = useState<Date | null>(null);
+    const [isSaving, setIsSaving] = useState(false);
+    const [isOnline, setIsOnline] = useState(true);
+    const autoSaveIntervalRef = useRef<NodeJS.Timeout | null>(null);
+
+    const [timeSinceLastSave, setTimeSinceLastSave] = useState(0);
+
+    // Auto-save to localStorage
+    const saveToLocalStorage = useCallback(() => {
+        if (!exam || !examId) return;
+
+        const examState = {
+            examId: examId.toString(),
+            answers,
+            mcqAnswers: Object.entries(mcqAnswers || {}),
+            flaggedQuestions: Array.from(flaggedQuestions),
+            activeQuestionIndex,
+            timeLeft,
+            lastSaved: new Date().toISOString(),
+            userEmail: session?.user?.email
+        };
+
+        try {
+            localStorage.setItem(`exam_${examId}_${session?.user?.email}`, JSON.stringify(examState));
+            setLastSaved(new Date());
+            console.log('Exam state saved to localStorage');
+        } catch (error) {
+            console.error('Failed to save to localStorage:', error);
+        }
+    }, [exam, examId, answers, mcqAnswers, flaggedQuestions, activeQuestionIndex, timeLeft, session]);
+
+    // Auto-save to server
+    const autoSaveToServer = useCallback(async () => {
+        if (!exam || !examId || !session?.user?.email || !isOnline) return;
+
+        setIsSaving(true);
+
+        try {
+            const answersWithQuestionIds = answers.map((answer, index) => {
+                const question = shuffledQuestions[index];
+                return {
+                    questionId: question?.id || index,
+                    question: question?.question || '',
+                    answer: question?.type === 'mcq' ? mcqAnswers[index]?.toString() || '' : answer,
+                    marks: question?.marks || 0,
+                    originalIndex: index,
+                    type: question?.type || 'coding',
+                    selectedOption: question?.type === 'mcq' ? mcqAnswers[index] : undefined
+                };
+            });
+
+            await fetch('/api/submissions/auto-save', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    examId: examId.toString(),
+                    email: session.user.email,
+                    answers: answersWithQuestionIds,
+                    flaggedQuestions: Array.from(flaggedQuestions),
+                    timeLeft,
+                    lastUpdated: new Date().toISOString()
+                })
+            });
+
+            setLastSaved(new Date());
+            console.log('Auto-saved to server');
+        } catch (error) {
+            console.error('Auto-save failed:', error);
+            // Fallback to localStorage if server save fails
+            saveToLocalStorage();
+        } finally {
+            setIsSaving(false);
+        }
+    }, [exam, examId, session, answers, mcqAnswers, shuffledQuestions, flaggedQuestions, timeLeft, isOnline, saveToLocalStorage]);
+
+    // Load saved state
+    const loadSavedState = useCallback(() => {
+        if (!examId || !session?.user?.email) return false;
+
+        try {
+            const savedState = localStorage.getItem(`exam_${examId}_${session.user.email}`);
+            if (savedState) {
+                const state = JSON.parse(savedState);
+
+                // Verify it's the same exam and user
+                if (state.examId === examId.toString() && state.userEmail === session.user.email) {
+                    setAnswers(state.answers || []);
+                    setMcqAnswers(Object.fromEntries(state.mcqAnswers || []));
+                    setFlaggedQuestions(new Set(state.flaggedQuestions || []));
+                    setActiveQuestionIndex(state.activeQuestionIndex || 0);
+                    setTimeLeft(state.timeLeft || exam?.duration * 60 || 0);
+                    setLastSaved(new Date(state.lastSaved));
+
+                    toast.success('Previous session restored!');
+                    return true;
+                }
+            }
+        } catch (error) {
+            console.error('Failed to load saved state:', error);
+        }
+        return false;
+    }, [examId, session, exam]);
+
+    // Clear saved state after successful submission
+    const clearSavedState = useCallback(() => {
+        if (!examId || !session?.user?.email) return;
+
+        try {
+            localStorage.removeItem(`exam_${examId}_${session.user.email}`);
+            console.log('Saved state cleared');
+        } catch (error) {
+            console.error('Failed to clear saved state:', error);
+        }
+    }, [examId, session]);
+
+    const toggleFlag = useCallback((index: number) => {
+        setFlaggedQuestions(prev => {
+            const newSet = new Set(prev);
+            if (newSet.has(index)) {
+                newSet.delete(index);
+                toast.success(`Question ${index + 1} unflagged`);
+            } else {
+                newSet.add(index);
+                toast.success(`Question ${index + 1} flagged for review`);
+            }
+            return newSet;
+        });
+    }, []);
+
     const timeColor = useMemo(() => {
         if (timeLeft > 300) return "text-primary";
         if (timeLeft > 60) return "text-amber-600 dark:text-amber-400";
@@ -133,9 +270,22 @@ export default function ExamPage() {
         });
     }, []);
 
+    const handleMcqAnswer = useCallback((questionIndex: number, optionIndex: number) => {
+        setMcqAnswers(prev => ({
+            ...prev,
+            [questionIndex]: optionIndex
+        }));
+
+        updateAnswer(questionIndex, optionIndex.toString());
+    }, [updateAnswer]);
+
     const isQuestionAnswered = useCallback((index: number) => {
+        const question = exam?.questions[index];
+        if (question?.type === 'mcq') {
+            return mcqAnswers[index] !== undefined;
+        }
         return !!(answers[index] && answers[index].trim() !== "");
-    }, [answers]);
+    }, [answers, mcqAnswers, exam]);
 
     const shuffleArrayWithSeed = (array: any, seed: any) => {
         const seededRandom = (seed: number) => {
@@ -214,17 +364,8 @@ export default function ExamPage() {
     useEffect(() => {
         if (exam?.questions) {
             setAnswers(new Array(exam.questions.length).fill(""));
+            setMcqAnswers({});
         }
-
-        // if (exam && !examStarted) {
-        //     document.documentElement.requestFullscreen()
-        //         .then(() => {
-        //             setExamStarted(true);
-        //         })
-        //         .catch(() => {
-        //             alert("Please allow fullscreen mode.");
-        //         });
-        // }
     }, [exam]);
 
     useEffect(() => {
@@ -516,6 +657,73 @@ export default function ExamPage() {
         }
     }, [activeQuestionIndex, answers, exam, examFiles]);
 
+    // Monitor online/offline status
+    useEffect(() => {
+        const handleOnline = () => {
+            setIsOnline(true);
+            toast.success('Connection restored! Auto-saving...');
+            autoSaveToServer();
+        };
+
+        const handleOffline = () => {
+            setIsOnline(false);
+            toast.error('Connection lost! Your work is being saved locally.');
+            saveToLocalStorage();
+        };
+
+        window.addEventListener('online', handleOnline);
+        window.addEventListener('offline', handleOffline);
+
+        // Check initial state
+        setIsOnline(navigator.onLine);
+
+        return () => {
+            window.removeEventListener('online', handleOnline);
+            window.removeEventListener('offline', handleOffline);
+        };
+    }, [autoSaveToServer, saveToLocalStorage]);
+
+    // Auto-save interval
+    useEffect(() => {
+        if (!examStarted || hasSubmittedRef.current) return;
+
+        autoSaveIntervalRef.current = setInterval(() => {
+            saveToLocalStorage();
+            autoSaveToServer();
+        }, 30000);
+
+        return () => {
+            if (autoSaveIntervalRef.current) {
+                clearInterval(autoSaveIntervalRef.current);
+            }
+        };
+    }, [examStarted, saveToLocalStorage, autoSaveToServer, isOnline]);
+
+    useEffect(() => {
+        if (examStarted && !hasSubmittedRef.current) {
+            saveToLocalStorage();
+        }
+    }, [answers, mcqAnswers, flaggedQuestions, saveToLocalStorage, examStarted]);
+
+    useEffect(() => {
+        if (exam && session?.user?.email) {
+            const restored = loadSavedState();
+            if (restored) {
+                console.log('Exam state restored from previous session');
+            }
+        }
+    }, [exam, session, loadSavedState]);
+
+    useEffect(() => {
+        if (!lastSaved) return;
+
+        const interval = setInterval(() => {
+            setTimeSinceLastSave(Math.floor((Date.now() - lastSaved.getTime()) / 1000));
+        }, 1000);
+
+        return () => clearInterval(interval);
+    }, [lastSaved]);
+
     handleContextMenuRef.current = (e) => {
         e.preventDefault();
         violationsRef.current += 1;
@@ -644,22 +852,34 @@ export default function ExamPage() {
             return;
         }
 
-        console.log(isDisqualified, "isDisqualified");
-
         const email = session.user?.email || "unknown";
         const userName = session.user?.name || "Anonymous";
         const examIdStr = examId?.toString() || "unknown";
 
-        const answersWithQuestionIds = answers.map((answer, index) => ({
-            questionId: shuffledQuestions[index]?.id || index,
-            question: shuffledQuestions[index]?.question || '',
-            answer: answer,
-            marks: shuffledQuestions[index]?.marks || 0,
-            originalIndex: index
-        }));
+        const answersWithQuestionIds = answers.map((answer, index) => {
+            const question = shuffledQuestions[index];
+            const isMcq = question?.type === 'mcq';
+
+            // Get the actual option text for MCQ
+            let mcqAnswer = '';
+            if (isMcq && mcqAnswers[index] !== undefined) {
+                const selectedOptionIndex = mcqAnswers[index];
+                mcqAnswer = question?.options?.[selectedOptionIndex]?.text || '';
+            }
+
+            return {
+                questionId: question?.id || index,
+                question: question?.question || '',
+                answer: isMcq ? mcqAnswer : answer,
+                marks: question?.marks || 0,
+                originalIndex: index,
+                type: question?.type || 'coding',
+                selectedOption: isMcq ? mcqAnswers[index] : undefined,
+                selectedOptionText: isMcq ? mcqAnswer : undefined
+            };
+        });
 
         try {
-
             const result = await fetch("/api/submissions", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
@@ -676,9 +896,10 @@ export default function ExamPage() {
 
             const finalResult = await result.json();
 
-            console.log(finalResult.submissionId, "submission result");
+            // Clear saved state after successful submission
+            clearSavedState();
 
-            fetch("http://localhost:5678/webhook/feedback", {
+            fetch("https://wizard-aiautomate.dopplr.ai/webhook/feedback", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
@@ -693,6 +914,8 @@ export default function ExamPage() {
 
         } catch (error) {
             console.error("Submission failed:", error);
+            toast.error('Submission failed. Your answers are saved locally.');
+            hasSubmittedRef.current = false;
             setIsSubmitting(false);
         }
     };
@@ -895,7 +1118,7 @@ export default function ExamPage() {
                     </div>
 
                     <button
-                        onClick={handleSubmit}
+                        onClick={() => setShowSubmitSummary(true)}
                         disabled={isSubmitting}
                         className="px-6 py-2 bg-primary text-primary-foreground rounded-lg font-semibold hover:opacity-90 transition-opacity disabled:opacity-50 flex items-center gap-2"
                     >
@@ -932,7 +1155,7 @@ export default function ExamPage() {
                             </div>
                         </div>
 
-                        <div className="flex-1 overflow-y-auto p-2">
+                        {/* <div className="flex-1 overflow-y-auto p-2">
                             <div className="space-y-1">
 
                                 {(exam.questions as Question[]).map((q: Question, index: number) => {
@@ -967,9 +1190,136 @@ export default function ExamPage() {
                                     );
                                 })}
                             </div>
+                        </div> */}
+
+                        <div className="flex-1 overflow-y-auto p-2">
+                            {/* Search/Filter */}
+                            <div className="px-2 mb-3">
+                                <div className="relative">
+                                    <input
+                                        type="text"
+                                        placeholder="Search questions..."
+                                        className="w-full px-3 py-2 text-xs bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50"
+                                        value={searchTerm}
+                                        onChange={(e) => setSearchTerm(e.target.value)}
+                                    />
+                                </div>
+                            </div>
+
+                            {/* Question Type Filter */}
+                            <div className="px-2 mb-3 flex gap-2">
+                                <button
+                                    onClick={() => setQuestionFilter('all')}
+                                    className={`flex-1 px-2 py-1.5 text-xs font-medium rounded-lg transition-colors ${questionFilter === 'all'
+                                        ? 'bg-primary text-primary-foreground'
+                                        : 'bg-muted text-muted-foreground hover:bg-muted/80'
+                                        }`}
+                                >
+                                    All ({exam.questions.length})
+                                </button>
+                                <button
+                                    onClick={() => setQuestionFilter('coding')}
+                                    className={`flex-1 px-2 py-1.5 text-xs font-medium rounded-lg transition-colors ${questionFilter === 'coding'
+                                        ? 'bg-primary text-primary-foreground'
+                                        : 'bg-muted text-muted-foreground hover:bg-muted/80'
+                                        }`}
+                                >
+                                    Code ({exam.questions.filter((q: Question) => q.type !== 'mcq').length})
+                                </button>
+                                <button
+                                    onClick={() => setQuestionFilter('mcq')}
+                                    className={`flex-1 px-2 py-1.5 text-xs font-medium rounded-lg transition-colors ${questionFilter === 'mcq'
+                                        ? 'bg-primary text-primary-foreground'
+                                        : 'bg-muted text-muted-foreground hover:bg-muted/80'
+                                        }`}
+                                >
+                                    MCQ ({exam.questions.filter((q: Question) => q.type === 'mcq').length})
+                                </button>
+                            </div>
+
+                            {/* Compact Grid View */}
+                            <div className="grid grid-cols-5 gap-1.5 px-2">
+                                {(exam.questions as Question[])
+                                    .map((q: Question, index: number) => ({ q, index }))
+                                    .filter(({ q, index }) => {
+                                        if (questionFilter === 'coding' && q.type === 'mcq') return false;
+                                        if (questionFilter === 'mcq' && q.type !== 'mcq') return false;
+                                        if (searchTerm && !`Q${index + 1}`.toLowerCase().includes(searchTerm.toLowerCase())) {
+                                            return false;
+                                        }
+                                        return true;
+                                    })
+                                    .map(({ q, index }) => {
+                                        const isActive: boolean = activeQuestionIndex === index;
+                                        const isAnswered: boolean = isQuestionAnswered(index);
+                                        const isFlagged: boolean = flaggedQuestions.has(index);
+                                        const isMcq = q.type === 'mcq';
+
+                                        return (
+                                            <button
+                                                key={index}
+                                                onClick={() => setActiveQuestionIndex(index)}
+                                                className={`aspect-square p-2 rounded-lg text-xs font-semibold transition-all relative ${isActive
+                                                    ? 'bg-primary text-primary-foreground shadow-lg scale-110'
+                                                    : isAnswered
+                                                        ? 'bg-green-500/20 text-green-700 dark:text-green-400 hover:bg-green-500/30'
+                                                        : 'bg-muted text-muted-foreground hover:bg-muted/80'
+                                                    } ${isFlagged ? 'ring-2 ring-amber-500' : ''}`}
+                                                title={`Question ${index + 1} - ${isMcq ? 'MCQ' : 'Coding'} - ${q.marks}pts${isFlagged ? ' (Flagged)' : ''}`}
+                                            >
+                                                <div className="flex flex-col items-center justify-center h-full">
+                                                    <span>{index + 1}</span>
+                                                    {isAnswered && (
+                                                        <CheckCircle2 className="w-3 h-3 absolute top-0.5 right-0.5" />
+                                                    )}
+                                                    {isFlagged && (
+                                                        <span className="absolute top-0.5 left-0.5 text-xs">🚩</span>
+                                                    )}
+                                                    {isMcq && (
+                                                        <FileText className="w-2.5 h-2.5 absolute bottom-0.5 left-0.5 opacity-50" />
+                                                    )}
+                                                    {!isMcq && (
+                                                        <Code className="w-2.5 h-2.5 absolute bottom-0.5 left-0.5 opacity-50" />
+                                                    )}
+                                                </div>
+                                            </button>
+                                        );
+                                    })}
+                            </div>
                         </div>
 
                         <div className="p-4 border-t border-border bg-muted/50">
+                            <div className="space-y-2">
+                                {/* Connection Status */}
+                                {!isOnline && (
+                                    <div className="flex items-center gap-2 px-3 py-2 bg-red-500/10 border border-red-500/20 rounded-lg">
+                                        <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
+                                        <span className="text-xs font-medium text-red-600 dark:text-red-400">Offline Mode</span>
+                                    </div>
+                                )}
+
+                                {/* Auto-save Status */}
+                                {/* {lastSaved && (
+                                    <div className="flex items-center gap-2 px-3 py-2 bg-muted/50 rounded-lg border border-border">
+                                        {isSaving ? (
+                                            <>
+                                                <div className="w-3 h-3 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                                                <span className="text-xs text-muted-foreground">Saving...</span>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <CheckCircle2 className="w-3 h-3 text-green-500" />
+                                                <span className="text-xs text-muted-foreground">
+                                                    Saved {timeSinceLastSave < 60
+                                                        ? `${timeSinceLastSave}s ago`
+                                                        : `${Math.floor(timeSinceLastSave / 60)}m ago`
+                                                    }
+                                                </span>
+                                            </>
+                                        )}
+                                    </div>
+                                )} */}
+                            </div>
                             <div className="space-y-2 text-xs">
                                 <div className="flex items-center justify-between">
                                     <span className="text-muted-foreground">Answered</span>
@@ -978,6 +1328,10 @@ export default function ExamPage() {
                                 <div className="flex items-center justify-between">
                                     <span className="text-muted-foreground">Unanswered</span>
                                     <span className="font-semibold text-muted-foreground">{exam.questions.length - answeredCount}</span>
+                                </div>
+                                <div className="flex items-center justify-between">
+                                    <div className="text-muted-foreground mb-0.5">Flagged</div>
+                                    <div className="font-semibold text-muted-foreground">{flaggedQuestions.size}</div>
                                 </div>
 
                                 {/* Add this Dialog */}
@@ -1196,9 +1550,24 @@ export default function ExamPage() {
                                     <span className="px-3 py-1 bg-primary/10 text-primary text-sm font-medium rounded-full">
                                         {exam.questions[activeQuestionIndex].marks} points
                                     </span>
+                                    {flaggedQuestions.has(activeQuestionIndex) && (
+                                        <span className="px-3 py-1 bg-amber-500/10 text-amber-600 dark:text-amber-400 text-sm font-medium rounded-full flex items-center gap-1">
+                                            <span>🚩</span> Flagged
+                                        </span>
+                                    )}
                                 </div>
 
                                 <div className="flex items-center gap-2">
+                                    <button
+                                        onClick={() => toggleFlag(activeQuestionIndex)}
+                                        className={`p-2 rounded-lg transition-all ${flaggedQuestions.has(activeQuestionIndex)
+                                            ? 'bg-amber-500/20 text-amber-600 dark:text-amber-400 hover:bg-amber-500/30'
+                                            : 'bg-muted hover:bg-muted/80 text-muted-foreground'
+                                            }`}
+                                        title={flaggedQuestions.has(activeQuestionIndex) ? 'Remove flag' : 'Flag for review'}
+                                    >
+                                        <span className="text-lg">🚩</span>
+                                    </button>
                                     <button
                                         onClick={() => setActiveQuestionIndex(Math.max(0, activeQuestionIndex - 1))}
                                         disabled={activeQuestionIndex === 0}
@@ -1223,214 +1592,271 @@ export default function ExamPage() {
                         </div>
                     </div>
 
-                    {/* Code Editor & Output */}
+                    {/* Code Editor & Output OR MCQ Options */}
                     <div className="flex-1 flex flex-col overflow-hidden">
-                        {/* Editor Header */}
-                        <div className="h-14 border-b border-border bg-muted/30 flex items-center justify-between px-4">
-                            <div className="flex items-center gap-3">
-                                <Terminal className="w-4 h-4 text-muted-foreground" />
-                                <span className="text-sm font-medium text-foreground">Code Editor</span>
-                                <span className="px-2 py-1 bg-primary/10 text-primary text-xs font-medium rounded">
-                                    {exam.language.toUpperCase()}
-                                </span>
-                            </div>
-
-                            <div className="flex items-center gap-3">
-                                <div className="flex items-center gap-2 px-3 py-1.5 bg-background border border-border rounded-lg">
-                                    <Sun className={`w-4 h-4 ${theme === 'light' ? 'text-amber-500' : 'text-muted-foreground'}`} />
-                                    <button
-                                        onClick={() => {
-                                            const newTheme = theme === 'dark' ? 'light' : 'dark';
-                                            setTheme(newTheme);
-                                            setEditorTheme(newTheme);
-                                        }}
-                                        className="relative w-10 h-5 bg-muted rounded-full transition-colors"
-                                    >
-                                        <div className={`absolute top-0.5 ${theme === 'dark' ? 'right-0.5' : 'left-0.5'} w-4 h-4 bg-primary rounded-full transition-all`} />
-                                    </button>
-                                    <Moon className={`w-4 h-4 ${theme === 'dark' ? 'text-blue-400' : 'text-muted-foreground'}`} />
-                                </div>
-
-                                <button
-                                    onClick={handleRun}
-                                    disabled={running}
-                                    className="px-4 py-2 bg-primary text-primary-foreground rounded-lg font-semibold hover:opacity-90 transition-opacity disabled:opacity-50 flex items-center gap-2"
-                                >
-                                    {running ? (
-                                        <>
-                                            <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
-                                            Running
-                                        </>
-                                    ) : (
-                                        <>
-                                            <Play className="w-4 h-4" />
-                                            Run Code
-                                        </>
-                                    )}
-                                </button>
-                            </div>
-                        </div>
-
-                        {/* Editor & Console Split */}
-                        <div className="flex-1 flex overflow-hidden">
-
-                            {/* Code Editor */}
-                            <div className="flex-1 overflow-hidden bg-background">
-                                <Editor
-                                    height="100%"
-                                    language={exam.language === 'sql' ? 'sql' : exam.language}
-                                    value={code}
-                                    onChange={(value) => {
-                                        const newCode = value || "";
-                                        setCode(newCode);
-                                        updateAnswer(activeQuestionIndex, newCode);
-                                    }}
-                                    theme={theme === 'dark' ? 'vs-dark' : 'light'}
-                                    options={{
-                                        minimap: { enabled: true },
-                                        fontSize: 14,
-                                        lineNumbers: 'on',
-                                        roundedSelection: false,
-                                        scrollBeyondLastLine: false,
-                                        automaticLayout: true,
-                                        tabSize: 4,
-                                        wordWrap: 'on',
-                                        formatOnPaste: true,
-                                        formatOnType: true,
-                                        suggestOnTriggerCharacters: true,
-                                        quickSuggestions: true,
-                                        folding: true,
-                                        bracketPairColorization: { enabled: true },
-                                    }}
-                                />
-                            </div>
-
-                            {/* Console Output */}
-                            <div className="w-2/5 border-l border-border bg-card flex flex-col">
-                                <div className="h-10 border-b border-border bg-muted/30 flex items-center px-4">
-                                    <div className="flex items-center gap-2">
-                                        <div className="w-3 h-3 bg-red-500 rounded-full" />
-                                        <div className="w-3 h-3 bg-amber-500 rounded-full" />
-                                        <div className="w-3 h-3 bg-green-500 rounded-full" />
+                        {exam.questions[activeQuestionIndex]?.type === 'mcq' ? (
+                            // MCQ Options View
+                            <div className="flex-1 overflow-y-auto bg-card p-6">
+                                <div className="max-w-3xl mx-auto space-y-4">
+                                    <div className="mb-6">
+                                        <h3 className="text-lg font-semibold text-foreground mb-2">Select your answer:</h3>
+                                        <p className="text-sm text-muted-foreground">Choose one option from the following</p>
                                     </div>
-                                    <span className="ml-4 text-xs font-medium text-muted-foreground">
-                                        {exam.language === 'sql' ? 'Query Results' : 'Console'}
-                                    </span>
+
+                                    <div className="space-y-3">
+                                        {exam.questions[activeQuestionIndex]?.options?.map((option: any, optionIndex: number) => {
+                                            const isSelected = mcqAnswers[activeQuestionIndex] === optionIndex;
+
+                                            return (
+                                                <button
+                                                    key={option.id || optionIndex}
+                                                    onClick={() => handleMcqAnswer(activeQuestionIndex, optionIndex)}
+                                                    className={`w-full p-4 rounded-lg border-2 text-left transition-all ${isSelected
+                                                        ? 'border-primary bg-primary/10 shadow-md'
+                                                        : 'border-border hover:border-primary/50 hover:bg-muted/50'
+                                                        }`}
+                                                >
+                                                    <div className="flex items-start gap-4">
+                                                        <div className={`w-8 h-8 rounded-full flex items-center justify-center font-semibold flex-shrink-0 ${isSelected
+                                                            ? 'bg-primary text-primary-foreground'
+                                                            : 'bg-muted text-muted-foreground'
+                                                            }`}>
+                                                            {String.fromCharCode(65 + optionIndex)}
+                                                        </div>
+                                                        <div className="flex-1 pt-1">
+                                                            <p className="text-sm text-foreground leading-relaxed">{option.text}</p>
+                                                        </div>
+                                                        {isSelected && (
+                                                            <CheckCircle2 className="w-5 h-5 text-primary flex-shrink-0 mt-1" />
+                                                        )}
+                                                    </div>
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+
+                                    {mcqAnswers[activeQuestionIndex] !== undefined && (
+                                        <div className="mt-6 p-4 bg-primary/10 rounded-lg border border-primary/20">
+                                            <div className="flex items-center gap-2 text-sm text-primary">
+                                                <CheckCircle2 className="w-4 h-4" />
+                                                <span className="font-medium">
+                                                    Answer selected: Option {String.fromCharCode(65 + mcqAnswers[activeQuestionIndex])}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        ) : (
+                            // Coding Questions - Editor & Console
+                            <>
+                                {/* Editor Header */}
+                                <div className="h-14 border-b border-border bg-muted/30 flex items-center justify-between px-4">
+                                    <div className="flex items-center gap-3">
+                                        <Terminal className="w-4 h-4 text-muted-foreground" />
+                                        <span className="text-sm font-medium text-foreground">Code Editor</span>
+                                        <span className="px-2 py-1 bg-primary/10 text-primary text-xs font-medium rounded">
+                                            {exam.language.toUpperCase()}
+                                        </span>
+                                    </div>
+
+                                    <div className="flex items-center gap-3">
+                                        <div className="flex items-center gap-2 px-3 py-1.5 bg-background border border-border rounded-lg">
+                                            <Sun className={`w-4 h-4 ${theme === 'light' ? 'text-amber-500' : 'text-muted-foreground'}`} />
+                                            <button
+                                                onClick={() => {
+                                                    const newTheme = theme === 'dark' ? 'light' : 'dark';
+                                                    setTheme(newTheme);
+                                                    setEditorTheme(newTheme);
+                                                }}
+                                                className="relative w-10 h-5 bg-muted rounded-full transition-colors"
+                                            >
+                                                <div className={`absolute top-0.5 ${theme === 'dark' ? 'right-0.5' : 'left-0.5'} w-4 h-4 bg-primary rounded-full transition-all`} />
+                                            </button>
+                                            <Moon className={`w-4 h-4 ${theme === 'dark' ? 'text-blue-400' : 'text-muted-foreground'}`} />
+                                        </div>
+
+                                        <button
+                                            onClick={handleRun}
+                                            disabled={running}
+                                            className="px-4 py-2 bg-primary text-primary-foreground rounded-lg font-semibold hover:opacity-90 transition-opacity disabled:opacity-50 flex items-center gap-2"
+                                        >
+                                            {running ? (
+                                                <>
+                                                    <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                                                    Running
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <Play className="w-4 h-4" />
+                                                    Run Code
+                                                </>
+                                            )}
+                                        </button>
+                                    </div>
                                 </div>
 
-                                <div className="flex-1 overflow-auto p-4">
-                                    {exam.language === 'sql' ? (
-                                        // SQL Results Table
-                                        sqlResult ? (
-                                            <div className="space-y-4">
-                                                <div className="flex items-center justify-between">
-                                                    <span className="text-sm font-medium text-foreground">
-                                                        {sqlResult.rows.length} row{sqlResult.rows.length !== 1 ? 's' : ''} returned
-                                                    </span>
-                                                    <span className="text-xs text-muted-foreground">
-                                                        {sqlResult.columns.length} column{sqlResult.columns.length !== 1 ? 's' : ''}
-                                                    </span>
-                                                </div>
+                                {/* Editor & Console Split */}
+                                <div className="flex-1 flex overflow-hidden">
+                                    {/* Code Editor */}
+                                    <div className="flex-1 overflow-hidden bg-background">
+                                        <Editor
+                                            height="100%"
+                                            language={exam.language === 'sql' ? 'sql' : exam.language}
+                                            value={code}
+                                            onChange={(value) => {
+                                                const newCode = value || "";
+                                                setCode(newCode);
+                                                updateAnswer(activeQuestionIndex, newCode);
+                                            }}
+                                            theme={theme === 'dark' ? 'vs-dark' : 'light'}
+                                            options={{
+                                                minimap: { enabled: true },
+                                                fontSize: 14,
+                                                lineNumbers: 'on',
+                                                roundedSelection: false,
+                                                scrollBeyondLastLine: false,
+                                                automaticLayout: true,
+                                                tabSize: 4,
+                                                wordWrap: 'on',
+                                                formatOnPaste: true,
+                                                formatOnType: true,
+                                                suggestOnTriggerCharacters: true,
+                                                quickSuggestions: true,
+                                                folding: true,
+                                                bracketPairColorization: { enabled: true },
+                                            }}
+                                        />
+                                    </div>
 
-                                                <div className="border border-border rounded-lg overflow-hidden">
-                                                    <div className="overflow-x-auto">
-                                                        <table className="w-full text-sm">
-                                                            <thead className="bg-muted">
-                                                                <tr>
-                                                                    <th className="px-4 py-2 text-left font-semibold text-foreground border-b border-border w-12">
-                                                                        #
-                                                                    </th>
-                                                                    {sqlResult.columns.map((col, idx) => (
-                                                                        <th
-                                                                            key={idx}
-                                                                            className="px-4 py-2 text-left font-semibold text-foreground border-b border-border whitespace-nowrap"
-                                                                        >
-                                                                            {col}
-                                                                        </th>
-                                                                    ))}
-                                                                </tr>
-                                                            </thead>
-                                                            <tbody>
-                                                                {sqlResult.rows.length > 0 ? (
-                                                                    sqlResult.rows.map((row, rowIdx) => (
-                                                                        <tr
-                                                                            key={rowIdx}
-                                                                            className="hover:bg-muted/50 transition-colors"
-                                                                        >
-                                                                            <td className="px-4 py-2 text-muted-foreground border-b border-border/50 font-mono text-xs">
-                                                                                {rowIdx + 1}
-                                                                            </td>
-                                                                            {sqlResult.columns.map((col, colIdx) => (
-                                                                                <td
-                                                                                    key={colIdx}
-                                                                                    className="px-4 py-2 border-b border-border/50 font-mono text-xs text-foreground"
+                                    {/* Console Output */}
+                                    <div className="w-2/5 border-l border-border bg-card flex flex-col">
+                                        <div className="h-10 border-b border-border bg-muted/30 flex items-center px-4">
+                                            <div className="flex items-center gap-2">
+                                                <div className="w-3 h-3 bg-red-500 rounded-full" />
+                                                <div className="w-3 h-3 bg-amber-500 rounded-full" />
+                                                <div className="w-3 h-3 bg-green-500 rounded-full" />
+                                            </div>
+                                            <span className="ml-4 text-xs font-medium text-muted-foreground">
+                                                {exam.language === 'sql' ? 'Query Results' : 'Console'}
+                                            </span>
+                                        </div>
+
+                                        <div className="flex-1 overflow-auto p-4">
+                                            {exam.language === 'sql' ? (
+                                                // SQL Results Table
+                                                sqlResult ? (
+                                                    <div className="space-y-4">
+                                                        <div className="flex items-center justify-between">
+                                                            <span className="text-sm font-medium text-foreground">
+                                                                {sqlResult.rows.length} row{sqlResult.rows.length !== 1 ? 's' : ''} returned
+                                                            </span>
+                                                            <span className="text-xs text-muted-foreground">
+                                                                {sqlResult.columns.length} column{sqlResult.columns.length !== 1 ? 's' : ''}
+                                                            </span>
+                                                        </div>
+
+                                                        <div className="border border-border rounded-lg overflow-hidden">
+                                                            <div className="overflow-x-auto">
+                                                                <table className="w-full text-sm">
+                                                                    <thead className="bg-muted">
+                                                                        <tr>
+                                                                            <th className="px-4 py-2 text-left font-semibold text-foreground border-b border-border w-12">
+                                                                                #
+                                                                            </th>
+                                                                            {sqlResult.columns.map((col, idx) => (
+                                                                                <th
+                                                                                    key={idx}
+                                                                                    className="px-4 py-2 text-left font-semibold text-foreground border-b border-border whitespace-nowrap"
                                                                                 >
-                                                                                    {row[col] === null ? (
-                                                                                        <span className="text-muted-foreground italic">NULL</span>
-                                                                                    ) : row[col] === undefined ? (
-                                                                                        <span className="text-muted-foreground italic">-</span>
-                                                                                    ) : typeof row[col] === 'object' ? (
-                                                                                        <span className="text-blue-500">{JSON.stringify(row[col])}</span>
-                                                                                    ) : (
-                                                                                        String(row[col])
-                                                                                    )}
-                                                                                </td>
+                                                                                    {col}
+                                                                                </th>
                                                                             ))}
                                                                         </tr>
-                                                                    ))
-                                                                ) : (
-                                                                    <tr>
-                                                                        <td
-                                                                            colSpan={sqlResult.columns.length + 1}
-                                                                            className="px-4 py-8 text-center text-muted-foreground"
-                                                                        >
-                                                                            No rows returned
-                                                                        </td>
-                                                                    </tr>
-                                                                )}
-                                                            </tbody>
-                                                        </table>
-                                                    </div>
-                                                </div>
+                                                                    </thead>
+                                                                    <tbody>
+                                                                        {sqlResult.rows.length > 0 ? (
+                                                                            sqlResult.rows.map((row, rowIdx) => (
+                                                                                <tr
+                                                                                    key={rowIdx}
+                                                                                    className="hover:bg-muted/50 transition-colors"
+                                                                                >
+                                                                                    <td className="px-4 py-2 text-muted-foreground border-b border-border/50 font-mono text-xs">
+                                                                                        {rowIdx + 1}
+                                                                                    </td>
+                                                                                    {sqlResult.columns.map((col, colIdx) => (
+                                                                                        <td
+                                                                                            key={colIdx}
+                                                                                            className="px-4 py-2 border-b border-border/50 font-mono text-xs text-foreground"
+                                                                                        >
+                                                                                            {row[col] === null ? (
+                                                                                                <span className="text-muted-foreground italic">NULL</span>
+                                                                                            ) : row[col] === undefined ? (
+                                                                                                <span className="text-muted-foreground italic">-</span>
+                                                                                            ) : typeof row[col] === 'object' ? (
+                                                                                                <span className="text-blue-500">{JSON.stringify(row[col])}</span>
+                                                                                            ) : (
+                                                                                                String(row[col])
+                                                                                            )}
+                                                                                        </td>
+                                                                                    ))}
+                                                                                </tr>
+                                                                            ))
+                                                                        ) : (
+                                                                            <tr>
+                                                                                <td
+                                                                                    colSpan={sqlResult.columns.length + 1}
+                                                                                    className="px-4 py-8 text-center text-muted-foreground"
+                                                                                >
+                                                                                    No rows returned
+                                                                                </td>
+                                                                            </tr>
+                                                                        )}
+                                                                    </tbody>
+                                                                </table>
+                                                            </div>
+                                                        </div>
 
-                                                {output && (
-                                                    <div className="mt-4 p-3 bg-muted rounded-lg">
-                                                        <div className="flex items-start gap-2">
-                                                            <span className="text-xs font-semibold text-muted-foreground">Info:</span>
-                                                            <pre className="text-xs text-foreground whitespace-pre-wrap flex-1">{output}</pre>
+                                                        {output && (
+                                                            <div className="mt-4 p-3 bg-muted rounded-lg">
+                                                                <div className="flex items-start gap-2">
+                                                                    <span className="text-xs font-semibold text-muted-foreground">Info:</span>
+                                                                    <pre className="text-xs text-foreground whitespace-pre-wrap flex-1">{output}</pre>
+                                                                </div>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                ) : output ? (
+                                                    // Error or info message
+                                                    <div className="space-y-2">
+                                                        <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-lg">
+                                                            <pre className="text-sm text-destructive whitespace-pre-wrap font-mono">{output}</pre>
                                                         </div>
                                                     </div>
-                                                )}
-                                            </div>
-                                        ) : output ? (
-                                            // Error or info message
-                                            <div className="space-y-2">
-                                                <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-lg">
-                                                    <pre className="text-sm text-destructive whitespace-pre-wrap font-mono">{output}</pre>
-                                                </div>
-                                            </div>
-                                        ) : (
-                                            // Empty state
-                                            <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground">
-                                                <Terminal className="w-12 h-12 mb-3 opacity-50" />
-                                                <p className="text-sm font-medium mb-1">No Results</p>
-                                                <p className="text-xs">Run your SQL query to see results</p>
-                                            </div>
-                                        )
-                                    ) : (
-                                        // Non-SQL Console Output
-                                        output ? (
-                                            <pre className="text-foreground whitespace-pre-wrap font-mono text-sm">{output}</pre>
-                                        ) : (
-                                            <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground">
-                                                <Terminal className="w-12 h-12 mb-3 opacity-50" />
-                                                <p className="text-sm">Run your code to see output</p>
-                                            </div>
-                                        )
-                                    )}
+                                                ) : (
+                                                    // Empty state
+                                                    <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground">
+                                                        <Terminal className="w-12 h-12 mb-3 opacity-50" />
+                                                        <p className="text-sm font-medium mb-1">No Results</p>
+                                                        <p className="text-xs">Run your SQL query to see results</p>
+                                                    </div>
+                                                )
+                                            ) : (
+                                                // Non-SQL Console Output
+                                                output ? (
+                                                    <pre className="text-foreground whitespace-pre-wrap font-mono text-sm">{output}</pre>
+                                                ) : (
+                                                    <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground">
+                                                        <Terminal className="w-12 h-12 mb-3 opacity-50" />
+                                                        <p className="text-sm">Run your code to see output</p>
+                                                    </div>
+                                                )
+                                            )}
+                                        </div>
+                                    </div>
                                 </div>
-                            </div>
-                        </div>
+                            </>
+                        )}
                     </div>
                 </main>
             </div>
@@ -1460,6 +1886,207 @@ export default function ExamPage() {
                                 <h3 className="text-xl font-bold text-foreground mb-2">Submitting Your Exam</h3>
                                 <p className="text-sm text-muted-foreground">Please wait while we process your submission...</p>
                             </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Submit Summary Modal */}
+            {showSubmitSummary && (
+                <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                    <div className="bg-card border border-border rounded-2xl w-full max-w-4xl max-h-[90vh] flex flex-col shadow-2xl">
+                        {/* Header */}
+                        <div className="p-6 border-b border-border flex-shrink-0">
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <h2 className="text-2xl font-bold text-foreground mb-1">Exam Summary</h2>
+                                    <p className="text-sm text-muted-foreground">Review your answers before final submission</p>
+                                </div>
+                                <button
+                                    onClick={() => setShowSubmitSummary(false)}
+                                    className="p-2 hover:bg-muted rounded-lg transition-colors"
+                                >
+                                    <X className="w-5 h-5" />
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Summary Content */}
+                        <div className="flex-1 overflow-y-auto p-6">
+                            <div className="space-y-6">
+                                {/* Stats Grid */}
+                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                    <div className="p-4 bg-primary/10 rounded-lg border border-primary/20">
+                                        <div className="text-sm text-muted-foreground mb-1">Total Questions</div>
+                                        <div className="text-2xl font-bold text-foreground">{exam.questions.length}</div>
+                                    </div>
+                                    <div className="p-4 bg-green-500/10 rounded-lg border border-green-500/20">
+                                        <div className="text-sm text-muted-foreground mb-1">Answered</div>
+                                        <div className="text-2xl font-bold text-green-600 dark:text-green-400">{answeredCount}</div>
+                                    </div>
+                                    <div className="p-4 bg-red-500/10 rounded-lg border border-red-500/20">
+                                        <div className="text-sm text-muted-foreground mb-1">Unanswered</div>
+                                        <div className="text-2xl font-bold text-red-600 dark:text-red-400">
+                                            {exam.questions.length - answeredCount}
+                                        </div>
+                                    </div>
+                                    <div className="p-4 bg-amber-500/10 rounded-lg border border-amber-500/20">
+                                        <div className="text-sm text-muted-foreground mb-1">Flagged</div>
+                                        <div className="text-2xl font-bold text-amber-600 dark:text-amber-400">
+                                            {flaggedQuestions.size}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Time Remaining */}
+                                <div className="p-4 bg-muted/50 rounded-lg border border-border">
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-3">
+                                            <Clock className="w-5 h-5 text-primary" />
+                                            <div>
+                                                <div className="text-sm text-muted-foreground">Time Remaining</div>
+                                                <div className="text-lg font-bold text-foreground">{formattedTime}</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Unanswered Questions Warning */}
+                                {exam.questions.length - answeredCount > 0 && (
+                                    <div className="p-4 bg-red-500/10 rounded-lg border border-red-500/20">
+                                        <div className="flex items-start gap-3">
+                                            <div className="w-5 h-5 text-red-600 dark:text-red-400 flex-shrink-0">⚠️</div>
+                                            <div>
+                                                <div className="font-semibold text-red-600 dark:text-red-400 mb-1">
+                                                    You have {exam.questions.length - answeredCount} unanswered question{exam.questions.length - answeredCount > 1 ? 's' : ''}
+                                                </div>
+                                                <div className="text-sm text-muted-foreground">
+                                                    Questions: {exam.questions
+                                                        .map((_: any, idx: any) => idx)
+                                                        .filter((idx: number) => !isQuestionAnswered(idx))
+                                                        .map((idx: number) => `Q${idx + 1}`)
+                                                        .join(', ')}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Flagged Questions */}
+                                {flaggedQuestions.size > 0 && (
+                                    <div className="p-4 bg-amber-500/10 rounded-lg border border-amber-500/20">
+                                        <div className="flex items-start gap-3">
+                                            <span className="text-lg flex-shrink-0">🚩</span>
+                                            <div className="flex-1">
+                                                <div className="font-semibold text-amber-600 dark:text-amber-400 mb-1">
+                                                    {flaggedQuestions.size} question{flaggedQuestions.size > 1 ? 's' : ''} flagged for review
+                                                </div>
+                                                <div className="text-sm text-muted-foreground">
+                                                    Questions: {Array.from(flaggedQuestions)
+                                                        .sort((a, b) => a - b)
+                                                        .map(idx => `Q${idx + 1}`)
+                                                        .join(', ')}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Question Breakdown */}
+                                <div>
+                                    <h3 className="text-lg font-semibold text-foreground mb-3">Question Breakdown</h3>
+                                    <div className="space-y-2 max-h-64 overflow-y-auto">
+                                        {exam.questions.map((q: Question, index: number) => {
+                                            const isAnswered = isQuestionAnswered(index);
+                                            const isFlagged = flaggedQuestions.has(index);
+
+                                            return (
+                                                <div
+                                                    key={index}
+                                                    className={`p-3 rounded-lg border flex items-center justify-between ${isAnswered
+                                                        ? 'bg-green-500/10 border-green-500/20'
+                                                        : 'bg-red-500/10 border-red-500/20'
+                                                        }`}
+                                                >
+                                                    <div className="flex items-center gap-3">
+                                                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold ${isAnswered
+                                                            ? 'bg-green-500/20 text-green-600 dark:text-green-400'
+                                                            : 'bg-red-500/20 text-red-600 dark:text-red-400'
+                                                            }`}>
+                                                            {index + 1}
+                                                        </div>
+                                                        <div>
+                                                            <div className="flex items-center gap-2">
+                                                                <span className="text-sm font-medium text-foreground">
+                                                                    Question {index + 1}
+                                                                </span>
+                                                                {q.type === 'mcq' && (
+                                                                    <span className="px-2 py-0.5 bg-purple-500/10 text-purple-600 dark:text-purple-400 text-xs rounded">
+                                                                        MCQ
+                                                                    </span>
+                                                                )}
+                                                                {q.type !== 'mcq' && (
+                                                                    <span className="px-2 py-0.5 bg-blue-500/10 text-blue-600 dark:text-blue-400 text-xs rounded">
+                                                                        Coding
+                                                                    </span>
+                                                                )}
+                                                                {isFlagged && <span>🚩</span>}
+                                                            </div>
+                                                            <div className="text-xs text-muted-foreground">{q.marks} points</div>
+                                                        </div>
+                                                    </div>
+                                                    <div className="flex items-center gap-2">
+                                                        {isAnswered ? (
+                                                            <CheckCircle2 className="w-5 h-5 text-green-600 dark:text-green-400" />
+                                                        ) : (
+                                                            <X className="w-5 h-5 text-red-600 dark:text-red-400" />
+                                                        )}
+                                                        <button
+                                                            onClick={() => {
+                                                                setShowSubmitSummary(false);
+                                                                setActiveQuestionIndex(index);
+                                                            }}
+                                                            className="px-3 py-1 text-xs bg-primary/10 text-primary rounded hover:bg-primary/20 transition-colors"
+                                                        >
+                                                            Review
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Footer Actions */}
+                        <div className="p-6 border-t border-border flex items-center justify-between flex-shrink-0 bg-muted/30">
+                            <button
+                                onClick={() => setShowSubmitSummary(false)}
+                                className="px-6 py-2.5 bg-muted hover:bg-muted/80 text-foreground rounded-lg font-semibold transition-colors"
+                            >
+                                Continue Exam
+                            </button>
+                            <button
+                                onClick={() => {
+                                    setShowSubmitSummary(false);
+                                    handleSubmit();
+                                }}
+                                disabled={isSubmitting}
+                                className="px-6 py-2.5 bg-primary text-primary-foreground rounded-lg font-semibold hover:opacity-90 transition-opacity disabled:opacity-50 flex items-center gap-2"
+                            >
+                                {isSubmitting ? (
+                                    <>
+                                        <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                                        Submitting...
+                                    </>
+                                ) : (
+                                    <>
+                                        <Send className="w-4 h-4" />
+                                        Confirm & Submit
+                                    </>
+                                )}
+                            </button>
                         </div>
                     </div>
                 </div>

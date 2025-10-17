@@ -54,17 +54,22 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
       query += ` ORDER BY q."createdAt" DESC`;
 
-      console.log("Executing query:", query, "with params:", params);
-
       const result = await pool.query(query, params);
 
-      console.log("Query result:", result.rows);
-
-      // Group options by question id
       const grouped = result.rows.reduce((acc: any, row: any) => {
         if (!acc[row.id]) {
           acc[row.id] = {
-            ...row,
+            id: row.id,
+            questionText: row.questionText,
+            expectedOutput: row.expectedOutput,
+            difficulty: row.difficulty,
+            marks: row.marks,
+            language: row.language,
+            questionType: row.questionType,
+            jobId: row.jobId,
+            skillId: row.skillId,
+            solution: row.solution,
+            createdAt: row.createdAt,
             options: [],
           };
         }
@@ -77,6 +82,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         }
         return acc;
       }, {});
+
+      console.log("Grouped result:", grouped);
 
       return res.status(200).json(Object.values(grouped));
     }

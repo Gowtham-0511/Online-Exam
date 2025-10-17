@@ -104,9 +104,36 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         }
     }
 
+    if(req.method === "GET") {
+        try {
+            const { id } = req.query;
+            const batchId = id as string;
+            if (!batchId) {
+                return res.status(400).json({ error: "Batch ID is required" });
+            }
+            const query = `SELECT * FROM "Batch" WHERE "Id" = $1`;
+            const result = await pool.query(query, [batchId]);
+            if (result.rows.length === 0) {
+                return res.status(404).json({ error: "Batch not found" });
+            }
+            const batch = result.rows[0];
+            const employees = batch.Employees ? JSON.parse(batch.Employees) : [];
+            return res.status(200).json({
+                id: batch.Id,
+                name: batch.Name,
+                createdAt: batch.CreatedAt,
+                employeeCount: batch.EmployeeCount,
+                employees: employees,
+            });
+        } catch (error) {
+            console.error("Error fetching batch:", error);
+            return res.status(500).json({ error: "Failed to fetch batch" });
+        }
+    }
+
     // ---------------- Unsupported Methods ----------------
     return res.status(405).json({
         error: `Method ${req.method} not allowed`,
-        allowedMethods: ["PUT", "DELETE"],
+        allowedMethods: ["PUT", "DELETE", "GET"],
     });
 }

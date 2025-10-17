@@ -235,10 +235,20 @@ const ViewExams: React.FC = () => {
 
     const isExamActive = (exam: Exam): boolean => {
         if (!exam.startTime || !exam.endTime) return true;
+
         const now = new Date();
+        const istOffset = 5.5 * 60 * 60 * 1000;
+        const nowIST = new Date(now.getTime() + istOffset);
+
         const start = new Date(exam.startTime);
+        const startIST = new Date(start.getTime() - istOffset);
+
         const end = new Date(exam.endTime);
-        return now >= start && now <= end;
+        const endIST = new Date(end.getTime() - istOffset);
+
+        console.log(`Exam: ${exam.title}, Now(IST): ${nowIST}, Start(IST): ${startIST}, End(IST): ${endIST}`);
+
+        return nowIST >= startIST && nowIST <= endIST;
     };
 
     const getExamStatus = (exam: Exam): { status: string; color: string; bgColor: string } => {
@@ -274,7 +284,7 @@ const ViewExams: React.FC = () => {
             };
         }
     };
-    
+
     const handleStartExam = (examId: any) => {
         const exam = exams.find(e => e.id === examId);
         if (exam) {
