@@ -1,5 +1,5 @@
 import { NextApiRequest, NextApiResponse } from "next";
-import { getDBConnection } from "@/lib/database";
+import pool from "@/lib/db";
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== "GET") return res.status(405).end();
@@ -11,14 +11,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(400).json({ error: "Missing or invalid email" });
     }
 
-    const db = await getDBConnection();
+    // 1️⃣ Get exams created by this examiner
+    const examsResult = await pool.query(
+      `SELECT id, title FROM "Assessment" WHERE "createdBy" = $1`,
+      [email]
+    );
 
-    const examsResult = await db
-      .request()
-      .input("createdBy", email)
-      .query(`SELECT id, title FROM Assessment WHERE createdBy = @createdBy`);
-
-    const exams = examsResult.recordset;
+    const exams = examsResult.rows;
 
     if (exams.length === 0) {
       return res.status(200).json([]);
@@ -27,23 +26,23 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const examIds = exams.map((e: any) => e.id);
     const examTitles = exams.map((e: any) => e.title);
     console.log("Exam Titles:", examTitles);
-    const placeholders = examTitles.map((_, idx) => `@id${idx}`).join(",");
 
-    const request = db.request();
-    examTitles.forEach((id, idx) => request.input(`id${idx}`, id));
+    // 2️⃣ Build a dynamic placeholder list ($1, $2, ...)
+    const placeholders = examIds.map((_, idx) => `$${idx + 1}`).join(",");
 
     console.log("Fetching submissions for exam IDs:", examIds);
 
-    const submissionsResult = await request.query(`
-      SELECT * 
-      FROM Submissions 
-      WHERE examId IN (${placeholders})
-      ORDER BY submittedAt DESC
-    `);
+    const submissionsResult = await pool.query(
+      `SELECT * 
+       FROM "submissions"
+       WHERE "examId" IN (${placeholders})
+       ORDER BY "submittedAt" DESC`,
+      examTitles
+    );
 
-    console.log("Submissions found:", submissionsResult.recordset.length);
+    console.log("Submissions found:", submissionsResult.rows.length);
 
-    return res.status(200).json(submissionsResult.recordset);
+    return res.status(200).json(submissionsResult.rows);
   } catch (error: any) {
     console.error("❌ Error in /api/submissions/by-examiner:", error.message);
     return res.status(500).json({ error: "Failed to load submissions", details: error.message });

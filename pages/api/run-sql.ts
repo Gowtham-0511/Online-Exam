@@ -34,16 +34,31 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
         client = await pool.connect();
 
-        const result = await client.query(
-            'select * from sql_credentials where lower(exam_title) = $1',
+        const assessmentResult = await client.query(
+            'SELECT "sqlCredentialId" FROM "Assessment" WHERE title = $1',
             [examId]
         );
 
-        if (result.rows.length === 0) {
+        if (assessmentResult.rows.length === 0) {
+            return res.status(404).json({ error: "Assessment not found" });
+        }
+
+        const sqlCredentialId = assessmentResult.rows[0].sqlCredentialId;
+
+        if (!sqlCredentialId) {
+            return res.status(404).json({ error: "No SQL credentials configured for this exam" });
+        }
+        
+        const credentialResult = await client.query(
+            'SELECT * FROM sql_credentials WHERE id = $1',
+            [sqlCredentialId]
+        );
+
+        if (credentialResult.rows.length === 0) {
             return res.status(404).json({ error: "SQL credentials not found" });
         }
 
-        const credential = result.rows[0];
+        const credential = credentialResult.rows[0];
         const decryptedPassword = decrypt(credential.password);
 
         if (credential.server_type === 'postgres') {

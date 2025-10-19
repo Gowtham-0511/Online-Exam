@@ -1040,6 +1040,11 @@ export default function ExamPage() {
         setRunning(false);
     };
 
+    const copyToClipboard = (text: string, label: string) => {
+        navigator.clipboard.writeText(text);
+        toast.success(`${label} copied to clipboard!`);
+    };
+
     if (!exam) {
         return (
             <div className="h-screen w-screen bg-background flex items-center justify-center">
@@ -1392,18 +1397,56 @@ export default function ExamPage() {
                                                                 .map((table: any, idx: number) => {
                                                                     const isSelected = selectedTable === table.table_name;
 
+                                                                    // Find relationships for this table
+                                                                    const outgoingRelationships = schemaData.relationships.filter(
+                                                                        (rel: any) => rel.from_table === table.table_name
+                                                                    );
+                                                                    const incomingRelationships = schemaData.relationships.filter(
+                                                                        (rel: any) => rel.to_table === table.table_name
+                                                                    );
+
                                                                     return (
                                                                         <div
                                                                             key={idx}
-                                                                            className={`border rounded-lg overflow-hidden transition-all cursor-pointer hover:shadow-md ${isSelected ? 'ring-2 ring-primary shadow-lg bg-primary/5' : 'border-border hover:border-primary/50'
+                                                                            className={`border rounded-lg overflow-hidden transition-all ${isSelected ? 'ring-2 ring-primary shadow-lg bg-primary/5' : 'border-border hover:border-primary/50'
                                                                                 }`}
-                                                                            onClick={() => setSelectedTable(isSelected ? null : table.table_name)}
                                                                         >
                                                                             <div className="bg-muted/50 px-4 py-3 border-b border-border">
-                                                                                <h3 className="text-base font-bold text-foreground flex items-center gap-2">
-                                                                                    <Database className="w-4 h-4 text-primary" />
-                                                                                    {table.table_name}
-                                                                                </h3>
+                                                                                <div className="flex items-center justify-between">
+                                                                                    <h3 className="text-base font-bold text-foreground flex items-center gap-2">
+                                                                                        <Database className="w-4 h-4 text-primary" />
+                                                                                        {table.table_name}
+                                                                                    </h3>
+                                                                                    <Button
+                                                                                        variant="outline"
+                                                                                        size="sm"
+                                                                                        onClick={(e) => {
+                                                                                            e.stopPropagation();
+                                                                                            copyToClipboard(table.table_name, 'Table name');
+                                                                                        }}
+                                                                                        className="h-7 text-xs"
+                                                                                    >
+                                                                                        Copy Name
+                                                                                    </Button>
+                                                                                </div>
+
+                                                                                {/* Show relationship counts */}
+                                                                                {(outgoingRelationships.length > 0 || incomingRelationships.length > 0) && (
+                                                                                    <div className="mt-2 flex items-center gap-3 text-xs text-muted-foreground">
+                                                                                        {outgoingRelationships.length > 0 && (
+                                                                                            <span className="flex items-center gap-1">
+                                                                                                <span className="text-blue-500">→</span>
+                                                                                                {outgoingRelationships.length} Foreign Key{outgoingRelationships.length > 1 ? 's' : ''}
+                                                                                            </span>
+                                                                                        )}
+                                                                                        {incomingRelationships.length > 0 && (
+                                                                                            <span className="flex items-center gap-1">
+                                                                                                <span className="text-green-500">←</span>
+                                                                                                {incomingRelationships.length} Reference{incomingRelationships.length > 1 ? 's' : ''}
+                                                                                            </span>
+                                                                                        )}
+                                                                                    </div>
+                                                                                )}
                                                                             </div>
 
                                                                             <div className="bg-card overflow-x-auto">
@@ -1414,12 +1457,18 @@ export default function ExamPage() {
                                                                                             <th className="px-4 py-3 text-left font-semibold text-foreground border-b border-border">Data Type</th>
                                                                                             <th className="px-4 py-3 text-center font-semibold text-foreground border-b border-border">Constraints</th>
                                                                                             <th className="px-4 py-3 text-center font-semibold text-foreground border-b border-border">Nullable</th>
+                                                                                            <th className="px-4 py-3 text-center font-semibold text-foreground border-b border-border">Actions</th>
                                                                                         </tr>
                                                                                     </thead>
                                                                                     <tbody className="divide-y divide-border">
                                                                                         {table.columns.map((col: any, colIdx: number) => {
                                                                                             const matchesSearch = !searchTerm ||
                                                                                                 col.column_name.toLowerCase().includes(searchTerm.toLowerCase());
+
+                                                                                            // Check if this column is a foreign key
+                                                                                            const fkRelation = outgoingRelationships.find(
+                                                                                                (rel: any) => rel.from_column === col.column_name
+                                                                                            );
 
                                                                                             return (
                                                                                                 <tr
@@ -1428,7 +1477,19 @@ export default function ExamPage() {
                                                                                                         }`}
                                                                                                 >
                                                                                                     <td className="px-4 py-3 font-mono text-sm text-foreground">
-                                                                                                        <span className="truncate" title={col.column_name}>{col.column_name}</span>
+                                                                                                        <div className="flex items-center gap-2">
+                                                                                                            <span className="truncate" title={col.column_name}>
+                                                                                                                {col.column_name}
+                                                                                                            </span>
+                                                                                                            {fkRelation && (
+                                                                                                                <span
+                                                                                                                    className="text-xs text-blue-500 cursor-help"
+                                                                                                                    title={`References ${fkRelation.to_table}.${fkRelation.to_column}`}
+                                                                                                                >
+                                                                                                                    → {fkRelation.to_table}
+                                                                                                                </span>
+                                                                                                            )}
+                                                                                                        </div>
                                                                                                     </td>
                                                                                                     <td className="px-4 py-3 text-muted-foreground">
                                                                                                         <code className="bg-muted px-2 py-1 rounded text-xs">
@@ -1441,7 +1502,7 @@ export default function ExamPage() {
                                                                                                                 <span className="text-primary text-base" title="Primary Key">🔑</span>
                                                                                                             )}
                                                                                                             {col.constraint_type === 'FOREIGN KEY' && (
-                                                                                                                <span className="text-blue-500 text-base" title="Foreign Key">🔗</span>
+                                                                                                                <span className="text-blue-500 text-base" title={`Foreign Key → ${fkRelation?.to_table}.${fkRelation?.to_column}`}>🔗</span>
                                                                                                             )}
                                                                                                             {!col.constraint_type && <span className="text-muted-foreground">—</span>}
                                                                                                         </div>
@@ -1453,15 +1514,75 @@ export default function ExamPage() {
                                                                                                             <span className="text-red-500 text-base">✗</span>
                                                                                                         )}
                                                                                                     </td>
+                                                                                                    <td className="px-4 py-3 text-center">
+                                                                                                        <Button
+                                                                                                            variant="ghost"
+                                                                                                            size="sm"
+                                                                                                            onClick={(e) => {
+                                                                                                                e.stopPropagation();
+                                                                                                                copyToClipboard(col.column_name, 'Column name');
+                                                                                                            }}
+                                                                                                            className="h-7 w-7 p-0"
+                                                                                                        >
+                                                                                                            <span className="text-xs">📋</span>
+                                                                                                        </Button>
+                                                                                                    </td>
                                                                                                 </tr>
                                                                                             );
                                                                                         })}
                                                                                     </tbody>
                                                                                 </table>
                                                                             </div>
+
+                                                                            {/* Relationships Section */}
+                                                                            {(outgoingRelationships.length > 0 || incomingRelationships.length > 0) && (
+                                                                                <div className="p-4 bg-muted/30 border-t border-border">
+                                                                                    <h4 className="text-sm font-semibold text-foreground mb-2">Relationships</h4>
+                                                                                    <div className="space-y-2">
+                                                                                        {outgoingRelationships.map((rel: any, relIdx: number) => (
+                                                                                            <div key={`out-${relIdx}`} className="text-xs p-2 bg-blue-500/10 border border-blue-500/20 rounded flex items-center gap-2">
+                                                                                                <span className="text-blue-500 font-mono">→</span>
+                                                                                                <code className="text-foreground">
+                                                                                                    {rel.from_column}
+                                                                                                </code>
+                                                                                                <span className="text-muted-foreground">references</span>
+                                                                                                <code className="text-primary font-semibold">
+                                                                                                    {rel.to_table}.{rel.to_column}
+                                                                                                </code>
+                                                                                                <Button
+                                                                                                    variant="ghost"
+                                                                                                    size="sm"
+                                                                                                    onClick={() => copyToClipboard(`${rel.to_table}.${rel.to_column}`, 'Reference')}
+                                                                                                    className="h-6 w-6 p-0 ml-auto"
+                                                                                                >
+                                                                                                    📋
+                                                                                                </Button>
+                                                                                            </div>
+                                                                                        ))}
+                                                                                        {incomingRelationships.map((rel: any, relIdx: number) => (
+                                                                                            <div key={`in-${relIdx}`} className="text-xs p-2 bg-green-500/10 border border-green-500/20 rounded flex items-center gap-2">
+                                                                                                <span className="text-green-500 font-mono">←</span>
+                                                                                                <span className="text-muted-foreground">Referenced by</span>
+                                                                                                <code className="text-primary font-semibold">
+                                                                                                    {rel.from_table}.{rel.from_column}
+                                                                                                </code>
+                                                                                                <Button
+                                                                                                    variant="ghost"
+                                                                                                    size="sm"
+                                                                                                    onClick={() => copyToClipboard(`${rel.from_table}.${rel.from_column}`, 'Reference')}
+                                                                                                    className="h-6 w-6 p-0 ml-auto"
+                                                                                                >
+                                                                                                    📋
+                                                                                                </Button>
+                                                                                            </div>
+                                                                                        ))}
+                                                                                    </div>
+                                                                                </div>
+                                                                            )}
                                                                         </div>
                                                                     );
-                                                                })}
+                                                                })
+                                                            }
                                                         </div>
                                                     </div>
                                                 </div>

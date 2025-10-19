@@ -15,7 +15,8 @@ import {
     FileText,
     LogOut,
     User,
-    Settings
+    Settings,
+    Home
 } from 'lucide-react';
 import ThemeToggle from '@/components/ThemeToggle';
 import { signOut } from 'next-auth/react';
@@ -42,7 +43,7 @@ const menuItems: MenuItem[] = [
         id: 'Home',
         navigation: 'index',
         label: 'Home',
-        icon: PlusCircle,
+        icon: Home,
         description: '',
     },
     {

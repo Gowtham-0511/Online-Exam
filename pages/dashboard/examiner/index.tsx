@@ -177,7 +177,7 @@ export default function ExaminerDashboard() {
                 body: JSON.stringify({
                     serverType: sqlServerType,
                     credentials: sqlCredentials,
-                    saveCredentials: true,  // Flag to save credentials
+                    saveCredentials: showNewCredentialForm,
                     examTitle: title,
                     createdBy: session?.user?.email
                 })
@@ -187,8 +187,12 @@ export default function ExaminerDashboard() {
 
             if (response.ok && data.success) {
                 setConnectionStatus('success');
-                setSavedCredentialId(data.credentialId);  // Save the credential ID
-                toast.success('Connection successful and credentials saved!');
+                if (showNewCredentialForm && data.credentialId) {
+                    setSavedCredentialId(data.credentialId);
+                    toast.success('Connection successful and credentials saved!');
+                } else {
+                    toast.success('Connection successful!');
+                }
             } else {
                 setConnectionStatus('failed');
                 toast.error(data.message || 'Connection failed');
@@ -351,7 +355,7 @@ export default function ExaminerDashboard() {
                     language,
                     ...(language === 'sql' && {
                         sqlServerType,
-                        sqlCredentialId: savedCredentialId ?? undefined
+                        sqlCredentialId: (selectedCredentialId || savedCredentialId) ?? undefined
                     }),
                     requiresFileHandling,
                     duration,
@@ -1126,7 +1130,7 @@ export default function ExaminerDashboard() {
                                             !title.trim() ||
                                             (language === 'sql' && (
                                                 !sqlServerType ||
-                                                (!selectedCredentialId && connectionStatus !== 'success')
+                                                (!selectedCredentialId && !savedCredentialId)
                                             )) ||
                                             (language === 'python' && requiresFileHandling && uploadedFiles.length === 0)
                                         }

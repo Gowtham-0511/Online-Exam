@@ -54,11 +54,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                 "isGeneratedFromExcel",
                 "questionConfig",
                 questions,
-                "allowedUsers"
+                "allowedUsers",
+                "sqlCredentialId"
             )
             VALUES (
                 $1, $2, $3, $4, $5,
-                $6, $7, $8, $9, $10
+                $6, $7, $8, $9, $10, 
+                $11
             )
             RETURNING id;
         `;
@@ -74,6 +76,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             JSON.stringify(questionConfig || {}),
             JSON.stringify(questions || []),
             allowedUsers?.length ? JSON.stringify(allowedUsers) : null,
+            req.body.sqlCredentialId || null,
         ]);
 
         const assessmentId = result.rows[0].id;

@@ -105,11 +105,13 @@ export default function ViewExamsPage() {
     };
 
     const handleEdit = (examId: string) => {
-        router.push(`/dashboard/edit-exam/${examId}`);
+        // router.push(`/dashboard/edit-exam/${examId}`);
+        console.log('Edit exam with ID:', examId);
+        toast.success('Edit functionality coming soon!');
     };
 
     const handleCreateNew = () => {
-        router.push('/dashboard/create-exam');
+        router.push('/dashboard/examiner');
     };
 
     const formatDate = (dateString: string) => {
