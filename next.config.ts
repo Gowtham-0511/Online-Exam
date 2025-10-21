@@ -5,6 +5,7 @@ const nextConfig: NextConfig = {
   eslint: {
     ignoreDuringBuilds: true,
   },
+  devIndicators: false,
   webpack: (config, { isServer }) => {
     if (!isServer) {
       config.resolve.fallback = {

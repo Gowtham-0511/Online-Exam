@@ -19,6 +19,7 @@ import {
     Package,
     CalendarClock,
     ClipboardList,
+    LockKeyhole,
 } from 'lucide-react';
 import ThemeToggle from '@/components/ThemeToggle';
 
@@ -55,13 +56,6 @@ const menuItems: MenuItem[] = [
         description: 'Manage System Users',
     },
     // {
-    //     id: 'exams',
-    //     navigation: 'exams',
-    //     label: 'Exams',
-    //     icon: Building2,
-    //     description: 'Manage all exams'
-    // },
-    // {
     //     id: 'skillsets',
     //     navigation: 'skillset-config',
     //     label: 'Skillset Config',
@@ -95,7 +89,14 @@ const menuItems: MenuItem[] = [
         label: 'Assessment Management',
         icon: ClipboardList,
         description: 'Create and Manage Assessment'
-    }
+    },
+    {
+        id: 'credentialManagement',
+        navigation: 'credential-management',
+        label: 'Credentials Management',
+        icon: LockKeyhole,
+        description: 'Manage all Credentials'
+    },
 ];
 
 interface AdminLayoutProps {

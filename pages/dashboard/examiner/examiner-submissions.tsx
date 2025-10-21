@@ -75,12 +75,53 @@ export default function ExaminerSubmissions() {
         feedback: any[];
     } | null>(null);
 
-    const parseFeedback = (feedbackString: string | null) => {
+    const parseFeedback = (feedbackString: string | null | any) => {
         if (!feedbackString) return [];
+
+        if (typeof feedbackString === 'object') {
+            return Array.isArray(feedbackString) ? feedbackString : [feedbackString];
+        }
+
         try {
-            return JSON.parse(feedbackString);
+            const cleanedString = feedbackString.trim();
+            return JSON.parse(cleanedString);
         } catch (e) {
-            console.error('Error parsing feedback:', e);
+            console.error('JSON Parse Error at position 4022:', e);
+
+            try {
+                let fixed = feedbackString
+                    .replace(/data-end=\\"(\d+)"/g, 'data-end=\\"$1\\"')
+                    .replace(/data-end=\\"(\d+)\s/g, 'data-end=\\"$1\\" ')
+                    .replace(/(\d+)"\u003E/g, '$1\\"\u003E')
+                    .replace(/,(\s*[}\]])/g, '$1');
+
+                return JSON.parse(fixed);
+            } catch (fixError) {
+                console.error('Auto-fix failed:', fixError);
+
+                try {
+                    const match = feedbackString.match(/^\s*\[[\s\S]*\]\s*$/);
+                    if (match) {
+                        const objects = [];
+                        const objRegex = /\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\}/g;
+                        let objMatch;
+
+                        while ((objMatch = objRegex.exec(feedbackString)) !== null) {
+                            try {
+                                objects.push(JSON.parse(objMatch[0]));
+                            } catch (e) {
+                            }
+                        }
+
+                        if (objects.length > 0) {
+                            return objects;
+                        }
+                    }
+                } catch (extractError) {
+                    console.error('Extraction failed:', extractError);
+                }
+            }
+
             return [];
         }
     };
@@ -385,7 +426,7 @@ export default function ExaminerSubmissions() {
                 }
 
                 doc.setTextColor(0, 0, 0);
-                y += 6; 
+                y += 6;
 
                 addText('Question:', 10, true, [107, 114, 128]);
                 const questionText = stripHtml(answerItem.question || 'No question text');
