@@ -48,38 +48,24 @@ export const authOptions: NextAuthOptions = {
                 }
 
                 try {
-                    console.log("Attempting login for:", credentials.email);
-
                     const result = await pool.query(
                         `SELECT id, "email", "name", "password", "role"
-                        FROM "ExternalUsers"
-                        WHERE "email" = $1`,
+                         FROM "ExternalUsers"
+                         WHERE "email" = $1`,
                         [credentials.email]
                     );
 
-                    console.log("Query result:", result.rows.length, "users found");
-
                     const user = result.rows[0];
 
-                    if (!user) {
-                        console.log("No user found with email:", credentials.email);
+                    if (!user || !user.password) {
                         throw new Error("Invalid credentials");
                     }
 
-                    if (!user.password) {
-                        console.log("User has no password set:", credentials.email);
-                        throw new Error("Invalid credentials");
-                    }
-
-                    console.log("Comparing passwords...");
                     const isPasswordValid = await compare(credentials.password, user.password);
-
                     if (!isPasswordValid) {
-                        console.log("Password comparison failed for:", credentials.email);
                         throw new Error("Invalid credentials");
                     }
 
-                    console.log("Login successful for:", credentials.email);
                     return {
                         id: user.id.toString(),
                         email: user.email,
@@ -98,34 +84,13 @@ export const authOptions: NextAuthOptions = {
     },
 
     pages: {
-        signIn: "/",
+        signIn: "/", 
     },
 
     secret: process.env.NEXTAUTH_SECRET,
 
     callbacks: {
         async signIn({ user, account, profile }) {
-            console.log("SignIn attempt with provider:", account?.provider);
-
-            if (account?.provider === 'azure-ad' || account?.provider === 'google') {
-                try {
-                    const result = await pool.query(
-                        `SELECT id FROM "ExternalUsers" WHERE email = $1`,
-                        [user.email]
-                    );
-
-                    if (result.rows.length === 0) {
-                        await pool.query(
-                            `INSERT INTO "ExternalUsers" (email, name) VALUES ($1, $2)`,
-                            [user.email, user.name]
-                        );
-                        console.log("Created new user:", user.email);
-                    }
-                } catch (error) {
-                    console.error("SignIn callback error:", error);
-                    return false;
-                }
-            }
             return true;
         },
         async jwt({ token, user }) {
