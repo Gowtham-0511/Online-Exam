@@ -105,6 +105,8 @@ export const authOptions: NextAuthOptions = {
 
     callbacks: {
         async signIn({ user, account, profile }) {
+            console.log("SignIn attempt with provider:", account?.provider);
+
             if (account?.provider === 'azure-ad' || account?.provider === 'google') {
                 try {
                     const result = await pool.query(
@@ -114,9 +116,10 @@ export const authOptions: NextAuthOptions = {
 
                     if (result.rows.length === 0) {
                         await pool.query(
-                            `INSERT INTO "ExternalUsers" (email, name, provider) VALUES ($1, $2, $3)`,
-                            [user.email, user.name, account.provider]
+                            `INSERT INTO "ExternalUsers" (email, name) VALUES ($1, $2)`,
+                            [user.email, user.name]
                         );
+                        console.log("Created new user:", user.email);
                     }
                 } catch (error) {
                     console.error("SignIn callback error:", error);
