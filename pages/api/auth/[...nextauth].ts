@@ -3,9 +3,8 @@ import AzureADProvider from "next-auth/providers/azure-ad";
 import GoogleProvider from "next-auth/providers/google";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { compare } from "bcryptjs";
-import pool from "@/lib/db"; // ✅ PostgreSQL connection (pg Pool)
+import pool from "@/lib/db";
 
-// Extend NextAuth types to include 'id' in session.user
 import { Session, User } from "next-auth";
 declare module "next-auth" {
     interface Session {
@@ -26,20 +25,17 @@ declare module "next-auth" {
 
 export const authOptions: NextAuthOptions = {
     providers: [
-        // ✅ Azure AD Provider
         AzureADProvider({
             clientId: process.env.AZURE_AD_CLIENT_ID!,
             clientSecret: process.env.AZURE_AD_CLIENT_SECRET!,
             tenantId: process.env.AZURE_AD_TENANT_ID!,
         }),
 
-        // ✅ Google Provider
         GoogleProvider({
             clientId: process.env.GOOGLE_CLIENT_ID!,
             clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
         }),
 
-        // ✅ Credentials Provider (Email/Password Login)
         CredentialsProvider({
             name: "credentials",
             credentials: {
@@ -52,25 +48,38 @@ export const authOptions: NextAuthOptions = {
                 }
 
                 try {
-                    // Check user in PostgreSQL
+                    console.log("Attempting login for:", credentials.email);
+
                     const result = await pool.query(
                         `SELECT id, "email", "name", "password", "role"
-                         FROM "ExternalUsers"
-                         WHERE "email" = $1`,
+                        FROM "ExternalUsers"
+                        WHERE "email" = $1`,
                         [credentials.email]
                     );
 
+                    console.log("Query result:", result.rows.length, "users found");
+
                     const user = result.rows[0];
 
-                    if (!user || !user.password) {
+                    if (!user) {
+                        console.log("No user found with email:", credentials.email);
                         throw new Error("Invalid credentials");
                     }
 
+                    if (!user.password) {
+                        console.log("User has no password set:", credentials.email);
+                        throw new Error("Invalid credentials");
+                    }
+
+                    console.log("Comparing passwords...");
                     const isPasswordValid = await compare(credentials.password, user.password);
+
                     if (!isPasswordValid) {
+                        console.log("Password comparison failed for:", credentials.email);
                         throw new Error("Invalid credentials");
                     }
 
+                    console.log("Login successful for:", credentials.email);
                     return {
                         id: user.id.toString(),
                         email: user.email,
@@ -89,13 +98,31 @@ export const authOptions: NextAuthOptions = {
     },
 
     pages: {
-        signIn: "/", // your login page
+        signIn: "/",
     },
 
     secret: process.env.NEXTAUTH_SECRET,
 
     callbacks: {
         async signIn({ user, account, profile }) {
+            if (account?.provider === 'azure-ad' || account?.provider === 'google') {
+                try {
+                    const result = await pool.query(
+                        `SELECT id FROM "ExternalUsers" WHERE email = $1`,
+                        [user.email]
+                    );
+
+                    if (result.rows.length === 0) {
+                        await pool.query(
+                            `INSERT INTO "ExternalUsers" (email, name, provider) VALUES ($1, $2, $3)`,
+                            [user.email, user.name, account.provider]
+                        );
+                    }
+                } catch (error) {
+                    console.error("SignIn callback error:", error);
+                    return false;
+                }
+            }
             return true;
         },
         async jwt({ token, user }) {
