@@ -72,41 +72,42 @@ const recentExams = [
     }
 ];
 
-
 export default function AdminDashboard() {
     return (
         <AdminLayout>
-            <div className="space-y-8">
+            <div className="space-y-6">
                 {/* Welcome Section */}
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between">
-                    <div>
-                        <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-100">
-                            Hi, Admin! 👋
-                        </h1>
-                        <p className="text-slate-600 dark:text-slate-400 mt-2">
-                            Here's what's happening with your platform today.
-                        </p>
-                    </div>
+                <div>
+                    <h1 className="text-2xl font-bold text-foreground">
+                        Hi, Admin! 👋
+                    </h1>
+                    <p className="text-muted-foreground text-sm mt-1">
+                        Here's what's happening with your platform today.
+                    </p>
                 </div>
 
                 {/* Stats Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                     {stats.map((stat, index) => {
                         const Icon = stat.icon;
                         return (
-                            <Card key={index} className="hover:shadow-lg transition-shadow duration-200">
-                                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                    <CardTitle className="text-sm font-medium text-slate-600 dark:text-slate-400">
+                            <Card key={index} className="border-border hover:shadow-sm transition-shadow">
+                                <CardHeader className="flex flex-row items-center justify-between pb-2">
+                                    <CardTitle className="text-sm font-medium text-muted-foreground">
                                         {stat.title}
                                     </CardTitle>
-                                    <Icon className="h-4 w-4 text-slate-500" />
+                                    <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                                        <Icon className="h-4 w-4 text-primary" />
+                                    </div>
                                 </CardHeader>
                                 <CardContent>
-                                    <div className="text-2xl font-bold text-slate-900 dark:text-slate-100">
+                                    <div className="text-2xl font-bold text-foreground">
                                         {stat.value}
                                     </div>
-                                    <div className="flex items-center space-x-2 text-xs text-slate-600 dark:text-slate-400">
-                                        <div className={`flex items-center ${stat.trend === 'up' ? 'text-green-600' : 'text-red-600'
+                                    <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1">
+                                        <div className={`flex items-center ${stat.trend === 'up'
+                                                ? 'text-emerald-600 dark:text-emerald-400'
+                                                : 'text-rose-600 dark:text-rose-400'
                                             }`}>
                                             {stat.trend === 'up' ? (
                                                 <ArrowUpRight className="w-3 h-3 mr-1" />
@@ -117,7 +118,7 @@ export default function AdminDashboard() {
                                         </div>
                                         <span>from last month</span>
                                     </div>
-                                    <p className="text-xs text-slate-500 mt-1">{stat.description}</p>
+                                    <p className="text-xs text-muted-foreground mt-1">{stat.description}</p>
                                 </CardContent>
                             </Card>
                         );
@@ -127,41 +128,47 @@ export default function AdminDashboard() {
                 {/* Main Content Grid */}
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                     {/* Recent Exams */}
-                    <Card className="lg:col-span-2">
+                    <Card className="lg:col-span-2 border-border">
                         <CardHeader>
                             <div className="flex items-center justify-between">
                                 <div>
-                                    <CardTitle>Recent Exams</CardTitle>
-                                    <CardDescription>Latest exam activities and performance</CardDescription>
+                                    <CardTitle className="text-base">Recent Exams</CardTitle>
+                                    <CardDescription className="text-xs mt-1">Latest exam activities and performance</CardDescription>
                                 </div>
-                                <Button variant="ghost" size="sm">
+                                <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
                                     <MoreHorizontal className="w-4 h-4" />
                                 </Button>
                             </div>
                         </CardHeader>
                         <CardContent>
-                            <div className="space-y-4">
+                            <div className="space-y-3">
                                 {recentExams.map((exam) => (
-                                    <div key={exam.id} className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-800 rounded-lg">
-                                        <div className="space-y-1">
-                                            <div className="flex items-center space-x-2">
-                                                <h4 className="font-medium text-slate-900 dark:text-slate-100">
+                                    <div
+                                        key={exam.id}
+                                        className="flex items-center justify-between p-4 bg-muted/30 rounded-lg border border-border hover:bg-muted/50 transition-colors"
+                                    >
+                                        <div className="flex-1 min-w-0">
+                                            <div className="flex items-center gap-2 mb-1">
+                                                <h4 className="font-semibold text-sm text-foreground truncate">
                                                     {exam.title}
                                                 </h4>
-                                                <Badge variant={exam.status === 'active' ? 'default' : 'secondary'}>
+                                                <Badge
+                                                    variant={exam.status === 'active' ? 'default' : 'secondary'}
+                                                    className="text-xs shrink-0"
+                                                >
                                                     {exam.status}
                                                 </Badge>
                                             </div>
-                                            <p className="text-sm text-slate-600 dark:text-slate-400">
+                                            <p className="text-xs text-muted-foreground">
                                                 {exam.category} • {exam.participants} participants
                                             </p>
-                                            <p className="text-xs text-slate-500">{exam.createdAt}</p>
+                                            <p className="text-xs text-muted-foreground mt-1">{exam.createdAt}</p>
                                         </div>
-                                        <div className="text-right space-y-1">
-                                            <div className="text-sm font-medium text-slate-900 dark:text-slate-100">
+                                        <div className="text-right ml-4 shrink-0">
+                                            <div className="text-sm font-semibold text-foreground mb-1">
                                                 {exam.completionRate}%
                                             </div>
-                                            <Progress value={exam.completionRate} className="w-20" />
+                                            <Progress value={exam.completionRate} className="w-20 h-2" />
                                         </div>
                                     </div>
                                 ))}
@@ -169,15 +176,14 @@ export default function AdminDashboard() {
                         </CardContent>
                     </Card>
 
-                    {/* Quick Actions & Upcoming Events */}
+                    {/* Quick Actions */}
                     <div className="space-y-6">
-                        {/* Quick Actions */}
-                        <Card>
+                        <Card className="border-border">
                             <CardHeader>
-                                <CardTitle>Quick Actions</CardTitle>
-                                <CardDescription>Frequently used admin tasks</CardDescription>
+                                <CardTitle className="text-base">Quick Actions</CardTitle>
+                                <CardDescription className="text-xs mt-1">Frequently used admin tasks</CardDescription>
                             </CardHeader>
-                            <CardContent className="space-y-3">
+                            <CardContent className="space-y-2">
                                 <Button className="w-full justify-start">
                                     <Users className="w-4 h-4 mr-2" />
                                     Add New User

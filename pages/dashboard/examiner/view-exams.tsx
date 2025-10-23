@@ -105,7 +105,6 @@ export default function ViewExamsPage() {
     };
 
     const handleEdit = (examId: string) => {
-        // router.push(`/dashboard/edit-exam/${examId}`);
         console.log('Edit exam with ID:', examId);
         toast.success('Edit functionality coming soon!');
     };
@@ -135,7 +134,7 @@ export default function ViewExamsPage() {
     if (loading) {
         return (
             <ExaminerLayout>
-                <div className="container mx-auto p-6 space-y-6">
+                <div className="space-y-6">
                     <div className="flex items-center justify-between">
                         <div className="space-y-2">
                             <Skeleton className="h-8 w-48" />
@@ -143,9 +142,9 @@ export default function ViewExamsPage() {
                         </div>
                         <Skeleton className="h-10 w-32" />
                     </div>
-                    <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                         {[...Array(6)].map((_, i) => (
-                            <Card key={i} className="overflow-hidden">
+                            <Card key={i} className="border-border">
                                 <CardHeader className="pb-3">
                                     <Skeleton className="h-6 w-3/4" />
                                     <Skeleton className="h-4 w-1/2" />
@@ -156,8 +155,8 @@ export default function ViewExamsPage() {
                                         <Skeleton className="h-6 w-20" />
                                     </div>
                                     <Skeleton className="h-4 w-full" />
-                                    <div className="flex justify-between">
-                                        <Skeleton className="h-9 w-16" />
+                                    <div className="flex gap-2">
+                                        <Skeleton className="h-9 flex-1" />
                                         <Skeleton className="h-9 w-9" />
                                     </div>
                                 </CardContent>
@@ -171,116 +170,110 @@ export default function ViewExamsPage() {
 
     return (
         <ExaminerLayout>
-            <div className="container mx-auto p-6 space-y-8">
+            <div className="space-y-6">
                 {/* Header Section */}
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                    <div className="space-y-2">
-                        <h1 className="text-3xl font-bold tracking-tight">My Exams</h1>
-                        <p className="text-muted-foreground">
+                    <div>
+                        <h1 className="text-2xl font-bold text-foreground">My Exams</h1>
+                        <p className="text-muted-foreground text-sm mt-1">
                             Manage and organize your exam assessments
                         </p>
                     </div>
-                    <Button onClick={handleCreateNew} className="gap-2">
-                        <Plus className="h-4 w-4" />
+                    <Button onClick={handleCreateNew}>
+                        <Plus className="h-4 w-4 mr-2" />
                         Create New Exam
                     </Button>
                 </div>
 
                 {/* Stats Section */}
                 {exams.length > 0 && (
-                    <div className="border-t pt-8">
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                            <Card>
-                                <CardContent className="p-4 text-center">
-                                    <div className="text-2xl font-bold text-primary">{exams.length}</div>
-                                    <div className="text-xs text-muted-foreground">Total Exams</div>
-                                </CardContent>
-                            </Card>
-                            <Card>
-                                <CardContent className="p-4 text-center">
-                                    <div className="text-2xl font-bold text-primary">
-                                        {Math.round(exams.reduce((acc, exam) => acc + exam.duration, 0) / exams.length)}
-                                    </div>
-                                    <div className="text-xs text-muted-foreground">Avg Duration (min)</div>
-                                </CardContent>
-                            </Card>
-                            <Card>
-                                <CardContent className="p-4 text-center">
-                                    <div className="text-2xl font-bold text-primary">
-                                        {new Set(exams.map(exam => exam.language)).size}
-                                    </div>
-                                    <div className="text-xs text-muted-foreground">Languages</div>
-                                </CardContent>
-                            </Card>
-                        </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <Card className="border-border">
+                            <CardContent className="p-4 text-center">
+                                <div className="text-2xl font-bold text-foreground">{exams.length}</div>
+                                <div className="text-xs text-muted-foreground mt-1">Total Exams</div>
+                            </CardContent>
+                        </Card>
+                        <Card className="border-border">
+                            <CardContent className="p-4 text-center">
+                                <div className="text-2xl font-bold text-foreground">
+                                    {Math.round(exams.reduce((acc, exam) => acc + exam.duration, 0) / exams.length)}
+                                </div>
+                                <div className="text-xs text-muted-foreground mt-1">Avg Duration (min)</div>
+                            </CardContent>
+                        </Card>
+                        <Card className="border-border">
+                            <CardContent className="p-4 text-center">
+                                <div className="text-2xl font-bold text-foreground">
+                                    {new Set(exams.map(exam => exam.language)).size}
+                                </div>
+                                <div className="text-xs text-muted-foreground mt-1">Languages</div>
+                            </CardContent>
+                        </Card>
                     </div>
                 )}
 
                 {/* Content Section */}
                 {exams.length === 0 ? (
-                    <Card className="border-dashed border-2 min-h-[400px] flex items-center justify-center">
-                        <CardContent className="text-center space-y-6 p-8">
-                            <div className="mx-auto w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center">
-                                <FileText className="h-10 w-10 text-primary" />
+                    <Card className="border-2 border-dashed border-border">
+                        <CardContent className="text-center py-12">
+                            <div className="mx-auto w-16 h-16 bg-muted/50 rounded-full flex items-center justify-center mb-4">
+                                <FileText className="h-8 w-8 text-muted-foreground" />
                             </div>
-                            <div className="space-y-2">
-                                <h3 className="text-xl font-semibold">No Exams Created Yet</h3>
-                                <p className="text-muted-foreground max-w-sm mx-auto">
-                                    Get started by creating your first exam assessment. You can add questions, set duration, and customize settings.
-                                </p>
-                            </div>
-                            <Button onClick={handleCreateNew} className="gap-2">
-                                <Plus className="h-4 w-4" />
+                            <h3 className="text-lg font-semibold mb-2">No Exams Created Yet</h3>
+                            <p className="text-muted-foreground text-sm max-w-sm mx-auto mb-4">
+                                Get started by creating your first exam assessment. You can add questions, set duration, and customize settings.
+                            </p>
+                            <Button onClick={handleCreateNew}>
+                                <Plus className="h-4 w-4 mr-2" />
                                 Create Your First Exam
                             </Button>
                         </CardContent>
                     </Card>
                 ) : (
-                    <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                         {exams.map((exam) => (
-                            <Card key={exam.id} className="group hover:shadow-lg transition-all duration-200 overflow-hidden border-border/50">
+                            <Card key={exam.id} className="group hover:shadow-md transition-all border-border">
                                 <CardHeader className="pb-3">
-                                    <div className="flex items-start justify-between">
-                                        <div className="space-y-1 flex-1">
-                                            <CardTitle className="text-lg line-clamp-2 group-hover:text-primary transition-colors">
+                                    <div className="flex items-start justify-between gap-2">
+                                        <div className="flex-1 min-w-0">
+                                            <CardTitle className="text-base line-clamp-2 group-hover:text-primary transition-colors">
                                                 {exam.title}
                                             </CardTitle>
-                                            <CardDescription className="text-xs">
-                                                Created {formatDate(exam.createdAt)}
+                                            <CardDescription className="text-xs mt-1">
+                                                {formatDate(exam.createdAt)}
                                             </CardDescription>
                                         </div>
                                         <DropdownMenu>
                                             <DropdownMenuTrigger asChild>
-                                                <Button variant="ghost" size="sm" className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                <Button
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                                                >
                                                     <MoreVertical className="h-4 w-4" />
                                                 </Button>
                                             </DropdownMenuTrigger>
-                                            <DropdownMenuContent align="end" className="w-48">
-                                                <DropdownMenuItem onClick={() => handleEdit(exam.id)} className="gap-2">
-                                                    <Edit3 className="h-4 w-4" />
-                                                    Edit Exam
+                                            <DropdownMenuContent align="end">
+                                                <DropdownMenuItem onClick={() => handleEdit(exam.id)}>
+                                                    <Edit3 className="h-4 w-4 mr-2" />
+                                                    Edit
                                                 </DropdownMenuItem>
                                                 <AlertDialog>
                                                     <AlertDialogTrigger asChild>
                                                         <DropdownMenuItem
                                                             onSelect={(e) => e.preventDefault()}
-                                                            className="gap-2 text-destructive focus:text-destructive"
+                                                            className="text-destructive focus:text-destructive"
                                                         >
-                                                            <Trash2 className="h-4 w-4" />
-                                                            Delete Exam
+                                                            <Trash2 className="h-4 w-4 mr-2" />
+                                                            Delete
                                                         </DropdownMenuItem>
                                                     </AlertDialogTrigger>
                                                     <AlertDialogContent>
                                                         <AlertDialogHeader>
-                                                            <AlertDialogTitle className="flex items-center gap-2">
-                                                                <div className="h-10 w-10 rounded-full bg-destructive/10 flex items-center justify-center">
-                                                                    <Trash2 className="h-5 w-5 text-destructive" />
-                                                                </div>
-                                                                Delete Exam
-                                                            </AlertDialogTitle>
-                                                            <AlertDialogDescription className="space-y-2">
-                                                                <span className="font-medium">"{exam.title}"</span> will be permanently deleted.
-                                                                <br />
+                                                            <AlertDialogTitle>Delete Exam</AlertDialogTitle>
+                                                            <AlertDialogDescription>
+                                                                Are you sure you want to delete <span className="font-semibold">"{exam.title}"</span>?
                                                                 This action cannot be undone and all associated data will be lost.
                                                             </AlertDialogDescription>
                                                         </AlertDialogHeader>
@@ -291,7 +284,7 @@ export default function ViewExamsPage() {
                                                                 className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                                                                 disabled={deletingId === exam.id}
                                                             >
-                                                                {deletingId === exam.id ? "Deleting..." : "Delete Exam"}
+                                                                {deletingId === exam.id ? "Deleting..." : "Delete"}
                                                             </AlertDialogAction>
                                                         </AlertDialogFooter>
                                                     </AlertDialogContent>
@@ -304,17 +297,17 @@ export default function ViewExamsPage() {
                                 <CardContent className="space-y-4">
                                     {/* Exam Details */}
                                     <div className="flex flex-wrap gap-2">
-                                        <Badge variant="secondary" className="gap-1.5 text-xs">
-                                            <Globe className="h-3 w-3" />
+                                        <Badge variant="secondary" className="text-xs">
+                                            <Globe className="h-3 w-3 mr-1" />
                                             {exam.language}
                                         </Badge>
-                                        <Badge variant="outline" className="gap-1.5 text-xs">
-                                            <Clock className="h-3 w-3" />
+                                        <Badge variant="outline" className="text-xs">
+                                            <Clock className="h-3 w-3 mr-1" />
                                             {exam.duration}m
                                         </Badge>
                                         {exam.questionsCount && (
-                                            <Badge variant="outline" className="gap-1.5 text-xs">
-                                                <FileText className="h-3 w-3" />
+                                            <Badge variant="outline" className="text-xs">
+                                                <FileText className="h-3 w-3 mr-1" />
                                                 {exam.questionsCount} questions
                                             </Badge>
                                         )}
@@ -327,21 +320,21 @@ export default function ViewExamsPage() {
                                     </div>
 
                                     {/* Action Buttons */}
-                                    <div className="flex items-center justify-between pt-2">
+                                    <div className="flex gap-2 pt-2">
                                         <Button
                                             variant="default"
                                             size="sm"
                                             onClick={() => handleEdit(exam.id)}
-                                            className="gap-2 flex-1 mr-2"
+                                            className="flex-1"
                                         >
-                                            <Edit3 className="h-4 w-4" />
+                                            <Edit3 className="h-4 w-4 mr-2" />
                                             Edit
                                         </Button>
 
                                         <AlertDialog>
                                             <AlertDialogTrigger asChild>
                                                 <Button
-                                                    variant="destructive"
+                                                    variant="outline"
                                                     size="sm"
                                                     className="px-3"
                                                 >
@@ -350,15 +343,9 @@ export default function ViewExamsPage() {
                                             </AlertDialogTrigger>
                                             <AlertDialogContent>
                                                 <AlertDialogHeader>
-                                                    <AlertDialogTitle className="flex items-center gap-2">
-                                                        <div className="h-10 w-10 rounded-full bg-destructive/10 flex items-center justify-center">
-                                                            <Trash2 className="h-5 w-5 text-destructive" />
-                                                        </div>
-                                                        Delete Exam
-                                                    </AlertDialogTitle>
-                                                    <AlertDialogDescription className="space-y-2">
-                                                        <span className="font-medium">"{exam.title}"</span> will be permanently deleted.
-                                                        <br />
+                                                    <AlertDialogTitle>Delete Exam</AlertDialogTitle>
+                                                    <AlertDialogDescription>
+                                                        Are you sure you want to delete <span className="font-semibold">"{exam.title}"</span>?
                                                         This action cannot be undone and all associated data will be lost.
                                                     </AlertDialogDescription>
                                                 </AlertDialogHeader>
@@ -369,7 +356,7 @@ export default function ViewExamsPage() {
                                                         className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                                                         disabled={deletingId === exam.id}
                                                     >
-                                                        {deletingId === exam.id ? "Deleting..." : "Delete Exam"}
+                                                        {deletingId === exam.id ? "Deleting..." : "Delete"}
                                                     </AlertDialogAction>
                                                 </AlertDialogFooter>
                                             </AlertDialogContent>
@@ -380,8 +367,6 @@ export default function ViewExamsPage() {
                         ))}
                     </div>
                 )}
-
-
             </div>
         </ExaminerLayout>
     );

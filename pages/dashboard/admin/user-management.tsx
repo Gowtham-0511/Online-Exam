@@ -1,4 +1,3 @@
-// Updated user-management.tsx with Bulk Upload feature
 import React, { useEffect, useState } from 'react';
 import AdminLayout from './layout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -42,7 +41,6 @@ import {
     CheckCircle2,
     Circle,
     MoreVertical,
-    Sparkles,
     ChevronLeft,
     ChevronRight,
     Upload,
@@ -182,22 +180,22 @@ const UsersPage: React.FC = () => {
                 return {
                     label: 'Active',
                     icon: Play,
-                    color: 'bg-blue-500 text-blue-50',
-                    dotColor: 'bg-blue-500'
+                    color: 'bg-primary text-primary-foreground',
+                    dotColor: 'bg-primary'
                 };
             case 2:
                 return {
                     label: 'Completed',
                     icon: CheckCircle2,
-                    color: 'bg-green-500 text-green-50',
-                    dotColor: 'bg-green-500'
+                    color: 'bg-emerald-500 text-white dark:bg-emerald-600',
+                    dotColor: 'bg-emerald-500 dark:bg-emerald-600'
                 };
             default:
                 return {
                     label: 'Inactive',
                     icon: Circle,
-                    color: 'bg-gray-500 text-gray-50',
-                    dotColor: 'bg-gray-400'
+                    color: 'bg-secondary text-secondary-foreground',
+                    dotColor: 'bg-muted-foreground'
                 };
         }
     };
@@ -232,51 +230,33 @@ const UsersPage: React.FC = () => {
 
     return (
         <AdminLayout>
-            <div className="space-y-6 p-6">
+            <div className="space-y-6">
                 {/* Header Section */}
                 <div className="flex flex-col space-y-4 md:flex-row md:items-center md:justify-between md:space-y-0">
                     <div>
-                        <div className="flex items-center gap-3 mb-2">
-                            <div className="p-2 bg-systech-gradient rounded-lg">
-                                <Users className="h-6 w-6 text-white" />
-                            </div>
-                            <h1 className="text-3xl font-bold text-foreground">Candidate Management</h1>
-                            <Sparkles className="h-5 w-5 text-systech-primary animate-pulse" />
-                        </div>
-                        <p className="text-muted-foreground">
-                            Manage exam candidates and schedules with advanced controls
+                        <h1 className="text-2xl font-bold text-foreground">Candidate Management</h1>
+                        <p className="text-muted-foreground text-sm mt-1">
+                            Manage exam candidates and schedules
                         </p>
                     </div>
-                    <Button
-                        onClick={() => setUploadDialogOpen(true)}
-                        className="
-                            bg-blue-600 text-white 
-                            hover:bg-blue-700 
-                            dark:bg-blue-500 dark:hover:bg-blue-600 
-                            px-4 py-2 rounded 
-                            flex items-center gap-2
-                        "
-                    >
-                        <Upload className="h-4 w-4" />
-                        Bulk Upload Users
+                    <Button onClick={() => setUploadDialogOpen(true)}>
+                        <Upload className="h-4 w-4 mr-2" />
+                        Bulk Upload
                     </Button>
-
                 </div>
 
                 {/* Filters and Search */}
-                <Card className="border-border/50">
-                    <CardContent className="p-6">
+                <Card className="border-border">
+                    <CardContent className="p-4">
                         <div className="flex flex-col space-y-4 md:flex-row md:items-center md:justify-between md:space-y-0">
-                            <div className="flex flex-1 items-center space-x-4">
-                                <div className="relative flex-1 max-w-sm">
-                                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                    <Input
-                                        placeholder="Search candidates..."
-                                        value={searchTerm}
-                                        onChange={handleSearchChange}
-                                        className="pl-10 border-border/50 focus:border-systech-primary"
-                                    />
-                                </div>
+                            <div className="relative flex-1 max-w-sm">
+                                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                <Input
+                                    placeholder="Search candidates..."
+                                    value={searchTerm}
+                                    onChange={handleSearchChange}
+                                    className="pl-10"
+                                />
                             </div>
 
                             <div className="text-sm text-muted-foreground">
@@ -287,9 +267,9 @@ const UsersPage: React.FC = () => {
                 </Card>
 
                 {/* Users Table */}
-                <Card className="border-border/50">
+                <Card className="border-border">
                     <CardHeader>
-                        <CardTitle className="flex items-center gap-2">
+                        <CardTitle className="text-base flex items-center gap-2">
                             <Users className="h-5 w-5" />
                             Candidates List
                         </CardTitle>
@@ -299,21 +279,22 @@ const UsersPage: React.FC = () => {
                             <div className="space-y-4 p-6">
                                 {[...Array(5)].map((_, i) => (
                                     <div key={i} className="flex items-center space-x-4">
-                                        <Skeleton className="h-12 w-12 rounded-full" />
+                                        <Skeleton className="h-10 w-10 rounded-full" />
                                         <div className="space-y-2 flex-1">
                                             <Skeleton className="h-4 w-[200px]" />
                                             <Skeleton className="h-3 w-[160px]" />
                                         </div>
-                                        <Skeleton className="h-4 w-[100px]" />
-                                        <Skeleton className="h-6 w-[80px] rounded-full" />
+                                        <Skeleton className="h-8 w-8" />
                                     </div>
                                 ))}
                             </div>
                         ) : filteredUsers.length === 0 ? (
                             <div className="flex flex-col items-center justify-center py-12">
-                                <Users className="h-12 w-12 text-muted-foreground mb-4" />
+                                <div className="w-16 h-16 bg-muted/50 rounded-full flex items-center justify-center mb-4">
+                                    <Users className="h-8 w-8 text-muted-foreground" />
+                                </div>
                                 <h3 className="text-lg font-semibold mb-2">No candidates found</h3>
-                                <p className="text-muted-foreground text-center">
+                                <p className="text-muted-foreground text-sm text-center">
                                     {searchTerm || statusFilter !== null
                                         ? 'Try adjusting your search or filter criteria'
                                         : 'No candidates have been registered yet'
@@ -334,20 +315,19 @@ const UsersPage: React.FC = () => {
                                         const userStatus = getUserStatus(user);
                                         const statusInfo = getStatusInfo(userStatus);
                                         const StatusIcon = statusInfo.icon;
-                                        const isSelectable = !user.is_active;
 
                                         return (
-                                            <TableRow key={index} className="hover:bg-muted/50">
+                                            <TableRow key={index} className="hover:bg-muted/30">
                                                 <TableCell>
                                                     <div className="flex items-center gap-3">
-                                                        <Avatar className="h-10 w-10">
+                                                        <Avatar className="h-9 w-9 border-2 border-border">
                                                             <AvatarImage src={`https://api.dicebear.com/7.x/initials/svg?seed=${user.email}`} />
-                                                            <AvatarFallback className="bg-systech-gradient text-white font-semibold">
+                                                            <AvatarFallback className="bg-primary text-primary-foreground text-xs font-semibold">
                                                                 {getInitials(user.name, user.email)}
                                                             </AvatarFallback>
                                                         </Avatar>
                                                         <div>
-                                                            <p className="font-semibold text-foreground">
+                                                            <p className="font-semibold text-sm text-foreground">
                                                                 {user.name || 'Unknown'}
                                                             </p>
                                                         </div>
@@ -356,7 +336,7 @@ const UsersPage: React.FC = () => {
                                                 <TableCell>
                                                     <div className="flex items-center gap-2">
                                                         <Mail className="h-4 w-4 text-muted-foreground" />
-                                                        <span className="text-foreground">{user.email}</span>
+                                                        <span className="text-sm text-foreground">{user.email}</span>
                                                     </div>
                                                 </TableCell>
                                                 <TableCell>
@@ -387,7 +367,7 @@ const UsersPage: React.FC = () => {
 
                 {/* Pagination */}
                 {totalPages > 1 && (
-                    <Card className="border-border/50">
+                    <Card className="border-border">
                         <CardContent className="p-4">
                             <div className="flex items-center justify-between">
                                 <div className="text-sm text-muted-foreground">
@@ -400,7 +380,7 @@ const UsersPage: React.FC = () => {
                                         onClick={() => paginate(currentPage - 1)}
                                         disabled={currentPage === 1}
                                     >
-                                        <ChevronLeft className="h-4 w-4" />
+                                        <ChevronLeft className="h-4 w-4 mr-2" />
                                         Previous
                                     </Button>
 
@@ -412,7 +392,6 @@ const UsersPage: React.FC = () => {
                                                 variant={currentPage === pageNum ? "default" : "outline"}
                                                 size="sm"
                                                 onClick={() => paginate(pageNum)}
-                                                className={currentPage === pageNum ? 'bg-systech-primary' : ''}
                                             >
                                                 {pageNum}
                                             </Button>
@@ -426,7 +405,7 @@ const UsersPage: React.FC = () => {
                                         disabled={currentPage === totalPages}
                                     >
                                         Next
-                                        <ChevronRight className="h-4 w-4" />
+                                        <ChevronRight className="h-4 w-4 ml-2" />
                                     </Button>
                                 </div>
                             </div>
@@ -439,7 +418,7 @@ const UsersPage: React.FC = () => {
                     <DialogContent className="sm:max-w-md">
                         <DialogHeader>
                             <DialogTitle className="flex items-center gap-2">
-                                <FileSpreadsheet className="h-5 w-5 text-systech-primary" />
+                                <FileSpreadsheet className="h-5 w-5 text-primary" />
                                 Bulk Upload Users
                             </DialogTitle>
                             <DialogDescription>
@@ -494,7 +473,7 @@ const UsersPage: React.FC = () => {
                                 </Alert>
                             )}
 
-                            <div className="bg-muted/50 p-4 rounded-lg">
+                            <div className="bg-muted/50 p-4 rounded-lg border border-border">
                                 <p className="text-sm font-medium mb-2">Excel Format:</p>
                                 <ul className="text-sm text-muted-foreground space-y-1">
                                     <li>• Column 1: Name (Full name of the user)</li>
@@ -514,12 +493,6 @@ const UsersPage: React.FC = () => {
                             <Button
                                 onClick={handleBulkUpload}
                                 disabled={!uploadFile || uploading}
-                                className="                            
-                                bg-blue-600 text-white 
-                                hover:bg-blue-700 
-                                dark:bg-blue-500 dark:hover:bg-blue-600 
-                                px-4 py-2 rounded 
-                                flex items-center gap-2"
                             >
                                 {uploading ? (
                                     <>
@@ -541,4 +514,4 @@ const UsersPage: React.FC = () => {
     );
 };
 
-export default UsersPage
+export default UsersPage;

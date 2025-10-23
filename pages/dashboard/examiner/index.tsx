@@ -75,8 +75,6 @@ export default function ExaminerDashboard() {
     const [useExcelQuestions, setUseExcelQuestions] = useState(false);
     const [isExamProctored, setIsExamProctored] = useState(false);
 
-    // const [startTime, setStartTime] = useState("");
-    // const [endTime, setEndTime] = useState("");
     const [allowedUsersRaw, setAllowedUsersRaw] = useState("");
     const [currentStep, setCurrentStep] = useState(1);
 
@@ -332,7 +330,6 @@ export default function ExaminerDashboard() {
                 let uploadedFileUrls: string[] = [];
                 let examFilesData: { name: string; url: string; size: number }[] = [];
 
-                // Upload files if required
                 if (requiresFileHandling && uploadedFiles.length > 0) {
                     try {
                         uploadedFileUrls = await uploadFilesToStorage(uploadedFiles);
@@ -375,9 +372,6 @@ export default function ExaminerDashboard() {
                     })),
                 };
 
-                console.log(examData);
-
-                // Create exam
                 try {
                     const response: Response = await fetch("/api/assessment/create", {
                         method: "POST",
@@ -393,7 +387,6 @@ export default function ExaminerDashboard() {
 
                     if (!response.ok) throw new Error("Failed to create exam");
 
-                    // Save file references to database if files were uploaded
                     if (examFilesData.length > 0) {
                         try {
                             const fileResponse = await fetch('/api/exam-files/save', {
@@ -455,7 +448,7 @@ export default function ExaminerDashboard() {
             uploadedFiles,
             sqlServerType,
             savedCredentialId,
-            selectedCredentialId,  // Add this
+            selectedCredentialId,
             showNewCredentialForm
         ]
     );
@@ -463,8 +456,6 @@ export default function ExaminerDashboard() {
     const languageOptions = [
         { value: "python", label: "Python", icon: "🐍" },
         { value: "sql", label: "SQL", icon: "🗄️" },
-        // { value: "javascript", label: "JavaScript", icon: "⚡" },
-        // { value: "java", label: "Java", icon: "☕" },
     ];
 
     const isFormValid = title.trim() !== "" && questions.some(q =>
@@ -488,7 +479,6 @@ export default function ExaminerDashboard() {
         try {
             let allFetchedQuestions: Question[] = [];
 
-            // Fetch Coding Questions
             if (codingTotal > 0) {
                 const codingRes = await fetch(`/api/questions?language=${language}&questionType=coding`);
                 if (!codingRes.ok) throw new Error(`Failed to fetch coding questions`);
@@ -524,7 +514,6 @@ export default function ExaminerDashboard() {
                 allFetchedQuestions = [...allFetchedQuestions, ...mappedCoding];
             }
 
-            // Fetch MCQ Questions
             if (mcqTotal > 0) {
                 const mcqRes = await fetch(`/api/questions?language=${language}&questionType=mcq`);
                 if (!mcqRes.ok) throw new Error(`Failed to fetch MCQ questions`);
@@ -545,28 +534,23 @@ export default function ExaminerDashboard() {
 
                 const selectedMcq = [...mcqBeginner, ...mcqIntermediate, ...mcqExpert];
 
-                const mappedMcq: Question[] = selectedMcq.map((q, index) => {
-                    console.log('Mapping MCQ question:', q); // Debug log
-                    return {
-                        id: `mcq-q${allFetchedQuestions.length + index + 1}`,
-                        question: q.questionText ?? q.question,
-                        expectedOutput: undefined,
-                        difficulty: q.difficulty,
-                        marks: q.marks,
-                        solution: q.solution !== undefined ? q.solution : undefined,
-                        type: 'mcq',
-                        options: Array.isArray(q.options) && q.options.length > 0 ? q.options.map((opt: any) => ({
-                            id: opt.id,
-                            text: opt.text || opt.optionText,
-                            isCorrect: opt.isCorrect
-                        })) : [],
-                        correctAnswer: Array.isArray(q.options) ? q.options.findIndex((opt: any) => opt.isCorrect === true) : undefined
-                    };
-                });
+                const mappedMcq: Question[] = selectedMcq.map((q, index) => ({
+                    id: `mcq-q${allFetchedQuestions.length + index + 1}`,
+                    question: q.questionText ?? q.question,
+                    expectedOutput: undefined,
+                    difficulty: q.difficulty,
+                    marks: q.marks,
+                    solution: q.solution !== undefined ? q.solution : undefined,
+                    type: 'mcq',
+                    options: Array.isArray(q.options) && q.options.length > 0 ? q.options.map((opt: any) => ({
+                        id: opt.id,
+                        text: opt.text || opt.optionText,
+                        isCorrect: opt.isCorrect
+                    })) : [],
+                    correctAnswer: Array.isArray(q.options) ? q.options.findIndex((opt: any) => opt.isCorrect === true) : undefined
+                }));
                 allFetchedQuestions = [...allFetchedQuestions, ...mappedMcq];
             }
-
-            console.log('Fetched Questions:', allFetchedQuestions);
 
             setQuestions(allFetchedQuestions);
             toast.success(`Fetched ${allFetchedQuestions.length} questions successfully`);
@@ -589,7 +573,6 @@ export default function ExaminerDashboard() {
             const response = await fetch('/api/admin/batch');
             if (response.ok) {
                 const batches = await response.json();
-                console.log(batches);
                 setAvaileBatches(batches);
             }
         } catch (error) {
@@ -632,11 +615,11 @@ export default function ExaminerDashboard() {
     };
 
     const getDifficultyColor = (difficulty: string) => {
-        switch (difficulty) {
-            case 'easy': return 'bg-green-500/10 text-green-700 border-green-200 dark:text-green-400';
-            case 'medium': return 'bg-yellow-500/10 text-yellow-700 border-yellow-200 dark:text-yellow-400';
-            case 'hard': return 'bg-red-500/10 text-red-700 border-red-200 dark:text-red-400';
-            default: return 'bg-muted text-muted-foreground';
+        switch (difficulty?.toLowerCase()) {
+            case 'easy': return 'bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-950/50 dark:text-emerald-400 dark:border-emerald-900';
+            case 'medium': return 'bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-950/50 dark:text-amber-400 dark:border-amber-900';
+            case 'hard': return 'bg-rose-100 text-rose-700 border-rose-200 dark:bg-rose-950/50 dark:text-rose-400 dark:border-rose-900';
+            default: return 'bg-secondary text-secondary-foreground border-border';
         }
     };
 
@@ -660,470 +643,414 @@ export default function ExaminerDashboard() {
                 <link rel="icon" href="/logo.png" />
             </Head>
 
-            <div className="min-h-screen bg-background">
-                <div className="container mx-auto px-4 py-8 max-w-6xl">
-                    {/* Header */}
-                    <div className="text-center mb-8 space-y-4">
-                        <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 text-primary text-sm font-medium">
-                            <div className="w-2 h-2 bg-primary rounded-full animate-pulse"></div>
-                            Create Assessment
-                        </div>
-                        <h1 className="text-4xl font-bold tracking-tight text-foreground">Design Your Exam</h1>
-                        <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
-                            Create comprehensive assessments with our intuitive builder
-                        </p>
-                    </div>
+            <div className="space-y-6">
+                {/* Header */}
+                <div className="space-y-2">
+                    <h1 className="text-2xl font-bold text-foreground">Create New Exam</h1>
+                    <p className="text-muted-foreground">
+                        Design comprehensive assessments with our intuitive builder
+                    </p>
+                </div>
 
-                    {/* Progress Steps */}
-                    <div className="mb-8">
-                        <div className="flex items-center justify-center">
+                {/* Progress Steps */}
+                <Card className="border-border">
+                    <CardContent className="p-6">
+                        <div className="flex items-center justify-between mb-4">
                             {steps.map((step, index) => {
                                 const Icon = step.icon;
                                 const isActive = currentStep === step.number;
                                 const isCompleted = currentStep > step.number;
 
                                 return (
-                                    <div key={step.number} className="flex items-center">
-                                        <div className={`flex items-center gap-3 px-4 py-2 rounded-lg transition-all duration-200 ${isActive ? 'bg-primary/10 text-primary' :
-                                            isCompleted ? 'bg-green-500/10 text-green-600' :
-                                                'bg-muted/50 text-muted-foreground'
-                                            }`}>
-                                            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold transition-all duration-200 ${isActive ? 'bg-primary text-primary-foreground' :
-                                                isCompleted ? 'bg-green-500 text-white' :
-                                                    'bg-muted text-muted-foreground'
+                                    <div key={step.number} className="flex items-center flex-1">
+                                        <div className={`flex items-center gap-2 ${index < steps.length - 1 ? 'w-full' : ''}`}>
+                                            <div className={`flex items-center justify-center w-8 h-8 rounded-full border-2 transition-colors ${isActive
+                                                ? 'bg-primary border-primary text-primary-foreground'
+                                                : isCompleted
+                                                    ? 'bg-emerald-500 border-emerald-500 text-white'
+                                                    : 'bg-background border-border text-muted-foreground'
                                                 }`}>
-                                                {isCompleted ? <CheckCircle className="w-4 h-4" /> : step.number}
+                                                {isCompleted ? <CheckCircle className="w-4 h-4" /> : <Icon className="w-4 h-4" />}
                                             </div>
-                                            <span className="font-medium">{step.title}</span>
+                                            <span className={`text-sm font-medium hidden md:inline ${isActive ? 'text-foreground' : 'text-muted-foreground'
+                                                }`}>
+                                                {step.title}
+                                            </span>
                                         </div>
                                         {index < steps.length - 1 && (
-                                            <div className={`w-16 h-0.5 mx-2 transition-all duration-200 ${isCompleted ? 'bg-green-500' : 'bg-border'
+                                            <div className={`h-0.5 flex-1 mx-2 transition-colors ${isCompleted ? 'bg-emerald-500' : 'bg-border'
                                                 }`}></div>
                                         )}
                                     </div>
                                 );
                             })}
                         </div>
-                        <div className="mt-4">
-                            <Progress value={(currentStep / steps.length) * 100} className="w-full max-w-md mx-auto" />
-                        </div>
-                    </div>
+                        <Progress value={(currentStep / steps.length) * 100} className="h-1" />
+                    </CardContent>
+                </Card>
 
-                    {/* Main Content Card */}
-                    <Card className="shadow-lg border-0 bg-card/50 backdrop-blur-sm">
-                        <CardContent className="p-8">
-                            {/* Step 1: Basic Information */}
-                            {currentStep === 1 && (
-                                <div className="space-y-8">
-                                    <div className="text-center space-y-2">
-                                        <div className="w-16 h-16 bg-primary/10 rounded-2xl mx-auto flex items-center justify-center">
-                                            <Info className="w-8 h-8 text-primary" />
-                                        </div>
-                                        <h2 className="text-2xl font-semibold text-foreground">Basic Information</h2>
-                                        <p className="text-muted-foreground">Set up your exam details and configuration</p>
+                {/* Main Content Card */}
+                <Card className="border-border">
+                    <CardContent className="p-6">
+                        {/* Step 1: Basic Information */}
+                        {currentStep === 1 && (
+                            <div className="space-y-6">
+                                <div>
+                                    <h2 className="text-lg font-semibold text-foreground mb-1">Basic Information</h2>
+                                    <p className="text-sm text-muted-foreground">Set up your exam details and configuration</p>
+                                </div>
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div className="space-y-2">
+                                        <Label htmlFor="title">Exam Title *</Label>
+                                        <Input
+                                            id="title"
+                                            type="text"
+                                            value={title}
+                                            onChange={(e) => setTitle(e.target.value)}
+                                            placeholder="e.g., Python Programming Assessment"
+                                            disabled={isLoading}
+                                        />
                                     </div>
 
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                        <div className="space-y-2">
-                                            <Label htmlFor="title" className="text-sm font-medium">Exam Title *</Label>
-                                            <Input
-                                                id="title"
-                                                type="text"
-                                                value={title}
-                                                onChange={(e) => setTitle(e.target.value)}
-                                                placeholder="e.g., Python Programming Assessment"
-                                                disabled={isLoading}
-                                                className="h-11"
-                                            />
-                                        </div>
-
-                                        <div className="space-y-2">
-                                            <Label htmlFor="language" className="text-sm font-medium">Programming Language</Label>
-                                            <Select value={language} onValueChange={setLanguage} disabled={isLoading}>
-                                                <SelectTrigger className="h-11">
-                                                    <SelectValue />
-                                                </SelectTrigger>
-                                                <SelectContent>
-                                                    {languageOptions.map((lang) => (
-                                                        <SelectItem key={lang.value} value={lang.value}>
-                                                            <div className="flex items-center gap-2">
-                                                                <span>{lang.icon}</span>
-                                                                <span>{lang.label}</span>
-                                                            </div>
-                                                        </SelectItem>
-                                                    ))}
-                                                </SelectContent>
-                                            </Select>
-                                        </div>
-
-                                        <div className="space-y-2">
-                                            <Label htmlFor="duration" className="text-sm font-medium">Duration (minutes)</Label>
-                                            <Input
-                                                id="duration"
-                                                type="number"
-                                                min={1}
-                                                max={300}
-                                                value={duration}
-                                                onChange={(e) => setDuration(Number(e.target.value))}
-                                                disabled={isLoading}
-                                                className="h-11"
-                                            />
-                                        </div>
-
-                                        {language === 'python' && (
-                                            <>
-                                                <div className="md:col-span-2 space-y-3">
-                                                    <Label className="text-sm font-medium">File Handling Required</Label>
-                                                    <Card className="p-4">
-                                                        <div className="flex items-center justify-between">
-                                                            <div className="flex items-center gap-3">
-                                                                <FileText className="w-4 h-4 text-muted-foreground" />
-                                                                <span className="text-sm font-medium">
-                                                                    {requiresFileHandling ? 'File Handling Enabled' : 'No File Handling'}
-                                                                </span>
-                                                            </div>
-                                                            <Switch
-                                                                checked={requiresFileHandling}
-                                                                onCheckedChange={setRequiresFileHandling}
-                                                                disabled={isLoading}
-                                                            />
+                                    <div className="space-y-2">
+                                        <Label htmlFor="language">Programming Language</Label>
+                                        <Select value={language} onValueChange={setLanguage} disabled={isLoading}>
+                                            <SelectTrigger>
+                                                <SelectValue />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                {languageOptions.map((lang) => (
+                                                    <SelectItem key={lang.value} value={lang.value}>
+                                                        <div className="flex items-center gap-2">
+                                                            <span>{lang.icon}</span>
+                                                            <span>{lang.label}</span>
                                                         </div>
-                                                    </Card>
-                                                </div>
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
 
-                                                {requiresFileHandling && (
-                                                    <div className="md:col-span-2 space-y-4">
-                                                        <Card className="border-primary/20">
-                                                            <CardHeader>
-                                                                <CardTitle className="text-sm font-medium flex items-center gap-2">
-                                                                    <FileText className="w-4 h-4" />
-                                                                    Upload Excel/CSV Files
-                                                                </CardTitle>
-                                                                <CardDescription>
-                                                                    Upload one or multiple files that will be provided to students during the exam
-                                                                </CardDescription>
-                                                            </CardHeader>
-                                                            <CardContent className="space-y-4">
-                                                                <div className="flex items-center justify-center w-full">
-                                                                    <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer hover:bg-muted/50 transition-colors">
-                                                                        <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                                                                            <Plus className="w-8 h-8 mb-2 text-muted-foreground" />
-                                                                            <p className="mb-2 text-sm text-muted-foreground">
-                                                                                <span className="font-semibold">Click to upload</span> or drag and drop
-                                                                            </p>
-                                                                            <p className="text-xs text-muted-foreground">
-                                                                                Excel (.xlsx, .xls) or CSV files
-                                                                            </p>
-                                                                        </div>
-                                                                        <input
-                                                                            type="file"
-                                                                            className="hidden"
-                                                                            accept=".xlsx,.xls,.csv"
-                                                                            multiple
-                                                                            onChange={handleFileUpload}
-                                                                        />
-                                                                    </label>
-                                                                </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="duration">Duration (minutes)</Label>
+                                        <Input
+                                            id="duration"
+                                            type="number"
+                                            min={1}
+                                            max={300}
+                                            value={duration}
+                                            onChange={(e) => setDuration(Number(e.target.value))}
+                                            disabled={isLoading}
+                                        />
+                                    </div>
 
-                                                                {fileUploadError && (
-                                                                    <Alert variant="destructive">
-                                                                        <AlertDescription>{fileUploadError}</AlertDescription>
-                                                                    </Alert>
-                                                                )}
+                                    <div className="space-y-2">
+                                        <Label>Exam Proctoring</Label>
+                                        <div className="flex items-center justify-between h-10 px-3 border border-border rounded-md">
+                                            <div className="flex items-center gap-2">
+                                                <Shield className="w-4 h-4 text-muted-foreground" />
+                                                <span className="text-sm">{isExamProctored ? 'Proctored' : 'Non-Proctored'}</span>
+                                            </div>
+                                            <Switch
+                                                checked={isExamProctored}
+                                                onCheckedChange={setIsExamProctored}
+                                                disabled={isLoading}
+                                            />
+                                        </div>
+                                    </div>
 
-                                                                {uploadedFiles.length > 0 && (
-                                                                    <div className="space-y-2">
-                                                                        <Label className="text-sm font-medium">
-                                                                            Uploaded Files ({uploadedFiles.length})
-                                                                        </Label>
-                                                                        <div className="space-y-2">
-                                                                            {uploadedFiles.map((file, index) => (
-                                                                                <Card key={index} className="p-3">
-                                                                                    <div className="flex items-center justify-between">
-                                                                                        <div className="flex items-center gap-3">
-                                                                                            <FileText className="w-4 h-4 text-primary" />
-                                                                                            <div>
-                                                                                                <p className="text-sm font-medium">{file.name}</p>
-                                                                                                <p className="text-xs text-muted-foreground">
-                                                                                                    {(file.size / 1024).toFixed(2)} KB
-                                                                                                </p>
-                                                                                            </div>
-                                                                                        </div>
-                                                                                        <Button
-                                                                                            variant="ghost"
-                                                                                            size="sm"
-                                                                                            onClick={() => removeFile(index)}
-                                                                                            className="text-destructive hover:text-destructive"
-                                                                                        >
-                                                                                            <Trash2 className="w-4 h-4" />
-                                                                                        </Button>
-                                                                                    </div>
-                                                                                </Card>
-                                                                            ))}
-                                                                        </div>
-                                                                    </div>
-                                                                )}
-                                                            </CardContent>
-                                                        </Card>
-                                                    </div>
-                                                )}
-                                            </>
-                                        )}
-
-                                        {language === 'sql' && (
-                                            <>
-                                                <div className="space-y-2">
-                                                    <Label htmlFor="sqlServerType" className="text-sm font-medium">SQL Server Type *</Label>
-                                                    <Select value={sqlServerType} onValueChange={(value) => {
-                                                        setSqlServerType(value as 'ssms' | 'postgres' | '');
-                                                        if (value) {
-                                                            fetchExistingCredentials();
-                                                        }
-                                                    }} disabled={isLoading}>
-                                                        <SelectTrigger className="h-11">
-                                                            <SelectValue placeholder="Select SQL Server" />
-                                                        </SelectTrigger>
-                                                        <SelectContent>
-                                                            <SelectItem value="ssms">
-                                                                <div className="flex items-center gap-2">
-                                                                    <span>🗄️</span>
-                                                                    <span>SQL Server (SSMS)</span>
-                                                                </div>
-                                                            </SelectItem>
-                                                            <SelectItem value="postgres">
-                                                                <div className="flex items-center gap-2">
-                                                                    <span>🐘</span>
-                                                                    <span>PostgreSQL</span>
-                                                                </div>
-                                                            </SelectItem>
-                                                        </SelectContent>
-                                                    </Select>
-                                                </div>
-
-                                                {sqlServerType && (
-                                                    <div className="md:col-span-2 space-y-4">
-                                                        <Card className="border-primary/20">
-                                                            <CardHeader>
-                                                                <CardTitle className="text-sm font-medium flex items-center gap-2">
-                                                                    <Settings className="w-4 h-4" />
-                                                                    Database Connection Settings
-                                                                </CardTitle>
-                                                            </CardHeader>
-                                                            <CardContent className="space-y-4">
-                                                                {/* Credential Selection */}
-                                                                <div className="space-y-3">
-                                                                    <div className="flex items-center justify-between">
-                                                                        <Label>Choose Credential</Label>
-                                                                        <Button
-                                                                            type="button"
-                                                                            variant="outline"
-                                                                            size="sm"
-                                                                            onClick={() => {
-                                                                                setShowNewCredentialForm(!showNewCredentialForm);
-                                                                                setSelectedCredentialId('');
-                                                                            }}
-                                                                        >
-                                                                            {showNewCredentialForm ? 'Use Existing' : 'Create New'}
-                                                                        </Button>
-                                                                    </div>
-
-                                                                    {!showNewCredentialForm && (
-                                                                        <Select
-                                                                            value={selectedCredentialId}
-                                                                            onValueChange={(value) => {
-                                                                                setSelectedCredentialId(value);
-                                                                                const selected = existingCredentials.find(c => c.id === value);
-                                                                                if (selected) {
-                                                                                    setSqlCredentials({
-                                                                                        host: selected.host,
-                                                                                        port: selected.port.toString(),
-                                                                                        username: selected.username,
-                                                                                        password: '********', // Masked
-                                                                                        database: selected.database
-                                                                                    });
-                                                                                    setSqlServerType(selected.serverType);
-                                                                                    setSavedCredentialId(value);
-                                                                                    setConnectionStatus('success');
-                                                                                }
-                                                                            }}
-                                                                        >
-                                                                            <SelectTrigger className="h-11">
-                                                                                <SelectValue placeholder="Select existing credential" />
-                                                                            </SelectTrigger>
-                                                                            <SelectContent>
-                                                                                {loadingCredentials ? (
-                                                                                    <SelectItem value="loading" disabled>
-                                                                                        <div className="flex items-center gap-2">
-                                                                                            <Loader2 className="w-4 h-4 animate-spin" />
-                                                                                            Loading...
-                                                                                        </div>
-                                                                                    </SelectItem>
-                                                                                ) : existingCredentials.length === 0 ? (
-                                                                                    <SelectItem value="none" disabled>
-                                                                                        No credentials found
-                                                                                    </SelectItem>
-                                                                                ) : (
-                                                                                    existingCredentials
-                                                                                        .filter(c => c.serverType === sqlServerType)
-                                                                                        .map((credential) => (
-                                                                                            <SelectItem key={credential.id} value={credential.id}>
-                                                                                                <div className="flex flex-col">
-                                                                                                    <span className="font-medium">{credential.examTitle || 'Unnamed'}</span>
-                                                                                                    <span className="text-xs text-muted-foreground">
-                                                                                                        {credential.host}:{credential.port} - {credential.database}
-                                                                                                    </span>
-                                                                                                </div>
-                                                                                            </SelectItem>
-                                                                                        ))
-                                                                                )}
-                                                                            </SelectContent>
-                                                                        </Select>
-                                                                    )}
-                                                                </div>
-
-                                                                {/* New Credential Form */}
-                                                                {showNewCredentialForm && (
-                                                                    <>
-                                                                        <div className="grid grid-cols-2 gap-4">
-                                                                            <div className="space-y-2">
-                                                                                <Label htmlFor="host">Host/Server *</Label>
-                                                                                <Input
-                                                                                    id="host"
-                                                                                    value={sqlCredentials.host}
-                                                                                    onChange={(e) => setSqlCredentials(prev => ({ ...prev, host: e.target.value }))}
-                                                                                    placeholder="localhost"
-                                                                                    className="h-10"
-                                                                                />
-                                                                            </div>
-                                                                            <div className="space-y-2">
-                                                                                <Label htmlFor="port">Port *</Label>
-                                                                                <Input
-                                                                                    id="port"
-                                                                                    value={sqlCredentials.port}
-                                                                                    onChange={(e) => setSqlCredentials(prev => ({ ...prev, port: e.target.value }))}
-                                                                                    placeholder={sqlServerType === 'postgres' ? '5432' : '1433'}
-                                                                                    className="h-10"
-                                                                                />
-                                                                            </div>
-                                                                        </div>
-                                                                        <div className="space-y-2">
-                                                                            <Label htmlFor="database">Database Name *</Label>
-                                                                            <Input
-                                                                                id="database"
-                                                                                value={sqlCredentials.database}
-                                                                                onChange={(e) => setSqlCredentials(prev => ({ ...prev, database: e.target.value }))}
-                                                                                placeholder="database_name"
-                                                                                className="h-10"
-                                                                            />
-                                                                        </div>
-                                                                        <div className="grid grid-cols-2 gap-4">
-                                                                            <div className="space-y-2">
-                                                                                <Label htmlFor="username">Username *</Label>
-                                                                                <Input
-                                                                                    id="username"
-                                                                                    value={sqlCredentials.username}
-                                                                                    onChange={(e) => setSqlCredentials(prev => ({ ...prev, username: e.target.value }))}
-                                                                                    placeholder="username"
-                                                                                    className="h-10"
-                                                                                />
-                                                                            </div>
-                                                                            <div className="space-y-2">
-                                                                                <Label htmlFor="password">Password *</Label>
-                                                                                <Input
-                                                                                    id="password"
-                                                                                    type="password"
-                                                                                    value={sqlCredentials.password}
-                                                                                    onChange={(e) => setSqlCredentials(prev => ({ ...prev, password: e.target.value }))}
-                                                                                    placeholder="••••••••"
-                                                                                    className="h-10"
-                                                                                />
-                                                                            </div>
-                                                                        </div>
-                                                                        <Button
-                                                                            type="button"
-                                                                            onClick={testSqlConnection}
-                                                                            disabled={testingConnection || !sqlCredentials.host || !sqlCredentials.port || !sqlCredentials.username || !sqlCredentials.password || !sqlCredentials.database}
-                                                                            className="w-full"
-                                                                            variant={connectionStatus === 'success' ? 'default' : 'outline'}
-                                                                        >
-                                                                            {testingConnection ? (
-                                                                                <>
-                                                                                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                                                                                    Testing Connection...
-                                                                                </>
-                                                                            ) : connectionStatus === 'success' ? (
-                                                                                <>
-                                                                                    <CheckCircle className="w-4 h-4 mr-2" />
-                                                                                    Connection Successful
-                                                                                </>
-                                                                            ) : (
-                                                                                <>
-                                                                                    <RefreshCw className="w-4 h-4 mr-2" />
-                                                                                    Test Connection
-                                                                                </>
-                                                                            )}
-                                                                        </Button>
-                                                                        {connectionStatus === 'failed' && (
-                                                                            <Alert variant="destructive">
-                                                                                <AlertDescription>
-                                                                                    Connection failed. Please check your credentials and try again.
-                                                                                </AlertDescription>
-                                                                            </Alert>
-                                                                        )}
-                                                                    </>
-                                                                )}
-
-                                                                {/* Display selected credential info */}
-                                                                {selectedCredentialId && !showNewCredentialForm && (
-                                                                    <Alert>
-                                                                        <CheckCircle className="w-4 h-4" />
-                                                                        <AlertDescription>
-                                                                            Using existing credential: {existingCredentials.find(c => c.id === selectedCredentialId)?.examTitle}
-                                                                        </AlertDescription>
-                                                                    </Alert>
-                                                                )}
-                                                            </CardContent>
-                                                        </Card>
-                                                    </div>
-                                                )}
-                                            </>
-                                        )}
-
-                                        <div className="space-y-3">
-                                            <Label className="text-sm font-medium">Exam Proctoring</Label>
-                                            <Card className="p-4">
-                                                <div className="flex items-center justify-between">
-                                                    <div className="flex items-center gap-3">
-                                                        <Shield className="w-4 h-4 text-muted-foreground" />
-                                                        <span className="text-sm font-medium">
-                                                            {isExamProctored ? 'Proctored' : 'Non-Proctored'}
-                                                        </span>
+                                    {language === 'python' && (
+                                        <>
+                                            <div className="md:col-span-2 space-y-2">
+                                                <Label>File Handling Required</Label>
+                                                <div className="flex items-center justify-between h-10 px-3 border border-border rounded-md">
+                                                    <div className="flex items-center gap-2">
+                                                        <FileText className="w-4 h-4 text-muted-foreground" />
+                                                        <span className="text-sm">{requiresFileHandling ? 'Enabled' : 'Disabled'}</span>
                                                     </div>
                                                     <Switch
-                                                        checked={isExamProctored}
-                                                        onCheckedChange={setIsExamProctored}
+                                                        checked={requiresFileHandling}
+                                                        onCheckedChange={setRequiresFileHandling}
                                                         disabled={isLoading}
                                                     />
                                                 </div>
-                                            </Card>
-                                        </div>
-                                    </div>
-
-                                    {language === 'sql' && sqlServerType && (
-                                        <div className="space-y-1">
-                                            <Label className="text-sm font-medium text-muted-foreground">SQL Server</Label>
-                                            <div className="flex items-center gap-2">
-                                                <span>{sqlServerType === 'postgres' ? '🐘' : '🗄️'}</span>
-                                                <span className="font-semibold">
-                                                    {sqlServerType === 'postgres' ? 'PostgreSQL' : 'SQL Server (SSMS)'}
-                                                </span>
                                             </div>
-                                            {savedCredentialId && (
-                                                <p className="text-xs text-muted-foreground">Credential ID: {savedCredentialId}</p>
+
+                                            {requiresFileHandling && (
+                                                <div className="md:col-span-2 space-y-4">
+                                                    <Card className="border-primary/20">
+                                                        <CardHeader>
+                                                            <CardTitle className="text-sm">Upload Excel/CSV Files</CardTitle>
+                                                            <CardDescription>
+                                                                Upload files that will be provided to students during the exam
+                                                            </CardDescription>
+                                                        </CardHeader>
+                                                        <CardContent className="space-y-4">
+                                                            <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-border rounded-lg cursor-pointer hover:bg-muted/50 transition-colors">
+                                                                <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                                                                    <Plus className="w-8 h-8 mb-2 text-muted-foreground" />
+                                                                    <p className="mb-2 text-sm text-muted-foreground">
+                                                                        <span className="font-semibold">Click to upload</span> or drag and drop
+                                                                    </p>
+                                                                    <p className="text-xs text-muted-foreground">Excel (.xlsx, .xls) or CSV files</p>
+                                                                </div>
+                                                                <input
+                                                                    type="file"
+                                                                    className="hidden"
+                                                                    accept=".xlsx,.xls,.csv"
+                                                                    multiple
+                                                                    onChange={handleFileUpload}
+                                                                />
+                                                            </label>
+
+                                                            {fileUploadError && (
+                                                                <Alert variant="destructive">
+                                                                    <AlertDescription>{fileUploadError}</AlertDescription>
+                                                                </Alert>
+                                                            )}
+
+                                                            {uploadedFiles.length > 0 && (
+                                                                <div className="space-y-2">
+                                                                    <Label className="text-sm">Uploaded Files ({uploadedFiles.length})</Label>
+                                                                    <div className="space-y-2">
+                                                                        {uploadedFiles.map((file, index) => (
+                                                                            <div key={index} className="flex items-center justify-between p-3 border border-border rounded-lg">
+                                                                                <div className="flex items-center gap-3">
+                                                                                    <FileText className="w-4 h-4 text-primary" />
+                                                                                    <div>
+                                                                                        <p className="text-sm font-medium">{file.name}</p>
+                                                                                        <p className="text-xs text-muted-foreground">
+                                                                                            {(file.size / 1024).toFixed(2)} KB
+                                                                                        </p>
+                                                                                    </div>
+                                                                                </div>
+                                                                                <Button
+                                                                                    variant="ghost"
+                                                                                    size="sm"
+                                                                                    onClick={() => removeFile(index)}
+                                                                                    className="text-destructive hover:text-destructive"
+                                                                                >
+                                                                                    <Trash2 className="w-4 h-4" />
+                                                                                </Button>
+                                                                            </div>
+                                                                        ))}
+                                                                    </div>
+                                                                </div>
+                                                            )}
+                                                        </CardContent>
+                                                    </Card>
+                                                </div>
                                             )}
-                                        </div>
+                                        </>
                                     )}
 
+                                    {language === 'sql' && (
+                                        <>
+                                            <div className="space-y-2">
+                                                <Label htmlFor="sqlServerType">SQL Server Type *</Label>
+                                                <Select value={sqlServerType} onValueChange={(value) => {
+                                                    setSqlServerType(value as 'ssms' | 'postgres' | '');
+                                                    if (value) {
+                                                        fetchExistingCredentials();
+                                                    }
+                                                }} disabled={isLoading}>
+                                                    <SelectTrigger>
+                                                        <SelectValue placeholder="Select SQL Server" />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        <SelectItem value="ssms">
+                                                            <div className="flex items-center gap-2">
+                                                                <span>🗄️</span>
+                                                                <span>SQL Server (SSMS)</span>
+                                                            </div>
+                                                        </SelectItem>
+                                                        <SelectItem value="postgres">
+                                                            <div className="flex items-center gap-2">
+                                                                <span>🐘</span>
+                                                                <span>PostgreSQL</span>
+                                                            </div>
+                                                        </SelectItem>
+                                                    </SelectContent>
+                                                </Select>
+                                            </div>
+
+                                            {sqlServerType && (
+                                                <div className="md:col-span-2 space-y-4">
+                                                    <Card className="border-primary/20">
+                                                        <CardHeader>
+                                                            <CardTitle className="text-sm">Database Connection Settings</CardTitle>
+                                                        </CardHeader>
+                                                        <CardContent className="space-y-4">
+                                                            <div className="flex items-center justify-between">
+                                                                <Label>Choose Credential</Label>
+                                                                <Button
+                                                                    type="button"
+                                                                    variant="outline"
+                                                                    size="sm"
+                                                                    onClick={() => {
+                                                                        setShowNewCredentialForm(!showNewCredentialForm);
+                                                                        setSelectedCredentialId('');
+                                                                    }}
+                                                                >
+                                                                    {showNewCredentialForm ? 'Use Existing' : 'Create New'}
+                                                                </Button>
+                                                            </div>
+
+                                                            {!showNewCredentialForm && (
+                                                                <Select
+                                                                    value={selectedCredentialId}
+                                                                    onValueChange={(value) => {
+                                                                        setSelectedCredentialId(value);
+                                                                        const selected = existingCredentials.find(c => c.id === value);
+                                                                        if (selected) {
+                                                                            setSqlCredentials({
+                                                                                host: selected.host,
+                                                                                port: selected.port.toString(),
+                                                                                username: selected.username,
+                                                                                password: '********',
+                                                                                database: selected.database
+                                                                            });
+                                                                            setSqlServerType(selected.serverType);
+                                                                            setSavedCredentialId(value);
+                                                                            setConnectionStatus('success');
+                                                                        }
+                                                                    }}
+                                                                >
+                                                                    <SelectTrigger>
+                                                                        <SelectValue placeholder="Select existing credential" />
+                                                                    </SelectTrigger>
+                                                                    <SelectContent>
+                                                                        {loadingCredentials ? (
+                                                                            <SelectItem value="loading" disabled>
+                                                                                <div className="flex items-center gap-2">
+                                                                                    <Loader2 className="w-4 h-4 animate-spin" />
+                                                                                    Loading...
+                                                                                </div>
+                                                                            </SelectItem>
+                                                                        ) : existingCredentials.length === 0 ? (
+                                                                            <SelectItem value="none" disabled>No credentials found</SelectItem>
+                                                                        ) : (
+                                                                            existingCredentials
+                                                                                .filter(c => c.serverType === sqlServerType)
+                                                                                .map((credential) => (
+                                                                                    <SelectItem key={credential.id} value={credential.id}>
+                                                                                        <div className="flex flex-col">
+                                                                                            <span className="font-medium">{credential.examTitle || 'Unnamed'}</span>
+                                                                                            <span className="text-xs text-muted-foreground">
+                                                                                                {credential.host}:{credential.port} - {credential.database}
+                                                                                            </span>
+                                                                                        </div>
+                                                                                    </SelectItem>
+                                                                                ))
+                                                                        )}
+                                                                    </SelectContent>
+                                                                </Select>
+                                                            )}
+
+                                                            {showNewCredentialForm && (
+                                                                <div className="space-y-4">
+                                                                    <div className="grid grid-cols-2 gap-4">
+                                                                        <div className="space-y-2">
+                                                                            <Label htmlFor="host">Host/Server *</Label>
+                                                                            <Input
+                                                                                id="host"
+                                                                                value={sqlCredentials.host}
+                                                                                onChange={(e) => setSqlCredentials(prev => ({ ...prev, host: e.target.value }))}
+                                                                                placeholder="localhost"
+                                                                            />
+                                                                        </div>
+                                                                        <div className="space-y-2">
+                                                                            <Label htmlFor="port">Port *</Label>
+                                                                            <Input
+                                                                                id="port"
+                                                                                value={sqlCredentials.port}
+                                                                                onChange={(e) => setSqlCredentials(prev => ({ ...prev, port: e.target.value }))}
+                                                                                placeholder={sqlServerType === 'postgres' ? '5432' : '1433'}
+                                                                            />
+                                                                        </div>
+                                                                    </div>
+                                                                    <div className="space-y-2">
+                                                                        <Label htmlFor="database">Database Name *</Label>
+                                                                        <Input
+                                                                            id="database"
+                                                                            value={sqlCredentials.database}
+                                                                            onChange={(e) => setSqlCredentials(prev => ({ ...prev, database: e.target.value }))}
+                                                                            placeholder="database_name"
+                                                                        />
+                                                                    </div>
+                                                                    <div className="grid grid-cols-2 gap-4">
+                                                                        <div className="space-y-2">
+                                                                            <Label htmlFor="username">Username *</Label>
+                                                                            <Input
+                                                                                id="username"
+                                                                                value={sqlCredentials.username}
+                                                                                onChange={(e) => setSqlCredentials(prev => ({ ...prev, username: e.target.value }))}
+                                                                                placeholder="username"
+                                                                            />
+                                                                        </div>
+                                                                        <div className="space-y-2">
+                                                                            <Label htmlFor="password">Password *</Label>
+                                                                            <Input
+                                                                                id="password"
+                                                                                type="password"
+                                                                                value={sqlCredentials.password}
+                                                                                onChange={(e) => setSqlCredentials(prev => ({ ...prev, password: e.target.value }))}
+                                                                                placeholder="••••••••"
+                                                                            />
+                                                                        </div>
+                                                                    </div>
+                                                                    <Button
+                                                                        type="button"
+                                                                        onClick={testSqlConnection}
+                                                                        disabled={testingConnection || !sqlCredentials.host || !sqlCredentials.port || !sqlCredentials.username || !sqlCredentials.password || !sqlCredentials.database}
+                                                                        className="w-full"
+                                                                        variant={connectionStatus === 'success' ? 'default' : 'outline'}
+                                                                    >
+                                                                        {testingConnection ? (
+                                                                            <>
+                                                                                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                                                                Testing Connection...
+                                                                            </>
+                                                                        ) : connectionStatus === 'success' ? (
+                                                                            <>
+                                                                                <CheckCircle className="w-4 h-4 mr-2" />
+                                                                                Connection Successful
+                                                                            </>
+                                                                        ) : (
+                                                                            <>
+                                                                                <RefreshCw className="w-4 h-4 mr-2" />
+                                                                                Test Connection
+                                                                            </>
+                                                                        )}
+                                                                    </Button>
+                                                                    {connectionStatus === 'failed' && (
+                                                                        <Alert variant="destructive">
+                                                                            <AlertDescription>
+                                                                                Connection failed. Please check your credentials and try again.
+                                                                            </AlertDescription>
+                                                                        </Alert>
+                                                                    )}
+                                                                </div>
+                                                            )}
+
+                                                            {selectedCredentialId && !showNewCredentialForm && (
+                                                                <Alert>
+                                                                    <CheckCircle className="w-4 h-4" />
+                                                                    <AlertDescription>
+                                                                        Using existing credential: {existingCredentials.find(c => c.id === selectedCredentialId)?.examTitle}
+                                                                    </AlertDescription>
+                                                                </Alert>
+                                                            )}
+                                                        </CardContent>
+                                                    </Card>
+                                                </div>
+                                            )}
+                                        </>
+                                    )}
+                                </div>
+
+                                <div className="flex justify-end pt-4">
                                     <Button
                                         onClick={() => setCurrentStep(2)}
                                         disabled={
@@ -1134,832 +1061,630 @@ export default function ExaminerDashboard() {
                                             )) ||
                                             (language === 'python' && requiresFileHandling && uploadedFiles.length === 0)
                                         }
-                                        className="px-8"
                                     >
                                         Next: Questions
                                         <ArrowRight className="w-4 h-4 ml-2" />
                                     </Button>
                                 </div>
-                            )}
+                            </div>
+                        )}
 
-                            {/* Step 2: Questions */}
-                            {currentStep === 2 && (
-                                <div className="space-y-8">
-                                    <div className="text-center space-y-2">
-                                        <div className="w-16 h-16 bg-primary/10 rounded-2xl mx-auto flex items-center justify-center">
-                                            <FileText className="w-8 h-8 text-primary" />
-                                        </div>
-                                        <h2 className="text-2xl font-semibold text-foreground">Exam Questions</h2>
-                                        <p className="text-muted-foreground">Configure your question selection from the question bank</p>
-                                    </div>
-
-                                    {/* Question Count Selection */}
-                                    <div className="space-y-6">
-                                        {/* Coding Questions */}
-                                        <Card className="border-blue-200 dark:border-blue-800">
-                                            <CardHeader>
-                                                <CardTitle className="text-sm font-medium text-blue-700 dark:text-blue-400 flex items-center gap-2">
-                                                    <Code className="w-4 h-4" />
-                                                    Coding Questions
-                                                </CardTitle>
-                                            </CardHeader>
-                                            <CardContent>
-                                                <div className="grid grid-cols-3 gap-4">
-                                                    <div className="space-y-2">
-                                                        <Label className="text-xs">Easy</Label>
-                                                        <Input
-                                                            type="number"
-                                                            min="0"
-                                                            max="50"
-                                                            value={beginnerCount}
-                                                            onChange={(e) => setBeginnerCount(Number(e.target.value))}
-                                                            className="h-10"
-                                                        />
-                                                    </div>
-                                                    <div className="space-y-2">
-                                                        <Label className="text-xs">Medium</Label>
-                                                        <Input
-                                                            type="number"
-                                                            min="0"
-                                                            max="50"
-                                                            value={intermediateCount}
-                                                            onChange={(e) => setIntermediateCount(Number(e.target.value))}
-                                                            className="h-10"
-                                                        />
-                                                    </div>
-                                                    <div className="space-y-2">
-                                                        <Label className="text-xs">Hard</Label>
-                                                        <Input
-                                                            type="number"
-                                                            min="0"
-                                                            max="50"
-                                                            value={expertCount}
-                                                            onChange={(e) => setExpertCount(Number(e.target.value))}
-                                                            className="h-10"
-                                                        />
-                                                    </div>
-                                                </div>
-                                            </CardContent>
-                                        </Card>
-
-                                        {/* MCQ Questions */}
-                                        <Card className="border-purple-200 dark:border-purple-800">
-                                            <CardHeader>
-                                                <CardTitle className="text-sm font-medium text-purple-700 dark:text-purple-400 flex items-center gap-2">
-                                                    <FileText className="w-4 h-4" />
-                                                    MCQ Questions
-                                                </CardTitle>
-                                            </CardHeader>
-                                            <CardContent>
-                                                <div className="grid grid-cols-3 gap-4">
-                                                    <div className="space-y-2">
-                                                        <Label className="text-xs">Easy</Label>
-                                                        <Input
-                                                            type="number"
-                                                            min="0"
-                                                            max="50"
-                                                            value={mcqBeginnerCount}
-                                                            onChange={(e) => setMcqBeginnerCount(Number(e.target.value))}
-                                                            className="h-10"
-                                                        />
-                                                    </div>
-                                                    <div className="space-y-2">
-                                                        <Label className="text-xs">Medium</Label>
-                                                        <Input
-                                                            type="number"
-                                                            min="0"
-                                                            max="50"
-                                                            value={mcqIntermediateCount}
-                                                            onChange={(e) => setMcqIntermediateCount(Number(e.target.value))}
-                                                            className="h-10"
-                                                        />
-                                                    </div>
-                                                    <div className="space-y-2">
-                                                        <Label className="text-xs">Hard</Label>
-                                                        <Input
-                                                            type="number"
-                                                            min="0"
-                                                            max="50"
-                                                            value={mcqExpertCount}
-                                                            onChange={(e) => setMcqExpertCount(Number(e.target.value))}
-                                                            className="h-10"
-                                                        />
-                                                    </div>
-                                                </div>
-                                            </CardContent>
-                                        </Card>
-                                    </div>
-
-                                    {/* Action Buttons */}
-                                    <div className="flex flex-wrap gap-3">
-                                        <Button
-                                            onClick={fetchQuestions}
-                                            disabled={loading}
-                                            className="flex-1 min-w-[200px]"
-                                            size="lg"
-                                        >
-                                            {loading ? (
-                                                <>
-                                                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                                                    Fetching Questions...
-                                                </>
-                                            ) : (
-                                                <>
-                                                    <FileText className="w-4 h-4 mr-2" />
-                                                    Fetch All Questions
-                                                </>
-                                            )}
-                                        </Button>
-
-                                        <Button variant="outline" onClick={resetCounts}>
-                                            <RefreshCw className="w-4 h-4 mr-2" />
-                                            Reset
-                                        </Button>
-
-                                        {questions.length > 0 && (
-                                            <Button variant="destructive" onClick={clearQuestions}>
-                                                <Trash2 className="w-4 h-4 mr-2" />
-                                                Clear Questions
-                                            </Button>
-                                        )}
-                                    </div>
-
-                                    {/* Question Summary */}
-                                    {(beginnerCount + intermediateCount + expertCount + mcqBeginnerCount + mcqIntermediateCount + mcqExpertCount > 0) && (
-                                        <Alert>
-                                            <Info className="w-4 h-4" />
-                                            <AlertDescription>
-                                                <div className="space-y-1">
-                                                    <p><strong>Total questions to fetch: {beginnerCount + intermediateCount + expertCount + mcqBeginnerCount + mcqIntermediateCount + mcqExpertCount}</strong></p>
-                                                    <p className="text-sm">
-                                                        <span className="text-blue-600 dark:text-blue-400">Coding:</span> {beginnerCount + intermediateCount + expertCount}
-                                                        ({beginnerCount} easy, {intermediateCount} medium, {expertCount} hard)
-                                                    </p>
-                                                    <p className="text-sm">
-                                                        <span className="text-purple-600 dark:text-purple-400">MCQ:</span> {mcqBeginnerCount + mcqIntermediateCount + mcqExpertCount}
-                                                        ({mcqBeginnerCount} easy, {mcqIntermediateCount} medium, {mcqExpertCount} hard)
-                                                    </p>
-                                                </div>
-                                            </AlertDescription>
-                                        </Alert>
-                                    )}
-
-                                    {/* Error Display */}
-                                    {error && (
-                                        <Alert variant="destructive">
-                                            <AlertDescription>{error}</AlertDescription>
-                                        </Alert>
-                                    )}
-
-                                    {/* Questions Display */}
-                                    {questions.length > 0 && (
-                                        <Card>
-                                            <CardHeader>
-                                                <div className="flex items-center justify-between">
-                                                    <div>
-                                                        <CardTitle className="flex items-center gap-2">
-                                                            <FileText className="w-5 h-5" />
-                                                            Fetched Questions ({questions.length})
-                                                        </CardTitle>
-                                                        <CardDescription>
-                                                            Language: <Badge variant="secondary">{language}</Badge>
-                                                        </CardDescription>
-                                                    </div>
-                                                </div>
-                                            </CardHeader>
-                                            <CardContent className="space-y-4">
-                                                {questions.map((q, index) => (
-                                                    <Card key={q.id || index} className="bg-muted/30">
-                                                        <CardHeader className="pb-3">
-                                                            <div className="flex items-center justify-between">
-                                                                <div className="flex items-center gap-3">
-                                                                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold text-white ${q.difficulty === 'easy' ? 'bg-green-500' :
-                                                                        q.difficulty?.toLocaleLowerCase() === 'medium' ? 'bg-yellow-500' : 'bg-red-500'
-                                                                        }`}>
-                                                                        {index + 1}
-                                                                    </div>
-                                                                    <Badge className={getDifficultyColor(q.difficulty || '')}>
-                                                                        {q.difficulty}
-                                                                    </Badge>
-                                                                    <Badge variant="outline" className={`capitalize ${q.type === 'mcq' ? 'bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-900/20 dark:text-purple-400' :
-                                                                        'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-900/20 dark:text-blue-400'
-                                                                        }`}>
-                                                                        {q.type === 'mcq' ? (
-                                                                            <><FileText className="w-3 h-3 mr-1" />MCQ</>
-                                                                        ) : (
-                                                                            <><Code className="w-3 h-3 mr-1" />Coding</>
-                                                                        )}
-                                                                    </Badge>
-                                                                </div>
-                                                                <div className="flex items-center gap-2">
-                                                                    {q.marks && (
-                                                                        <Badge variant="outline">{q.marks} marks</Badge>
-                                                                    )}
-                                                                    <Button
-                                                                        variant="ghost"
-                                                                        size="sm"
-                                                                        onClick={() => deleteQuestion(q.id)}
-                                                                        className="text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20"
-                                                                        title="Delete question"
-                                                                    >
-                                                                        <Trash2 className="w-4 h-4" />
-                                                                    </Button>
-                                                                </div>
-                                                            </div>
-                                                        </CardHeader>
-                                                        <CardContent className="space-y-4">
-                                                            <div>
-                                                                <Label className="text-sm font-semibold mb-2 block">Question:</Label>
-                                                                <Card className="p-3 bg-background">
-                                                                    <div
-                                                                        className="text-sm leading-relaxed prose prose-sm max-w-none"
-                                                                        dangerouslySetInnerHTML={{
-                                                                            __html: q.question || 'No question text available'
-                                                                        }}
-                                                                    />
-                                                                </Card>
-                                                            </div>
-
-                                                            {q.type === 'mcq' && q.options && q.options.length > 0 && (
-                                                                <div>
-                                                                    <Label className="text-sm font-semibold mb-2 block">Options:</Label>
-                                                                    <div className="space-y-2">
-                                                                        {q.options.map((option: QuestionOption, optIndex: number) => (
-                                                                            <Card key={option.id || optIndex} className={`p-3 ${option.isCorrect ? 'bg-green-50 border-green-200 dark:bg-green-900/20 dark:border-green-800' : 'bg-background'}`}>
-                                                                                <div className="flex items-center gap-3">
-                                                                                    <div className={`w-6 h-6 rounded-full flex items-center justify-center text-sm font-medium ${option.isCorrect ? 'bg-green-500 text-white' : 'bg-muted text-muted-foreground'
-                                                                                        }`}>
-                                                                                        {String.fromCharCode(65 + optIndex)}
-                                                                                    </div>
-                                                                                    <span className="text-sm">{option.text}</span>
-                                                                                    {option.isCorrect && (
-                                                                                        <Badge className="ml-auto bg-green-500 hover:bg-green-600">Correct</Badge>
-                                                                                    )}
-                                                                                </div>
-                                                                            </Card>
-                                                                        ))}
-                                                                    </div>
-                                                                </div>
-                                                            )}
-
-                                                            {q.expectedOutput && (
-                                                                <div>
-                                                                    <Label className="text-sm font-semibold mb-2 block">Expected Output:</Label>
-                                                                    <Card className="p-3 bg-background">
-                                                                        <code className="text-sm font-mono">{q.expectedOutput}</code>
-                                                                    </Card>
-                                                                </div>
-                                                            )}
-
-                                                            {q.solution && (
-                                                                <div>
-                                                                    <Label className="text-sm font-semibold mb-2 block">Solution:</Label>
-                                                                    <Card className="p-3 bg-slate-900 text-green-400 overflow-x-auto">
-                                                                        <pre className="text-sm font-mono whitespace-pre-wrap">
-                                                                            {q.solution}
-                                                                        </pre>
-                                                                    </Card>
-                                                                </div>
-                                                            )}
-                                                        </CardContent>
-                                                    </Card>
-                                                ))}
-                                            </CardContent>
-                                        </Card>
-                                    )}
-
-
-
-                                    <div className="flex justify-between pt-4">
-                                        <Button variant="outline" onClick={() => setCurrentStep(1)}>
-                                            <ArrowLeft className="w-4 h-4 mr-2" />
-                                            Back
-                                        </Button>
-                                        <Button
-                                            onClick={() => setCurrentStep(3)}
-                                            disabled={!questions.some(q => q.question?.trim())}
-                                            className="px-8"
-                                        >
-                                            Next: Assign Batch
-                                            <ArrowRight className="w-4 h-4 ml-2" />
-                                        </Button>
-                                    </div>
+                        {/* Step 2: Questions */}
+                        {currentStep === 2 && (
+                            <div className="space-y-6">
+                                <div>
+                                    <h2 className="text-lg font-semibold text-foreground mb-1">Exam Questions</h2>
+                                    <p className="text-sm text-muted-foreground">Configure your question selection from the question bank</p>
                                 </div>
-                            )}
 
-                            {/* Step 3: Batch Assignment */}
-                            {currentStep === 3 && (
-                                <div className="space-y-8">
-                                    <div className="text-center space-y-2">
-                                        <div className="w-16 h-16 bg-primary/10 rounded-2xl mx-auto flex items-center justify-center">
-                                            <Users className="w-8 h-8 text-primary" />
-                                        </div>
-                                        <h2 className="text-2xl font-semibold text-foreground">Assign to Batches</h2>
-                                        <p className="text-muted-foreground">Select which batches can access this exam</p>
-                                    </div>
-
-                                    {/* Fetch Batches Button */}
-                                    {availableBatches.length === 0 && (
-                                        <div className="text-center">
-                                            <Button
-                                                onClick={fetchAvailableBatches}
-                                                disabled={loadingBatches}
-                                                size="lg"
-                                                className="px-8"
-                                            >
-                                                {loadingBatches ? (
-                                                    <>
-                                                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                                                        Loading Batches...
-                                                    </>
-                                                ) : (
-                                                    <>
-                                                        <Users className="w-4 h-4 mr-2" />
-                                                        Load Available Batches
-                                                    </>
-                                                )}
-                                            </Button>
-                                        </div>
-                                    )}
-
-                                    {/* Batch Selection */}
-                                    {availableBatches.length > 0 && (
-                                        <div className="space-y-6">
-                                            <Card>
-                                                <CardHeader>
-                                                    <CardTitle className="flex items-center gap-2">
-                                                        <Users className="w-5 h-5" />
-                                                        Available Batches ({availableBatches.length})
-                                                    </CardTitle>
-                                                    <CardDescription>
-                                                        Select the batches and set their exam schedule
-                                                    </CardDescription>
-                                                </CardHeader>
-                                                <CardContent>
-                                                    <div className="space-y-4">
-                                                        {availableBatches.map((batch) => (
-                                                            <Card
-                                                                key={batch.Id}
-                                                                className={`transition-all duration-200 ${selectedBatches.includes(batch.Id)
-                                                                    ? 'ring-2 ring-primary bg-primary/5'
-                                                                    : ''
-                                                                    }`}
-                                                            >
-                                                                <CardContent className="p-4">
-                                                                    <div className="flex items-start justify-between mb-4">
-                                                                        <div className="flex items-center gap-3">
-                                                                            <div
-                                                                                className={`w-5 h-5 rounded-full border-2 flex items-center justify-center cursor-pointer ${selectedBatches.includes(batch.Id)
-                                                                                    ? 'bg-primary border-primary'
-                                                                                    : 'border-muted-foreground'
-                                                                                    }`}
-                                                                                onClick={() => {
-                                                                                    setSelectedBatches(prev =>
-                                                                                        prev.includes(batch.Id)
-                                                                                            ? prev.filter(id => id !== batch.Id)
-                                                                                            : [...prev, batch.Id]
-                                                                                    );
-                                                                                    if (!selectedBatches.includes(batch.Id)) {
-                                                                                        setBatchTimes(prev => ({
-                                                                                            ...prev,
-                                                                                            [batch.Id]: { startTime: '', endTime: '' } // Remove String()
-                                                                                        }));
-                                                                                    } else {
-                                                                                        setBatchTimes(prev => {
-                                                                                            const { [batch.Id]: removed, ...rest } = prev; // Remove String()
-                                                                                            return rest;
-                                                                                        });
-                                                                                    }
-                                                                                }}
-                                                                            >
-                                                                                {selectedBatches.includes(batch.Id) && (
-                                                                                    <CheckCircle className="w-3 h-3 text-primary-foreground" />
-                                                                                )}
-                                                                            </div>
-                                                                            <div>
-                                                                                <h3 className="font-semibold">{batch.Name}</h3>
-                                                                                <p className="text-sm text-muted-foreground">
-                                                                                    {batch.EmployeeCount || 0} Employees
-                                                                                </p>
-                                                                            </div>
-                                                                        </div>
-                                                                    </div>
-
-                                                                    {selectedBatches.includes(batch.Id) && (
-                                                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t">
-                                                                            <div className="space-y-2">
-                                                                                <Label className="text-sm font-medium flex items-center gap-2">
-                                                                                    <Calendar className="w-4 h-4" />
-                                                                                    Start Time *
-                                                                                </Label>
-                                                                                <Input
-                                                                                    type="datetime-local"
-                                                                                    value={batchTimes[batch.Id]?.startTime || ''}
-                                                                                    onChange={(e) => {
-                                                                                        console.log('Setting start time:', e.target.value);
-                                                                                        setBatchTimes(prev => ({
-                                                                                            ...prev,
-                                                                                            [batch.Id]: {
-                                                                                                ...prev[batch.Id],
-                                                                                                startTime: e.target.value
-                                                                                            }
-                                                                                        }));
-                                                                                    }}
-                                                                                    className="h-10"
-                                                                                />
-                                                                            </div>
-                                                                            <div className="space-y-2">
-                                                                                <Label className="text-sm font-medium flex items-center gap-2">
-                                                                                    <Clock className="w-4 h-4" />
-                                                                                    End Time *
-                                                                                </Label>
-                                                                                <Input
-                                                                                    type="datetime-local"
-                                                                                    value={batchTimes[batch.Id]?.endTime || ''}
-                                                                                    onChange={(e) => {
-                                                                                        console.log('Setting end time:', e.target.value);
-                                                                                        setBatchTimes(prev => ({
-                                                                                            ...prev,
-                                                                                            [batch.Id]: {
-                                                                                                ...prev[batch.Id],
-                                                                                                endTime: e.target.value
-                                                                                            }
-                                                                                        }));
-                                                                                    }}
-                                                                                    className="h-10"
-                                                                                />
-                                                                            </div>
-                                                                        </div>
-                                                                    )}
-                                                                </CardContent>
-                                                            </Card>
-                                                        ))}
-                                                    </div>
-
-                                                    {selectedBatches.length > 0 && (
-                                                        <div className="mt-6 p-4 bg-primary/10 rounded-lg">
-                                                            <div className="flex items-center gap-2 mb-2">
-                                                                <CheckCircle className="w-4 h-4 text-primary" />
-                                                                <span className="font-medium">Selected Batches ({selectedBatches.length})</span>
-                                                            </div>
-                                                            <div className="space-y-2">
-                                                                {selectedBatches.map(batchId => {
-                                                                    const batch = availableBatches.find(b => b.Id === batchId);
-                                                                    const times = batchTimes[batchId];
-                                                                    return (
-                                                                        <div key={batchId} className="flex items-center justify-between text-sm">
-                                                                            <Badge variant="default">{batch?.Name || batchId}</Badge>
-                                                                            <span className="text-muted-foreground">
-                                                                                {times?.startTime ? new Date(times.startTime).toLocaleString() : 'No start time'} -
-                                                                                {times?.endTime ? new Date(times.endTime).toLocaleString() : 'No end time'}
-                                                                            </span>
-                                                                        </div>
-                                                                    );
-                                                                })}
-                                                            </div>
-                                                        </div>
-                                                    )}
-
-                                                    <div className="mt-4 flex gap-2">
-                                                        <Button
-                                                            variant="outline"
-                                                            size="sm"
-                                                            onClick={() => {
-                                                                setSelectedBatches(availableBatches.map(b => b.Id));
-                                                                const newTimes: { [key: string]: { startTime: string, endTime: string } } = {};
-                                                                availableBatches.forEach(batch => {
-                                                                    newTimes[batch.Id] = { startTime: '', endTime: '' };
-                                                                });
-                                                                setBatchTimes(newTimes);
-                                                            }}
-                                                        >
-                                                            Select All
-                                                        </Button>
-                                                        <Button
-                                                            variant="outline"
-                                                            size="sm"
-                                                            onClick={() => {
-                                                                setSelectedBatches([]);
-                                                                setBatchTimes({});
-                                                            }}
-                                                        >
-                                                            Clear All
-                                                        </Button>
-                                                    </div>
-                                                </CardContent>
-                                            </Card>
-                                        </div>
-                                    )}
-
-                                    <div className="flex justify-between pt-4">
-                                        <Button variant="outline" onClick={() => setCurrentStep(2)}>
-                                            <ArrowLeft className="w-4 h-4 mr-2" />
-                                            Back
-                                        </Button>
-                                        <Button
-                                            onClick={() => {
-                                                const incompleteTimes = selectedBatches.some(batchId => {
-                                                    const times = batchTimes[batchId];
-                                                    return !times?.startTime || !times?.endTime;
-                                                });
-
-                                                if (incompleteTimes) {
-                                                    toast.error('Please set start and end times for all selected batches');
-                                                    return;
-                                                }
-
-                                                setCurrentStep(4);
-                                            }}
-                                            disabled={selectedBatches.length === 0}
-                                            className="px-8"
-                                        >
-                                            Next: Review
-                                            <ArrowRight className="w-4 h-4 ml-2" />
-                                        </Button>
-                                    </div>
-                                </div>
-                            )}
-
-                            {/* Step 4: Review */}
-                            {currentStep === 4 && (
-                                <div className="space-y-8">
-                                    <div className="text-center space-y-2">
-                                        <div className="w-16 h-16 bg-primary/10 rounded-2xl mx-auto flex items-center justify-center">
-                                            <CheckCircle className="w-8 h-8 text-primary" />
-                                        </div>
-                                        <h2 className="text-2xl font-semibold text-foreground">Review & Create</h2>
-                                        <p className="text-muted-foreground">Review your exam details before creating</p>
-                                    </div>
-
-                                    {/* Review Summary */}
-                                    <Card>
+                                <div className="space-y-4">
+                                    <Card className="border-blue-200 dark:border-blue-800">
                                         <CardHeader>
-                                            <CardTitle className="flex items-center gap-2">
-                                                <Settings className="w-5 h-5" />
-                                                Exam Summary
+                                            <CardTitle className="text-sm text-blue-700 dark:text-blue-400 flex items-center gap-2">
+                                                <Code className="w-4 h-4" />
+                                                Coding Questions
                                             </CardTitle>
                                         </CardHeader>
                                         <CardContent>
-                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                                <div className="space-y-1">
-                                                    <Label className="text-sm font-medium text-muted-foreground">Title</Label>
-                                                    <p className="font-semibold">{title}</p>
+                                            <div className="grid grid-cols-3 gap-4">
+                                                <div className="space-y-2">
+                                                    <Label className="text-xs">Easy</Label>
+                                                    <Input
+                                                        type="number"
+                                                        min="0"
+                                                        max="50"
+                                                        value={beginnerCount}
+                                                        onChange={(e) => setBeginnerCount(Number(e.target.value))}
+                                                    />
                                                 </div>
-
-                                                <div className="space-y-1">
-                                                    <Label className="text-sm font-medium text-muted-foreground">Language</Label>
-                                                    <div className="flex items-center gap-2">
-                                                        <span>{languageOptions.find(l => l.value === language)?.icon}</span>
-                                                        <span className="font-semibold">{languageOptions.find(l => l.value === language)?.label}</span>
-                                                    </div>
+                                                <div className="space-y-2">
+                                                    <Label className="text-xs">Medium</Label>
+                                                    <Input
+                                                        type="number"
+                                                        min="0"
+                                                        max="50"
+                                                        value={intermediateCount}
+                                                        onChange={(e) => setIntermediateCount(Number(e.target.value))}
+                                                    />
                                                 </div>
-
-                                                <div className="space-y-1">
-                                                    <Label className="text-sm font-medium text-muted-foreground">Duration</Label>
-                                                    <div className="flex items-center gap-2">
-                                                        <Timer className="w-4 h-4" />
-                                                        <span className="font-semibold">{duration} minutes</span>
-                                                    </div>
+                                                <div className="space-y-2">
+                                                    <Label className="text-xs">Hard</Label>
+                                                    <Input
+                                                        type="number"
+                                                        min="0"
+                                                        max="50"
+                                                        value={expertCount}
+                                                        onChange={(e) => setExpertCount(Number(e.target.value))}
+                                                    />
                                                 </div>
-
-                                                <div className="space-y-1">
-                                                    <Label className="text-sm font-medium text-muted-foreground">Questions</Label>
-                                                    <div className="flex items-center gap-2">
-                                                        <FileText className="w-4 h-4" />
-                                                        <span className="font-semibold">{questions.filter(q => q.question.trim()).length} questions</span>
-                                                    </div>
-                                                </div>
-
-                                                <div className="space-y-1">
-                                                    <Label className="text-sm font-medium text-muted-foreground">Proctoring</Label>
-                                                    <div className="flex items-center gap-2">
-                                                        <Shield className="w-4 h-4" />
-                                                        <span className="font-semibold">{isExamProctored ? 'Proctored' : 'Non-Proctored'}</span>
-                                                    </div>
-                                                </div>
-
-                                                {allowedUsersRaw.trim() && (
-                                                    <div className="space-y-1">
-                                                        <Label className="text-sm font-medium text-muted-foreground">Allowed Users</Label>
-                                                        <div className="flex items-center gap-2">
-                                                            <Users className="w-4 h-4" />
-                                                            <span className="font-semibold">{allowedUsersRaw.split(',').length} users</span>
-                                                        </div>
-                                                    </div>
-                                                )}
                                             </div>
                                         </CardContent>
                                     </Card>
 
-                                    {language === 'python' && requiresFileHandling && uploadedFiles.length > 0 && (
-                                        <Card>
-                                            <CardHeader>
-                                                <CardTitle className="flex items-center gap-2">
-                                                    <FileText className="w-5 h-5" />
-                                                    Exam Files ({uploadedFiles.length})
-                                                </CardTitle>
-                                                <CardDescription>
-                                                    Files stored in: /exam-files/{title.toLowerCase().replace(/\s+/g, "-")}/
-                                                </CardDescription>
-                                            </CardHeader>
-                                            <CardContent>
+                                    <Card className="border-purple-200 dark:border-purple-800">
+                                        <CardHeader>
+                                            <CardTitle className="text-sm text-purple-700 dark:text-purple-400 flex items-center gap-2">
+                                                <FileText className="w-4 h-4" />
+                                                MCQ Questions
+                                            </CardTitle>
+                                        </CardHeader>
+                                        <CardContent>
+                                            <div className="grid grid-cols-3 gap-4">
                                                 <div className="space-y-2">
-                                                    {uploadedFiles.map((file, index) => (
-                                                        <Card key={index} className="p-3 bg-muted/30">
-                                                            <div className="flex items-center justify-between">
-                                                                <div className="flex items-center gap-3">
-                                                                    <FileText className="w-4 h-4 text-primary" />
-                                                                    <div className="flex-1">
-                                                                        <p className="text-sm font-medium">{file.name}</p>
-                                                                        <p className="text-xs text-muted-foreground">
-                                                                            {(file.size / 1024).toFixed(2)} KB
-                                                                        </p>
-                                                                    </div>
-                                                                </div>
-                                                                <Badge variant="secondary">Ready</Badge>
-                                                            </div>
-                                                        </Card>
-                                                    ))}
+                                                    <Label className="text-xs">Easy</Label>
+                                                    <Input
+                                                        type="number"
+                                                        min="0"
+                                                        max="50"
+                                                        value={mcqBeginnerCount}
+                                                        onChange={(e) => setMcqBeginnerCount(Number(e.target.value))}
+                                                    />
                                                 </div>
-                                                <Alert className="mt-4">
-                                                    <Info className="w-4 h-4" />
-                                                    <AlertDescription className="text-xs space-y-2">
-                                                        <p className="font-semibold">Students will access files using:</p>
+                                                <div className="space-y-2">
+                                                    <Label className="text-xs">Medium</Label>
+                                                    <Input
+                                                        type="number"
+                                                        min="0"
+                                                        max="50"
+                                                        value={mcqIntermediateCount}
+                                                        onChange={(e) => setMcqIntermediateCount(Number(e.target.value))}
+                                                    />
+                                                </div>
+                                                <div className="space-y-2">
+                                                    <Label className="text-xs">Hard</Label>
+                                                    <Input
+                                                        type="number"
+                                                        min="0"
+                                                        max="50"
+                                                        value={mcqExpertCount}
+                                                        onChange={(e) => setMcqExpertCount(Number(e.target.value))}
+                                                    />
+                                                </div>
+                                            </div>
+                                        </CardContent>
+                                    </Card>
+                                </div>
 
-                                                        <div className="space-y-2 mt-2">
-                                                            <div>
-                                                                <p className="text-muted-foreground mb-1">Method 1: Using window.fs (Recommended)</p>
-                                                                <code className="bg-slate-900 text-green-400 px-2 py-1 rounded block">
-                                                                    {`data = window.fs.readFile('${uploadedFiles[0]?.name}', { encoding: 'utf8' })`}<br />
-                                                                    {`df = pd.read_csv(io.StringIO(data))`}
-                                                                </code>
-                                                            </div>
+                                <div className="flex flex-wrap gap-3">
+                                    <Button
+                                        onClick={fetchQuestions}
+                                        disabled={loading}
+                                        className="flex-1 min-w-[200px]"
+                                    >
+                                        {loading ? (
+                                            <>
+                                                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                                Fetching Questions...
+                                            </>
+                                        ) : (
+                                            <>
+                                                <FileText className="w-4 h-4 mr-2" />
+                                                Fetch Questions
+                                            </>
+                                        )}
+                                    </Button>
 
-                                                            <div>
-                                                                <p className="text-muted-foreground mb-1">Method 2: Direct URL (Alternative)</p>
-                                                                <code className="bg-slate-900 text-green-400 px-2 py-1 rounded block">
-                                                                    {`df = pd.read_csv('/exam-files/${title.toLowerCase().replace(/\s+/g, "-")}/${uploadedFiles[0]?.name}')`}
-                                                                </code>
+                                    <Button variant="outline" onClick={resetCounts}>
+                                        <RefreshCw className="w-4 h-4 mr-2" />
+                                        Reset
+                                    </Button>
+
+                                    {questions.length > 0 && (
+                                        <Button variant="destructive" onClick={clearQuestions}>
+                                            <Trash2 className="w-4 h-4 mr-2" />
+                                            Clear
+                                        </Button>
+                                    )}
+                                </div>
+
+                                {(beginnerCount + intermediateCount + expertCount + mcqBeginnerCount + mcqIntermediateCount + mcqExpertCount > 0) && (
+                                    <Alert>
+                                        <Info className="w-4 h-4" />
+                                        <AlertDescription>
+                                            <p className="font-medium">Total: {beginnerCount + intermediateCount + expertCount + mcqBeginnerCount + mcqIntermediateCount + mcqExpertCount} questions</p>
+                                            <p className="text-sm mt-1">
+                                                Coding: {beginnerCount + intermediateCount + expertCount} | MCQ: {mcqBeginnerCount + mcqIntermediateCount + mcqExpertCount}
+                                            </p>
+                                        </AlertDescription>
+                                    </Alert>
+                                )}
+
+                                {error && (
+                                    <Alert variant="destructive">
+                                        <AlertDescription>{error}</AlertDescription>
+                                    </Alert>
+                                )}
+
+                                {questions.length > 0 && (
+                                    <Card>
+                                        <CardHeader>
+                                            <CardTitle className="text-base">Fetched Questions ({questions.length})</CardTitle>
+                                            <CardDescription>Language: {language}</CardDescription>
+                                        </CardHeader>
+                                        <CardContent className="space-y-3">
+                                            {questions.map((q, index) => (
+                                                <Card key={q.id || index} className="bg-muted/30">
+                                                    <CardHeader className="pb-3">
+                                                        <div className="flex items-center justify-between">
+                                                            <div className="flex items-center gap-2">
+                                                                <Badge className={getDifficultyColor(q.difficulty || '')}>
+                                                                    {q.difficulty}
+                                                                </Badge>
+                                                                <Badge variant="outline" className="capitalize">
+                                                                    {q.type === 'mcq' ? 'MCQ' : 'Coding'}
+                                                                </Badge>
+                                                                {q.marks && <Badge variant="secondary">{q.marks} marks</Badge>}
                                                             </div>
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="sm"
+                                                                onClick={() => deleteQuestion(q.id)}
+                                                                className="text-destructive hover:text-destructive"
+                                                            >
+                                                                <Trash2 className="w-4 h-4" />
+                                                            </Button>
+                                                        </div>
+                                                    </CardHeader>
+                                                    <CardContent className="space-y-3">
+                                                        <div>
+                                                            <Label className="text-xs text-muted-foreground mb-1 block">Question:</Label>
+                                                            <div
+                                                                className="text-sm p-3 bg-background rounded-md border border-border"
+                                                                dangerouslySetInnerHTML={{ __html: q.question || 'No question text' }}
+                                                            />
                                                         </div>
 
-                                                        <p className="mt-2 text-muted-foreground italic">
-                                                            Available files: {uploadedFiles.map(f => f.name).join(', ')}
-                                                        </p>
-                                                    </AlertDescription>
-                                                </Alert>
-                                            </CardContent>
-                                        </Card>
-                                    )}
-
-                                    {/* Question Breakdown */}
-                                    {questions.length > 0 && (
-                                        <Card>
-                                            <CardHeader>
-                                                <CardTitle>Question Breakdown</CardTitle>
-                                                <CardDescription>Overview of questions by difficulty level</CardDescription>
-                                            </CardHeader>
-                                            <CardContent>
-                                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                                    {['easy', 'medium', 'hard'].map((difficulty) => {
-                                                        const count = questions.filter(q => q.difficulty?.toLocaleLowerCase() === difficulty).length;
-                                                        const percentage = questions.length ? (count / questions.length) * 100 : 0;
-
-                                                        return (
-                                                            <div key={difficulty} className="text-center space-y-2">
-                                                                <div className={`w-16 h-16 rounded-full mx-auto flex items-center justify-center text-2xl font-bold text-white ${difficulty === 'easy' ? 'bg-green-500' :
-                                                                    difficulty === 'medium' ? 'bg-yellow-500' : 'bg-red-500'
-                                                                    }`}>
-                                                                    {count}
-                                                                </div>
-                                                                <div>
-                                                                    <p className="font-semibold capitalize">{difficulty}</p>
-                                                                    <p className="text-sm text-muted-foreground">{percentage.toFixed(0)}% of total</p>
+                                                        {q.type === 'mcq' && q.options && q.options.length > 0 && (
+                                                            <div>
+                                                                <Label className="text-xs text-muted-foreground mb-1 block">Options:</Label>
+                                                                <div className="space-y-2">
+                                                                    {q.options.map((option: QuestionOption, optIndex: number) => (
+                                                                        <div
+                                                                            key={option.id || optIndex}
+                                                                            className={`p-2 rounded-md text-sm flex items-center gap-2 ${option.isCorrect
+                                                                                ? 'bg-emerald-100 border border-emerald-200 dark:bg-emerald-950/50 dark:border-emerald-900'
+                                                                                : 'bg-background border border-border'
+                                                                                }`}
+                                                                        >
+                                                                            <span className="font-medium">{String.fromCharCode(65 + optIndex)}.</span>
+                                                                            <span>{option.text}</span>
+                                                                            {option.isCorrect && (
+                                                                                <Badge className="ml-auto bg-emerald-500 hover:bg-emerald-600 text-xs">Correct</Badge>
+                                                                            )}
+                                                                        </div>
+                                                                    ))}
                                                                 </div>
                                                             </div>
-                                                        );
-                                                    })}
-                                                </div>
-                                            </CardContent>
-                                        </Card>
-                                    )}
+                                                        )}
 
-                                    {/* Batch Schedules */}
-                                    {selectedBatches.length > 0 && (
-                                        <Card>
-                                            <CardHeader>
-                                                <CardTitle className="flex items-center gap-2">
-                                                    <Users className="w-5 h-5" />
-                                                    Batch Schedules ({selectedBatches.length})
-                                                </CardTitle>
-                                                <CardDescription>
-                                                    Exam schedule for each assigned batch
-                                                </CardDescription>
-                                            </CardHeader>
-                                            <CardContent>
-                                                <div className="space-y-4">
-                                                    {selectedBatches.map(batchId => {
-                                                        const batch = availableBatches.find(b => b.Id === batchId);
-                                                        const times = batchTimes[batchId];
-                                                        return (
-                                                            <Card key={batchId} className="bg-muted/30">
-                                                                <CardContent className="p-4">
-                                                                    <div className="flex items-center justify-between">
-                                                                        <div className="space-y-1">
-                                                                            <h4 className="font-semibold">{batch?.Name || batchId}</h4>
-                                                                            <p className="text-sm text-muted-foreground">
-                                                                                {batch?.EmployeeCount || 0} Employees
-                                                                            </p>
-                                                                        </div>
-                                                                        <div className="text-right space-y-1">
-                                                                            <div className="flex items-center gap-2 text-sm">
-                                                                                <Calendar className="w-4 h-4" />
-                                                                                <span className="font-medium">
-                                                                                    {times?.startTime ?
-                                                                                        new Date(times.startTime).toLocaleDateString() + ' ' +
-                                                                                        new Date(times.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-                                                                                        : 'No start time set'
-                                                                                    }
-                                                                                </span>
-                                                                            </div>
-                                                                            <div className="flex items-center gap-2 text-sm">
-                                                                                <Clock className="w-4 h-4" />
-                                                                                <span className="font-medium">
-                                                                                    {times?.endTime ?
-                                                                                        new Date(times.endTime).toLocaleDateString() + ' ' +
-                                                                                        new Date(times.endTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-                                                                                        : 'No end time set'
-                                                                                    }
-                                                                                </span>
-                                                                            </div>
-                                                                        </div>
-                                                                    </div>
-                                                                    {times?.startTime && times?.endTime && (
-                                                                        <div className="mt-3 p-2 bg-primary/10 rounded text-sm">
-                                                                            <span className="text-primary font-medium">
-                                                                                Duration: {Math.floor((new Date(times.endTime).getTime() - new Date(times.startTime).getTime()) / (1000 * 60 * 60))} hours &nbsp; {Math.floor(((new Date(times.endTime).getTime() - new Date(times.startTime).getTime()) % (1000 * 60 * 60)) / (1000 * 60))} minutes
-                                                                            </span>
-                                                                        </div>
-                                                                    )}
-                                                                </CardContent>
-                                                            </Card>
-                                                        );
-                                                    })}
-                                                </div>
-                                            </CardContent>
-                                        </Card>
-                                    )}
+                                                        {q.expectedOutput && (
+                                                            <div>
+                                                                <Label className="text-xs text-muted-foreground mb-1 block">Expected Output:</Label>
+                                                                <code className="text-sm p-3 bg-background rounded-md border border-border block font-mono">
+                                                                    {q.expectedOutput}
+                                                                </code>
+                                                            </div>
+                                                        )}
+                                                    </CardContent>
+                                                </Card>
+                                            ))}
+                                        </CardContent>
+                                    </Card>
+                                )}
 
-                                    <div className="flex justify-between pt-4">
-                                        <Button variant="outline" onClick={() => setCurrentStep(3)}>
-                                            <ArrowLeft className="w-4 h-4 mr-2" />
-                                            Back
-                                        </Button>
+                                <div className="flex justify-between pt-4">
+                                    <Button variant="outline" onClick={() => setCurrentStep(1)}>
+                                        <ArrowLeft className="w-4 h-4 mr-2" />
+                                        Back
+                                    </Button>
+                                    <Button
+                                        onClick={() => setCurrentStep(3)}
+                                        disabled={!questions.some(q => q.question?.trim())}
+                                    >
+                                        Next: Assign Batch
+                                        <ArrowRight className="w-4 h-4 ml-2" />
+                                    </Button>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Step 3: Batch Assignment */}
+                        {currentStep === 3 && (
+                            <div className="space-y-6">
+                                <div>
+                                    <h2 className="text-lg font-semibold text-foreground mb-1">Assign to Batches</h2>
+                                    <p className="text-sm text-muted-foreground">Select which batches can access this exam</p>
+                                </div>
+
+                                {availableBatches.length === 0 && (
+                                    <div className="text-center py-8">
                                         <Button
-                                            onClick={() => handleCreateExam(batchTimes)}
-                                            disabled={isLoading || !isFormValid}
-                                            size="lg"
-                                            className="px-8"
+                                            onClick={fetchAvailableBatches}
+                                            disabled={loadingBatches}
                                         >
-                                            {isLoading ? (
+                                            {loadingBatches ? (
                                                 <>
                                                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                                                    Creating Exam...
+                                                    Loading Batches...
                                                 </>
                                             ) : (
                                                 <>
-                                                    <Plus className="w-4 h-4 mr-2" />
-                                                    Create Exam
+                                                    <Users className="w-4 h-4 mr-2" />
+                                                    Load Available Batches
                                                 </>
                                             )}
                                         </Button>
                                     </div>
+                                )}
+
+                                {availableBatches.length > 0 && (
+                                    <div className="space-y-4">
+                                        <div className="flex items-center justify-between">
+                                            <p className="text-sm text-muted-foreground">
+                                                {availableBatches.length} batches available
+                                            </p>
+                                            <div className="flex gap-2">
+                                                <Button
+                                                    variant="outline"
+                                                    size="sm"
+                                                    onClick={() => {
+                                                        setSelectedBatches(availableBatches.map(b => b.Id));
+                                                        const newTimes: { [key: string]: { startTime: string, endTime: string } } = {};
+                                                        availableBatches.forEach(batch => {
+                                                            newTimes[batch.Id] = { startTime: '', endTime: '' };
+                                                        });
+                                                        setBatchTimes(newTimes);
+                                                    }}
+                                                >
+                                                    Select All
+                                                </Button>
+                                                <Button
+                                                    variant="outline"
+                                                    size="sm"
+                                                    onClick={() => {
+                                                        setSelectedBatches([]);
+                                                        setBatchTimes({});
+                                                    }}
+                                                >
+                                                    Clear All
+                                                </Button>
+                                            </div>
+                                        </div>
+
+                                        <div className="space-y-3">
+                                            {availableBatches.map((batch) => (
+                                                <Card
+                                                    key={batch.Id}
+                                                    className={`transition-all ${selectedBatches.includes(batch.Id)
+                                                        ? 'ring-2 ring-primary bg-primary/5'
+                                                        : ''
+                                                        }`}
+                                                >
+                                                    <CardContent className="p-4">
+                                                        <div className="flex items-start justify-between mb-4">
+                                                            <div className="flex items-center gap-3">
+                                                                <div
+                                                                    className={`w-5 h-5 rounded border-2 flex items-center justify-center cursor-pointer ${selectedBatches.includes(batch.Id)
+                                                                        ? 'bg-primary border-primary'
+                                                                        : 'border-muted-foreground'
+                                                                        }`}
+                                                                    onClick={() => {
+                                                                        setSelectedBatches(prev =>
+                                                                            prev.includes(batch.Id)
+                                                                                ? prev.filter(id => id !== batch.Id)
+                                                                                : [...prev, batch.Id]
+                                                                        );
+                                                                        if (!selectedBatches.includes(batch.Id)) {
+                                                                            setBatchTimes(prev => ({
+                                                                                ...prev,
+                                                                                [batch.Id]: { startTime: '', endTime: '' }
+                                                                            }));
+                                                                        } else {
+                                                                            setBatchTimes(prev => {
+                                                                                const { [batch.Id]: removed, ...rest } = prev;
+                                                                                return rest;
+                                                                            });
+                                                                        }
+                                                                    }}
+                                                                >
+                                                                    {selectedBatches.includes(batch.Id) && (
+                                                                        <CheckCircle className="w-3 h-3 text-primary-foreground" />
+                                                                    )}
+                                                                </div>
+                                                                <div>
+                                                                    <h3 className="font-semibold text-sm">{batch.Name}</h3>
+                                                                    <p className="text-xs text-muted-foreground">
+                                                                        {batch.EmployeeCount || 0} Employees
+                                                                    </p>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+
+                                                        {selectedBatches.includes(batch.Id) && (
+                                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t border-border">
+                                                                <div className="space-y-2">
+                                                                    <Label className="text-xs flex items-center gap-2">
+                                                                        <Calendar className="w-3 h-3" />
+                                                                        Start Time *
+                                                                    </Label>
+                                                                    <Input
+                                                                        type="datetime-local"
+                                                                        value={batchTimes[batch.Id]?.startTime || ''}
+                                                                        onChange={(e) => {
+                                                                            setBatchTimes(prev => ({
+                                                                                ...prev,
+                                                                                [batch.Id]: {
+                                                                                    ...prev[batch.Id],
+                                                                                    startTime: e.target.value
+                                                                                }
+                                                                            }));
+                                                                        }}
+                                                                    />
+                                                                </div>
+                                                                <div className="space-y-2">
+                                                                    <Label className="text-xs flex items-center gap-2">
+                                                                        <Clock className="w-3 h-3" />
+                                                                        End Time *
+                                                                    </Label>
+                                                                    <Input
+                                                                        type="datetime-local"
+                                                                        value={batchTimes[batch.Id]?.endTime || ''}
+                                                                        onChange={(e) => {
+                                                                            setBatchTimes(prev => ({
+                                                                                ...prev,
+                                                                                [batch.Id]: {
+                                                                                    ...prev[batch.Id],
+                                                                                    endTime: e.target.value
+                                                                                }
+                                                                            }));
+                                                                        }}
+                                                                    />
+                                                                </div>
+                                                            </div>
+                                                        )}
+                                                    </CardContent>
+                                                </Card>
+                                            ))}
+                                        </div>
+
+                                        {selectedBatches.length > 0 && (
+                                            <Alert>
+                                                <CheckCircle className="w-4 h-4" />
+                                                <AlertDescription>
+                                                    <p className="font-medium mb-2">Selected: {selectedBatches.length} batches</p>
+                                                    <div className="text-xs space-y-1">
+                                                        {selectedBatches.map(batchId => {
+                                                            const batch = availableBatches.find(b => b.Id === batchId);
+                                                            const times = batchTimes[batchId];
+                                                            return (
+                                                                <div key={batchId} className="flex items-center justify-between">
+                                                                    <span>{batch?.Name}</span>
+                                                                    <span className="text-muted-foreground">
+                                                                        {times?.startTime && times?.endTime ? '✓ Scheduled' : '⚠ Times needed'}
+                                                                    </span>
+                                                                </div>
+                                                            );
+                                                        })}
+                                                    </div>
+                                                </AlertDescription>
+                                            </Alert>
+                                        )}
+                                    </div>
+                                )}
+
+                                <div className="flex justify-between pt-4">
+                                    <Button variant="outline" onClick={() => setCurrentStep(2)}>
+                                        <ArrowLeft className="w-4 h-4 mr-2" />
+                                        Back
+                                    </Button>
+                                    <Button
+                                        onClick={() => {
+                                            const incompleteTimes = selectedBatches.some(batchId => {
+                                                const times = batchTimes[batchId];
+                                                return !times?.startTime || !times?.endTime;
+                                            });
+
+                                            if (incompleteTimes) {
+                                                toast.error('Please set start and end times for all selected batches');
+                                                return;
+                                            }
+
+                                            setCurrentStep(4);
+                                        }}
+                                        disabled={selectedBatches.length === 0}
+                                    >
+                                        Next: Review
+                                        <ArrowRight className="w-4 h-4 ml-2" />
+                                    </Button>
                                 </div>
-                            )}
+                            </div>
+                        )}
+
+                        {/* Step 4: Review */}
+                        {currentStep === 4 && (
+                            <div className="space-y-6">
+                                <div>
+                                    <h2 className="text-lg font-semibold text-foreground mb-1">Review & Create</h2>
+                                    <p className="text-sm text-muted-foreground">Review your exam details before creating</p>
+                                </div>
+
+                                <Card>
+                                    <CardHeader>
+                                        <CardTitle className="text-base">Exam Summary</CardTitle>
+                                    </CardHeader>
+                                    <CardContent>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            <div className="space-y-1">
+                                                <Label className="text-xs text-muted-foreground">Title</Label>
+                                                <p className="font-semibold">{title}</p>
+                                            </div>
+
+                                            <div className="space-y-1">
+                                                <Label className="text-xs text-muted-foreground">Language</Label>
+                                                <div className="flex items-center gap-2">
+                                                    <span>{languageOptions.find(l => l.value === language)?.icon}</span>
+                                                    <span className="font-semibold">{languageOptions.find(l => l.value === language)?.label}</span>
+                                                </div>
+                                            </div>
+
+                                            <div className="space-y-1">
+                                                <Label className="text-xs text-muted-foreground">Duration</Label>
+                                                <div className="flex items-center gap-2">
+                                                    <Timer className="w-4 h-4" />
+                                                    <span className="font-semibold">{duration} minutes</span>
+                                                </div>
+                                            </div>
+
+                                            <div className="space-y-1">
+                                                <Label className="text-xs text-muted-foreground">Questions</Label>
+                                                <div className="flex items-center gap-2">
+                                                    <FileText className="w-4 h-4" />
+                                                    <span className="font-semibold">{questions.filter(q => q.question.trim()).length} questions</span>
+                                                </div>
+                                            </div>
+
+                                            <div className="space-y-1">
+                                                <Label className="text-xs text-muted-foreground">Proctoring</Label>
+                                                <div className="flex items-center gap-2">
+                                                    <Shield className="w-4 h-4" />
+                                                    <span className="font-semibold">{isExamProctored ? 'Proctored' : 'Non-Proctored'}</span>
+                                                </div>
+                                            </div>
+
+                                            <div className="space-y-1">
+                                                <Label className="text-xs text-muted-foreground">Batches</Label>
+                                                <div className="flex items-center gap-2">
+                                                    <Users className="w-4 h-4" />
+                                                    <span className="font-semibold">{selectedBatches.length} batches</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </CardContent>
+                                </Card>
+
+                                {questions.length > 0 && (
+                                    <Card>
+                                        <CardHeader>
+                                            <CardTitle className="text-base">Question Breakdown</CardTitle>
+                                        </CardHeader>
+                                        <CardContent>
+                                            <div className="grid grid-cols-3 gap-4">
+                                                {['easy', 'medium', 'hard'].map((difficulty) => {
+                                                    const count = questions.filter(q => q.difficulty?.toLowerCase() === difficulty).length;
+                                                    return (
+                                                        <div key={difficulty} className="text-center space-y-2">
+                                                            <div className={`w-12 h-12 rounded-full mx-auto flex items-center justify-center text-lg font-bold text-white ${difficulty === 'easy' ? 'bg-emerald-500' :
+                                                                difficulty === 'medium' ? 'bg-amber-500' : 'bg-rose-500'
+                                                                }`}>
+                                                                {count}
+                                                            </div>
+                                                            <p className="text-sm font-medium capitalize">{difficulty}</p>
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        </CardContent>
+                                    </Card>
+                                )}
+
+                                {selectedBatches.length > 0 && (
+                                    <Card>
+                                        <CardHeader>
+                                            <CardTitle className="text-base">Batch Schedules</CardTitle>
+                                        </CardHeader>
+                                        <CardContent>
+                                            <div className="space-y-3">
+                                                {selectedBatches.map(batchId => {
+                                                    const batch = availableBatches.find(b => b.Id === batchId);
+                                                    const times = batchTimes[batchId];
+                                                    return (
+                                                        <div key={batchId} className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
+                                                            <div>
+                                                                <p className="font-semibold text-sm">{batch?.Name}</p>
+                                                                <p className="text-xs text-muted-foreground">
+                                                                    {batch?.EmployeeCount || 0} Employees
+                                                                </p>
+                                                            </div>
+                                                            <div className="text-right text-xs">
+                                                                {times?.startTime && (
+                                                                    <p>{new Date(times.startTime).toLocaleString()}</p>
+                                                                )}
+                                                                {times?.endTime && (
+                                                                    <p className="text-muted-foreground">to {new Date(times.endTime).toLocaleString()}</p>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        </CardContent>
+                                    </Card>
+                                )}
+
+                                <div className="flex justify-between pt-4">
+                                    <Button variant="outline" onClick={() => setCurrentStep(3)}>
+                                        <ArrowLeft className="w-4 h-4 mr-2" />
+                                        Back
+                                    </Button>
+                                    <Button
+                                        onClick={() => handleCreateExam(batchTimes)}
+                                        disabled={isLoading || !isFormValid}
+                                    >
+                                        {isLoading ? (
+                                            <>
+                                                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                                Creating...
+                                            </>
+                                        ) : (
+                                            <>
+                                                <Plus className="w-4 h-4 mr-2" />
+                                                Create Exam
+                                            </>
+                                        )}
+                                    </Button>
+                                </div>
+                            </div>
+                        )}
+                    </CardContent>
+                </Card>
+            </div>
+
+            {/* Success Modal */}
+            {showSuccess && (
+                <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                    <Card className="w-full max-w-md">
+                        <CardContent className="p-8 text-center space-y-4">
+                            <div className="w-16 h-16 bg-emerald-500/10 rounded-full mx-auto flex items-center justify-center">
+                                <CheckCircle className="w-8 h-8 text-emerald-600" />
+                            </div>
+                            <div>
+                                <h3 className="text-xl font-semibold text-foreground mb-2">Success!</h3>
+                                <p className="text-muted-foreground">Your exam has been created successfully</p>
+                            </div>
                         </CardContent>
                     </Card>
                 </div>
-
-                {/* Success Modal */}
-                {showSuccess && (
-                    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-                        <Card className="w-full max-w-md animate-in zoom-in-95 duration-300">
-                            <CardContent className="p-8 text-center space-y-4">
-                                <div className="w-20 h-20 bg-green-500/10 rounded-full mx-auto flex items-center justify-center">
-                                    <CheckCircle className="w-10 h-10 text-green-600" />
-                                </div>
-                                <div>
-                                    <h3 className="text-2xl font-semibold text-foreground mb-2">Success!</h3>
-                                    <p className="text-muted-foreground">Your exam has been created successfully</p>
-                                </div>
-                                <div className="w-full bg-primary/10 rounded-full h-1">
-                                    <div className="bg-primary h-1 rounded-full animate-pulse" style={{ width: '100%' }}></div>
-                                </div>
-                            </CardContent>
-                        </Card>
-                    </div>
-                )}
-            </div>
+            )}
         </ExaminerLayout>
     );
 }

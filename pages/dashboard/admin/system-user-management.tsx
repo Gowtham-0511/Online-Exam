@@ -12,14 +12,12 @@ import {
     Filter,
     Plus,
     MoreVertical,
-    Clock,
     Mail,
     UserCheck,
     UserX,
     Grid3X3,
     List,
     Download,
-    Sparkles
 } from 'lucide-react'
 import {
     DropdownMenu,
@@ -91,15 +89,6 @@ const SystemUserPage = () => {
         return email ? email.slice(0, 2).toUpperCase() : 'U';
     };
 
-    const formatTime = (time?: string) => {
-        if (!time) return 'Not set';
-        return new Date(`2000-01-01T${time}`).toLocaleTimeString('en-US', {
-            hour: 'numeric',
-            minute: '2-digit',
-            hour12: true
-        });
-    };
-
     const filteredUsers = users.filter(user => {
         const matchesSearch = user.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
             user.email.toLowerCase().includes(searchQuery.toLowerCase());
@@ -108,8 +97,6 @@ const SystemUserPage = () => {
             (filterStatus === 'inactive' && (user.is_active === false || user.is_active === 0 || user.is_active === null));
         return matchesSearch && matchesFilter;
     });
-
-    console.log(users);
 
     const activeUsers = users.filter(user => user.is_active === true || user.is_active === 1).length;
     const inactiveUsers = users.filter(user => user.is_active === false || user.is_active === 0 || user.is_active === null).length;
@@ -139,7 +126,6 @@ const SystemUserPage = () => {
                 throw new Error('Failed to update user role');
             }
 
-            // Update local state
             setUsers(prevUsers =>
                 prevUsers.map(user =>
                     user.email === selectedUser.email
@@ -160,21 +146,21 @@ const SystemUserPage = () => {
         const isActive = user.is_active === true || user.is_active === 1;
 
         return (
-            <Card className="group hover:shadow-lg transition-all duration-300 hover:scale-[1.02] border-border/50 hover:border-systech-primary/30">
+            <Card className="group hover:shadow-md transition-all border-border">
                 <CardHeader className="pb-3">
                     <div className="flex items-center justify-between">
-                        <div className="flex items-center space-x-3">
-                            <Avatar className="h-12 w-12 ring-2 ring-systech-primary/20">
+                        <div className="flex items-center gap-3">
+                            <Avatar className="h-10 w-10 border-2 border-border">
                                 <AvatarImage src={`https://api.dicebear.com/7.x/initials/svg?seed=${user.email}`} />
-                                <AvatarFallback className="bg-systech-gradient text-white font-semibold">
+                                <AvatarFallback className="bg-primary text-primary-foreground text-xs font-semibold">
                                     {getInitials(user.name, user.email)}
                                 </AvatarFallback>
                             </Avatar>
                             <div>
-                                <CardTitle className="text-lg group-hover:text-systech-primary transition-colors">
+                                <CardTitle className="text-base group-hover:text-primary transition-colors">
                                     {user.name || 'Unnamed User'}
                                 </CardTitle>
-                                <CardDescription className="flex items-center gap-1">
+                                <CardDescription className="flex items-center gap-1 text-xs">
                                     <Mail className="h-3 w-3" />
                                     {user.email}
                                 </CardDescription>
@@ -199,12 +185,12 @@ const SystemUserPage = () => {
                     </div>
                 </CardHeader>
                 <CardContent className="pt-0">
-                    <div className="space-y-3">
+                    <div className="space-y-2">
                         <div className="flex items-center justify-between">
-                            <span className="text-sm font-medium">Status</span>
+                            <span className="text-xs text-muted-foreground">Status</span>
                             <Badge
                                 variant={isActive ? "default" : "secondary"}
-                                className={isActive ? "bg-green-500 hover:bg-green-600" : "bg-gray-500 hover:bg-gray-600"}
+                                className="text-xs"
                             >
                                 {isActive ? (
                                     <>
@@ -218,22 +204,11 @@ const SystemUserPage = () => {
                                     </>
                                 )}
                             </Badge>
-                            <span className="text-sm font-medium">Role</span>
-                            <Badge
-                                variant={isActive ? "default" : "secondary"}
-                                className={isActive ? "bg-green-500 hover:bg-green-600" : "bg-gray-500 hover:bg-gray-600"}
-                            >
-                                {isActive ? (
-                                    <>
-                                        <UserCheck className="h-3 w-3 mr-1" />
-                                        {user.role || 'No Role Assigned'}
-                                    </>
-                                ) : (
-                                    <>
-                                        <UserX className="h-3 w-3 mr-1" />
-                                        {user.role || 'No Role Assigned'}
-                                    </>
-                                )}
+                        </div>
+                        <div className="flex items-center justify-between">
+                            <span className="text-xs text-muted-foreground">Role</span>
+                            <Badge variant="outline" className="text-xs capitalize">
+                                {user.role || 'No Role'}
                             </Badge>
                         </div>
                     </div>
@@ -246,51 +221,51 @@ const SystemUserPage = () => {
         const isActive = user.is_active === true || user.is_active === 1;
 
         return (
-            <Card className="hover:shadow-md transition-all duration-200">
+            <Card className="hover:shadow-sm transition-all border-border">
                 <CardContent className="p-4">
                     <div className="flex items-center justify-between">
-                        <div className="flex items-center space-x-4">
-                            <Avatar className="h-10 w-10">
+                        <div className="flex items-center gap-4">
+                            <Avatar className="h-9 w-9 border-2 border-border">
                                 <AvatarImage src={`https://api.dicebear.com/7.x/initials/svg?seed=${user.email}`} />
-                                <AvatarFallback className="bg-systech-gradient text-white">
+                                <AvatarFallback className="bg-primary text-primary-foreground text-xs">
                                     {getInitials(user.name, user.email)}
                                 </AvatarFallback>
                             </Avatar>
                             <div className="min-w-0 flex-1">
-                                <div className="flex items-center gap-3">
-                                    <h3 className="font-semibold text-foreground">
+                                <div className="flex items-center gap-2 mb-1">
+                                    <h3 className="font-semibold text-sm text-foreground">
                                         {user.name || 'Unnamed User'}
                                     </h3>
                                     <Badge
                                         variant={isActive ? "default" : "secondary"}
-                                        className={`${isActive ? "bg-green-500" : "bg-gray-500"} text-xs`}
+                                        className="text-xs"
                                     >
                                         {isActive ? 'Active' : 'Inactive'}
                                     </Badge>
+                                    <Badge variant="outline" className="text-xs capitalize">
+                                        {user.role || 'No Role'}
+                                    </Badge>
                                 </div>
-                                <p className="text-sm text-muted-foreground">{user.email}</p>
+                                <p className="text-xs text-muted-foreground">{user.email}</p>
                             </div>
                         </div>
 
-                        <div className="flex items-center space-x-4">
-
-                            <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                    <Button variant="ghost" className="h-8 w-8 p-0">
-                                        <MoreVertical className="h-4 w-4" />
-                                    </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end">
-                                    <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                                    <DropdownMenuItem onClick={() => handleEditUser(user)}>Edit User</DropdownMenuItem>
-                                    <DropdownMenuItem>View Details</DropdownMenuItem>
-                                    <DropdownMenuSeparator />
-                                    <DropdownMenuItem className="text-destructive">
-                                        {isActive ? 'Deactivate' : 'Activate'}
-                                    </DropdownMenuItem>
-                                </DropdownMenuContent>
-                            </DropdownMenu>
-                        </div>
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" className="h-8 w-8 p-0">
+                                    <MoreVertical className="h-4 w-4" />
+                                </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                                <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                                <DropdownMenuItem onClick={() => handleEditUser(user)}>Edit User</DropdownMenuItem>
+                                <DropdownMenuItem>View Details</DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem className="text-destructive">
+                                    {isActive ? 'Deactivate' : 'Activate'}
+                                </DropdownMenuItem>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
                     </div>
                 </CardContent>
             </Card>
@@ -299,19 +274,13 @@ const SystemUserPage = () => {
 
     return (
         <AdminLayout>
-            <div className="space-y-6 p-6">
+            <div className="space-y-6">
                 {/* Header Section */}
                 <div className="flex flex-col space-y-4 md:flex-row md:items-center md:justify-between md:space-y-0">
                     <div>
-                        <div className="flex items-center gap-3 mb-2">
-                            <div className="p-2 bg-systech-gradient rounded-lg">
-                                <Users className="h-6 w-6 text-white" />
-                            </div>
-                            <h1 className="text-3xl font-bold text-foreground">System Users</h1>
-                            <Sparkles className="h-5 w-5 text-systech-primary animate-pulse" />
-                        </div>
-                        <p className="text-muted-foreground">
-                            Manage and monitor your system users with advanced controls
+                        <h1 className="text-2xl font-bold text-foreground">System Users</h1>
+                        <p className="text-muted-foreground text-sm mt-1">
+                            Manage and monitor your system users
                         </p>
                     </div>
                     <div className="flex items-center gap-2">
@@ -319,7 +288,7 @@ const SystemUserPage = () => {
                             <Download className="h-4 w-4 mr-2" />
                             Export
                         </Button>
-                        <Button className="bg-systech-gradient hover:opacity-90">
+                        <Button>
                             <Plus className="h-4 w-4 mr-2" />
                             Add User
                         </Button>
@@ -328,60 +297,66 @@ const SystemUserPage = () => {
 
                 {/* Stats Cards */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <Card className="border-border/50">
-                        <CardContent className="p-6">
+                    <Card className="border-border">
+                        <CardContent className="p-4">
                             <div className="flex items-center justify-between">
                                 <div>
-                                    <p className="text-sm font-medium text-muted-foreground">Total Users</p>
-                                    <p className="text-2xl font-bold text-systech-primary">{users.length}</p>
+                                    <p className="text-xs text-muted-foreground">Total Users</p>
+                                    <p className="text-2xl font-bold text-foreground mt-1">{users.length}</p>
                                 </div>
-                                <Users className="h-8 w-8 text-systech-primary" />
+                                <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                                    <Users className="h-5 w-5 text-primary" />
+                                </div>
                             </div>
                         </CardContent>
                     </Card>
 
-                    <Card className="border-border/50">
-                        <CardContent className="p-6">
+                    <Card className="border-border">
+                        <CardContent className="p-4">
                             <div className="flex items-center justify-between">
                                 <div>
-                                    <p className="text-sm font-medium text-muted-foreground">Active Users</p>
-                                    <p className="text-2xl font-bold text-green-600">{activeUsers}</p>
+                                    <p className="text-xs text-muted-foreground">Active Users</p>
+                                    <p className="text-2xl font-bold text-foreground mt-1">{activeUsers}</p>
                                 </div>
-                                <UserCheck className="h-8 w-8 text-green-600" />
+                                <div className="h-10 w-10 rounded-lg bg-emerald-500/10 flex items-center justify-center">
+                                    <UserCheck className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+                                </div>
                             </div>
                         </CardContent>
                     </Card>
 
-                    <Card className="border-border/50">
-                        <CardContent className="p-6">
+                    <Card className="border-border">
+                        <CardContent className="p-4">
                             <div className="flex items-center justify-between">
                                 <div>
-                                    <p className="text-sm font-medium text-muted-foreground">Inactive Users</p>
-                                    <p className="text-2xl font-bold text-gray-500">{inactiveUsers}</p>
+                                    <p className="text-xs text-muted-foreground">Inactive Users</p>
+                                    <p className="text-2xl font-bold text-foreground mt-1">{inactiveUsers}</p>
                                 </div>
-                                <UserX className="h-8 w-8 text-gray-500" />
+                                <div className="h-10 w-10 rounded-lg bg-secondary flex items-center justify-center">
+                                    <UserX className="h-5 w-5 text-muted-foreground" />
+                                </div>
                             </div>
                         </CardContent>
                     </Card>
                 </div>
 
                 {/* Filters and Controls */}
-                <Card className="border-border/50">
-                    <CardContent className="p-6">
+                <Card className="border-border">
+                    <CardContent className="p-4">
                         <div className="flex flex-col space-y-4 md:flex-row md:items-center md:justify-between md:space-y-0">
-                            <div className="flex flex-1 items-center space-x-4">
+                            <div className="flex flex-1 items-center gap-4">
                                 <div className="relative flex-1 max-w-sm">
                                     <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                                     <Input
                                         placeholder="Search users..."
                                         value={searchQuery}
                                         onChange={(e) => setSearchQuery(e.target.value)}
-                                        className="pl-10 border-border/50 focus:border-systech-primary"
+                                        className="pl-10"
                                     />
                                 </div>
 
                                 <Select value={filterStatus} onValueChange={setFilterStatus}>
-                                    <SelectTrigger className="w-[180px] border-border/50">
+                                    <SelectTrigger className="w-[180px]">
                                         <Filter className="h-4 w-4 mr-2" />
                                         <SelectValue placeholder="Filter by status" />
                                     </SelectTrigger>
@@ -393,12 +368,12 @@ const SystemUserPage = () => {
                                 </Select>
                             </div>
 
-                            <div className="flex items-center space-x-2">
+                            <div className="flex items-center gap-2">
                                 <Button
                                     variant={viewMode === 'grid' ? 'default' : 'outline'}
                                     size="sm"
                                     onClick={() => setViewMode('grid')}
-                                    className={viewMode === 'grid' ? 'bg-systech-primary' : ''}
+                                    className="px-3"
                                 >
                                     <Grid3X3 className="h-4 w-4" />
                                 </Button>
@@ -406,7 +381,7 @@ const SystemUserPage = () => {
                                     variant={viewMode === 'list' ? 'default' : 'outline'}
                                     size="sm"
                                     onClick={() => setViewMode('list')}
-                                    className={viewMode === 'list' ? 'bg-systech-primary' : ''}
+                                    className="px-3"
                                 >
                                     <List className="h-4 w-4" />
                                 </Button>
@@ -417,12 +392,12 @@ const SystemUserPage = () => {
 
                 {/* Users Display */}
                 {loading ? (
-                    <div className={`grid gap-6 ${viewMode === 'grid' ? 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3' : 'grid-cols-1'}`}>
+                    <div className={`grid gap-4 ${viewMode === 'grid' ? 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3' : 'grid-cols-1'}`}>
                         {[...Array(6)].map((_, i) => (
-                            <Card key={i} className="border-border/50">
+                            <Card key={i} className="border-border">
                                 <CardHeader className="pb-3">
-                                    <div className="flex items-center space-x-3">
-                                        <Skeleton className="h-12 w-12 rounded-full" />
+                                    <div className="flex items-center gap-3">
+                                        <Skeleton className="h-10 w-10 rounded-full" />
                                         <div className="space-y-2">
                                             <Skeleton className="h-4 w-[120px]" />
                                             <Skeleton className="h-3 w-[160px]" />
@@ -430,27 +405,26 @@ const SystemUserPage = () => {
                                     </div>
                                 </CardHeader>
                                 <CardContent>
-                                    <div className="space-y-3">
-                                        <Skeleton className="h-4 w-full" />
-                                        <Skeleton className="h-16 w-full" />
-                                    </div>
+                                    <Skeleton className="h-16 w-full" />
                                 </CardContent>
                             </Card>
                         ))}
                     </div>
                 ) : filteredUsers.length === 0 ? (
-                    <Card className="border-border/50">
+                    <Card className="border-2 border-dashed border-border">
                         <CardContent className="flex flex-col items-center justify-center py-12">
-                            <Users className="h-12 w-12 text-muted-foreground mb-4" />
+                            <div className="w-16 h-16 bg-muted/50 rounded-full flex items-center justify-center mb-4">
+                                <Users className="h-8 w-8 text-muted-foreground" />
+                            </div>
                             <h3 className="text-lg font-semibold mb-2">No users found</h3>
-                            <p className="text-muted-foreground text-center">
+                            <p className="text-muted-foreground text-sm text-center mb-4">
                                 {searchQuery || filterStatus !== 'all'
                                     ? 'Try adjusting your search or filter criteria'
                                     : 'Get started by adding your first system user'
                                 }
                             </p>
                             {!searchQuery && filterStatus === 'all' && (
-                                <Button className="mt-4 bg-systech-gradient">
+                                <Button>
                                     <Plus className="h-4 w-4 mr-2" />
                                     Add First User
                                 </Button>
@@ -458,7 +432,7 @@ const SystemUserPage = () => {
                         </CardContent>
                     </Card>
                 ) : (
-                    <div className={`grid gap-6 ${viewMode === 'grid' ? 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3' : 'grid-cols-1'}`}>
+                    <div className={`grid gap-4 ${viewMode === 'grid' ? 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3' : 'grid-cols-1'}`}>
                         {filteredUsers.map((user, index) => (
                             viewMode === 'grid' ? (
                                 <UserCard key={`${user.email}-${index}`} user={user} />
@@ -473,12 +447,7 @@ const SystemUserPage = () => {
                 <Dialog open={editModalOpen} onOpenChange={setEditModalOpen}>
                     <DialogContent className="sm:max-w-[425px]">
                         <DialogHeader>
-                            <DialogTitle className="flex items-center gap-2">
-                                <div className="p-2 bg-systech-gradient rounded-lg">
-                                    <Users className="h-4 w-4 text-white" />
-                                </div>
-                                Edit User Role
-                            </DialogTitle>
+                            <DialogTitle>Edit User Role</DialogTitle>
                             <DialogDescription>
                                 Update the role for {selectedUser?.name || selectedUser?.email}
                             </DialogDescription>
@@ -486,25 +455,25 @@ const SystemUserPage = () => {
 
                         <div className="grid gap-4 py-4">
                             <div className="space-y-2">
-                                <Label htmlFor="user-info" className="text-sm font-medium">
+                                <Label className="text-sm font-medium">
                                     User Information
                                 </Label>
-                                <div className="flex items-center space-x-3 p-3 bg-muted/50 rounded-lg">
-                                    <Avatar className="h-10 w-10">
+                                <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg border border-border">
+                                    <Avatar className="h-9 w-9">
                                         <AvatarImage src={`https://api.dicebear.com/7.x/initials/svg?seed=${selectedUser?.email}`} />
-                                        <AvatarFallback className="bg-systech-gradient text-white">
+                                        <AvatarFallback className="bg-primary text-primary-foreground text-xs">
                                             {getInitials(selectedUser?.name, selectedUser?.email)}
                                         </AvatarFallback>
                                     </Avatar>
                                     <div>
-                                        <div className="font-medium">{selectedUser?.name || 'Unnamed User'}</div>
-                                        <div className="text-sm text-muted-foreground">{selectedUser?.email}</div>
+                                        <div className="font-medium text-sm">{selectedUser?.name || 'Unnamed User'}</div>
+                                        <div className="text-xs text-muted-foreground">{selectedUser?.email}</div>
                                     </div>
                                 </div>
                             </div>
 
                             <div className="space-y-2">
-                                <Label htmlFor="role" className="text-sm font-medium">
+                                <Label className="text-sm font-medium">
                                     User Role
                                 </Label>
                                 <Select value={newRole} onValueChange={setNewRole}>
@@ -535,7 +504,6 @@ const SystemUserPage = () => {
                             </Button>
                             <Button
                                 onClick={handleSaveRole}
-                                className="bg-systech-gradient hover:opacity-90"
                                 disabled={!newRole}
                             >
                                 Save Changes

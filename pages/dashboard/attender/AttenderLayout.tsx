@@ -9,14 +9,11 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
     Menu,
-    ChevronRight,
     BarChart3,
-    PlusCircle,
     FileText,
     LogOut,
-    User,
-    Settings,
-    Home
+    Home,
+    Bell,
 } from 'lucide-react';
 import ThemeToggle from '@/components/ThemeToggle';
 import { signOut } from 'next-auth/react';
@@ -27,7 +24,7 @@ import {
     DropdownMenuLabel,
     DropdownMenuSeparator,
     DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+} from '@/components/ui/dropdown-menu';
 
 interface MenuItem {
     id: string;
@@ -53,16 +50,9 @@ const menuItems: MenuItem[] = [
         icon: FileText,
         description: 'View all exams',
     },
-    // {
-    //     id: 'viewResults',
-    //     navigation: 'examiner-submissions',
-    //     label: 'View Results',
-    //     icon: BarChart3,
-    //     description: 'View exam results',
-    // }
 ];
 
-interface ExaminerLayoutProps {
+interface AttenderLayoutProps {
     children: React.ReactNode;
 }
 
@@ -81,7 +71,7 @@ const getDisplayName = (session: any): string => {
     return 'User';
 };
 
-export default function AttenderLayout({ children }: ExaminerLayoutProps) {
+export default function AttenderLayout({ children }: AttenderLayoutProps) {
     const router = useRouter();
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const [desktopSidebarCollapsed, setDesktopSidebarCollapsed] = useState(true);
@@ -92,14 +82,12 @@ export default function AttenderLayout({ children }: ExaminerLayoutProps) {
         const segments = pathname.split('/');
         const lastSegment = segments[segments.length - 1];
 
-        console.log(lastSegment);
-
         if (lastSegment === 'attender' || lastSegment === 'index') {
             return 'Home';
         }
 
         const currentItem = menuItems.find(item => item.navigation === lastSegment);
-        return currentItem ? currentItem.id : 'overview';
+        return currentItem ? currentItem.id : 'Home';
     };
 
     const currentPageId = getCurrentPageId();
@@ -122,33 +110,30 @@ export default function AttenderLayout({ children }: ExaminerLayoutProps) {
     const userInitials = getUserInitials(userName);
 
     const SidebarContent = ({ isCollapsed = false }: { isCollapsed?: boolean }) => (
-        <div className="flex flex-col h-full">
+        <div className="flex flex-col h-full bg-card border-r border-border">
+            {/* Logo Section */}
             <div className={cn(
-                "p-6 border-b transition-all duration-300",
-                isCollapsed ? "px-3" : ""
+                "flex items-center h-16 px-6 border-b border-border",
+                isCollapsed && "px-4 justify-center"
             )}>
                 <div className={cn(
-                    "flex items-center transition-all duration-300",
-                    isCollapsed ? "justify-center" : "space-x-3"
+                    "flex items-center gap-3",
+                    isCollapsed && "gap-0"
                 )}>
-                    <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center flex-shrink-0">
-                        <BarChart3 className="w-6 h-6 text-white" />
+                    <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-primary">
+                        <BarChart3 className="w-5 h-5 text-primary-foreground" />
                     </div>
                     {!isCollapsed && (
-                        <div className="transition-opacity duration-300">
-                            <h2 className="text-xl font-bold text-primary bg-clip-text">
-                                SysRank
-                            </h2>
-                        </div>
+                        <span className="text-lg font-semibold text-foreground">
+                            SysRank
+                        </span>
                     )}
                 </div>
             </div>
 
-            <ScrollArea className={cn(
-                "flex-1 py-6 transition-all duration-300",
-                isCollapsed ? "px-2" : "px-4"
-            )}>
-                <div className="space-y-2">
+            {/* Navigation */}
+            <ScrollArea className="flex-1 py-4">
+                <nav className={cn("space-y-1", isCollapsed ? "px-2" : "px-3")}>
                     {menuItems.map((item) => {
                         const isActive = currentPageId === item.id;
                         const Icon = item.icon;
@@ -156,38 +141,38 @@ export default function AttenderLayout({ children }: ExaminerLayoutProps) {
                         return (
                             <div key={item.id} className="relative group">
                                 <Button
-                                    variant={isActive ? "default" : "ghost"}
+                                    variant="ghost"
                                     className={cn(
-                                        "w-full h-12 mb-1 group transition-all duration-200",
-                                        isCollapsed
-                                            ? "justify-center px-3"
-                                            : "justify-start px-4",
+                                        "w-full justify-start h-10 font-normal transition-colors",
+                                        isCollapsed ? "px-2" : "px-3",
                                         isActive
-                                            ? "bg-primary text-primary-foreground shadow-lg hover:shadow-xl"
-                                            : "hover:bg-accent text-foreground"
+                                            ? "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground"
+                                            : "text-muted-foreground hover:text-foreground hover:bg-accent"
                                     )}
                                     onClick={() => handleNavigation(item)}
                                 >
                                     <Icon className={cn(
-                                        "w-5 h-5 transition-colors flex-shrink-0",
-                                        isActive ? "text-white" : "text-muted-foreground group-hover:text-foreground",
-                                        !isCollapsed ? "mr-3" : ""
+                                        "w-5 h-5 shrink-0",
+                                        !isCollapsed && "mr-3"
                                     )} />
                                     {!isCollapsed && (
-                                        <>
-                                            <span className="flex-1 text-left font-medium">{item.label}</span>
-                                            {isActive && (
-                                                <ChevronRight className="w-4 h-4 ml-2 text-white" />
-                                            )}
-                                        </>
+                                        <span className="flex-1 text-left text-sm">
+                                            {item.label}
+                                        </span>
+                                    )}
+                                    {!isCollapsed && item.badge && (
+                                        <span className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs font-medium px-1.5">
+                                            {item.badge}
+                                        </span>
                                     )}
                                 </Button>
 
+                                {/* Tooltip for collapsed state */}
                                 {isCollapsed && (
-                                    <div className="absolute left-full top-1/2 -translate-y-1/2 ml-2 px-2 py-1 bg-popover text-popover-foreground text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-50 whitespace-nowrap border">
+                                    <div className="absolute left-full top-1/2 -translate-y-1/2 ml-2 px-3 py-1.5 bg-popover text-popover-foreground text-sm rounded-md opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 whitespace-nowrap border border-border shadow-lg">
                                         {item.label}
                                         {item.badge && (
-                                            <span className="ml-1 px-1 py-0.5 bg-blue-600 text-white rounded text-xs">
+                                            <span className="ml-2 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs font-medium px-1.5">
                                                 {item.badge}
                                             </span>
                                         )}
@@ -196,114 +181,61 @@ export default function AttenderLayout({ children }: ExaminerLayoutProps) {
                             </div>
                         );
                     })}
-                </div>
+                </nav>
             </ScrollArea>
 
-            {/* <div className={cn(
-                "p-4 border-t transition-all duration-300",
-                isCollapsed ? "px-2" : ""
-            )}>
-                {status === 'loading' ? (
-                    <div className={cn(
-                        "flex items-center p-3 rounded-xl bg-muted transition-all duration-300",
-                        isCollapsed ? "justify-center space-x-0" : "space-x-3"
-                    )}>
-                        <Skeleton className="w-10 h-10 rounded-full flex-shrink-0" />
-                        {!isCollapsed && (
-                            <div className="flex-1 space-y-1">
-                                <Skeleton className="h-4 w-20" />
-                                <Skeleton className="h-3 w-24" />
-                            </div>
-                        )}
-                    </div>
-                ) : (
-                    <div className="space-y-2">
-                        <div className={cn(
-                            "flex items-center p-3 rounded-xl bg-muted transition-all duration-300",
-                            isCollapsed ? "justify-center space-x-0" : "space-x-3"
-                        )}>
-                            <Avatar className="w-10 h-10 ring-2 ring-blue-600/20 flex-shrink-0">
-                                <AvatarImage src={userImage || undefined} alt={userName} />
-                                <AvatarFallback className="bg-primary text-primary-foreground">
-                                    {userInitials}
-                                </AvatarFallback>
-                            </Avatar>
-                            {!isCollapsed && (
-                                <div className="flex-1 min-w-0">
-                                    <p className="text-sm font-medium text-foreground truncate">
-                                        {userName}
-                                    </p>
-                                    <p className="text-xs text-muted-foreground truncate">
-                                        {userEmail}
-                                    </p>
-                                </div>
-                            )}
-                        </div>
-                        <Button
-                            variant="ghost"
-                            className={cn(
-                                "w-full transition-all duration-200 hover:bg-destructive/10 hover:text-destructive",
-                                isCollapsed ? "justify-center px-3" : "justify-start px-4"
-                            )}
-                            onClick={() => signOut({ callbackUrl: '/' })}
-                        >
-                            <LogOut className={cn(
-                                "w-4 h-4",
-                                !isCollapsed ? "mr-3" : ""
-                            )} />
-                            {!isCollapsed && <span>Sign Out</span>}
-                        </Button>
-                    </div>
-                )}
-            </div> */}
-
+            {/* User Section */}
             <div className={cn(
-                "p-4 border-t transition-all duration-300",
-                isCollapsed ? "px-2" : ""
+                "border-t border-border p-4",
+                isCollapsed && "px-2"
             )}>
                 {status === 'loading' ? (
                     <div className={cn(
-                        "flex items-center p-3 rounded-xl bg-muted transition-all duration-300",
-                        isCollapsed ? "justify-center space-x-0" : "space-x-3"
+                        "flex items-center gap-3",
+                        isCollapsed && "justify-center"
                     )}>
-                        <Skeleton className="w-10 h-10 rounded-full flex-shrink-0" />
+                        <Skeleton className="w-8 h-8 rounded-full" />
                         {!isCollapsed && (
-                            <div className="flex-1 space-y-1">
-                                <Skeleton className="h-4 w-20" />
-                                <Skeleton className="h-3 w-24" />
+                            <div className="flex-1 space-y-1.5">
+                                <Skeleton className="h-3.5 w-24" />
+                                <Skeleton className="h-3 w-32" />
                             </div>
                         )}
                     </div>
                 ) : (
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                            <button className={cn(
-                                "flex items-center p-3 rounded-xl bg-muted hover:bg-muted/80 transition-all duration-300 w-full cursor-pointer",
-                                isCollapsed ? "justify-center space-x-0" : "space-x-3"
-                            )}>
-                                <Avatar className="w-10 h-10 ring-2 ring-primary/20 flex-shrink-0">
-                                    <AvatarImage src={userImage || undefined} alt={userName} />
-                                    <AvatarFallback className="bg-primary text-primary-foreground">
-                                        {userInitials}
-                                    </AvatarFallback>
-                                </Avatar>
-                                {!isCollapsed && (
-                                    <div className="flex-1 min-w-0 text-left">
-                                        <p className="text-sm font-medium text-foreground truncate">
-                                            {userName}
-                                        </p>
-                                        <p className="text-xs text-muted-foreground truncate">
-                                            {userEmail}
-                                        </p>
-                                    </div>
+                            <Button
+                                variant="ghost"
+                                className={cn(
+                                    "w-full h-auto p-2 hover:bg-accent",
+                                    isCollapsed && "justify-center"
                                 )}
-                            </button>
+                            >
+                                <div className={cn(
+                                    "flex items-center gap-3 w-full",
+                                    isCollapsed && "gap-0"
+                                )}>
+                                    <Avatar className="w-8 h-8 border-2 border-border">
+                                        <AvatarImage src={userImage || undefined} alt={userName} />
+                                        <AvatarFallback className="bg-primary text-primary-foreground text-xs">
+                                            {userInitials}
+                                        </AvatarFallback>
+                                    </Avatar>
+                                    {!isCollapsed && (
+                                        <div className="flex-1 text-left overflow-hidden">
+                                            <p className="text-sm font-medium text-foreground truncate">
+                                                {userName}
+                                            </p>
+                                            <p className="text-xs text-muted-foreground truncate">
+                                                {userEmail}
+                                            </p>
+                                        </div>
+                                    )}
+                                </div>
+                            </Button>
                         </DropdownMenuTrigger>
-                        <DropdownMenuContent
-                            align="end"
-                            className="w-56"
-                            side={isCollapsed ? "right" : "top"}
-                        >
+                        <DropdownMenuContent align="end" className="w-56">
                             <DropdownMenuLabel>
                                 <div className="flex flex-col space-y-1">
                                     <p className="text-sm font-medium">{userName}</p>
@@ -311,17 +243,8 @@ export default function AttenderLayout({ children }: ExaminerLayoutProps) {
                                 </div>
                             </DropdownMenuLabel>
                             <DropdownMenuSeparator />
-                            {/* <DropdownMenuItem className="cursor-pointer">
-                                <User className="w-4 h-4 mr-2" />
-                                Profile
-                            </DropdownMenuItem>
-                            <DropdownMenuItem className="cursor-pointer">
-                                <Settings className="w-4 h-4 mr-2" />
-                                Settings
-                            </DropdownMenuItem> */}
-                            {/* <DropdownMenuSeparator /> */}
                             <DropdownMenuItem
-                                className="cursor-pointer text-destructive focus:text-destructive focus:bg-destructive/10"
+                                className="cursor-pointer text-destructive focus:text-destructive"
                                 onClick={() => signOut({ callbackUrl: '/' })}
                             >
                                 <LogOut className="w-4 h-4 mr-2" />
@@ -336,67 +259,71 @@ export default function AttenderLayout({ children }: ExaminerLayoutProps) {
 
     return (
         <div className="min-h-screen bg-background">
-            <div className={cn(
-                "hidden lg:fixed lg:inset-y-0 lg:flex lg:flex-col transition-all duration-300 z-30 bg-card border-r",
-                desktopSidebarCollapsed ? "lg:w-20" : "lg:w-72"
-            )}>
+            {/* Desktop Sidebar */}
+            <aside
+                className={cn(
+                    "hidden lg:fixed lg:inset-y-0 lg:z-50 lg:flex lg:flex-col transition-all duration-300",
+                    desktopSidebarCollapsed ? "lg:w-16" : "lg:w-64"
+                )}
+            >
                 <SidebarContent isCollapsed={desktopSidebarCollapsed} />
-            </div>
+            </aside>
 
+            {/* Mobile Sidebar */}
             <Sheet open={sidebarOpen} onOpenChange={setSidebarOpen}>
-                <SheetContent side="left" className="p-0 w-72">
+                <SheetContent side="left" className="p-0 w-64">
                     <SidebarContent isCollapsed={false} />
                 </SheetContent>
             </Sheet>
 
-            <div className={cn(
-                "transition-all duration-300",
-                desktopSidebarCollapsed ? "lg:pl-20" : "lg:pl-72"
-            )}>
-                <header className="sticky top-0 z-40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 border-b">
-                    <div className="flex items-center justify-between px-6 py-4">
+            {/* Main Content */}
+            <div
+                className={cn(
+                    "lg:pl-64 transition-all duration-300",
+                    desktopSidebarCollapsed && "lg:pl-16"
+                )}
+            >
+                {/* Header */}
+                <header className="sticky top-0 z-40 flex h-16 items-center gap-4 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-6">
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        className="lg:hidden"
+                        onClick={() => setSidebarOpen(true)}
+                    >
+                        <Menu className="h-5 w-5" />
+                        <span className="sr-only">Toggle sidebar</span>
+                    </Button>
 
-                        {/* Left side */}
-                        <div className="flex items-center space-x-4">
-                            <Button
-                                variant="ghost"
-                                size="icon"
-                                className="lg:hidden hover:bg-accent"
-                                onClick={() => setSidebarOpen(true)}
-                            >
-                                <Menu className="w-5 h-5" />
-                            </Button>
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        className="hidden lg:flex"
+                        onClick={toggleDesktopSidebar}
+                    >
+                        <Menu className="h-5 w-5" />
+                        <span className="sr-only">Toggle sidebar</span>
+                    </Button>
 
-                            <Button
-                                variant="ghost"
-                                size="icon"
-                                className="hidden lg:flex hover:bg-accent"
-                                onClick={toggleDesktopSidebar}
-                            >
-                                <Menu className="w-5 h-5" />
-                            </Button>
+                    <div className="flex-1">
+                        <h1 className="text-lg font-semibold text-foreground">
+                            {menuItems.find(item => item.id === currentPageId)?.label || 'Dashboard'}
+                        </h1>
+                    </div>
 
-                            <div>
-                                <h1 className="text-2xl font-bold text-foreground">
-                                    {menuItems.find(item => item.id === currentPageId)?.label || 'Dashboard'}
-                                </h1>
-                                <p className="text-sm text-muted-foreground mt-1">
-                                    {menuItems.find(item => item.id === currentPageId)?.description || 'Welcome back'}
-                                </p>
-                            </div>
-                        </div>
-
-                        {/* Right side */}
-                        <div className="flex items-center gap-2">
-                            <ThemeToggle />
-                        </div>
-
+                    <div className="flex items-center gap-2">
+                        {/* <Button variant="ghost" size="icon" className="relative">
+                            <Bell className="h-5 w-5" />
+                            <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-primary" />
+                            <span className="sr-only">Notifications</span>
+                        </Button> */}
+                        <ThemeToggle />
                     </div>
                 </header>
 
-
-                <main className="p-6">
-                    <div className="max-w-7xl mx-auto">
+                {/* Page Content */}
+                <main className="flex-1 p-6">
+                    <div className="mx-auto max-w-7xl">
                         {children}
                     </div>
                 </main>
