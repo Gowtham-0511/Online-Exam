@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useState, useMemo, useCallback } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/router';
-import { useSession } from 'next-auth/react';
+import { useSession, signOut } from 'next-auth/react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -13,10 +14,8 @@ import {
     FileText,
     LogOut,
     Home,
-    Bell,
 } from 'lucide-react';
 import ThemeToggle from '@/components/ThemeToggle';
-import { signOut } from 'next-auth/react';
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -77,7 +76,8 @@ export default function AttenderLayout({ children }: AttenderLayoutProps) {
     const [desktopSidebarCollapsed, setDesktopSidebarCollapsed] = useState(true);
     const { data: session, status } = useSession();
 
-    const getCurrentPageId = () => {
+    // Memoize current page calculation
+    const currentPageId = useMemo(() => {
         const pathname = router.pathname;
         const segments = pathname.split('/');
         const lastSegment = segments[segments.length - 1];
@@ -88,26 +88,34 @@ export default function AttenderLayout({ children }: AttenderLayoutProps) {
 
         const currentItem = menuItems.find(item => item.navigation === lastSegment);
         return currentItem ? currentItem.id : 'Home';
-    };
+    }, [router.pathname]);
 
-    const currentPageId = getCurrentPageId();
+    // Memoize user data
+    const userData = useMemo(() => ({
+        userName: getDisplayName(session),
+        userEmail: session?.user?.email || '',
+        userImage: session?.user?.image || null,
+        userInitials: getUserInitials(getDisplayName(session))
+    }), [session]);
 
-    const handleNavigation = (item: MenuItem) => {
-        const targetPath = item.navigation === 'index'
+    // Callback for sidebar toggle
+    const toggleDesktopSidebar = useCallback(() => {
+        setDesktopSidebarCollapsed(prev => !prev);
+    }, []);
+
+    const closeMobileSidebar = useCallback(() => {
+        setSidebarOpen(false);
+    }, []);
+
+    const getHref = useCallback((item: MenuItem) => {
+        return item.navigation === 'index'
             ? '/dashboard/attender'
             : `/dashboard/attender/${item.navigation}`;
-        router.push(targetPath);
-        setSidebarOpen(false);
-    };
+    }, []);
 
-    const toggleDesktopSidebar = () => {
-        setDesktopSidebarCollapsed(!desktopSidebarCollapsed);
-    };
-
-    const userName = getDisplayName(session);
-    const userEmail = session?.user?.email || '';
-    const userImage = session?.user?.image || null;
-    const userInitials = getUserInitials(userName);
+    const handleSignOut = useCallback(() => {
+        signOut({ callbackUrl: '/' });
+    }, []);
 
     const SidebarContent = ({ isCollapsed = false }: { isCollapsed?: boolean }) => (
         <div className="flex flex-col h-full bg-card border-r border-border">
@@ -137,35 +145,41 @@ export default function AttenderLayout({ children }: AttenderLayoutProps) {
                     {menuItems.map((item) => {
                         const isActive = currentPageId === item.id;
                         const Icon = item.icon;
+                        const href = getHref(item);
 
                         return (
                             <div key={item.id} className="relative group">
-                                <Button
-                                    variant="ghost"
-                                    className={cn(
-                                        "w-full justify-start h-10 font-normal transition-colors",
-                                        isCollapsed ? "px-2" : "px-3",
-                                        isActive
-                                            ? "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground"
-                                            : "text-muted-foreground hover:text-foreground hover:bg-accent"
-                                    )}
-                                    onClick={() => handleNavigation(item)}
-                                >
-                                    <Icon className={cn(
-                                        "w-5 h-5 shrink-0",
-                                        !isCollapsed && "mr-3"
-                                    )} />
-                                    {!isCollapsed && (
-                                        <span className="flex-1 text-left text-sm">
-                                            {item.label}
-                                        </span>
-                                    )}
-                                    {!isCollapsed && item.badge && (
-                                        <span className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs font-medium px-1.5">
-                                            {item.badge}
-                                        </span>
-                                    )}
-                                </Button>
+                                <Link href={href} passHref legacyBehavior>
+                                    <Button
+                                        variant="ghost"
+                                        className={cn(
+                                            "w-full justify-start h-10 font-normal transition-colors",
+                                            isCollapsed ? "px-2" : "px-3",
+                                            isActive
+                                                ? "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground"
+                                                : "text-muted-foreground hover:text-foreground hover:bg-accent"
+                                        )}
+                                        onClick={closeMobileSidebar}
+                                        asChild
+                                    >
+                                        <a>
+                                            <Icon className={cn(
+                                                "w-5 h-5 shrink-0",
+                                                !isCollapsed && "mr-3"
+                                            )} />
+                                            {!isCollapsed && (
+                                                <span className="flex-1 text-left text-sm">
+                                                    {item.label}
+                                                </span>
+                                            )}
+                                            {!isCollapsed && item.badge && (
+                                                <span className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs font-medium px-1.5">
+                                                    {item.badge}
+                                                </span>
+                                            )}
+                                        </a>
+                                    </Button>
+                                </Link>
 
                                 {/* Tooltip for collapsed state */}
                                 {isCollapsed && (
@@ -217,18 +231,18 @@ export default function AttenderLayout({ children }: AttenderLayoutProps) {
                                     isCollapsed && "gap-0"
                                 )}>
                                     <Avatar className="w-8 h-8 border-2 border-border">
-                                        <AvatarImage src={userImage || undefined} alt={userName} />
+                                        <AvatarImage src={userData.userImage || undefined} alt={userData.userName} />
                                         <AvatarFallback className="bg-primary text-primary-foreground text-xs">
-                                            {userInitials}
+                                            {userData.userInitials}
                                         </AvatarFallback>
                                     </Avatar>
                                     {!isCollapsed && (
                                         <div className="flex-1 text-left overflow-hidden">
                                             <p className="text-sm font-medium text-foreground truncate">
-                                                {userName}
+                                                {userData.userName}
                                             </p>
                                             <p className="text-xs text-muted-foreground truncate">
-                                                {userEmail}
+                                                {userData.userEmail}
                                             </p>
                                         </div>
                                     )}
@@ -238,14 +252,14 @@ export default function AttenderLayout({ children }: AttenderLayoutProps) {
                         <DropdownMenuContent align="end" className="w-56">
                             <DropdownMenuLabel>
                                 <div className="flex flex-col space-y-1">
-                                    <p className="text-sm font-medium">{userName}</p>
-                                    <p className="text-xs text-muted-foreground">{userEmail}</p>
+                                    <p className="text-sm font-medium">{userData.userName}</p>
+                                    <p className="text-xs text-muted-foreground">{userData.userEmail}</p>
                                 </div>
                             </DropdownMenuLabel>
                             <DropdownMenuSeparator />
                             <DropdownMenuItem
                                 className="cursor-pointer text-destructive focus:text-destructive"
-                                onClick={() => signOut({ callbackUrl: '/' })}
+                                onClick={handleSignOut}
                             >
                                 <LogOut className="w-4 h-4 mr-2" />
                                 Sign Out
@@ -312,11 +326,6 @@ export default function AttenderLayout({ children }: AttenderLayoutProps) {
                     </div>
 
                     <div className="flex items-center gap-2">
-                        {/* <Button variant="ghost" size="icon" className="relative">
-                            <Bell className="h-5 w-5" />
-                            <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-primary" />
-                            <span className="sr-only">Notifications</span>
-                        </Button> */}
                         <ThemeToggle />
                     </div>
                 </header>

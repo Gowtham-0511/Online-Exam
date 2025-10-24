@@ -91,8 +91,11 @@ export default function ExaminerDashboard() {
 
     const [batchTimes, setBatchTimes] = useState<{ [key: string]: { startTime: string, endTime: string } }>({});
 
-    const [questionType, setQuestionType] = useState("coding");
-    const [mcqQuestions, setMcqQuestions] = useState<any[]>([]);
+    const [assignmentType, setAssignmentType] = useState<'batch' | 'users'>('batch');
+    const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
+    const [availableUsers, setAvailableUsers] = useState<any[]>([]);
+    const [loadingUsers, setLoadingUsers] = useState(false);
+    const [userSearchQuery, setUserSearchQuery] = useState('');
 
     const [sqlServerType, setSqlServerType] = useState<'ssms' | 'postgres' | ''>('');
     const [sqlCredentials, setSqlCredentials] = useState({
@@ -162,6 +165,11 @@ export default function ExaminerDashboard() {
         setSelectedCredentialId('');
         setShowNewCredentialForm(false);
         setExistingCredentials([]);
+
+        setAssignmentType('batch');
+        setSelectedUsers([]);
+        setAvailableUsers([]);
+        setUserSearchQuery('');
     };
 
     const testSqlConnection = async () => {
@@ -286,6 +294,8 @@ export default function ExaminerDashboard() {
             endTime: string;
         }[];
         requiresFileHandling?: boolean;
+        assignmentType?: 'batch' | 'users';
+        selectedUserEmails?: string[];
     }
 
     const handleCreateExam = useCallback(
@@ -365,6 +375,8 @@ export default function ExaminerDashboard() {
                         .split(",")
                         .map((email) => email.trim())
                         .filter(Boolean),
+                    assignmentType,
+                    selectedUserEmails: assignmentType === 'users' ? selectedUsers : [],
                     batchSchedules: selectedBatches.map((batchId) => ({
                         batchId,
                         startTime: batchTimes[batchId]?.startTime || "",
@@ -449,9 +461,48 @@ export default function ExaminerDashboard() {
             sqlServerType,
             savedCredentialId,
             selectedCredentialId,
-            showNewCredentialForm
+            showNewCredentialForm,
+            assignmentType,
+            selectedUsers,
         ]
     );
+
+    const fetchAvailableUsers = async () => {
+        setLoadingUsers(true);
+        try {
+            const [employeesRes, externalUsersRes] = await Promise.all([
+                fetch('/api/admin/employee'),
+                fetch('/api/admin/external-users')
+            ]);
+
+            if (employeesRes.ok && externalUsersRes.ok) {
+                const employees = await employeesRes.json();
+                const externalUsers = await externalUsersRes.json();
+
+                const allUsers = [
+                    ...employees.map((emp: any) => ({
+                        id: emp.Id || emp.id,
+                        email: emp.Email || emp.email,
+                        name: emp.Name || emp.name,
+                        type: 'employee'
+                    })),
+                    ...externalUsers.map((user: any) => ({
+                        id: user.id,
+                        email: user.email,
+                        name: user.name,
+                        type: 'external'
+                    }))
+                ];
+
+                setAvailableUsers(allUsers);
+            }
+        } catch (error) {
+            console.error('Error fetching users:', error);
+            toast.error('Failed to load users');
+        } finally {
+            setLoadingUsers(false);
+        }
+    };
 
     const languageOptions = [
         { value: "python", label: "Python", icon: "🐍" },
@@ -1316,178 +1367,329 @@ export default function ExaminerDashboard() {
                                     <p className="text-sm text-muted-foreground">Select which batches can access this exam</p>
                                 </div>
 
-                                {availableBatches.length === 0 && (
-                                    <div className="text-center py-8">
-                                        <Button
-                                            onClick={fetchAvailableBatches}
-                                            disabled={loadingBatches}
-                                        >
-                                            {loadingBatches ? (
-                                                <>
-                                                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                                                    Loading Batches...
-                                                </>
-                                            ) : (
-                                                <>
-                                                    <Users className="w-4 h-4 mr-2" />
-                                                    Load Available Batches
-                                                </>
-                                            )}
-                                        </Button>
+                                {/* Assignment Type Selector */}
+                                <Card className="border-primary/20">
+                                    <CardContent className="p-4">
+                                        <div className="flex gap-4">
+                                            <button
+                                                onClick={() => {
+                                                    setAssignmentType('batch');
+                                                    setSelectedUsers([]);
+                                                }}
+                                                className={`flex-1 p-4 rounded-lg border-2 transition-all ${assignmentType === 'batch'
+                                                    ? 'border-primary bg-primary/10'
+                                                    : 'border-border hover:border-primary/50'
+                                                    }`}
+                                            >
+                                                <Users className="w-6 h-6 mx-auto mb-2" />
+                                                <p className="font-semibold">Assign to Batches</p>
+                                                <p className="text-xs text-muted-foreground mt-1">
+                                                    Assign exam to entire batches
+                                                </p>
+                                            </button>
+
+                                            <button
+                                                onClick={() => {
+                                                    setAssignmentType('users');
+                                                    setSelectedBatches([]);
+                                                    setBatchTimes({});
+                                                    if (availableUsers.length === 0) {
+                                                        fetchAvailableUsers();
+                                                    }
+                                                }}
+                                                className={`flex-1 p-4 rounded-lg border-2 transition-all ${assignmentType === 'users'
+                                                    ? 'border-primary bg-primary/10'
+                                                    : 'border-border hover:border-primary/50'
+                                                    }`}
+                                            >
+                                                <Users className="w-6 h-6 mx-auto mb-2" />
+                                                <p className="font-semibold">Select Individual Users</p>
+                                                <p className="text-xs text-muted-foreground mt-1">
+                                                    Choose specific users
+                                                </p>
+                                            </button>
+                                        </div>
+                                    </CardContent>
+                                </Card>
+
+                                {assignmentType === 'batch' && (
+                                    <div className="space-y-4">
+                                        {availableBatches.length === 0 && (
+                                            <div className="text-center py-8">
+                                                <Button
+                                                    onClick={fetchAvailableBatches}
+                                                    disabled={loadingBatches}
+                                                >
+                                                    {loadingBatches ? (
+                                                        <>
+                                                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                                            Loading Batches...
+                                                        </>
+                                                    ) : (
+                                                        <>
+                                                            <Users className="w-4 h-4 mr-2" />
+                                                            Load Available Batches
+                                                        </>
+                                                    )}
+                                                </Button>
+                                            </div>
+                                        )}
+
+                                        {availableBatches.length > 0 && (
+                                            <div className="space-y-4">
+                                                <div className="flex items-center justify-between">
+                                                    <p className="text-sm text-muted-foreground">
+                                                        {availableBatches.length} batches available
+                                                    </p>
+                                                    <div className="flex gap-2">
+                                                        <Button
+                                                            variant="outline"
+                                                            size="sm"
+                                                            onClick={() => {
+                                                                setSelectedBatches(availableBatches.map(b => b.Id));
+                                                                const newTimes: { [key: string]: { startTime: string, endTime: string } } = {};
+                                                                availableBatches.forEach(batch => {
+                                                                    newTimes[batch.Id] = { startTime: '', endTime: '' };
+                                                                });
+                                                                setBatchTimes(newTimes);
+                                                            }}
+                                                        >
+                                                            Select All
+                                                        </Button>
+                                                        <Button
+                                                            variant="outline"
+                                                            size="sm"
+                                                            onClick={() => {
+                                                                setSelectedBatches([]);
+                                                                setBatchTimes({});
+                                                            }}
+                                                        >
+                                                            Clear All
+                                                        </Button>
+                                                    </div>
+                                                </div>
+
+                                                <div className="space-y-3">
+                                                    {availableBatches.map((batch) => (
+                                                        <Card
+                                                            key={batch.Id}
+                                                            className={`transition-all ${selectedBatches.includes(batch.Id)
+                                                                ? 'ring-2 ring-primary bg-primary/5'
+                                                                : ''
+                                                                }`}
+                                                        >
+                                                            <CardContent className="p-4">
+                                                                <div className="flex items-start justify-between mb-4">
+                                                                    <div className="flex items-center gap-3">
+                                                                        <div
+                                                                            className={`w-5 h-5 rounded border-2 flex items-center justify-center cursor-pointer ${selectedBatches.includes(batch.Id)
+                                                                                ? 'bg-primary border-primary'
+                                                                                : 'border-muted-foreground'
+                                                                                }`}
+                                                                            onClick={() => {
+                                                                                setSelectedBatches(prev =>
+                                                                                    prev.includes(batch.Id)
+                                                                                        ? prev.filter(id => id !== batch.Id)
+                                                                                        : [...prev, batch.Id]
+                                                                                );
+                                                                                if (!selectedBatches.includes(batch.Id)) {
+                                                                                    setBatchTimes(prev => ({
+                                                                                        ...prev,
+                                                                                        [batch.Id]: { startTime: '', endTime: '' }
+                                                                                    }));
+                                                                                } else {
+                                                                                    setBatchTimes(prev => {
+                                                                                        const { [batch.Id]: removed, ...rest } = prev;
+                                                                                        return rest;
+                                                                                    });
+                                                                                }
+                                                                            }}
+                                                                        >
+                                                                            {selectedBatches.includes(batch.Id) && (
+                                                                                <CheckCircle className="w-3 h-3 text-primary-foreground" />
+                                                                            )}
+                                                                        </div>
+                                                                        <div>
+                                                                            <h3 className="font-semibold text-sm">{batch.Name}</h3>
+                                                                            <p className="text-xs text-muted-foreground">
+                                                                                {batch.EmployeeCount || 0} Employees
+                                                                            </p>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+
+                                                                {selectedBatches.includes(batch.Id) && (
+                                                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t border-border">
+                                                                        <div className="space-y-2">
+                                                                            <Label className="text-xs flex items-center gap-2">
+                                                                                <Calendar className="w-3 h-3" />
+                                                                                Start Time *
+                                                                            </Label>
+                                                                            <Input
+                                                                                type="datetime-local"
+                                                                                value={batchTimes[batch.Id]?.startTime || ''}
+                                                                                onChange={(e) => {
+                                                                                    setBatchTimes(prev => ({
+                                                                                        ...prev,
+                                                                                        [batch.Id]: {
+                                                                                            ...prev[batch.Id],
+                                                                                            startTime: e.target.value
+                                                                                        }
+                                                                                    }));
+                                                                                }}
+                                                                            />
+                                                                        </div>
+                                                                        <div className="space-y-2">
+                                                                            <Label className="text-xs flex items-center gap-2">
+                                                                                <Clock className="w-3 h-3" />
+                                                                                End Time *
+                                                                            </Label>
+                                                                            <Input
+                                                                                type="datetime-local"
+                                                                                value={batchTimes[batch.Id]?.endTime || ''}
+                                                                                onChange={(e) => {
+                                                                                    setBatchTimes(prev => ({
+                                                                                        ...prev,
+                                                                                        [batch.Id]: {
+                                                                                            ...prev[batch.Id],
+                                                                                            endTime: e.target.value
+                                                                                        }
+                                                                                    }));
+                                                                                }}
+                                                                            />
+                                                                        </div>
+                                                                    </div>
+                                                                )}
+                                                            </CardContent>
+                                                        </Card>
+                                                    ))}
+                                                </div>
+
+                                                {selectedBatches.length > 0 && (
+                                                    <Alert>
+                                                        <CheckCircle className="w-4 h-4" />
+                                                        <AlertDescription>
+                                                            <p className="font-medium mb-2">Selected: {selectedBatches.length} batches</p>
+                                                            <div className="text-xs space-y-1">
+                                                                {selectedBatches.map(batchId => {
+                                                                    const batch = availableBatches.find(b => b.Id === batchId);
+                                                                    const times = batchTimes[batchId];
+                                                                    return (
+                                                                        <div key={batchId} className="flex items-center justify-between">
+                                                                            <span>{batch?.Name}</span>
+                                                                            <span className="text-muted-foreground">
+                                                                                {times?.startTime && times?.endTime ? '✓ Scheduled' : '⚠ Times needed'}
+                                                                            </span>
+                                                                        </div>
+                                                                    );
+                                                                })}
+                                                            </div>
+                                                        </AlertDescription>
+                                                    </Alert>
+                                                )}
+                                            </div>
+                                        )}
                                     </div>
                                 )}
 
-                                {availableBatches.length > 0 && (
+                                {assignmentType === 'users' && (
                                     <div className="space-y-4">
-                                        <div className="flex items-center justify-between">
-                                            <p className="text-sm text-muted-foreground">
-                                                {availableBatches.length} batches available
-                                            </p>
-                                            <div className="flex gap-2">
-                                                <Button
-                                                    variant="outline"
-                                                    size="sm"
-                                                    onClick={() => {
-                                                        setSelectedBatches(availableBatches.map(b => b.Id));
-                                                        const newTimes: { [key: string]: { startTime: string, endTime: string } } = {};
-                                                        availableBatches.forEach(batch => {
-                                                            newTimes[batch.Id] = { startTime: '', endTime: '' };
-                                                        });
-                                                        setBatchTimes(newTimes);
-                                                    }}
-                                                >
-                                                    Select All
-                                                </Button>
-                                                <Button
-                                                    variant="outline"
-                                                    size="sm"
-                                                    onClick={() => {
-                                                        setSelectedBatches([]);
-                                                        setBatchTimes({});
-                                                    }}
-                                                >
-                                                    Clear All
-                                                </Button>
+                                        {loadingUsers ? (
+                                            <div className="text-center py-8">
+                                                <Loader2 className="w-6 h-6 mx-auto animate-spin text-primary" />
+                                                <p className="mt-2 text-sm text-muted-foreground">Loading users...</p>
                                             </div>
-                                        </div>
+                                        ) : (
+                                            <>
+                                                <div className="space-y-3">
+                                                    <Input
+                                                        placeholder="Search users by name or email..."
+                                                        value={userSearchQuery}
+                                                        onChange={(e) => setUserSearchQuery(e.target.value)}
+                                                        className="w-full"
+                                                    />
 
-                                        <div className="space-y-3">
-                                            {availableBatches.map((batch) => (
-                                                <Card
-                                                    key={batch.Id}
-                                                    className={`transition-all ${selectedBatches.includes(batch.Id)
-                                                        ? 'ring-2 ring-primary bg-primary/5'
-                                                        : ''
-                                                        }`}
-                                                >
-                                                    <CardContent className="p-4">
-                                                        <div className="flex items-start justify-between mb-4">
-                                                            <div className="flex items-center gap-3">
+                                                    <div className="flex items-center justify-between">
+                                                        <p className="text-sm text-muted-foreground">
+                                                            {availableUsers.filter(user =>
+                                                                user.name.toLowerCase().includes(userSearchQuery.toLowerCase()) ||
+                                                                user.email.toLowerCase().includes(userSearchQuery.toLowerCase())
+                                                            ).length} users available
+                                                        </p>
+                                                        <div className="flex gap-2">
+                                                            <Button
+                                                                variant="outline"
+                                                                size="sm"
+                                                                onClick={() => setSelectedUsers(availableUsers.map(u => u.email))}
+                                                            >
+                                                                Select All
+                                                            </Button>
+                                                            <Button
+                                                                variant="outline"
+                                                                size="sm"
+                                                                onClick={() => setSelectedUsers([])}
+                                                            >
+                                                                Clear All
+                                                            </Button>
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                <div className="border border-border rounded-lg max-h-[400px] overflow-y-auto">
+                                                    <div className="space-y-2 p-4">
+                                                        {availableUsers
+                                                            .filter(user =>
+                                                                user.name.toLowerCase().includes(userSearchQuery.toLowerCase()) ||
+                                                                user.email.toLowerCase().includes(userSearchQuery.toLowerCase())
+                                                            )
+                                                            .map((user) => (
                                                                 <div
-                                                                    className={`w-5 h-5 rounded border-2 flex items-center justify-center cursor-pointer ${selectedBatches.includes(batch.Id)
-                                                                        ? 'bg-primary border-primary'
-                                                                        : 'border-muted-foreground'
+                                                                    key={user.email}
+                                                                    className={`flex items-center justify-between p-3 rounded-lg border transition-all cursor-pointer ${selectedUsers.includes(user.email)
+                                                                        ? 'border-primary bg-primary/5'
+                                                                        : 'border-border hover:border-primary/50'
                                                                         }`}
                                                                     onClick={() => {
-                                                                        setSelectedBatches(prev =>
-                                                                            prev.includes(batch.Id)
-                                                                                ? prev.filter(id => id !== batch.Id)
-                                                                                : [...prev, batch.Id]
+                                                                        setSelectedUsers(prev =>
+                                                                            prev.includes(user.email)
+                                                                                ? prev.filter(email => email !== user.email)
+                                                                                : [...prev, user.email]
                                                                         );
-                                                                        if (!selectedBatches.includes(batch.Id)) {
-                                                                            setBatchTimes(prev => ({
-                                                                                ...prev,
-                                                                                [batch.Id]: { startTime: '', endTime: '' }
-                                                                            }));
-                                                                        } else {
-                                                                            setBatchTimes(prev => {
-                                                                                const { [batch.Id]: removed, ...rest } = prev;
-                                                                                return rest;
-                                                                            });
-                                                                        }
                                                                     }}
                                                                 >
-                                                                    {selectedBatches.includes(batch.Id) && (
-                                                                        <CheckCircle className="w-3 h-3 text-primary-foreground" />
-                                                                    )}
+                                                                    <div className="flex items-center gap-3">
+                                                                        <div
+                                                                            className={`w-5 h-5 rounded border-2 flex items-center justify-center ${selectedUsers.includes(user.email)
+                                                                                ? 'bg-primary border-primary'
+                                                                                : 'border-muted-foreground'
+                                                                                }`}
+                                                                        >
+                                                                            {selectedUsers.includes(user.email) && (
+                                                                                <CheckCircle className="w-3 h-3 text-primary-foreground" />
+                                                                            )}
+                                                                        </div>
+                                                                        <div>
+                                                                            <p className="font-semibold text-sm">{user.name}</p>
+                                                                            <p className="text-xs text-muted-foreground">{user.email}</p>
+                                                                        </div>
+                                                                    </div>
+                                                                    <Badge variant="outline" className="text-xs">
+                                                                        {user.type === 'employee' ? 'Employee' : 'External'}
+                                                                    </Badge>
                                                                 </div>
-                                                                <div>
-                                                                    <h3 className="font-semibold text-sm">{batch.Name}</h3>
-                                                                    <p className="text-xs text-muted-foreground">
-                                                                        {batch.EmployeeCount || 0} Employees
-                                                                    </p>
-                                                                </div>
-                                                            </div>
-                                                        </div>
-
-                                                        {selectedBatches.includes(batch.Id) && (
-                                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t border-border">
-                                                                <div className="space-y-2">
-                                                                    <Label className="text-xs flex items-center gap-2">
-                                                                        <Calendar className="w-3 h-3" />
-                                                                        Start Time *
-                                                                    </Label>
-                                                                    <Input
-                                                                        type="datetime-local"
-                                                                        value={batchTimes[batch.Id]?.startTime || ''}
-                                                                        onChange={(e) => {
-                                                                            setBatchTimes(prev => ({
-                                                                                ...prev,
-                                                                                [batch.Id]: {
-                                                                                    ...prev[batch.Id],
-                                                                                    startTime: e.target.value
-                                                                                }
-                                                                            }));
-                                                                        }}
-                                                                    />
-                                                                </div>
-                                                                <div className="space-y-2">
-                                                                    <Label className="text-xs flex items-center gap-2">
-                                                                        <Clock className="w-3 h-3" />
-                                                                        End Time *
-                                                                    </Label>
-                                                                    <Input
-                                                                        type="datetime-local"
-                                                                        value={batchTimes[batch.Id]?.endTime || ''}
-                                                                        onChange={(e) => {
-                                                                            setBatchTimes(prev => ({
-                                                                                ...prev,
-                                                                                [batch.Id]: {
-                                                                                    ...prev[batch.Id],
-                                                                                    endTime: e.target.value
-                                                                                }
-                                                                            }));
-                                                                        }}
-                                                                    />
-                                                                </div>
-                                                            </div>
-                                                        )}
-                                                    </CardContent>
-                                                </Card>
-                                            ))}
-                                        </div>
-
-                                        {selectedBatches.length > 0 && (
-                                            <Alert>
-                                                <CheckCircle className="w-4 h-4" />
-                                                <AlertDescription>
-                                                    <p className="font-medium mb-2">Selected: {selectedBatches.length} batches</p>
-                                                    <div className="text-xs space-y-1">
-                                                        {selectedBatches.map(batchId => {
-                                                            const batch = availableBatches.find(b => b.Id === batchId);
-                                                            const times = batchTimes[batchId];
-                                                            return (
-                                                                <div key={batchId} className="flex items-center justify-between">
-                                                                    <span>{batch?.Name}</span>
-                                                                    <span className="text-muted-foreground">
-                                                                        {times?.startTime && times?.endTime ? '✓ Scheduled' : '⚠ Times needed'}
-                                                                    </span>
-                                                                </div>
-                                                            );
-                                                        })}
+                                                            ))}
                                                     </div>
-                                                </AlertDescription>
-                                            </Alert>
+                                                </div>
+
+                                                {selectedUsers.length > 0 && (
+                                                    <Alert>
+                                                        <CheckCircle className="w-4 h-4" />
+                                                        <AlertDescription>
+                                                            <p className="font-medium">{selectedUsers.length} users selected</p>
+                                                        </AlertDescription>
+                                                    </Alert>
+                                                )}
+                                            </>
                                         )}
                                     </div>
                                 )}
@@ -1499,19 +1701,23 @@ export default function ExaminerDashboard() {
                                     </Button>
                                     <Button
                                         onClick={() => {
-                                            const incompleteTimes = selectedBatches.some(batchId => {
-                                                const times = batchTimes[batchId];
-                                                return !times?.startTime || !times?.endTime;
-                                            });
+                                            if (assignmentType === 'batch') {
+                                                const incompleteTimes = selectedBatches.some(batchId => {
+                                                    const times = batchTimes[batchId];
+                                                    return !times?.startTime || !times?.endTime;
+                                                });
 
-                                            if (incompleteTimes) {
-                                                toast.error('Please set start and end times for all selected batches');
-                                                return;
+                                                if (incompleteTimes) {
+                                                    toast.error('Please set start and end times for all selected batches');
+                                                    return;
+                                                }
                                             }
-
                                             setCurrentStep(4);
                                         }}
-                                        disabled={selectedBatches.length === 0}
+                                        disabled={
+                                            (assignmentType === 'batch' && selectedBatches.length === 0) ||
+                                            (assignmentType === 'users' && selectedUsers.length === 0)
+                                        }
                                     >
                                         Next: Review
                                         <ArrowRight className="w-4 h-4 ml-2" />
@@ -1639,6 +1845,21 @@ export default function ExaminerDashboard() {
                                             </div>
                                         </CardContent>
                                     </Card>
+                                )}
+
+                                <div className="space-y-1">
+                                    <Label className="text-xs text-muted-foreground">Assignment Type</Label>
+                                    <p className="font-semibold capitalize">{assignmentType}</p>
+                                </div>
+
+                                {assignmentType === 'users' && (
+                                    <div className="space-y-1">
+                                        <Label className="text-xs text-muted-foreground">Selected Users</Label>
+                                        <div className="flex items-center gap-2">
+                                            <Users className="w-4 h-4" />
+                                            <span className="font-semibold">{selectedUsers.length} users</span>
+                                        </div>
+                                    </div>
                                 )}
 
                                 <div className="flex justify-between pt-4">

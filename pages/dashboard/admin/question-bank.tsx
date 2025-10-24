@@ -319,10 +319,21 @@ export default function QuestionBankPage() {
         questionType: ""
     });
 
+    const [activeFilters, setActiveFilters] = useState({
+        keyword: "",
+        language: "",
+        difficulty: "",
+        questionType: ""
+    });
+
     const [file, setFile] = useState<File | null>(null);
     const [preview, setPreview] = useState<QuestionInput[]>([]);
     const [uploading, setUploading] = useState(false);
     const [questions, setQuestions] = useState<QuestionInput[]>([]);
+
+    const [selectedQuestion, setSelectedQuestion] = useState<QuestionInput | null>(null);
+    const [isEditing, setIsEditing] = useState(false);
+    const [showQuestions, setShowQuestions] = useState(false);
 
     const fetchFilteredQuestions = async () => {
         const params = new URLSearchParams(filters as any).toString();
@@ -332,9 +343,66 @@ export default function QuestionBankPage() {
         setQuestions(data);
     };
 
+    const [currentPage, setCurrentPage] = useState(1);
+    const [itemsPerPage] = useState(10);
+    const [filteredQuestions, setFilteredQuestions] = useState<QuestionInput[]>([]);
+
     useEffect(() => {
         fetchFilteredQuestions();
     }, []);
+
+    // Apply filters locally
+    useEffect(() => {
+        let filtered = [...questions];
+
+        if (activeFilters.keyword) {
+            filtered = filtered.filter(q =>
+                q.questionText.toLowerCase().includes(activeFilters.keyword.toLowerCase())
+            );
+        }
+
+        if (activeFilters.language) {
+            filtered = filtered.filter(q => q.language === activeFilters.language);
+        }
+
+        if (activeFilters.difficulty) {
+            filtered = filtered.filter(q => q.difficulty === activeFilters.difficulty);
+        }
+
+        if (activeFilters.questionType) {
+            filtered = filtered.filter(q => q.questionType === activeFilters.questionType);
+        }
+
+        setFilteredQuestions(filtered);
+        setCurrentPage(1); // Reset to first page when filters change
+    }, [questions, activeFilters]);
+
+    // Pagination logic
+    const indexOfLastItem = currentPage * itemsPerPage;
+    const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+    const currentQuestions = filteredQuestions.slice(indexOfFirstItem, indexOfLastItem);
+    const totalPages = Math.ceil(filteredQuestions.length / itemsPerPage);
+
+    const handleApplyFilters = () => {
+        setActiveFilters({ ...filters });
+    };
+
+    const handleClearFilters = () => {
+        setFilters({
+            keyword: "",
+            language: "",
+            difficulty: "",
+            jobId: "",
+            skillId: "",
+            questionType: ""
+        });
+        setActiveFilters({
+            keyword: "",
+            language: "",
+            difficulty: "",
+            questionType: ""
+        });
+    };
 
     const handleCSVChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -415,27 +483,21 @@ export default function QuestionBankPage() {
             createdBy: session?.user?.email
         };
 
-        const res = await fetch("/api/questions", {
-            method: "POST",
+        const url = "/api/questions";
+        const method = isEditing ? "PUT" : "POST";
+
+        const res = await fetch(url, {
+            method,
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(questionData),
         });
 
         if (res.ok) {
-            toast.success("Question added successfully!");
-            setQuestion({
-                ...question,
-                questionText: "",
-                expectedOutput: "",
-                explanation: "",
-                options: [
-                    { id: 'option_1', text: '', isCorrect: false },
-                    { id: 'option_2', text: '', isCorrect: false }
-                ]
-            });
+            toast.success(isEditing ? "Question updated successfully!" : "Question added successfully!");
+            handleCancelEdit();
             fetchFilteredQuestions();
         } else {
-            toast.error("Failed to add question");
+            toast.error(isEditing ? "Failed to update question" : "Failed to add question");
         }
     };
 
@@ -502,6 +564,64 @@ export default function QuestionBankPage() {
         a.click();
         document.body.removeChild(a);
         window.URL.revokeObjectURL(url);
+    };
+
+    const handleEdit = (q: QuestionInput) => {
+        setSelectedQuestion(q);
+        setQuestion({
+            id: q.id,
+            questionText: q.questionText,
+            expectedOutput: q.expectedOutput || "",
+            difficulty: q.difficulty,
+            marks: q.marks,
+            language: q.language || "python",
+            jobId: q.jobId,
+            skillId: q.skillId,
+            questionType: q.questionType,
+            options: q.options || [
+                { id: 'option_1', text: '', isCorrect: false },
+                { id: 'option_2', text: '', isCorrect: false }
+            ],
+            explanation: q.explanation
+        });
+        setIsEditing(true);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
+
+    const handleDelete = async (id: number) => {
+        if (!confirm("Are you sure you want to delete this question?")) return;
+
+        const res = await fetch("/api/questions", {
+            method: "DELETE",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ id }),
+        });
+
+        if (res.ok) {
+            toast.success("Question deleted successfully!");
+            fetchFilteredQuestions();
+        } else {
+            toast.error("Failed to delete question");
+        }
+    };
+
+    const handleCancelEdit = () => {
+        setIsEditing(false);
+        setSelectedQuestion(null);
+        setQuestion({
+            questionText: "",
+            expectedOutput: "",
+            difficulty: "easy",
+            marks: 1,
+            language: "python",
+            jobId: 1,
+            skillId: 1,
+            questionType: 'coding',
+            options: [
+                { id: 'option_1', text: '', isCorrect: false },
+                { id: 'option_2', text: '', isCorrect: false }
+            ]
+        });
     };
 
     return (
@@ -572,7 +692,7 @@ export default function QuestionBankPage() {
                             <div className="p-2 bg-gradient-to-br from-green-500 to-emerald-600 rounded-lg shadow-lg">
                                 <Plus className="h-5 w-5 text-white" />
                             </div>
-                            Add New Question
+                            {isEditing ? 'Edit Question' : 'Add New Question'}
                         </CardTitle>
                         <CardDescription>
                             Create coding challenges or multiple choice questions with rich formatting
@@ -695,14 +815,27 @@ export default function QuestionBankPage() {
                                 </div>
                             </div>
 
-                            <Button
-                                type="submit"
-                                size="lg"
-                                className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-semibold py-6 shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-[1.02]"
-                            >
-                                <Save className="h-5 w-5 mr-2" />
-                                Save {question.questionType.toLocaleLowerCase() === 'coding' ? 'Coding' : 'MCQ'} Question
-                            </Button>
+                            <div className="flex gap-2">
+                                {isEditing && (
+                                    <Button
+                                        type="button"
+                                        onClick={handleCancelEdit}
+                                        variant="outline"
+                                        size="lg"
+                                        className="flex-1"
+                                    >
+                                        Cancel
+                                    </Button>
+                                )}
+                                <Button
+                                    type="submit"
+                                    size="lg"
+                                    className={`${isEditing ? 'flex-1' : 'w-full'} bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-semibold py-6 shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-[1.02]`}
+                                >
+                                    <Save className="h-5 w-5 mr-2" />
+                                    {isEditing ? 'Update' : 'Save'} {question.questionType === 'coding' ? 'Coding' : 'MCQ'} Question
+                                </Button>
+                            </div>
                         </form>
                     </CardContent>
                 </Card>
@@ -798,6 +931,298 @@ export default function QuestionBankPage() {
                             </Card>
                         )}
                     </CardContent>
+                </Card>
+
+                {showQuestions && (
+                    <Card className="border-2 border-dashed border-muted-foreground/20">
+                        <CardHeader>
+                            <CardTitle className="flex items-center gap-2 text-lg">
+                                <Target className="h-5 w-5" />
+                                Filter Questions
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                                <div className="space-y-2">
+                                    <Label className="text-sm">Search Keyword</Label>
+                                    <Input
+                                        placeholder="Search in questions..."
+                                        value={filters.keyword}
+                                        onChange={(e) => setFilters({ ...filters, keyword: e.target.value })}
+                                    />
+                                </div>
+
+                                <div className="space-y-2">
+                                    <Label className="text-sm">Question Type</Label>
+                                    <Select
+                                        value={filters.questionType || "all"}
+                                        onValueChange={(value) => setFilters({ ...filters, questionType: value === "all" ? "" : value })}
+                                    >
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="All Types" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="all">All Types</SelectItem>
+                                            <SelectItem value="coding">Coding</SelectItem>
+                                            <SelectItem value="mcq">MCQ</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+
+                                <div className="space-y-2">
+                                    <Label className="text-sm">Difficulty</Label>
+                                    <Select
+                                        value={filters.difficulty || "all"}
+                                        onValueChange={(value) => setFilters({ ...filters, difficulty: value === "all" ? "" : value })}
+                                    >
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="All Levels" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="all">All Levels</SelectItem>
+                                            <SelectItem value="easy">Easy</SelectItem>
+                                            <SelectItem value="medium">Medium</SelectItem>
+                                            <SelectItem value="hard">Hard</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+
+                                <div className="space-y-2">
+                                    <Label className="text-sm">Language</Label>
+                                    <Select
+                                        value={filters.language || "all"}
+                                        onValueChange={(value) => setFilters({ ...filters, language: value === "all" ? "" : value })}
+                                    >
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="All Languages" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="all">All Languages</SelectItem>
+                                            {Object.entries(languageConfig).map(([key, config]) => (
+                                                <SelectItem key={key} value={key}>
+                                                    {config.emoji} {config.name}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                            </div>
+
+                            <div className="flex gap-2 mt-4">
+                                <Button onClick={handleApplyFilters} className="flex-1">
+                                    Apply Filters
+                                </Button>
+                                <Button onClick={handleClearFilters} variant="outline">
+                                    Clear
+                                </Button>
+                            </div>
+
+                            {(activeFilters.keyword || activeFilters.language || activeFilters.difficulty || activeFilters.questionType) && (
+                                <div className="mt-4 flex flex-wrap gap-2">
+                                    <span className="text-sm text-muted-foreground">Active filters:</span>
+                                    {activeFilters.keyword && (
+                                        <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs">
+                                            Keyword: {activeFilters.keyword}
+                                        </span>
+                                    )}
+                                    {activeFilters.questionType && (
+                                        <span className="px-2 py-1 bg-purple-100 text-purple-700 rounded text-xs">
+                                            Type: {activeFilters.questionType}
+                                        </span>
+                                    )}
+                                    {activeFilters.difficulty && (
+                                        <span className="px-2 py-1 bg-orange-100 text-orange-700 rounded text-xs">
+                                            Difficulty: {activeFilters.difficulty}
+                                        </span>
+                                    )}
+                                    {activeFilters.language && (
+                                        <span className="px-2 py-1 bg-green-100 text-green-700 rounded text-xs">
+                                            Language: {activeFilters.language}
+                                        </span>
+                                    )}
+                                </div>
+                            )}
+                        </CardContent>
+                    </Card>
+                )}
+
+                <Card className="border-2 border-dashed border-muted-foreground/20 hover:border-primary/50 transition-colors">
+                    <CardHeader className="pb-4">
+                        <div className="flex items-center justify-between">
+                            <CardTitle className="flex items-center gap-2 text-xl">
+                                <div className="p-2 bg-gradient-to-br from-purple-500 to-pink-600 rounded-lg shadow-lg">
+                                    <List className="h-5 w-5 text-white" />
+                                </div>
+                                All Questions ({filteredQuestions.length})
+                            </CardTitle>
+                            <Button
+                                onClick={() => setShowQuestions(!showQuestions)}
+                                variant="outline"
+                            >
+                                {showQuestions ? 'Hide' : 'Show'} Questions
+                            </Button>
+                        </div>
+                    </CardHeader>
+
+                    {showQuestions && (
+                        <CardContent className="space-y-4">
+                            {filteredQuestions.length === 0 ? (
+                                <p className="text-center text-muted-foreground py-8">
+                                    {questions.length === 0 ? 'No questions found' : 'No questions match your filters'}
+                                </p>
+                            ) : (
+                                <>
+                                    <div className="text-sm text-muted-foreground">
+                                        Showing {indexOfFirstItem + 1} to {Math.min(indexOfLastItem, filteredQuestions.length)} of {filteredQuestions.length} questions
+                                    </div>
+
+                                    {currentQuestions.map((q) => (
+                                        <Card key={q.id} className="border-2">
+                                            <CardContent className="p-4">
+                                                <div className="space-y-3">
+                                                    {/* Header with badges */}
+                                                    <div className="flex items-start justify-between gap-4">
+                                                        <div className="flex items-center gap-2 flex-wrap">
+                                                            <span className={`px-2 py-1 rounded text-xs font-medium ${q.questionType === 'coding' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300' : 'bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300'
+                                                                }`}>
+                                                                {q.questionType === 'coding' ? 'CODING' : 'MCQ'}
+                                                            </span>
+                                                            <span className={`px-2 py-1 rounded text-xs font-medium ${difficultyConfig[q.difficulty as keyof typeof difficultyConfig]?.bg
+                                                                } ${difficultyConfig[q.difficulty as keyof typeof difficultyConfig]?.color}`}>
+                                                                {q.difficulty.toUpperCase()}
+                                                            </span>
+                                                            {q.language && (
+                                                                <span className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded">
+                                                                    {languageConfig[q.language as keyof typeof languageConfig]?.name}
+                                                                </span>
+                                                            )}
+                                                            <span className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded font-medium">
+                                                                {q.marks} marks
+                                                            </span>
+                                                        </div>
+                                                        <div className="flex gap-2">
+                                                            <Button
+                                                                onClick={() => handleEdit(q)}
+                                                                variant="outline"
+                                                                size="sm"
+                                                            >
+                                                                Edit
+                                                            </Button>
+                                                            <Button
+                                                                onClick={() => handleDelete(q.id!)}
+                                                                variant="destructive"
+                                                                size="sm"
+                                                            >
+                                                                Delete
+                                                            </Button>
+                                                        </div>
+                                                    </div>
+
+                                                    {/* Question Text */}
+                                                    <div className="border-l-4 border-primary/30 pl-4">
+                                                        <div
+                                                            className="prose prose-sm max-w-none dark:prose-invert"
+                                                            dangerouslySetInnerHTML={{ __html: q.questionText }}
+                                                        />
+                                                    </div>
+
+                                                    {/* Expected Output for Coding Questions */}
+                                                    {q.questionType === 'coding' && q.expectedOutput && (
+                                                        <div className="mt-3">
+                                                            <Label className="text-sm font-semibold mb-2 flex items-center gap-2">
+                                                                <Code className="h-4 w-4 text-green-600" />
+                                                                Expected Output / Solution
+                                                            </Label>
+                                                            <div className="bg-muted/50 p-3 rounded-lg border-2 border-dashed mt-2">
+                                                                <pre className="text-xs font-mono whitespace-pre-wrap overflow-x-auto">
+                                                                    {q.expectedOutput}
+                                                                </pre>
+                                                            </div>
+                                                        </div>
+                                                    )}
+
+                                                    {/* MCQ Options */}
+                                                    {q.questionType === 'mcq' && q.options && (
+                                                        <div className="space-y-2 mt-3">
+                                                            <Label className="text-sm font-semibold">Options:</Label>
+                                                            {q.options.map((opt: any, idx: number) => (
+                                                                <div
+                                                                    key={opt.id}
+                                                                    className={`flex items-center gap-2 text-sm p-2 rounded ${opt.isCorrect ? 'bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800' : 'bg-muted/30'
+                                                                        }`}
+                                                                >
+                                                                    <span className="font-bold min-w-[24px]">
+                                                                        {String.fromCharCode(65 + idx)}.
+                                                                    </span>
+                                                                    <span className="flex-1">{opt.text}</span>
+                                                                    {opt.isCorrect && (
+                                                                        <div className="flex items-center gap-1 text-green-600">
+                                                                            <CheckCircle className="h-4 w-4" />
+                                                                            <span className="text-xs font-medium">Correct</span>
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </CardContent>
+                                        </Card>
+                                    ))}
+
+                                    {/* Pagination Controls */}
+                                    {totalPages > 1 && (
+                                        <div className="flex items-center justify-between pt-4 border-t">
+                                            <Button
+                                                onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                                                disabled={currentPage === 1}
+                                                variant="outline"
+                                                size="sm"
+                                            >
+                                                Previous
+                                            </Button>
+
+                                            <div className="flex items-center gap-2">
+                                                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                                                    let pageNum;
+                                                    if (totalPages <= 5) {
+                                                        pageNum = i + 1;
+                                                    } else if (currentPage <= 3) {
+                                                        pageNum = i + 1;
+                                                    } else if (currentPage >= totalPages - 2) {
+                                                        pageNum = totalPages - 4 + i;
+                                                    } else {
+                                                        pageNum = currentPage - 2 + i;
+                                                    }
+
+                                                    return (
+                                                        <Button
+                                                            key={pageNum}
+                                                            onClick={() => setCurrentPage(pageNum)}
+                                                            variant={currentPage === pageNum ? "default" : "outline"}
+                                                            size="sm"
+                                                            className="w-10"
+                                                        >
+                                                            {pageNum}
+                                                        </Button>
+                                                    );
+                                                })}
+                                            </div>
+
+                                            <Button
+                                                onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                                                disabled={currentPage === totalPages}
+                                                variant="outline"
+                                                size="sm"
+                                            >
+                                                Next
+                                            </Button>
+                                        </div>
+                                    )}
+                                </>
+                            )}
+                        </CardContent>
+                    )}
                 </Card>
             </div>
         </AdminLayout>

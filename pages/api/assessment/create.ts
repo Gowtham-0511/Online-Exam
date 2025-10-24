@@ -23,6 +23,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         questionConfig,
         allowedUsers,
         batchSchedules,
+        assignmentType,
+        selectedUserEmails,
     } = req.body;
 
     console.log(batchSchedules);
@@ -33,9 +35,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     try {
         const checkQuery = `
-        SELECT COUNT(*) AS count
-        FROM "Assessment"
-        WHERE title = $1
+            SELECT COUNT(*) AS count
+            FROM "Assessment"
+            WHERE title = $1
         `;
         const checkResult = await pool.query(checkQuery, [examId]);
 
@@ -43,6 +45,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             return res.status(409).json({ error: "Exam with this title already exists" });
         }
 
+        // First, create the assessment (this should always happen)
         const insertQuery = `
             INSERT INTO "Assessment" (
                 title,
@@ -55,12 +58,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                 "questionConfig",
                 questions,
                 "allowedUsers",
-                "sqlCredentialId"
+                "sqlCredentialId",
+                "assignmentType"
             )
             VALUES (
                 $1, $2, $3, $4, $5,
                 $6, $7, $8, $9, $10, 
-                $11
+                $11, $12
             )
             RETURNING id;
         `;
@@ -77,14 +81,31 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             JSON.stringify(questions || []),
             allowedUsers?.length ? JSON.stringify(allowedUsers) : null,
             req.body.sqlCredentialId || null,
+            assignmentType || 'batch',
         ]);
 
         const assessmentId = result.rows[0].id;
 
-        if (batchSchedules && batchSchedules.length > 0) {
+        // Then, handle assignments based on type
+        if (assignmentType === 'users' && selectedUserEmails && selectedUserEmails.length > 0) {
+            const userInsertQuery = `
+                INSERT INTO "AssessmentUserMapping" (
+                    "assessmentId", "userEmail", "createdAt"
+                )
+                VALUES ($1, $2, $3)
+            `;
+
+            for (const email of selectedUserEmails) {
+                await pool.query(userInsertQuery, [
+                    assessmentId,
+                    email,
+                    new Date().toISOString()
+                ]);
+            }
+        } else if (assignmentType === 'batch' && batchSchedules && batchSchedules.length > 0) {
             const batchInsertQuery = `
                 INSERT INTO "AssessmentBatchMapping" (
-                "assessmentId", "batchId", "startTime", "endTime"
+                    "assessmentId", "batchId", "startTime", "endTime"
                 )
                 VALUES ($1, $2, $3, $4)
             `;

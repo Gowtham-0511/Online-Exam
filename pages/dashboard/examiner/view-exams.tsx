@@ -40,6 +40,10 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Skeleton } from "@/components/ui/skeleton";
 import ExaminerLayout from "./ExaminerLayout";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
+import { X } from "lucide-react";
 
 interface Exam {
     id: string;
@@ -49,6 +53,8 @@ interface Exam {
     createdAt: string;
     questionsCount?: number;
     status?: "draft" | "published" | "archived";
+    isExamProctored: boolean;
+    assignmentType: string;
 }
 
 export default function ViewExamsPage() {
@@ -57,6 +63,18 @@ export default function ViewExamsPage() {
     const [loading, setLoading] = useState(true);
     const [deletingId, setDeletingId] = useState<string | null>(null);
     const router = useRouter();
+
+    const [editingExam, setEditingExam] = useState<Exam | null>(null);
+    const [editDialogOpen, setEditDialogOpen] = useState(false);
+    const [editForm, setEditForm] = useState({
+        duration: 0,
+        isExamProctored: false,
+        assignmentType: '',
+        userEmails: [] as string[],
+        batchAssignments: [] as any[]
+    });
+    const [loadingEdit, setLoadingEdit] = useState(false);
+    const [userEmailInput, setUserEmailInput] = useState('');
 
     useEffect(() => {
         const fetchExams = async () => {
@@ -104,13 +122,95 @@ export default function ViewExamsPage() {
         }
     };
 
-    const handleEdit = (examId: string) => {
-        console.log('Edit exam with ID:', examId);
-        toast.success('Edit functionality coming soon!');
+    const handleEdit = async (examId: string) => {
+        const exam = exams.find(e => e.id === examId);
+        if (!exam) return;
+
+        setEditingExam(exam);
+        setEditDialogOpen(true);
+        await fetchExamDetails(exam.title); // Pass title instead of id
     };
 
     const handleCreateNew = () => {
         router.push('/dashboard/examiner');
+    };
+
+    const handleSaveEdit = async () => {
+        if (!editingExam) return;
+
+        try {
+            setLoadingEdit(true);
+
+            // Update exam details using title
+            const examRes = await fetch(`/api/assessment/${encodeURIComponent(editingExam.title)}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    duration: editForm.duration,
+                    isExamProctored: editForm.isExamProctored,
+                    assignmentType: editForm.assignmentType
+                })
+            });
+
+            if (!examRes.ok) throw new Error('Failed to update exam');
+
+            const updatedExam = await examRes.json();
+
+            // Update assignments using the actual ID from response
+            const assignmentRes = await fetch('/api/assessment/assignments', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    assessmentId: updatedExam.id, // Use the ID from the response
+                    type: 'both',
+                    userEmails: editForm.userEmails,
+                    batchAssignments: editForm.batchAssignments
+                })
+            });
+
+            if (!assignmentRes.ok) throw new Error('Failed to update assignments');
+
+            toast.success("Exam updated successfully");
+            setEditDialogOpen(false);
+            setEditingExam(null);
+
+            // Refresh exams list
+            const res = await fetch(`/api/assessment/by-user?email=${session?.user?.email}`);
+            const data = await res.json();
+            setExams(data);
+
+        } catch (error) {
+            console.error("Update error:", error);
+            toast.error("Failed to update exam");
+        } finally {
+            setLoadingEdit(false);
+        }
+    };
+
+    const fetchExamDetails = async (examTitle: string) => {
+        try {
+            setLoadingEdit(true);
+            const res = await fetch(`/api/assessment/${encodeURIComponent(examTitle)}`);
+
+            if (!res.ok) throw new Error('Failed to fetch exam details');
+
+            const data = await res.json();
+
+            setEditForm({
+                duration: data.exam.duration,
+                isExamProctored: data.exam.isExamProctored,
+                assignmentType: data.exam.assignmentType,
+                userEmails: data.userAssignments.map((u: any) => u.userEmail),
+                batchAssignments: data.batchAssignments
+            });
+
+            return data;
+        } catch (error) {
+            console.error("Failed to fetch exam details", error);
+            toast.error("Failed to load exam details");
+        } finally {
+            setLoadingEdit(false);
+        }
     };
 
     const formatDate = (dateString: string) => {
@@ -129,6 +229,30 @@ export default function ViewExamsPage() {
             hour: '2-digit',
             minute: '2-digit'
         });
+    };
+
+    const addUserEmail = () => {
+        if (userEmailInput.trim() && !editForm.userEmails.includes(userEmailInput.trim())) {
+            setEditForm(prev => ({
+                ...prev,
+                userEmails: [...prev.userEmails, userEmailInput.trim()]
+            }));
+            setUserEmailInput('');
+        }
+    };
+
+    const removeUserEmail = (email: string) => {
+        setEditForm(prev => ({
+            ...prev,
+            userEmails: prev.userEmails.filter(e => e !== email)
+        }));
+    };
+
+    const removeBatchAssignment = (index: number) => {
+        setEditForm(prev => ({
+            ...prev,
+            batchAssignments: prev.batchAssignments.filter((_, i) => i !== index)
+        }));
     };
 
     if (loading) {
@@ -168,8 +292,134 @@ export default function ViewExamsPage() {
         );
     }
 
+    const EditDialog = () => (
+        <AlertDialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+            <AlertDialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+                <AlertDialogHeader>
+                    <AlertDialogTitle>Edit Exam: {editingExam?.title}</AlertDialogTitle>
+                    <AlertDialogDescription>
+                        Update exam settings and manage assignments
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+
+                <div className="space-y-6 py-4">
+                    {/* Duration */}
+                    <div className="space-y-2">
+                        <Label htmlFor="duration">Duration (minutes)</Label>
+                        <Input
+                            id="duration"
+                            type="number"
+                            value={editForm.duration}
+                            onChange={(e) => setEditForm(prev => ({ ...prev, duration: parseInt(e.target.value) || 0 }))}
+                            min="1"
+                        />
+                    </div>
+
+                    {/* Is Proctored */}
+                    <div className="flex items-center justify-between">
+                        <Label htmlFor="proctored">Enable Proctoring</Label>
+                        <Switch
+                            id="proctored"
+                            checked={editForm.isExamProctored}
+                            onCheckedChange={(checked) => setEditForm(prev => ({ ...prev, isExamProctored: checked }))}
+                        />
+                    </div>
+
+                    {/* Assignment Type */}
+                    <div className="space-y-2">
+                        <Label htmlFor="assignmentType">Assignment Type</Label>
+                        <select
+                            id="assignmentType"
+                            value={editForm.assignmentType}
+                            onChange={(e) => setEditForm(prev => ({ ...prev, assignmentType: e.target.value }))}
+                            className="w-full p-2 border rounded-md"
+                        >
+                            <option value="user">User</option>
+                            <option value="batch">Batch</option>
+                            <option value="both">Both</option>
+                        </select>
+                    </div>
+
+                    {/* User Assignments */}
+                    {(editForm.assignmentType === 'user' || editForm.assignmentType === 'both') && (
+                        <div className="space-y-2">
+                            <Label>Assigned Users</Label>
+                            <div className="flex gap-2">
+                                <Input
+                                    placeholder="Enter user email"
+                                    value={userEmailInput}
+                                    onChange={(e) => setUserEmailInput(e.target.value)}
+                                    onKeyPress={(e) => e.key === 'Enter' && addUserEmail()}
+                                />
+                                <Button onClick={addUserEmail} size="sm">Add</Button>
+                            </div>
+                            <div className="flex flex-wrap gap-2 mt-2">
+                                {editForm.userEmails.map((email) => (
+                                    <Badge key={email} variant="secondary" className="pl-2 pr-1">
+                                        {email}
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            className="h-4 w-4 p-0 ml-1"
+                                            onClick={() => removeUserEmail(email)}
+                                        >
+                                            <X className="h-3 w-3" />
+                                        </Button>
+                                    </Badge>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Batch Assignments */}
+                    {(editForm.assignmentType === 'batch' || editForm.assignmentType === 'both') && (
+                        <div className="space-y-2">
+                            <Label>Batch Assignments</Label>
+                            {editForm.batchAssignments.length > 0 ? (
+                                <div className="space-y-2">
+                                    {editForm.batchAssignments.map((batch, index) => (
+                                        <div key={index} className="flex items-center justify-between p-2 border rounded">
+                                            <div className="text-sm">
+                                                <div>Batch ID: {batch.batchId}</div>
+                                                <div className="text-xs text-muted-foreground">
+                                                    {new Date(batch.startTime).toLocaleString()} - {new Date(batch.endTime).toLocaleString()}
+                                                </div>
+                                            </div>
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                onClick={() => removeBatchAssignment(index)}
+                                            >
+                                                <X className="h-4 w-4" />
+                                            </Button>
+                                        </div>
+                                    ))}
+                                </div>
+                            ) : (
+                                <p className="text-sm text-muted-foreground">No batch assignments</p>
+                            )}
+                        </div>
+                    )}
+                </div>
+
+                <AlertDialogFooter>
+                    <AlertDialogCancel onClick={() => {
+                        setEditDialogOpen(false);
+                        setEditingExam(null);
+                    }}>
+                        Cancel
+                    </AlertDialogCancel>
+                    <AlertDialogAction onClick={handleSaveEdit} disabled={loadingEdit}>
+                        {loadingEdit ? "Saving..." : "Save Changes"}
+                    </AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
+    );
+
     return (
         <ExaminerLayout>
+            <EditDialog />
             <div className="space-y-6">
                 {/* Header Section */}
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">

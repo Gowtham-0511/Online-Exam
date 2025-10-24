@@ -57,6 +57,12 @@ const ProctoringMonitor = memo(({
 
     const [isMinimized, setIsMinimized] = useState(false);
 
+    const [detectionDebug, setDetectionDebug] = useState({
+        lastFaceCount: 0,
+        lastObjectDetected: '',
+        lastDetectionTime: ''
+    });
+
     const audioViolationsRef = useRef(0);
 
     // Initialize camera
@@ -92,41 +98,63 @@ const ProctoringMonitor = memo(({
         if (!isExamProctored || !videoReady) return;
 
         const initializeDetection = async () => {
-            try {
-                const vision = await FilesetResolver.forVisionTasks(
-                    "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm"
-                );
+            let retries = 3;
+            while (retries > 0) {
+                try {
+                    console.log("🔄 Initializing MediaPipe detection...");
 
-                const faceDetector = await FaceDetector.createFromOptions(vision, {
-                    baseOptions: {
-                        modelAssetPath: "https://storage.googleapis.com/mediapipe-models/face_detector/blaze_face_short_range/float16/1/blaze_face_short_range.tflite",
-                        delegate: "GPU"
-                    },
-                    runningMode: "VIDEO",
-                    minDetectionConfidence: 0.5,
-                    minSuppressionThreshold: 0.3
-                });
+                    const vision = await FilesetResolver.forVisionTasks(
+                        "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm"
+                    );
 
-                const objectDetector = await ObjectDetector.createFromOptions(vision, {
-                    baseOptions: {
-                        modelAssetPath: "https://storage.googleapis.com/mediapipe-models/object_detector/efficientdet_lite0/float16/1/efficientdet_lite0.tflite",
-                        delegate: "GPU"
-                    },
-                    runningMode: "VIDEO",
-                    scoreThreshold: 0.5,
-                    maxResults: 5
-                });
+                    console.log("✅ Vision tasks loaded, creating detectors...");
 
-                setFaceDetector(faceDetector);
-                setObjectDetector(objectDetector);
-                setFaceDetectionActive(true);
-            } catch (error) {
-                console.error("Failed to initialize MediaPipe detection:", error);
-                setCameraError("AI detection unavailable - continuing with basic monitoring");
+                    const faceDetector = await FaceDetector.createFromOptions(vision, {
+                        baseOptions: {
+                            modelAssetPath: "https://storage.googleapis.com/mediapipe-models/face_detector/blaze_face_short_range/float16/1/blaze_face_short_range.tflite",
+                            delegate: "GPU"
+                        },
+                        runningMode: "VIDEO",
+                        minDetectionConfidence: 0.5,
+                        minSuppressionThreshold: 0.3
+                    });
+
+                    console.log("✅ Face detector created");
+
+                    const objectDetector = await ObjectDetector.createFromOptions(vision, {
+                        baseOptions: {
+                            modelAssetPath: "https://storage.googleapis.com/mediapipe-models/object_detector/efficientdet_lite0/float16/1/efficientdet_lite0.tflite",
+                            delegate: "GPU"
+                        },
+                        runningMode: "VIDEO",
+                        scoreThreshold: 0.3,
+                        maxResults: 10
+                    });
+
+                    console.log("✅ Object detector created");
+
+                    setFaceDetector(faceDetector);
+                    setObjectDetector(objectDetector);
+                    setFaceDetectionActive(true);
+
+                    console.log("✅ All detectors initialized successfully");
+                    return; // Success, exit retry loop
+
+                } catch (error) {
+                    retries--;
+                    console.error(`❌ Detection initialization failed. Retries left: ${retries}`, error);
+
+                    if (retries === 0) {
+                        setCameraError("AI detection failed to initialize - exam cannot proceed");
+                        onDisqualification("Proctoring system initialization failed");
+                    } else {
+                        await new Promise(resolve => setTimeout(resolve, 2000));
+                    }
+                }
             }
         };
 
-        setTimeout(initializeDetection, 2000);
+        setTimeout(initializeDetection, 1000);  // was 2000
 
         return () => {
             faceDetector?.close?.();
@@ -189,10 +217,12 @@ const ProctoringMonitor = memo(({
             try {
                 const detections = faceDetector.detectForVideo(video, performance.now());
 
+                // CHANGE: Make the thresholds more strict and immediate
                 if (detections.detections.length === 0) {
                     setNoFaceDetectedCount(prev => {
                         const newCount = prev + 1;
-                        if (newCount >= 10) {
+                        // CHANGE: Reduce from 10 to 3 consecutive detections (3 seconds)
+                        if (newCount >= 3) {
                             onDisqualification("No face detected for extended period");
                         }
                         return newCount;
@@ -200,15 +230,23 @@ const ProctoringMonitor = memo(({
                 } else if (detections.detections.length > 1) {
                     setMultipleFacesCount(prev => {
                         const newCount = prev + 1;
-                        if (newCount >= 5) {
+                        // CHANGE: Make immediate - was 5, now 2
+                        if (newCount >= 2) {
                             onDisqualification("Multiple faces detected");
                         }
                         return newCount;
                     });
                 } else {
+                    // IMPORTANT: Reset counters only when exactly 1 face
                     setNoFaceDetectedCount(0);
                     setMultipleFacesCount(0);
                 }
+
+                setDetectionDebug(prev => ({
+                    ...prev,
+                    lastFaceCount: detections.detections.length,
+                    lastDetectionTime: new Date().toLocaleTimeString()
+                }));
 
                 drawDetections(detections.detections);
             } catch (error) {
@@ -216,7 +254,7 @@ const ProctoringMonitor = memo(({
             }
         };
 
-        const interval = setInterval(detectFaces, 1000);
+        const interval = setInterval(detectFaces, 500);
         return () => clearInterval(interval);
     }, [faceDetectionActive, faceDetector, examStarted, videoReady, onDisqualification]);
 
@@ -232,42 +270,69 @@ const ProctoringMonitor = memo(({
 
             try {
                 const detections = objectDetector.detectForVideo(video, performance.now());
-                const suspiciousObjects = ['cell phone', 'mobile phone', 'phone', 'smartphone',
-                    'book', 'laptop', 'computer', 'tablet', 'keyboard'];
+
+                // CHANGE: Expanded and more specific object list
+                const suspiciousObjects = [
+                    'cell phone', 'mobile phone', 'phone', 'smartphone', 'telephone',
+                    'book', 'laptop', 'computer', 'tablet', 'keyboard', 'mouse',
+                    'monitor', 'screen', 'notebook', 'paper', 'headphones', 'earphones',
+                    'smartwatch', 'watch', 'calculator'
+                ];
 
                 let foundSuspicious = false;
                 let suspiciousItem = '';
+                const detectedItems: string[] = [];
 
                 detections.detections.forEach(detection => {
                     detection.categories.forEach(category => {
-                        if (category.score > 0.6) {
+                        // CHANGE: Lower confidence threshold
+                        if (category.score > 0.3) {  // was 0.6
                             const objectName = category.categoryName.toLowerCase();
-                            if (suspiciousObjects.some(s => objectName.includes(s) || s.includes(objectName))) {
+                            detectedItems.push(`${objectName} (${(category.score * 100).toFixed(0)}%)`);
+
+                            // Check for suspicious objects
+                            const isSuspicious = suspiciousObjects.some(s =>
+                                objectName.includes(s) || s.includes(objectName)
+                            );
+
+                            if (isSuspicious) {
                                 foundSuspicious = true;
                                 suspiciousItem = objectName;
+                                console.log(`⚠️ Suspicious object detected: ${objectName} with confidence ${(category.score * 100).toFixed(1)}%`);
                             }
                         }
                     });
                 });
 
+                // Update detected objects list
+                setDetectedObjects(detectedItems);
+
+                setDetectionDebug(prev => ({
+                    ...prev,
+                    lastObjectDetected: suspiciousItem || 'none',
+                    lastDetectionTime: new Date().toLocaleTimeString()
+                }));
+
                 if (foundSuspicious) {
                     setLastSuspiciousActivity(suspiciousItem);
                     setSuspiciousObjectCount(prev => {
                         const newCount = prev + 1;
-                        if (newCount >= 3) {
+                        // CHANGE: Immediate disqualification on first detection
+                        if (newCount >= 1) {  // was 3
                             onDisqualification(`Suspicious object detected: ${suspiciousItem}`);
                         }
                         return newCount;
                     });
                 } else {
-                    setSuspiciousObjectCount(0);
+                    // CHANGE: Only reset if nothing suspicious for 2 consecutive checks
+                    setSuspiciousObjectCount(prev => Math.max(0, prev - 1));
                 }
             } catch (error) {
                 console.error("Object detection error:", error);
             }
         };
 
-        const interval = setInterval(detectObjects, 1000);
+        const interval = setInterval(detectObjects, 500);
         return () => clearInterval(interval);
     }, [faceDetectionActive, objectDetector, examStarted, videoReady, onDisqualification]);
 
