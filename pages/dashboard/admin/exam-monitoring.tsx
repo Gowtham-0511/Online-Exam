@@ -185,18 +185,33 @@ export default function ExamMonitoring() {
         return () => clearInterval(interval);
     }, [autoRefresh]);
 
-    const stats = useMemo(() => ({
-        totalActive: activeSessions.filter(s => s.status === 'active').length,
-        averageProgress: Math.round(
-            activeSessions.reduce((acc, s) => acc + (s.questionsAttempted / s.totalQuestions * 100), 0) /
-            (activeSessions.length || 1)
-        ),
-        totalCodeRuns: questionAnalytics.reduce((acc, q) => acc + q.codeRuns, 0),
-        averageTimePerQuestion: Math.round(
+    const stats = useMemo(() => {
+        let totalCodeRuns = 0;
+        questionAnalytics.forEach(q => {
+            totalCodeRuns += Number(q.codeRuns);
+        });
+
+        let totalActive = activeSessions.filter(s => s.status === 'active').length;
+
+        let averageProgress = Math.round(
+            activeSessions.reduce(
+                (acc, s) => acc + (s.questionsAttempted / s.totalQuestions * 100),
+                0
+            ) / (activeSessions.length || 1)
+        );
+
+        let averageTimePerQuestion = Math.round(
             questionAnalytics.reduce((acc, q) => acc + q.averageTime, 0) /
             (questionAnalytics.length || 1)
-        )
-    }), [activeSessions, questionAnalytics]);
+        );
+
+        return {
+            totalActive,
+            averageProgress,
+            totalCodeRuns,
+            averageTimePerQuestion
+        };
+    }, [activeSessions, questionAnalytics]);
 
     const filteredSessions = useMemo(() => {
         return activeSessions.filter(session => {

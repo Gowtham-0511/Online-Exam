@@ -4,6 +4,9 @@ import { decrypt } from '@/lib/encryption';
 import { Pool } from 'pg';
 import sql from 'mssql';
 
+const schemaCache = new Map<string, { data: any; timestamp: number }>();
+const SCHEMA_CACHE_TTL = 10 * 60 * 1000;
+
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
     if (req.method !== 'GET') {
         return res.status(405).json({ message: 'Method not allowed' });
@@ -15,11 +18,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         return res.status(400).json({ message: 'examId is required' });
     }
 
+    const cached = schemaCache.get(examId);
+    if (cached && Date.now() - cached.timestamp < SCHEMA_CACHE_TTL) {
+        res.setHeader('Cache-Control', 'public, s-maxage=600');
+        return res.status(200).json(cached.data);
+    }
+
     let client;
     try {
         client = await pool.connect();
 
-        // First, get the sqlCredentialId from the Assessment table
         const assessmentResult = await client.query(
             'SELECT "sqlCredentialId" FROM "Assessment" WHERE title = $1',
             [examId]
@@ -35,7 +43,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             return res.status(404).json({ message: 'No SQL credentials configured for this exam' });
         }
 
-        // Now fetch the credential using the ID
         const result = await client.query(
             'SELECT * FROM sql_credentials WHERE id = $1',
             [sqlCredentialId]
@@ -63,12 +70,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             return res.status(400).json({ message: 'Unknown server type' });
         }
 
-        return res.status(200).json({
+        const response = {
             schemaData,
             relationships,
             serverType: credential.server_type
-        });
+        };
 
+        // Cache the result
+        schemaCache.set(examId, { data: response, timestamp: Date.now() });
+
+        res.setHeader('Cache-Control', 'public, s-maxage=600');
+        return res.status(200).json(response);
     } catch (error: any) {
         console.error('Error getting schema:', error);
         return res.status(500).json({

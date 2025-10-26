@@ -44,6 +44,24 @@ declare global {
     }
 }
 
+const shuffleArrayWithSeed = (array: any, seed: any) => {
+    const seededRandom = (seed: number) => {
+        const x = Math.sin(seed) * 10000;
+        return x - Math.floor(x);
+    };
+
+    const shuffled = [...array];
+    let currentSeed = seed;
+
+    for (let i = shuffled.length - 1; i > 0; i--) {
+        currentSeed = (currentSeed * 9301 + 49297) % 233280;
+        const j = Math.floor(seededRandom(currentSeed) * (i + 1));
+        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+
+    return shuffled;
+};
+
 export default function ExamPage() {
     const [exam, setExam] = useState<any>(null);
     const [code, setCode] = useState("");
@@ -60,6 +78,8 @@ export default function ExamPage() {
     const [sqlResult, setSqlResult] = useState<{ columns: string[]; rows: Record<string, any>[] } | null>(null);
     const [shuffledQuestions, setShuffledQuestions] = useState<any[]>([]);
     const [sidebarOpen, setSidebarOpen] = useState(true);
+
+    const [loading, setLoading] = useState(true);
 
     const [editorTheme, setEditorTheme] = useState<"light" | "dark">("dark");
 
@@ -346,24 +366,6 @@ export default function ExamPage() {
         return !!(answers[index] && answers[index].trim() !== "");
     }, [answers, mcqAnswers, exam]);
 
-    const shuffleArrayWithSeed = (array: any, seed: any) => {
-        const seededRandom = (seed: number) => {
-            const x = Math.sin(seed) * 10000;
-            return x - Math.floor(x);
-        };
-
-        const shuffled = [...array];
-        let currentSeed = seed;
-
-        for (let i = shuffled.length - 1; i > 0; i--) {
-            currentSeed = (currentSeed * 9301 + 49297) % 233280;
-            const j = Math.floor(seededRandom(currentSeed) * (i + 1));
-            [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-        }
-
-        return shuffled;
-    };
-
     useEffect(() => {
         if (theme === "dark") {
             document.documentElement.classList.add("dark");
@@ -376,56 +378,51 @@ export default function ExamPage() {
         const fetchExam = async () => {
             if (!examId) return;
 
-            const response = await fetch(`/api/assessment/${examId}`);
-            if (!response.ok) {
-                alert("Exam not found");
-                router.push("/dashboard/attender");
-                return;
-            }
-            const data = await response.json();
+            try {
+                setLoading(true); // Add this state if missing
 
-            if (data && data.language === 'python') {
-                const filesResponse = await fetch(`/api/exam-files/${examId}`);
-                if (filesResponse.ok) {
-                    const filesData = await filesResponse.json();
-                    setExamFiles(filesData.files || []);
+                // Fetch exam data first (critical path)
+                const response = await fetch(`/api/assessment/${examId}`);
+                if (!response.ok) {
+                    toast.error("Exam not found");
+                    router.push("/dashboard/attender");
+                    return;
                 }
-            }
+                const data = await response.json();
 
-            if (data && data.language === 'sql') {
-                try {
-                    const schemaResponse = await fetch(`/api/sql/er-diagram?examId=${examId}`);
-                    if (schemaResponse.ok) {
-                        const schemaResult = await schemaResponse.json();
-                        setSchemaData(schemaResult);
-                    }
-                } catch (error) {
-                    console.error('Failed to fetch schema:', error);
-                }
-            }
-
-
-            if (data) {
+                // Set exam data immediately so UI can render
                 const seed = examId.toString().split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
                 const shuffled = shuffleArrayWithSeed(data.questions || [], seed);
                 setExam({ ...data, questions: shuffled });
                 setShuffledQuestions(shuffled);
                 setTimeLeft(data.duration * 60);
-            } else {
-                alert("Exam not found");
+                setAnswers(new Array(shuffled.length).fill(""));
+                setMcqAnswers({});
+
+                // Fetch additional data in parallel (non-blocking)
+                Promise.all([
+                    data.language === 'python'
+                        ? fetch(`/api/exam-files/${examId}`).then(r => r.ok ? r.json() : { files: [] })
+                        : Promise.resolve({ files: [] }),
+                    data.language === 'sql'
+                        ? fetch(`/api/sql/er-diagram?examId=${examId}`).then(r => r.ok ? r.json() : null)
+                        : Promise.resolve(null)
+                ]).then(([filesData, schemaResult]) => {
+                    if (filesData.files) setExamFiles(filesData.files);
+                    if (schemaResult) setSchemaData(schemaResult);
+                }).catch(err => console.error('Error fetching additional data:', err));
+
+            } catch (error) {
+                console.error('Error fetching exam:', error);
+                toast.error("Failed to load exam");
                 router.push("/dashboard/attender");
+            } finally {
+                setLoading(false);
             }
         };
 
         fetchExam();
     }, [examId]);
-
-    useEffect(() => {
-        if (exam?.questions) {
-            setAnswers(new Array(exam.questions.length).fill(""));
-            setMcqAnswers({});
-        }
-    }, [exam]);
 
     useEffect(() => {
         const onFsChange = () => {
@@ -953,7 +950,6 @@ export default function ExamPage() {
             const question = shuffledQuestions[index];
             const isMcq = question?.type === 'mcq';
 
-            // Get the actual option text for MCQ
             let mcqAnswer = '';
             if (isMcq && mcqAnswers[index] !== undefined) {
                 const selectedOptionIndex = mcqAnswers[index];
@@ -987,29 +983,71 @@ export default function ExamPage() {
                 }),
             });
 
-            const finalResult = await result.json();
+            // Handle both 200 and 202 responses
+            if (result.ok || result.status === 202) {
+                const data = await result.json();
 
-            // Clear saved state after successful submission
-            clearSavedState();
+                // Clear saved state
+                clearSavedState();
 
-            fetch("https://wizard-aiautomate.dopplr.ai/webhook/feedback", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    output: answersWithQuestionIds,
-                    id: finalResult.submissionId
-                })
-            });
+                // Show success message
+                toast.success('Exam submitted successfully!');
 
-            await cleanupExamEnvironment();
-            setIsSubmitting(false);
-            router.push("/dashboard/attender");
+                // Cleanup and redirect
+                await cleanupExamEnvironment();
+                setIsSubmitting(false);
+
+                // Small delay to show success message
+                setTimeout(() => {
+                    router.push("/dashboard/attender");
+                }, 1000);
+
+            } else {
+                throw new Error('Submission failed');
+            }
 
         } catch (error) {
             console.error("Submission failed:", error);
-            toast.error('Submission failed. Your answers are saved locally.');
-            hasSubmittedRef.current = false;
-            setIsSubmitting(false);
+
+            // Don't reset hasSubmittedRef - keep trying
+            toast.error('Submission failed. Retrying...');
+
+            // Retry once after 2 seconds
+            setTimeout(async () => {
+                try {
+                    const retryResult = await fetch("/api/submissions", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                            examId: examIdStr,
+                            email,
+                            userName,
+                            answers,
+                            answersWithQuestionIds,
+                            disqualified: isDisqualified,
+                            code,
+                        }),
+                    });
+
+                    if (retryResult.ok || retryResult.status === 202) {
+                        clearSavedState();
+                        toast.success('Exam submitted successfully!');
+                        await cleanupExamEnvironment();
+                        router.push("/dashboard/attender");
+                    } else {
+                        // Final fallback - save locally
+                        toast.error('Could not submit online. Your answers are saved locally.');
+                        saveToLocalStorage();
+                        hasSubmittedRef.current = false;
+                    }
+                } catch (retryError) {
+                    toast.error('Could not submit. Your answers are saved locally.');
+                    saveToLocalStorage();
+                    hasSubmittedRef.current = false;
+                } finally {
+                    setIsSubmitting(false);
+                }
+            }, 2000);
         }
     };
 
@@ -1157,7 +1195,7 @@ export default function ExamPage() {
         toast.success(`${label} copied to clipboard!`);
     };
 
-    if (!exam) {
+    if (!exam || loading) {
         return (
             <div className="h-screen w-screen bg-background flex items-center justify-center">
                 <Card className="w-full max-w-md">

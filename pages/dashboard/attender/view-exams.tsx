@@ -680,6 +680,74 @@ const ViewExams: React.FC = () => {
 
                                     <Separator className="my-6" />
 
+                                    <div className="space-y-4">
+                                        <h4 className="font-bold text-lg flex items-center gap-2">
+                                            <FileText className="h-5 w-5 text-blue-600" />
+                                            Terms & Conditions
+                                        </h4>
+
+                                        <div className="p-4 rounded-xl bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700">
+                                            <div className="space-y-3 text-sm text-muted-foreground">
+                                                {examData.isExamProctored ? (
+                                                    <>
+                                                        <div className="flex items-start gap-2">
+                                                            <div className="w-1.5 h-1.5 rounded-full bg-blue-600 mt-1.5 flex-shrink-0" />
+                                                            <p>Your exam session will be <strong className="text-foreground">continuously monitored</strong> via camera and microphone for security purposes.</p>
+                                                        </div>
+                                                        <div className="flex items-start gap-2">
+                                                            <div className="w-1.5 h-1.5 rounded-full bg-blue-600 mt-1.5 flex-shrink-0" />
+                                                            <p>Any attempt to <strong className="text-foreground">switch tabs, minimize the window, or exit full-screen</strong> will be recorded and may result in exam termination.</p>
+                                                        </div>
+                                                        <div className="flex items-start gap-2">
+                                                            <div className="w-1.5 h-1.5 rounded-full bg-blue-600 mt-1.5 flex-shrink-0" />
+                                                            <p>Use of <strong className="text-foreground">unauthorized resources, communication devices, or external assistance</strong> is strictly prohibited.</p>
+                                                        </div>
+                                                        <div className="flex items-start gap-2">
+                                                            <div className="w-1.5 h-1.5 rounded-full bg-blue-600 mt-1.5 flex-shrink-0" />
+                                                            <p>All suspicious activities will be <strong className="text-foreground">flagged and reviewed</strong> by the exam administrator.</p>
+                                                        </div>
+                                                        <div className="flex items-start gap-2">
+                                                            <div className="w-1.5 h-1.5 rounded-full bg-blue-600 mt-1.5 flex-shrink-0" />
+                                                            <p>By proceeding, you acknowledge that <strong className="text-foreground">recording data will be stored</strong> and used for evaluation purposes.</p>
+                                                        </div>
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <div className="flex items-start gap-2">
+                                                            <div className="w-1.5 h-1.5 rounded-full bg-green-600 mt-1.5 flex-shrink-0" />
+                                                            <p>You must remain in <strong className="text-foreground">full-screen mode</strong> throughout the entire exam duration.</p>
+                                                        </div>
+                                                        <div className="flex items-start gap-2">
+                                                            <div className="w-1.5 h-1.5 rounded-full bg-green-600 mt-1.5 flex-shrink-0" />
+                                                            <p>All answers must be <strong className="text-foreground">your own work</strong>. Plagiarism or cheating will result in disqualification.</p>
+                                                        </div>
+                                                        <div className="flex items-start gap-2">
+                                                            <div className="w-1.5 h-1.5 rounded-full bg-green-600 mt-1.5 flex-shrink-0" />
+                                                            <p>Once started, the <strong className="text-foreground">timer cannot be paused</strong>. Ensure you have adequate time before beginning.</p>
+                                                        </div>
+                                                        <div className="flex items-start gap-2">
+                                                            <div className="w-1.5 h-1.5 rounded-full bg-green-600 mt-1.5 flex-shrink-0" />
+                                                            <p>Make sure you have a <strong className="text-foreground">stable internet connection</strong> to avoid submission issues.</p>
+                                                        </div>
+                                                        <div className="flex items-start gap-2">
+                                                            <div className="w-1.5 h-1.5 rounded-full bg-green-600 mt-1.5 flex-shrink-0" />
+                                                            <p>By proceeding, you agree to complete the exam <strong className="text-foreground">honestly and independently</strong>.</p>
+                                                        </div>
+                                                    </>
+                                                )}
+                                            </div>
+                                        </div>
+
+                                        <div className="flex items-center gap-2 p-3 rounded-lg bg-yellow-50 dark:bg-yellow-950/30 border border-yellow-200 dark:border-yellow-800">
+                                            <Info className="h-4 w-4 text-yellow-600 dark:text-yellow-400 flex-shrink-0" />
+                                            <p className="text-xs text-yellow-700 dark:text-yellow-300">
+                                                By clicking "Start Coding Challenge", you accept all terms and conditions outlined above.
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    <Separator className="my-6" />
+
                                     <div className="space-y-6">
                                         <h4 className="font-bold text-lg flex items-center gap-2">
                                             <CheckCircle className="h-5 w-5 text-green-600" />
@@ -788,7 +856,16 @@ const ViewExams: React.FC = () => {
                                     <div className="flex gap-4 pt-6">
                                         <Button
                                             variant="outline"
-                                            onClick={() => setShowExamPopup(false)}
+                                            onClick={() => {
+                                                setShowExamPopup(false);
+                                                // Exit fullscreen when cancel is clicked
+                                                if (document.fullscreenElement) {
+                                                    document.exitFullscreen().catch(err =>
+                                                        console.error('Failed to exit fullscreen:', err)
+                                                    );
+                                                }
+                                                setFullScreenEnabled(false);
+                                            }}
                                             className="flex-1 h-12 border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800"
                                         >
                                             <X className="h-4 w-4 mr-2" />
