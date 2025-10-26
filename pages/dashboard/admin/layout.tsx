@@ -20,6 +20,7 @@ import {
     LockKeyhole,
     LogOut,
     Settings,
+    Activity,
 } from 'lucide-react';
 import ThemeToggle from '@/components/ThemeToggle';
 import {
@@ -96,6 +97,13 @@ const menuItems: MenuItem[] = [
         label: 'Credentials Management',
         icon: LockKeyhole,
         description: 'Manage all Credentials'
+    },
+    {
+        id: 'exam-monitoring',
+        navigation: 'exam-monitoring',
+        label: 'Exam Monitoring',
+        icon: Activity,
+        description: 'Real-time exam monitoring',
     },
 ];
 

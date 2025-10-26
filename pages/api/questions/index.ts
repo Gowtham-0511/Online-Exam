@@ -1,5 +1,6 @@
 import { NextApiRequest, NextApiResponse } from "next";
 import pool from "@/lib/db";
+import { generateQuestionTags } from "@/lib/azureOpenAI";
 
 export const config = {
   api: {
@@ -12,7 +13,7 @@ export const config = {
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   try {
     if (req.method === "GET") {
-      const { keyword = "", language, difficulty, jobId, skillId, questionType } = req.query;
+      const { keyword = "", language, difficulty, jobId, skillId, questionType, tags  } = req.query;
 
       let query = `
         SELECT q.*, 
@@ -51,6 +52,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         query += ` AND q."questionType" = $${idx++}`;
         params.push(questionType);
       }
+      if (tags) {
+        const tagArray = typeof tags === 'string' ? tags.split(',') : tags;
+        query += ` AND q.tags && $${idx++}`;
+        params.push(tagArray);
+      }
 
       query += ` ORDER BY q."createdAt" DESC`;
 
@@ -70,6 +76,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             skillId: row.skillId,
             solution: row.solution,
             createdAt: row.createdAt,
+            tags: row.tags || [],
             options: [],
           };
         }
@@ -105,15 +112,23 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         options,
       } = req.body;
 
-      // Insert question and return id
+      // Generate tags using AI
+      let tags: string[] = [];
+      try {
+        tags = await generateQuestionTags(questionText, questionType, language);
+      } catch (error) {
+        console.error("Failed to generate tags:", error);
+        tags = ['general'];
+      }
+
       const insertQuestionQuery = `
         INSERT INTO "Questions" (
           "questionText", "expectedOutput", difficulty, marks, language,
-          "jobId", "skillId", "imageUrl", "imageAltText", "createdBy", "questionType"
+          "jobId", "skillId", "imageUrl", "imageAltText", "createdBy", "questionType", tags
         ) VALUES (
-          $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11
+          $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12
         )
-        RETURNING id;
+        RETURNING id, tags;
       `;
 
       const questionResult = await pool.query(insertQuestionQuery, [
@@ -128,9 +143,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         imageAltText || null,
         createdBy,
         questionType,
+        tags,
       ]);
 
       const questionId = questionResult.rows[0].id;
+      const generatedTags = questionResult.rows[0].tags;
 
       // Insert MCQ options (if applicable)
       if (questionType === "mcq" && options?.length) {
@@ -148,7 +165,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         }
       }
 
-      return res.status(201).json({ success: true, id: questionId });
+      return res.status(201).json({ success: true, id: questionId, tags: generatedTags });
     }
 
     // 🟡 PUT - Update Question
@@ -166,6 +183,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         options,
       } = req.body;
 
+      let tags: string[] = [];
+      try {
+        tags = await generateQuestionTags(questionText, questionType, language);
+      } catch (error) {
+        console.error("Failed to generate tags:", error);
+        tags = ['general'];
+      }
+
       const updateQuery = `
         UPDATE "Questions" SET
           "questionText" = $1,
@@ -175,11 +200,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           language = $5,
           "jobId" = $6,
           "skillId" = $7,
-          "questionType" = $8
-        WHERE id = $9
+          "questionType" = $8,
+          tags = $9
+        WHERE id = $10
+        RETURNING tags
       `;
 
-      await pool.query(updateQuery, [
+      const result = await pool.query(updateQuery, [
         questionText,
         expectedOutput || null,
         difficulty,
@@ -188,10 +215,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         jobId,
         skillId,
         questionType,
+        tags,
         id,
       ]);
 
-      // Replace options if MCQ
+      const generatedTags = result.rows[0].tags;
+
       if (questionType === "mcq") {
         await pool.query(`DELETE FROM "QuestionOptions" WHERE "questionId" = $1`, [id]);
 
@@ -209,7 +238,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         }
       }
 
-      return res.status(200).json({ success: true });
+      return res.status(200).json({ success: true, tags: generatedTags });
     }
 
     // 🔴 DELETE - Remove Question

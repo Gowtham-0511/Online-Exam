@@ -58,6 +58,7 @@ interface QuestionInput {
     options?: MCQOption[];
     correctAnswer?: string;
     explanation?: string;
+    tags?: string[];
 }
 
 interface RichTextEditorProps {
@@ -316,14 +317,16 @@ export default function QuestionBankPage() {
         difficulty: "",
         jobId: "",
         skillId: "",
-        questionType: ""
+        questionType: "",
+        tag: ""
     });
 
     const [activeFilters, setActiveFilters] = useState({
         keyword: "",
         language: "",
         difficulty: "",
-        questionType: ""
+        questionType: "",
+        tag: ""
     });
 
     const [file, setFile] = useState<File | null>(null);
@@ -347,11 +350,12 @@ export default function QuestionBankPage() {
     const [itemsPerPage] = useState(10);
     const [filteredQuestions, setFilteredQuestions] = useState<QuestionInput[]>([]);
 
+    const [generatingTags, setGeneratingTags] = useState(false);
+
     useEffect(() => {
         fetchFilteredQuestions();
     }, []);
 
-    // Apply filters locally
     useEffect(() => {
         let filtered = [...questions];
 
@@ -373,8 +377,14 @@ export default function QuestionBankPage() {
             filtered = filtered.filter(q => q.questionType === activeFilters.questionType);
         }
 
+        if (activeFilters.tag) {
+            filtered = filtered.filter(q =>
+                q.tags?.some(tag => tag.includes(activeFilters.tag.toLowerCase()))
+            );
+        }
+
         setFilteredQuestions(filtered);
-        setCurrentPage(1); // Reset to first page when filters change
+        setCurrentPage(1);
     }, [questions, activeFilters]);
 
     // Pagination logic
@@ -394,13 +404,15 @@ export default function QuestionBankPage() {
             difficulty: "",
             jobId: "",
             skillId: "",
-            questionType: ""
+            questionType: "",
+            tag: ""
         });
         setActiveFilters({
             keyword: "",
             language: "",
             difficulty: "",
-            questionType: ""
+            questionType: "",
+            tag: ""
         });
     };
 
@@ -441,6 +453,8 @@ export default function QuestionBankPage() {
 
     const handleManualSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+
+        setGeneratingTags(true);
 
         const content = question.questionText;
 
@@ -486,18 +500,25 @@ export default function QuestionBankPage() {
         const url = "/api/questions";
         const method = isEditing ? "PUT" : "POST";
 
-        const res = await fetch(url, {
-            method,
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(questionData),
-        });
+        try {
+            const res = await fetch(url, {
+                method,
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(questionData),
+            });
 
-        if (res.ok) {
-            toast.success(isEditing ? "Question updated successfully!" : "Question added successfully!");
-            handleCancelEdit();
-            fetchFilteredQuestions();
-        } else {
-            toast.error(isEditing ? "Failed to update question" : "Failed to add question");
+            if (res.ok) {
+                const data = await res.json();
+                toast.success(
+                    `${isEditing ? 'Updated' : 'Added'} successfully! Tags: ${data.tags?.join(', ') || 'none'}`
+                );
+                handleCancelEdit();
+                fetchFilteredQuestions();
+            } else {
+                toast.error(isEditing ? "Failed to update question" : "Failed to add question");
+            }
+        } finally {
+            setGeneratingTags(false);
         }
     };
 
@@ -622,6 +643,45 @@ export default function QuestionBankPage() {
                 { id: 'option_2', text: '', isCorrect: false }
             ]
         });
+    };
+
+    const downloadFilteredQuestions = () => {
+        if (filteredQuestions.length === 0) {
+            toast.error("No questions to download");
+            return;
+        }
+
+        const headers = ['questionText', 'expectedOutput', 'difficulty', 'marks', 'language', 'questionType', 'options', 'correctAnswer', 'explanation'];
+
+        const csvContent = [
+            headers.join(','),
+            ...filteredQuestions.map(q => {
+                const row = {
+                    questionText: q.questionText.replace(/<[^>]*>/g, '').replace(/"/g, '""'),
+                    expectedOutput: q.expectedOutput?.replace(/"/g, '""') || '',
+                    difficulty: q.difficulty,
+                    marks: q.marks,
+                    language: q.language || '',
+                    questionType: q.questionType,
+                    options: q.options ? q.options.map(opt => opt.text).join('|') : '',
+                    correctAnswer: q.options?.find(opt => opt.isCorrect)?.text || '',
+                    explanation: q.explanation?.replace(/"/g, '""') || ''
+                };
+                return headers.map(header => `"${row[header as keyof typeof row] || ''}"`).join(',');
+            })
+        ].join('\n');
+
+        const blob = new Blob([csvContent], { type: 'text/csv' });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `filtered_questions_${new Date().toISOString().split('T')[0]}.csv`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+
+        toast.success(`Downloaded ${filteredQuestions.length} questions`);
     };
 
     return (
@@ -830,10 +890,20 @@ export default function QuestionBankPage() {
                                 <Button
                                     type="submit"
                                     size="lg"
+                                    disabled={generatingTags}
                                     className={`${isEditing ? 'flex-1' : 'w-full'} bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-semibold py-6 shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-[1.02]`}
                                 >
-                                    <Save className="h-5 w-5 mr-2" />
-                                    {isEditing ? 'Update' : 'Save'} {question.questionType === 'coding' ? 'Coding' : 'MCQ'} Question
+                                    {generatingTags ? (
+                                        <>
+                                            <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent mr-2" />
+                                            Generating AI Tags...
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Save className="h-5 w-5 mr-2" />
+                                            {isEditing ? 'Update' : 'Save'} {question.questionType === 'coding' ? 'Coding' : 'MCQ'} Question
+                                        </>
+                                    )}
                                 </Button>
                             </div>
                         </form>
@@ -1006,6 +1076,15 @@ export default function QuestionBankPage() {
                                         </SelectContent>
                                     </Select>
                                 </div>
+
+                                <div className="space-y-2">
+                                    <Label className="text-sm">Tag</Label>
+                                    <Input
+                                        placeholder="Filter by tag..."
+                                        value={filters.tag}
+                                        onChange={(e) => setFilters({ ...filters, tag: e.target.value })}
+                                    />
+                                </div>
                             </div>
 
                             <div className="flex gap-2 mt-4">
@@ -1055,12 +1134,24 @@ export default function QuestionBankPage() {
                                 </div>
                                 All Questions ({filteredQuestions.length})
                             </CardTitle>
-                            <Button
-                                onClick={() => setShowQuestions(!showQuestions)}
-                                variant="outline"
-                            >
-                                {showQuestions ? 'Hide' : 'Show'} Questions
-                            </Button>
+                            <div className="flex gap-2">
+                                <Button
+                                    onClick={downloadFilteredQuestions}
+                                    variant="outline"
+                                    size="sm"
+                                    className="gap-2"
+                                    disabled={filteredQuestions.length === 0}
+                                >
+                                    <Download className="h-4 w-4" />
+                                    Download
+                                </Button>
+                                <Button
+                                    onClick={() => setShowQuestions(!showQuestions)}
+                                    variant="outline"
+                                >
+                                    {showQuestions ? 'Hide' : 'Show'} Questions
+                                </Button>
+                            </div>
                         </div>
                     </CardHeader>
 
@@ -1095,6 +1186,18 @@ export default function QuestionBankPage() {
                                                                 <span className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded">
                                                                     {languageConfig[q.language as keyof typeof languageConfig]?.name}
                                                                 </span>
+                                                            )}
+                                                            {q.tags && q.tags.length > 0 && (
+                                                                <div className="flex items-center gap-2 flex-wrap mt-2">
+                                                                    {q.tags.map((tag, idx) => (
+                                                                        <span
+                                                                            key={idx}
+                                                                            className="px-2 py-1 bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300 rounded-full text-xs font-medium"
+                                                                        >
+                                                                            #{tag}
+                                                                        </span>
+                                                                    ))}
+                                                                </div>
                                                             )}
                                                             <span className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded font-medium">
                                                                 {q.marks} marks

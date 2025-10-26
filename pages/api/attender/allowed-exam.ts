@@ -31,7 +31,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             CROSS JOIN LATERAL jsonb_array_elements(b."Employees"::jsonb) emp
             WHERE emp->>'Email' = $1
             AND abm."isActive" = true
-            AND a."assignmentType" = 'batch'
+            AND NOT EXISTS (
+                SELECT 1 FROM submissions s   
+                WHERE "examId" = a.title
+                AND "email" = $1
+            )
             UNION
             SELECT DISTINCT 
                 a.id, 
@@ -53,7 +57,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             FROM "AssessmentUserMapping" aum
             INNER JOIN "Assessment" a ON aum."assessmentId" = a.id
             WHERE aum."userEmail" = $1
-            AND a."assignmentType" = 'users'
+            AND NOT EXISTS (
+                SELECT 1 FROM submissions s   
+                WHERE "examId" = a.title
+                AND "email" = $1
+            )
             ORDER BY "createdAt" DESC;
         `;
 

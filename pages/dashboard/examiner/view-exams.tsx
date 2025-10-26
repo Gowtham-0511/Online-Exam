@@ -2,48 +2,8 @@ import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import toast from "react-hot-toast";
 import { useRouter } from "next/router";
-import {
-    Card,
-    CardContent,
-    CardDescription,
-    CardHeader,
-    CardTitle
-} from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import {
-    AlertDialog,
-    AlertDialogAction,
-    AlertDialogCancel,
-    AlertDialogContent,
-    AlertDialogDescription,
-    AlertDialogFooter,
-    AlertDialogHeader,
-    AlertDialogTitle,
-    AlertDialogTrigger
-} from "@/components/ui/alert-dialog";
-import { Badge } from "@/components/ui/badge";
-import {
-    Calendar,
-    Clock,
-    Edit3,
-    FileText,
-    Globe,
-    MoreVertical,
-    Plus,
-    Trash2
-} from "lucide-react";
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuTrigger
-} from "@/components/ui/dropdown-menu";
-import { Skeleton } from "@/components/ui/skeleton";
 import ExaminerLayout from "./ExaminerLayout";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
-import { X } from "lucide-react";
+import { X, Edit2, Trash2, UserPlus, Clock, Shield, Users, Calendar, Search, Filter, MoreVertical, Check } from "lucide-react";
 
 interface Exam {
     id: string;
@@ -57,24 +17,50 @@ interface Exam {
     assignmentType: string;
 }
 
+interface User {
+    id: string;
+    email: string;
+    name: string;
+    type: 'employee' | 'external';
+}
+
+interface Batch {
+    id: string;
+    name: string;
+    description?: string;
+}
+
 export default function ViewExamsPage() {
     const { data: session } = useSession();
     const [exams, setExams] = useState<Exam[]>([]);
     const [loading, setLoading] = useState(true);
     const [deletingId, setDeletingId] = useState<string | null>(null);
+    const [searchQuery, setSearchQuery] = useState('');
+    const [filterStatus, setFilterStatus] = useState<string>('all');
     const router = useRouter();
 
+    // Edit Dialog State
     const [editingExam, setEditingExam] = useState<Exam | null>(null);
     const [editDialogOpen, setEditDialogOpen] = useState(false);
     const [editForm, setEditForm] = useState({
         duration: 0,
         isExamProctored: false,
-        assignmentType: '',
-        userEmails: [] as string[],
-        batchAssignments: [] as any[]
     });
     const [loadingEdit, setLoadingEdit] = useState(false);
-    const [userEmailInput, setUserEmailInput] = useState('');
+
+    // Reassign Dialog State
+    const [reassignDialogOpen, setReassignDialogOpen] = useState(false);
+    const [reassigningExam, setReassigningExam] = useState<Exam | null>(null);
+    const [assignmentType, setAssignmentType] = useState<'user' | 'batch' | 'both'>('user');
+    const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
+    const [selectedBatches, setSelectedBatches] = useState<string[]>([]);
+    const [availableUsers, setAvailableUsers] = useState<User[]>([]);
+    const [availableBatches, setAvailableBatches] = useState<Batch[]>([]);
+    const [loadingUsers, setLoadingUsers] = useState(false);
+    const [loadingBatches, setLoadingBatches] = useState(false);
+    const [loadingReassign, setLoadingReassign] = useState(false);
+    const [searchUser, setSearchUser] = useState('');
+    const [searchBatch, setSearchBatch] = useState('');
 
     useEffect(() => {
         const fetchExams = async () => {
@@ -102,6 +88,10 @@ export default function ViewExamsPage() {
     }, [session]);
 
     const handleDelete = async (examId: string) => {
+        if (!confirm('Are you sure you want to delete this exam? This action cannot be undone.')) {
+            return;
+        }
+
         try {
             setDeletingId(examId);
             const response = await fetch(`/api/assessment/delete/${examId}`, {
@@ -127,12 +117,11 @@ export default function ViewExamsPage() {
         if (!exam) return;
 
         setEditingExam(exam);
+        setEditForm({
+            duration: exam.duration,
+            isExamProctored: exam.isExamProctored,
+        });
         setEditDialogOpen(true);
-        await fetchExamDetails(exam.title); // Pass title instead of id
-    };
-
-    const handleCreateNew = () => {
-        router.push('/dashboard/examiner');
     };
 
     const handleSaveEdit = async () => {
@@ -141,34 +130,17 @@ export default function ViewExamsPage() {
         try {
             setLoadingEdit(true);
 
-            // Update exam details using title
-            const examRes = await fetch(`/api/assessment/${encodeURIComponent(editingExam.title)}`, {
+            const examRes = await fetch(`/api/admin/assessments/${encodeURIComponent(editingExam.id)}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     duration: editForm.duration,
                     isExamProctored: editForm.isExamProctored,
-                    assignmentType: editForm.assignmentType
+                    assignmentType: editingExam.assignmentType
                 })
             });
 
             if (!examRes.ok) throw new Error('Failed to update exam');
-
-            const updatedExam = await examRes.json();
-
-            // Update assignments using the actual ID from response
-            const assignmentRes = await fetch('/api/assessment/assignments', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    assessmentId: updatedExam.id, // Use the ID from the response
-                    type: 'both',
-                    userEmails: editForm.userEmails,
-                    batchAssignments: editForm.batchAssignments
-                })
-            });
-
-            if (!assignmentRes.ok) throw new Error('Failed to update assignments');
 
             toast.success("Exam updated successfully");
             setEditDialogOpen(false);
@@ -187,434 +159,584 @@ export default function ViewExamsPage() {
         }
     };
 
-    const fetchExamDetails = async (examTitle: string) => {
+    const handleReassign = async (examId: string) => {
+        const exam = exams.find(e => e.id === examId);
+        if (!exam) return;
+
+        setReassigningExam(exam);
+        setReassignDialogOpen(true);
+        setAssignmentType('user');
+        setSelectedUsers([]);
+        setSelectedBatches([]);
+
+        // Fetch current assignments
+        await fetchCurrentAssignments(examId);
+        await fetchAvailableUsers();
+        await fetchAvailableBatches();
+    };
+
+    const fetchCurrentAssignments = async (examId: string) => {
         try {
-            setLoadingEdit(true);
-            const res = await fetch(`/api/assessment/${encodeURIComponent(examTitle)}`);
+            const [userRes, batchRes] = await Promise.all([
+                fetch(`/api/admin/assessments/user-assignments?assessmentId=${examId}`),
+                fetch(`/api/admin/assessments/batch-assignments?assessmentId=${examId}`)
+            ]);
 
-            if (!res.ok) throw new Error('Failed to fetch exam details');
+            if (userRes.ok) {
+                const userAssignments = await userRes.json();
+                setSelectedUsers(userAssignments.map((u: any) => u.userEmail));
+            }
 
-            const data = await res.json();
+            if (batchRes.ok) {
+                const batchAssignments = await batchRes.json();
+                setSelectedBatches(batchAssignments.map((b: any) => b.batchId));
+            }
+        } catch (error) {
+            console.error('Error fetching current assignments:', error);
+        }
+    };
 
-            setEditForm({
-                duration: data.exam.duration,
-                isExamProctored: data.exam.isExamProctored,
-                assignmentType: data.exam.assignmentType,
-                userEmails: data.userAssignments.map((u: any) => u.userEmail),
-                batchAssignments: data.batchAssignments
+    const fetchAvailableUsers = async () => {
+        setLoadingUsers(true);
+        try {
+            const [employeesRes, externalUsersRes] = await Promise.all([
+                fetch('/api/admin/employee'),
+                fetch('/api/admin/external-users')
+            ]);
+
+            if (employeesRes.ok && externalUsersRes.ok) {
+                const employees = await employeesRes.json();
+                const externalUsers = await externalUsersRes.json();
+
+                const allUsers = [
+                    ...employees.map((emp: any) => ({
+                        id: emp.Id || emp.id,
+                        email: emp.Email || emp.email,
+                        name: emp.Name || emp.name,
+                        type: 'employee' as const
+                    })),
+                    ...externalUsers.map((user: any) => ({
+                        id: user.id,
+                        email: user.email,
+                        name: user.name,
+                        type: 'external' as const
+                    }))
+                ];
+
+                setAvailableUsers(allUsers);
+            }
+        } catch (error) {
+            console.error('Error fetching users:', error);
+            toast.error('Failed to load users');
+        } finally {
+            setLoadingUsers(false);
+        }
+    };
+
+    const fetchAvailableBatches = async () => {
+        setLoadingBatches(true);
+        try {
+            const response = await fetch('/api/admin/batch');
+            if (response.ok) {
+                const batches = await response.json();
+                setAvailableBatches(batches);
+            }
+        } catch (error) {
+            console.error('Error fetching batches:', error);
+            toast.error('Failed to load batches');
+        } finally {
+            setLoadingBatches(false);
+        }
+    };
+
+    const handleSaveReassignment = async () => {
+        if (!reassigningExam) return;
+
+        if (assignmentType === 'user' && selectedUsers.length === 0) {
+            toast.error('Please select at least one user');
+            return;
+        }
+
+        if (assignmentType === 'batch' && selectedBatches.length === 0) {
+            toast.error('Please select at least one batch');
+            return;
+        }
+
+        if (assignmentType === 'both' && selectedUsers.length === 0 && selectedBatches.length === 0) {
+            toast.error('Please select at least one user or batch');
+            return;
+        }
+
+        try {
+            setLoadingReassign(true);
+
+            const batchAssignments = selectedBatches.map(batchId => ({
+                batchId,
+                assessmentId: reassigningExam.id
+            }));
+
+            const assignmentRes = await fetch('/api/assessment/assignments', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    assessmentId: reassigningExam.id,
+                    type: assignmentType,
+                    userEmails: selectedUsers,
+                    batchAssignments: batchAssignments
+                })
             });
 
-            return data;
+            if (!assignmentRes.ok) throw new Error('Failed to update assignments');
+
+            toast.success("Exam reassigned successfully");
+            setReassignDialogOpen(false);
+            setReassigningExam(null);
+
         } catch (error) {
-            console.error("Failed to fetch exam details", error);
-            toast.error("Failed to load exam details");
+            console.error("Reassignment error:", error);
+            toast.error("Failed to reassign exam");
         } finally {
-            setLoadingEdit(false);
+            setLoadingReassign(false);
         }
     };
 
-    const formatDate = (dateString: string) => {
-        return new Date(dateString).toLocaleDateString('en-US', {
-            year: 'numeric',
-            month: 'short',
-            day: 'numeric'
-        });
+    const toggleUserSelection = (email: string) => {
+        setSelectedUsers(prev =>
+            prev.includes(email)
+                ? prev.filter(e => e !== email)
+                : [...prev, email]
+        );
     };
 
-    const formatDateTime = (dateString: string) => {
-        return new Date(dateString).toLocaleString('en-US', {
-            year: 'numeric',
-            month: 'short',
-            day: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit'
-        });
+    const toggleBatchSelection = (batchId: string) => {
+        setSelectedBatches(prev =>
+            prev.includes(batchId)
+                ? prev.filter(id => id !== batchId)
+                : [...prev, batchId]
+        );
     };
 
-    const addUserEmail = () => {
-        if (userEmailInput.trim() && !editForm.userEmails.includes(userEmailInput.trim())) {
-            setEditForm(prev => ({
-                ...prev,
-                userEmails: [...prev.userEmails, userEmailInput.trim()]
-            }));
-            setUserEmailInput('');
-        }
-    };
+    const filteredUsers = availableUsers.filter(user =>
+        user.name.toLowerCase().includes(searchUser.toLowerCase()) ||
+        user.email.toLowerCase().includes(searchUser.toLowerCase())
+    );
 
-    const removeUserEmail = (email: string) => {
-        setEditForm(prev => ({
-            ...prev,
-            userEmails: prev.userEmails.filter(e => e !== email)
-        }));
-    };
+    const filteredBatches = availableBatches.filter(batch =>
+        console.log(batch)
+        // batch.name.toLowerCase().includes(searchBatch.toLowerCase())
+    );
 
-    const removeBatchAssignment = (index: number) => {
-        setEditForm(prev => ({
-            ...prev,
-            batchAssignments: prev.batchAssignments.filter((_, i) => i !== index)
-        }));
-    };
+    const filteredExams = exams.filter(exam => {
+        const matchesSearch = exam.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            exam.language.toLowerCase().includes(searchQuery.toLowerCase());
+        const matchesFilter = filterStatus === 'all' || exam.assignmentType === filterStatus;
+        return matchesSearch && matchesFilter;
+    });
 
     if (loading) {
         return (
             <ExaminerLayout>
-                <div className="space-y-6">
-                    <div className="flex items-center justify-between">
-                        <div className="space-y-2">
-                            <Skeleton className="h-8 w-48" />
-                            <Skeleton className="h-4 w-96" />
-                        </div>
-                        <Skeleton className="h-10 w-32" />
-                    </div>
-                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                        {[...Array(6)].map((_, i) => (
-                            <Card key={i} className="border-border">
-                                <CardHeader className="pb-3">
-                                    <Skeleton className="h-6 w-3/4" />
-                                    <Skeleton className="h-4 w-1/2" />
-                                </CardHeader>
-                                <CardContent className="space-y-4">
-                                    <div className="flex gap-2">
-                                        <Skeleton className="h-6 w-16" />
-                                        <Skeleton className="h-6 w-20" />
-                                    </div>
-                                    <Skeleton className="h-4 w-full" />
-                                    <div className="flex gap-2">
-                                        <Skeleton className="h-9 flex-1" />
-                                        <Skeleton className="h-9 w-9" />
-                                    </div>
-                                </CardContent>
-                            </Card>
-                        ))}
+                <div className="flex items-center justify-center min-h-screen">
+                    <div className="text-center">
+                        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+                        <p className="mt-4 text-muted-foreground">Loading exams...</p>
                     </div>
                 </div>
             </ExaminerLayout>
         );
     }
 
-    const EditDialog = () => (
-        <AlertDialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
-            <AlertDialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
-                <AlertDialogHeader>
-                    <AlertDialogTitle>Edit Exam: {editingExam?.title}</AlertDialogTitle>
-                    <AlertDialogDescription>
-                        Update exam settings and manage assignments
-                    </AlertDialogDescription>
-                </AlertDialogHeader>
-
-                <div className="space-y-6 py-4">
-                    {/* Duration */}
-                    <div className="space-y-2">
-                        <Label htmlFor="duration">Duration (minutes)</Label>
-                        <Input
-                            id="duration"
-                            type="number"
-                            value={editForm.duration}
-                            onChange={(e) => setEditForm(prev => ({ ...prev, duration: parseInt(e.target.value) || 0 }))}
-                            min="1"
-                        />
-                    </div>
-
-                    {/* Is Proctored */}
-                    <div className="flex items-center justify-between">
-                        <Label htmlFor="proctored">Enable Proctoring</Label>
-                        <Switch
-                            id="proctored"
-                            checked={editForm.isExamProctored}
-                            onCheckedChange={(checked) => setEditForm(prev => ({ ...prev, isExamProctored: checked }))}
-                        />
-                    </div>
-
-                    {/* Assignment Type */}
-                    <div className="space-y-2">
-                        <Label htmlFor="assignmentType">Assignment Type</Label>
-                        <select
-                            id="assignmentType"
-                            value={editForm.assignmentType}
-                            onChange={(e) => setEditForm(prev => ({ ...prev, assignmentType: e.target.value }))}
-                            className="w-full p-2 border rounded-md"
-                        >
-                            <option value="user">User</option>
-                            <option value="batch">Batch</option>
-                            <option value="both">Both</option>
-                        </select>
-                    </div>
-
-                    {/* User Assignments */}
-                    {(editForm.assignmentType === 'user' || editForm.assignmentType === 'both') && (
-                        <div className="space-y-2">
-                            <Label>Assigned Users</Label>
-                            <div className="flex gap-2">
-                                <Input
-                                    placeholder="Enter user email"
-                                    value={userEmailInput}
-                                    onChange={(e) => setUserEmailInput(e.target.value)}
-                                    onKeyPress={(e) => e.key === 'Enter' && addUserEmail()}
-                                />
-                                <Button onClick={addUserEmail} size="sm">Add</Button>
-                            </div>
-                            <div className="flex flex-wrap gap-2 mt-2">
-                                {editForm.userEmails.map((email) => (
-                                    <Badge key={email} variant="secondary" className="pl-2 pr-1">
-                                        {email}
-                                        <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            className="h-4 w-4 p-0 ml-1"
-                                            onClick={() => removeUserEmail(email)}
-                                        >
-                                            <X className="h-3 w-3" />
-                                        </Button>
-                                    </Badge>
-                                ))}
-                            </div>
-                        </div>
-                    )}
-
-                    {/* Batch Assignments */}
-                    {(editForm.assignmentType === 'batch' || editForm.assignmentType === 'both') && (
-                        <div className="space-y-2">
-                            <Label>Batch Assignments</Label>
-                            {editForm.batchAssignments.length > 0 ? (
-                                <div className="space-y-2">
-                                    {editForm.batchAssignments.map((batch, index) => (
-                                        <div key={index} className="flex items-center justify-between p-2 border rounded">
-                                            <div className="text-sm">
-                                                <div>Batch ID: {batch.batchId}</div>
-                                                <div className="text-xs text-muted-foreground">
-                                                    {new Date(batch.startTime).toLocaleString()} - {new Date(batch.endTime).toLocaleString()}
-                                                </div>
-                                            </div>
-                                            <Button
-                                                variant="ghost"
-                                                size="sm"
-                                                onClick={() => removeBatchAssignment(index)}
-                                            >
-                                                <X className="h-4 w-4" />
-                                            </Button>
-                                        </div>
-                                    ))}
-                                </div>
-                            ) : (
-                                <p className="text-sm text-muted-foreground">No batch assignments</p>
-                            )}
-                        </div>
-                    )}
-                </div>
-
-                <AlertDialogFooter>
-                    <AlertDialogCancel onClick={() => {
-                        setEditDialogOpen(false);
-                        setEditingExam(null);
-                    }}>
-                        Cancel
-                    </AlertDialogCancel>
-                    <AlertDialogAction onClick={handleSaveEdit} disabled={loadingEdit}>
-                        {loadingEdit ? "Saving..." : "Save Changes"}
-                    </AlertDialogAction>
-                </AlertDialogFooter>
-            </AlertDialogContent>
-        </AlertDialog>
-    );
-
     return (
         <ExaminerLayout>
-            <EditDialog />
-            <div className="space-y-6">
-                {/* Header Section */}
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                    <div>
-                        <h1 className="text-2xl font-bold text-foreground">My Exams</h1>
-                        <p className="text-muted-foreground text-sm mt-1">
-                            Manage and organize your exam assessments
-                        </p>
+            <div className="min-h-screen bg-background">
+                {/* Header */}
+                <div className="border-b border-border bg-card">
+                    <div className="max-w-7xl mx-auto px-6 py-6">
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <h1 className="text-2xl font-semibold text-foreground">My Assessments</h1>
+                                <p className="mt-1 text-sm text-muted-foreground">
+                                    Manage and track your created assessments
+                                </p>
+                            </div>
+                            <button
+                                onClick={() => router.push('/dashboard/examiner')}
+                                className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:opacity-90 transition-opacity font-medium text-sm"
+                            >
+                                Create Assessment
+                            </button>
+                        </div>
+
+                        {/* Search and Filter Bar */}
+                        <div className="mt-6 flex gap-3">
+                            <div className="flex-1 relative">
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                <input
+                                    type="text"
+                                    placeholder="Search assessments..."
+                                    value={searchQuery}
+                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                    className="w-full pl-10 pr-4 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring text-foreground placeholder:text-muted-foreground"
+                                />
+                            </div>
+                            <select
+                                value={filterStatus}
+                                onChange={(e) => setFilterStatus(e.target.value)}
+                                className="px-4 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring text-foreground"
+                            >
+                                <option value="all">All Types</option>
+                                <option value="user">User Assigned</option>
+                                <option value="batch">Batch Assigned</option>
+                                <option value="both">Both</option>
+                            </select>
+                        </div>
                     </div>
-                    <Button onClick={handleCreateNew}>
-                        <Plus className="h-4 w-4 mr-2" />
-                        Create New Exam
-                    </Button>
                 </div>
 
-                {/* Stats Section */}
-                {exams.length > 0 && (
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                        <Card className="border-border">
-                            <CardContent className="p-4 text-center">
-                                <div className="text-2xl font-bold text-foreground">{exams.length}</div>
-                                <div className="text-xs text-muted-foreground mt-1">Total Exams</div>
-                            </CardContent>
-                        </Card>
-                        <Card className="border-border">
-                            <CardContent className="p-4 text-center">
-                                <div className="text-2xl font-bold text-foreground">
-                                    {Math.round(exams.reduce((acc, exam) => acc + exam.duration, 0) / exams.length)}
+                {/* Main Content */}
+                <div className="max-w-7xl mx-auto px-6 py-6">
+                    {filteredExams.length === 0 ? (
+                        <div className="text-center py-16 bg-card rounded-lg border border-border">
+                            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-muted mb-4">
+                                <Users className="h-8 w-8 text-muted-foreground" />
+                            </div>
+                            <h3 className="text-lg font-medium text-foreground mb-2">
+                                {searchQuery || filterStatus !== 'all' ? 'No assessments found' : 'No assessments yet'}
+                            </h3>
+                            <p className="text-sm text-muted-foreground mb-6 max-w-sm mx-auto">
+                                {searchQuery || filterStatus !== 'all'
+                                    ? 'Try adjusting your search or filters'
+                                    : 'Get started by creating your first assessment'}
+                            </p>
+                            {!searchQuery && filterStatus === 'all' && (
+                                <button
+                                    onClick={() => router.push('/dashboard/examiner')}
+                                    className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:opacity-90 transition-opacity font-medium text-sm"
+                                >
+                                    Create Assessment
+                                </button>
+                            )}
+                        </div>
+                    ) : (
+                        <div className="space-y-3">
+                            {filteredExams.map((exam) => (
+                                <div
+                                    key={exam.id}
+                                    className="bg-card border border-border rounded-lg hover:border-primary/50 transition-colors group"
+                                >
+                                    <div className="p-5">
+                                        <div className="flex items-start justify-between">
+                                            <div className="flex-1 min-w-0">
+                                                <div className="flex items-start gap-3">
+                                                    <div className="flex-1">
+                                                        <h3 className="text-base font-medium text-foreground mb-2 group-hover:text-primary transition-colors">
+                                                            {exam.title}
+                                                        </h3>
+                                                        <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
+                                                            <div className="flex items-center gap-1.5">
+                                                                <Clock className="h-4 w-4" />
+                                                                <span>{exam.duration} mins</span>
+                                                            </div>
+                                                            <div className="flex items-center gap-1.5">
+                                                                <Calendar className="h-4 w-4" />
+                                                                <span>{new Date(exam.createdAt).toLocaleDateString()}</span>
+                                                            </div>
+                                                            <div className="flex items-center gap-2">
+                                                                <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-secondary text-secondary-foreground">
+                                                                    {exam.language}
+                                                                </span>
+                                                                {exam.isExamProctored && (
+                                                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-accent/10 text-accent">
+                                                                        <Shield className="h-3 w-3" />
+                                                                        Proctored
+                                                                    </span>
+                                                                )}
+                                                                <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-muted text-muted-foreground">
+                                                                    {exam.assignmentType}
+                                                                </span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div className="flex items-center gap-2 ml-4">
+                                                <button
+                                                    onClick={() => handleEdit(exam.id)}
+                                                    className="p-2 text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-colors"
+                                                    title="Edit"
+                                                >
+                                                    <Edit2 className="h-4 w-4" />
+                                                </button>
+                                                <button
+                                                    onClick={() => handleReassign(exam.id)}
+                                                    className="p-2 text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-colors"
+                                                    title="Reassign"
+                                                >
+                                                    <UserPlus className="h-4 w-4" />
+                                                </button>
+                                                <button
+                                                    onClick={() => handleDelete(exam.id)}
+                                                    disabled={deletingId === exam.id}
+                                                    className="p-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg transition-colors disabled:opacity-50"
+                                                    title="Delete"
+                                                >
+                                                    {deletingId === exam.id ? (
+                                                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-destructive"></div>
+                                                    ) : (
+                                                        <Trash2 className="h-4 w-4" />
+                                                    )}
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
-                                <div className="text-xs text-muted-foreground mt-1">Avg Duration (min)</div>
-                            </CardContent>
-                        </Card>
-                        <Card className="border-border">
-                            <CardContent className="p-4 text-center">
-                                <div className="text-2xl font-bold text-foreground">
-                                    {new Set(exams.map(exam => exam.language)).size}
+                            ))}
+                        </div>
+                    )}
+                </div>
+
+                {/* Edit Dialog */}
+                {editDialogOpen && editingExam && (
+                    <div className="fixed inset-0 bg-background/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+                        <div className="bg-card border border-border rounded-lg shadow-lg max-w-md w-full">
+                            <div className="flex items-center justify-between p-6 border-b border-border">
+                                <h2 className="text-lg font-semibold text-foreground">Edit Assessment</h2>
+                                <button
+                                    onClick={() => setEditDialogOpen(false)}
+                                    className="text-muted-foreground hover:text-foreground transition-colors"
+                                >
+                                    <X className="h-5 w-5" />
+                                </button>
+                            </div>
+
+                            <div className="p-6 space-y-5">
+                                <div>
+                                    <label className="block text-sm font-medium text-foreground mb-2">
+                                        Assessment Title
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={editingExam.title}
+                                        disabled
+                                        className="w-full px-3 py-2 bg-muted border border-border rounded-lg text-muted-foreground"
+                                    />
                                 </div>
-                                <div className="text-xs text-muted-foreground mt-1">Languages</div>
-                            </CardContent>
-                        </Card>
+
+                                <div>
+                                    <label className="block text-sm font-medium text-foreground mb-2">
+                                        Duration (minutes)
+                                    </label>
+                                    <input
+                                        type="number"
+                                        value={editForm.duration}
+                                        onChange={(e) => setEditForm({ ...editForm, duration: parseInt(e.target.value) || 0 })}
+                                        className="w-full px-3 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring text-foreground"
+                                        min="1"
+                                    />
+                                </div>
+
+                                <div className="flex items-center gap-3 p-4 bg-muted rounded-lg">
+                                    <input
+                                        type="checkbox"
+                                        id="isExamProctored"
+                                        checked={editForm.isExamProctored}
+                                        onChange={(e) => setEditForm({ ...editForm, isExamProctored: e.target.checked })}
+                                        className="h-4 w-4 rounded border-border text-primary focus:ring-2 focus:ring-ring"
+                                    />
+                                    <label htmlFor="isExamProctored" className="text-sm font-medium text-foreground cursor-pointer flex-1">
+                                        Enable Proctoring
+                                    </label>
+                                    <Shield className="h-4 w-4 text-muted-foreground" />
+                                </div>
+                            </div>
+
+                            <div className="flex gap-3 p-6 border-t border-border">
+                                <button
+                                    onClick={() => setEditDialogOpen(false)}
+                                    className="flex-1 px-4 py-2 border border-border rounded-lg text-foreground hover:bg-muted transition-colors"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={handleSaveEdit}
+                                    disabled={loadingEdit}
+                                    className="flex-1 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50"
+                                >
+                                    {loadingEdit ? 'Saving...' : 'Save Changes'}
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 )}
 
-                {/* Content Section */}
-                {exams.length === 0 ? (
-                    <Card className="border-2 border-dashed border-border">
-                        <CardContent className="text-center py-12">
-                            <div className="mx-auto w-16 h-16 bg-muted/50 rounded-full flex items-center justify-center mb-4">
-                                <FileText className="h-8 w-8 text-muted-foreground" />
+                {/* Reassign Dialog */}
+                {reassignDialogOpen && reassigningExam && (
+                    <div className="fixed inset-0 bg-background/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+                        <div className="bg-card border border-border rounded-lg shadow-lg max-w-3xl w-full max-h-[85vh] overflow-hidden flex flex-col">
+                            <div className="flex items-center justify-between p-6 border-b border-border">
+                                <div>
+                                    <h2 className="text-lg font-semibold text-foreground">Reassign Assessment</h2>
+                                    <p className="text-sm text-muted-foreground mt-1">{reassigningExam.title}</p>
+                                </div>
+                                <button
+                                    onClick={() => setReassignDialogOpen(false)}
+                                    className="text-muted-foreground hover:text-foreground transition-colors"
+                                >
+                                    <X className="h-5 w-5" />
+                                </button>
                             </div>
-                            <h3 className="text-lg font-semibold mb-2">No Exams Created Yet</h3>
-                            <p className="text-muted-foreground text-sm max-w-sm mx-auto mb-4">
-                                Get started by creating your first exam assessment. You can add questions, set duration, and customize settings.
-                            </p>
-                            <Button onClick={handleCreateNew}>
-                                <Plus className="h-4 w-4 mr-2" />
-                                Create Your First Exam
-                            </Button>
-                        </CardContent>
-                    </Card>
-                ) : (
-                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                        {exams.map((exam) => (
-                            <Card key={exam.id} className="group hover:shadow-md transition-all border-border">
-                                <CardHeader className="pb-3">
-                                    <div className="flex items-start justify-between gap-2">
-                                        <div className="flex-1 min-w-0">
-                                            <CardTitle className="text-base line-clamp-2 group-hover:text-primary transition-colors">
-                                                {exam.title}
-                                            </CardTitle>
-                                            <CardDescription className="text-xs mt-1">
-                                                {formatDate(exam.createdAt)}
-                                            </CardDescription>
+
+                            <div className="p-6 space-y-5 overflow-y-auto flex-1">
+                                <div>
+                                    <label className="block text-sm font-medium text-foreground mb-3">
+                                        Assignment Type
+                                    </label>
+                                    <div className="flex gap-3">
+                                        {['user', 'batch', 'both'].map((type) => (
+                                            <label
+                                                key={type}
+                                                className={`flex-1 flex items-center justify-center gap-2 p-3 rounded-lg border-2 cursor-pointer transition-all ${assignmentType === type
+                                                        ? 'border-primary bg-primary/5'
+                                                        : 'border-border hover:border-primary/50'
+                                                    }`}
+                                            >
+                                                <input
+                                                    type="radio"
+                                                    value={type}
+                                                    checked={assignmentType === type}
+                                                    onChange={(e) => setAssignmentType(e.target.value as any)}
+                                                    className="sr-only"
+                                                />
+                                                <span className={`text-sm font-medium ${assignmentType === type ? 'text-primary' : 'text-foreground'
+                                                    }`}>
+                                                    {type === 'user' ? 'Users Only' : type === 'batch' ? 'Batches Only' : 'Both'}
+                                                </span>
+                                                {assignmentType === type && <Check className="h-4 w-4 text-primary" />}
+                                            </label>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                {(assignmentType === 'user' || assignmentType === 'both') && (
+                                    <div>
+                                        <label className="block text-sm font-medium text-foreground mb-3">
+                                            Select Users
+                                            <span className="ml-2 text-xs text-muted-foreground">
+                                                ({selectedUsers.length} selected)
+                                            </span>
+                                        </label>
+                                        <div className="relative mb-3">
+                                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                            <input
+                                                type="text"
+                                                placeholder="Search users..."
+                                                value={searchUser}
+                                                onChange={(e) => setSearchUser(e.target.value)}
+                                                className="w-full pl-10 pr-4 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring text-foreground placeholder:text-muted-foreground"
+                                            />
                                         </div>
-                                        <DropdownMenu>
-                                            <DropdownMenuTrigger asChild>
-                                                <Button
-                                                    variant="ghost"
-                                                    size="sm"
-                                                    className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
-                                                >
-                                                    <MoreVertical className="h-4 w-4" />
-                                                </Button>
-                                            </DropdownMenuTrigger>
-                                            <DropdownMenuContent align="end">
-                                                <DropdownMenuItem onClick={() => handleEdit(exam.id)}>
-                                                    <Edit3 className="h-4 w-4 mr-2" />
-                                                    Edit
-                                                </DropdownMenuItem>
-                                                <AlertDialog>
-                                                    <AlertDialogTrigger asChild>
-                                                        <DropdownMenuItem
-                                                            onSelect={(e) => e.preventDefault()}
-                                                            className="text-destructive focus:text-destructive"
-                                                        >
-                                                            <Trash2 className="h-4 w-4 mr-2" />
-                                                            Delete
-                                                        </DropdownMenuItem>
-                                                    </AlertDialogTrigger>
-                                                    <AlertDialogContent>
-                                                        <AlertDialogHeader>
-                                                            <AlertDialogTitle>Delete Exam</AlertDialogTitle>
-                                                            <AlertDialogDescription>
-                                                                Are you sure you want to delete <span className="font-semibold">"{exam.title}"</span>?
-                                                                This action cannot be undone and all associated data will be lost.
-                                                            </AlertDialogDescription>
-                                                        </AlertDialogHeader>
-                                                        <AlertDialogFooter>
-                                                            <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                                            <AlertDialogAction
-                                                                onClick={() => handleDelete(exam.id)}
-                                                                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                                                                disabled={deletingId === exam.id}
-                                                            >
-                                                                {deletingId === exam.id ? "Deleting..." : "Delete"}
-                                                            </AlertDialogAction>
-                                                        </AlertDialogFooter>
-                                                    </AlertDialogContent>
-                                                </AlertDialog>
-                                            </DropdownMenuContent>
-                                        </DropdownMenu>
-                                    </div>
-                                </CardHeader>
-
-                                <CardContent className="space-y-4">
-                                    {/* Exam Details */}
-                                    <div className="flex flex-wrap gap-2">
-                                        <Badge variant="secondary" className="text-xs">
-                                            <Globe className="h-3 w-3 mr-1" />
-                                            {exam.language}
-                                        </Badge>
-                                        <Badge variant="outline" className="text-xs">
-                                            <Clock className="h-3 w-3 mr-1" />
-                                            {exam.duration}m
-                                        </Badge>
-                                        {exam.questionsCount && (
-                                            <Badge variant="outline" className="text-xs">
-                                                <FileText className="h-3 w-3 mr-1" />
-                                                {exam.questionsCount} questions
-                                            </Badge>
-                                        )}
-                                    </div>
-
-                                    {/* Full Date */}
-                                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                                        <Calendar className="h-3 w-3" />
-                                        {formatDateTime(exam.createdAt)}
-                                    </div>
-
-                                    {/* Action Buttons */}
-                                    <div className="flex gap-2 pt-2">
-                                        <Button
-                                            variant="default"
-                                            size="sm"
-                                            onClick={() => handleEdit(exam.id)}
-                                            className="flex-1"
-                                        >
-                                            <Edit3 className="h-4 w-4 mr-2" />
-                                            Edit
-                                        </Button>
-
-                                        <AlertDialog>
-                                            <AlertDialogTrigger asChild>
-                                                <Button
-                                                    variant="outline"
-                                                    size="sm"
-                                                    className="px-3"
-                                                >
-                                                    <Trash2 className="h-4 w-4" />
-                                                </Button>
-                                            </AlertDialogTrigger>
-                                            <AlertDialogContent>
-                                                <AlertDialogHeader>
-                                                    <AlertDialogTitle>Delete Exam</AlertDialogTitle>
-                                                    <AlertDialogDescription>
-                                                        Are you sure you want to delete <span className="font-semibold">"{exam.title}"</span>?
-                                                        This action cannot be undone and all associated data will be lost.
-                                                    </AlertDialogDescription>
-                                                </AlertDialogHeader>
-                                                <AlertDialogFooter>
-                                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                                    <AlertDialogAction
-                                                        onClick={() => handleDelete(exam.id)}
-                                                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                                                        disabled={deletingId === exam.id}
+                                        <div className="border border-border rounded-lg max-h-64 overflow-y-auto bg-background">
+                                            {loadingUsers ? (
+                                                <div className="p-8 text-center text-muted-foreground">
+                                                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-2"></div>
+                                                    Loading users...
+                                                </div>
+                                            ) : filteredUsers.length === 0 ? (
+                                                <div className="p-8 text-center text-muted-foreground">No users found</div>
+                                            ) : (
+                                                filteredUsers.map((user) => (
+                                                    <label
+                                                        key={user.email}
+                                                        className="flex items-center p-3 hover:bg-muted cursor-pointer border-b border-border last:border-b-0 transition-colors"
                                                     >
-                                                        {deletingId === exam.id ? "Deleting..." : "Delete"}
-                                                    </AlertDialogAction>
-                                                </AlertDialogFooter>
-                                            </AlertDialogContent>
-                                        </AlertDialog>
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={selectedUsers.includes(user.email)}
+                                                            onChange={() => toggleUserSelection(user.email)}
+                                                            className="h-4 w-4 rounded border-border text-primary focus:ring-2 focus:ring-ring"
+                                                        />
+                                                        <div className="ml-3 flex-1 min-w-0">
+                                                            <div className="text-sm font-medium text-foreground truncate">{user.name}</div>
+                                                            <div className="text-xs text-muted-foreground truncate">{user.email}</div>
+                                                        </div>
+                                                        <span className="text-xs px-2 py-1 rounded-full bg-secondary text-secondary-foreground ml-2">
+                                                            {user.type}
+                                                        </span>
+                                                    </label>
+                                                ))
+                                            )}
+                                        </div>
                                     </div>
-                                </CardContent>
-                            </Card>
-                        ))}
+                                )}
+
+                                {(assignmentType === 'batch' || assignmentType === 'both') && (
+                                    <div>
+                                        <label className="block text-sm font-medium text-foreground mb-3">
+                                            Select Batches
+                                            <span className="ml-2 text-xs text-muted-foreground">
+                                                ({selectedBatches.length} selected)
+                                            </span>
+                                        </label>
+                                        <div className="relative mb-3">
+                                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                            <input
+                                                type="text"
+                                                placeholder="Search batches..."
+                                                value={searchBatch}
+                                                onChange={(e) => setSearchBatch(e.target.value)}
+                                                className="w-full pl-10 pr-4 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring text-foreground placeholder:text-muted-foreground">
+                                            </input>
+                                        </div>
+                                        <div className="border border-border rounded-lg max-h-64 overflow-y-auto bg-background">
+                                            {loadingBatches ? (
+                                                <div className="p-8 text-center text-muted-foreground">
+                                                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-2"></div>
+                                                    Loading batches...
+                                                </div>
+                                            ) : filteredBatches.length === 0 ? (
+                                                <div className="p-8 text-center text-muted-foreground">No batches found</div>
+                                            ) : (
+                                                filteredBatches.map((batch) => (
+                                                    <label
+                                                        key={batch.id}
+                                                        className="flex items-center p-3 hover:bg-muted cursor-pointer border-b border-border last:border-b-0 transition-colors"
+                                                    >
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={selectedBatches.includes(batch.id)}
+                                                            onChange={() => toggleBatchSelection(batch.id)}
+                                                            className="h-4 w-4 rounded border-border text-primary focus:ring-2 focus:ring-ring"
+                                                        />
+                                                        <div className="ml-3 flex-1 min-w-0">
+                                                            <div className="text-sm font-medium text-foreground truncate">{batch.name}</div>
+                                                            {batch.description && (
+                                                                <div className="text-xs text-muted-foreground truncate">{batch.description}</div>
+                                                            )}
+                                                        </div>
+                                                    </label>
+                                                ))
+                                            )}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+
+                            <div className="flex gap-3 p-6 border-t border-border">
+                                <button
+                                    onClick={() => setReassignDialogOpen(false)}
+                                    className="flex-1 px-4 py-2 border border-border rounded-lg text-foreground hover:bg-muted transition-colors"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={handleSaveReassignment}
+                                    disabled={loadingReassign}
+                                    className="flex-1 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50"
+                                >
+                                    {loadingReassign ? 'Reassigning...' : 'Reassign Assessment'}
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 )}
             </div>

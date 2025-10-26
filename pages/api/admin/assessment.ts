@@ -10,6 +10,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
         const query = `SELECT * FROM "Assessment"`;
 
+        console.log(query)
+
         const result = await pool.query(query);
 
         return res.status(200).json(result.rows);

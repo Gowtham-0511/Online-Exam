@@ -29,7 +29,8 @@ import {
     Timer,
     Shield,
     Info,
-    Loader2
+    Loader2,
+    Sparkles
 } from "lucide-react";
 
 interface QuestionOption {
@@ -49,6 +50,7 @@ interface Question {
     type?: string;
     options?: QuestionOption[];
     correctAnswer?: number;
+    tags?: string[];
 }
 
 export default function ExaminerDashboard() {
@@ -121,6 +123,23 @@ export default function ExaminerDashboard() {
     const [loadingCredentials, setLoadingCredentials] = useState(false);
     const [selectedCredentialId, setSelectedCredentialId] = useState<string>('');
     const [showNewCredentialForm, setShowNewCredentialForm] = useState(false);
+
+    const [selectedTags, setSelectedTags] = useState<string[]>([]);
+    const [availableTags, setAvailableTags] = useState<string[]>([]);
+    const [loadingTags, setLoadingTags] = useState(false);
+
+    // Add these states with your existing state declarations
+    const [useMarksBasedGeneration, setUseMarksBasedGeneration] = useState(false);
+    const [totalMarks, setTotalMarks] = useState(0);
+    const [marksDistribution, setMarksDistribution] = useState({
+        coding: 70, // percentage
+        mcq: 30     // percentage
+    });
+    const [difficultyDistribution, setDifficultyDistribution] = useState({
+        easy: 40,    // percentage
+        medium: 40,  // percentage
+        hard: 20     // percentage
+    });
 
     const resetForm = () => {
         setTitle("");
@@ -504,6 +523,169 @@ export default function ExaminerDashboard() {
         }
     };
 
+    const fetchAvailableTags = async () => {
+        setLoadingTags(true);
+        try {
+            const response = await fetch(`/api/questions/tags?language=${language}`);
+            if (response.ok) {
+                const data = await response.json();
+                setAvailableTags(data.tags);
+            }
+        } catch (error) {
+            console.error('Error fetching tags:', error);
+            toast.error('Failed to load tags');
+        } finally {
+            setLoadingTags(false);
+        }
+    };
+
+    const generateQuestionsByMarks = async (): Promise<void> => {
+        if (totalMarks <= 0) {
+            setError('Please enter valid total marks');
+            return;
+        }
+
+        setLoading(true);
+        setError('');
+
+        try {
+            // Calculate marks for each category
+            const codingMarks = Math.round((totalMarks * marksDistribution.coding) / 100);
+            const mcqMarks = totalMarks - codingMarks;
+
+            // Calculate marks for each difficulty
+            const easyMarks = Math.round((totalMarks * difficultyDistribution.easy) / 100);
+            const mediumMarks = Math.round((totalMarks * difficultyDistribution.medium) / 100);
+            const hardMarks = totalMarks - easyMarks - mediumMarks;
+
+            console.log('Target distribution:', { codingMarks, mcqMarks, easyMarks, mediumMarks, hardMarks });
+
+            let allFetchedQuestions: Question[] = [];
+
+            // Fetch all available questions
+            const [codingRes, mcqRes] = await Promise.all([
+                fetch(`/api/questions?language=${language}&questionType=coding`),
+                fetch(`/api/questions?language=${language}&questionType=mcq`)
+            ]);
+
+            if (!codingRes.ok || !mcqRes.ok) {
+                throw new Error('Failed to fetch questions');
+            }
+
+            const codingQuestions: any[] = await codingRes.json();
+            const mcqQuestions: any[] = await mcqRes.json();
+
+            // Helper function to select questions by marks
+            const selectQuestionsByMarks = (
+                questions: any[],
+                targetMarks: number,
+                difficulty: string
+            ): any[] => {
+                const filtered = questions.filter(
+                    q => q.difficulty?.toLowerCase() === difficulty.toLowerCase()
+                );
+
+                // Shuffle for randomness
+                const shuffled = filtered.sort(() => Math.random() - 0.5);
+
+                const selected: any[] = [];
+                let currentMarks = 0;
+
+                for (const q of shuffled) {
+                    if (currentMarks >= targetMarks) break;
+                    if (currentMarks + q.marks <= targetMarks + 5) { // Allow 5 marks tolerance
+                        selected.push(q);
+                        currentMarks += q.marks;
+                    }
+                }
+
+                return selected;
+            };
+
+            // Select coding questions by difficulty and marks
+            const codingEasyMarks = Math.round((codingMarks * difficultyDistribution.easy) / 100);
+            const codingMediumMarks = Math.round((codingMarks * difficultyDistribution.medium) / 100);
+            const codingHardMarks = codingMarks - codingEasyMarks - codingMediumMarks;
+
+            const selectedCodingEasy = selectQuestionsByMarks(codingQuestions, codingEasyMarks, 'easy');
+            const selectedCodingMedium = selectQuestionsByMarks(codingQuestions, codingMediumMarks, 'medium');
+            const selectedCodingHard = selectQuestionsByMarks(codingQuestions, codingHardMarks, 'hard');
+
+            // Select MCQ questions by difficulty and marks
+            const mcqEasyMarks = Math.round((mcqMarks * difficultyDistribution.easy) / 100);
+            const mcqMediumMarks = Math.round((mcqMarks * difficultyDistribution.medium) / 100);
+            const mcqHardMarks = mcqMarks - mcqEasyMarks - mcqMediumMarks;
+
+            const selectedMcqEasy = selectQuestionsByMarks(mcqQuestions, mcqEasyMarks, 'easy');
+            const selectedMcqMedium = selectQuestionsByMarks(mcqQuestions, mcqMediumMarks, 'medium');
+            const selectedMcqHard = selectQuestionsByMarks(mcqQuestions, mcqHardMarks, 'hard');
+
+            // Map coding questions
+            const mappedCoding: Question[] = [
+                ...selectedCodingEasy,
+                ...selectedCodingMedium,
+                ...selectedCodingHard
+            ].map((q, index) => ({
+                id: `coding-q${index + 1}`,
+                question: q.questionText ?? q.question,
+                expectedOutput: q.expectedOutput ? q.expectedOutput.toString().trim() : '',
+                difficulty: q.difficulty,
+                marks: q.marks,
+                solution: q.solution,
+                type: 'coding',
+                options: [],
+                correctAnswer: undefined,
+                tags: q.tags || []
+            }));
+
+            // Map MCQ questions
+            const mappedMcq: Question[] = [
+                ...selectedMcqEasy,
+                ...selectedMcqMedium,
+                ...selectedMcqHard
+            ].map((q, index) => ({
+                id: `mcq-q${mappedCoding.length + index + 1}`,
+                question: q.questionText ?? q.question,
+                expectedOutput: undefined,
+                difficulty: q.difficulty,
+                marks: q.marks,
+                solution: q.solution,
+                type: 'mcq',
+                options: Array.isArray(q.options) && q.options.length > 0 ? q.options.map((opt: any) => ({
+                    id: opt.id,
+                    text: opt.text || opt.optionText,
+                    isCorrect: opt.isCorrect
+                })) : [],
+                correctAnswer: Array.isArray(q.options) ? q.options.findIndex((opt: any) => opt.isCorrect === true) : undefined,
+                tags: q.tags || []
+            }));
+
+            allFetchedQuestions = [...mappedCoding, ...mappedMcq];
+
+            // Shuffle final questions
+            allFetchedQuestions = allFetchedQuestions.sort(() => Math.random() - 0.5);
+
+            const actualMarks = allFetchedQuestions.reduce((sum, q) => sum + (q.marks || 0), 0);
+
+            setQuestions(allFetchedQuestions);
+
+            toast.success(
+                `Generated ${allFetchedQuestions.length} questions (Total: ${actualMarks}/${totalMarks} marks)`,
+                { duration: 4000 }
+            );
+
+        } catch (err) {
+            console.error('Error generating questions:', err);
+            if (err instanceof Error) {
+                setError(`Failed to generate questions: ${err.message}`);
+            } else {
+                setError('Failed to generate questions: Unknown error');
+            }
+        } finally {
+            setLoading(false);
+        }
+    };
+
     const languageOptions = [
         { value: "python", label: "Python", icon: "🐍" },
         { value: "sql", label: "SQL", icon: "🗄️" },
@@ -530,8 +712,11 @@ export default function ExaminerDashboard() {
         try {
             let allFetchedQuestions: Question[] = [];
 
+            // Build tag query parameter
+            const tagParam = selectedTags.length > 0 ? `&tags=${selectedTags.join(',')}` : '';
+
             if (codingTotal > 0) {
-                const codingRes = await fetch(`/api/questions?language=${language}&questionType=coding`);
+                const codingRes = await fetch(`/api/questions?language=${language}&questionType=coding${tagParam}`);
                 if (!codingRes.ok) throw new Error(`Failed to fetch coding questions`);
 
                 const codingQuestions: any[] = await codingRes.json();
@@ -559,14 +744,15 @@ export default function ExaminerDashboard() {
                     solution: q.solution !== undefined ? q.solution : undefined,
                     type: 'coding',
                     options: [],
-                    correctAnswer: undefined
+                    correctAnswer: undefined,
+                    tags: q.tags || []
                 }));
 
                 allFetchedQuestions = [...allFetchedQuestions, ...mappedCoding];
             }
 
             if (mcqTotal > 0) {
-                const mcqRes = await fetch(`/api/questions?language=${language}&questionType=mcq`);
+                const mcqRes = await fetch(`/api/questions?language=${language}&questionType=mcq${tagParam}`);
                 if (!mcqRes.ok) throw new Error(`Failed to fetch MCQ questions`);
 
                 const mcqQuestions: any[] = await mcqRes.json();
@@ -598,7 +784,8 @@ export default function ExaminerDashboard() {
                         text: opt.text || opt.optionText,
                         isCorrect: opt.isCorrect
                     })) : [],
-                    correctAnswer: Array.isArray(q.options) ? q.options.findIndex((opt: any) => opt.isCorrect === true) : undefined
+                    correctAnswer: Array.isArray(q.options) ? q.options.findIndex((opt: any) => opt.isCorrect === true) : undefined,
+                    tags: q.tags || []
                 }));
                 allFetchedQuestions = [...allFetchedQuestions, ...mappedMcq];
             }
@@ -662,6 +849,7 @@ export default function ExaminerDashboard() {
         setMcqBeginnerCount(0);
         setMcqIntermediateCount(0);
         setMcqExpertCount(0);
+        setSelectedTags([]);
         setError('');
     };
 
@@ -1120,146 +1308,469 @@ export default function ExaminerDashboard() {
                             </div>
                         )}
 
-                        {/* Step 2: Questions */}
+
+                        {/* Replace the existing question selection UI in Step 2 with this */}
                         {currentStep === 2 && (
                             <div className="space-y-6">
                                 <div>
                                     <h2 className="text-lg font-semibold text-foreground mb-1">Exam Questions</h2>
-                                    <p className="text-sm text-muted-foreground">Configure your question selection from the question bank</p>
+                                    <p className="text-sm text-muted-foreground">Choose your question selection method</p>
                                 </div>
 
-                                <div className="space-y-4">
-                                    <Card className="border-blue-200 dark:border-blue-800">
-                                        <CardHeader>
-                                            <CardTitle className="text-sm text-blue-700 dark:text-blue-400 flex items-center gap-2">
-                                                <Code className="w-4 h-4" />
-                                                Coding Questions
-                                            </CardTitle>
-                                        </CardHeader>
-                                        <CardContent>
-                                            <div className="grid grid-cols-3 gap-4">
-                                                <div className="space-y-2">
-                                                    <Label className="text-xs">Easy</Label>
-                                                    <Input
-                                                        type="number"
-                                                        min="0"
-                                                        max="50"
-                                                        value={beginnerCount}
-                                                        onChange={(e) => setBeginnerCount(Number(e.target.value))}
-                                                    />
-                                                </div>
-                                                <div className="space-y-2">
-                                                    <Label className="text-xs">Medium</Label>
-                                                    <Input
-                                                        type="number"
-                                                        min="0"
-                                                        max="50"
-                                                        value={intermediateCount}
-                                                        onChange={(e) => setIntermediateCount(Number(e.target.value))}
-                                                    />
-                                                </div>
-                                                <div className="space-y-2">
-                                                    <Label className="text-xs">Hard</Label>
-                                                    <Input
-                                                        type="number"
-                                                        min="0"
-                                                        max="50"
-                                                        value={expertCount}
-                                                        onChange={(e) => setExpertCount(Number(e.target.value))}
-                                                    />
-                                                </div>
-                                            </div>
-                                        </CardContent>
-                                    </Card>
+                                {/* Generation Method Toggle */}
+                                <Card className="border-primary/20">
+                                    <CardContent className="p-4">
+                                        <div className="flex gap-4">
+                                            <button
+                                                onClick={() => {
+                                                    setUseMarksBasedGeneration(false);
+                                                    setQuestions([]);
+                                                }}
+                                                className={`flex-1 p-4 rounded-lg border-2 transition-all ${!useMarksBasedGeneration
+                                                    ? 'border-primary bg-primary/10'
+                                                    : 'border-border hover:border-primary/50'
+                                                    }`}
+                                            >
+                                                <FileText className="w-6 h-6 mx-auto mb-2" />
+                                                <p className="font-semibold">Manual Selection</p>
+                                                <p className="text-xs text-muted-foreground mt-1">
+                                                    Choose exact number of questions per difficulty
+                                                </p>
+                                            </button>
 
-                                    <Card className="border-purple-200 dark:border-purple-800">
-                                        <CardHeader>
-                                            <CardTitle className="text-sm text-purple-700 dark:text-purple-400 flex items-center gap-2">
-                                                <FileText className="w-4 h-4" />
-                                                MCQ Questions
-                                            </CardTitle>
-                                        </CardHeader>
-                                        <CardContent>
-                                            <div className="grid grid-cols-3 gap-4">
-                                                <div className="space-y-2">
-                                                    <Label className="text-xs">Easy</Label>
-                                                    <Input
-                                                        type="number"
-                                                        min="0"
-                                                        max="50"
-                                                        value={mcqBeginnerCount}
-                                                        onChange={(e) => setMcqBeginnerCount(Number(e.target.value))}
-                                                    />
-                                                </div>
-                                                <div className="space-y-2">
-                                                    <Label className="text-xs">Medium</Label>
-                                                    <Input
-                                                        type="number"
-                                                        min="0"
-                                                        max="50"
-                                                        value={mcqIntermediateCount}
-                                                        onChange={(e) => setMcqIntermediateCount(Number(e.target.value))}
-                                                    />
-                                                </div>
-                                                <div className="space-y-2">
-                                                    <Label className="text-xs">Hard</Label>
-                                                    <Input
-                                                        type="number"
-                                                        min="0"
-                                                        max="50"
-                                                        value={mcqExpertCount}
-                                                        onChange={(e) => setMcqExpertCount(Number(e.target.value))}
-                                                    />
-                                                </div>
-                                            </div>
-                                        </CardContent>
-                                    </Card>
-                                </div>
+                                            <button
+                                                onClick={() => {
+                                                    setUseMarksBasedGeneration(true);
+                                                    setQuestions([]);
+                                                }}
+                                                className={`flex-1 p-4 rounded-lg border-2 transition-all ${useMarksBasedGeneration
+                                                    ? 'border-primary bg-primary/10'
+                                                    : 'border-border hover:border-primary/50'
+                                                    }`}
+                                            >
+                                                <Sparkles className="w-6 h-6 mx-auto mb-2" />
+                                                <p className="font-semibold">Generate by Marks</p>
+                                                <p className="text-xs text-muted-foreground mt-1">
+                                                    Auto-generate based on total marks
+                                                </p>
+                                            </button>
+                                        </div>
+                                    </CardContent>
+                                </Card>
 
-                                <div className="flex flex-wrap gap-3">
-                                    <Button
-                                        onClick={fetchQuestions}
-                                        disabled={loading}
-                                        className="flex-1 min-w-[200px]"
-                                    >
-                                        {loading ? (
-                                            <>
-                                                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                                                Fetching Questions...
-                                            </>
+                                {/* Tags Filter - Show for both methods */}
+                                <Card className="border-indigo-200 dark:border-indigo-800">
+                                    <CardHeader>
+                                        <div className="flex items-center justify-between">
+                                            <CardTitle className="text-sm text-indigo-700 dark:text-indigo-400 flex items-center gap-2">
+                                                <Settings className="w-4 h-4" />
+                                                Filter by Tags (Optional)
+                                            </CardTitle>
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                onClick={fetchAvailableTags}
+                                                disabled={loadingTags}
+                                            >
+                                                {loadingTags ? (
+                                                    <>
+                                                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                                        Loading...
+                                                    </>
+                                                ) : (
+                                                    'Load Tags'
+                                                )}
+                                            </Button>
+                                        </div>
+                                    </CardHeader>
+                                    <CardContent>
+                                        {availableTags.length > 0 ? (
+                                            <div className="space-y-3">
+                                                <div className="flex flex-wrap gap-2">
+                                                    {availableTags.map((tag) => (
+                                                        <Badge
+                                                            key={tag}
+                                                            variant={selectedTags.includes(tag) ? "default" : "outline"}
+                                                            className="cursor-pointer hover:bg-primary/80 transition-colors"
+                                                            onClick={() => {
+                                                                setSelectedTags(prev =>
+                                                                    prev.includes(tag)
+                                                                        ? prev.filter(t => t !== tag)
+                                                                        : [...prev, tag]
+                                                                );
+                                                            }}
+                                                        >
+                                                            #{tag}
+                                                            {selectedTags.includes(tag) && (
+                                                                <CheckCircle className="w-3 h-3 ml-1" />
+                                                            )}
+                                                        </Badge>
+                                                    ))}
+                                                </div>
+                                                {selectedTags.length > 0 && (
+                                                    <div className="flex items-center justify-between pt-2 border-t">
+                                                        <p className="text-xs text-muted-foreground">
+                                                            {selectedTags.length} tag(s) selected
+                                                        </p>
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            onClick={() => setSelectedTags([])}
+                                                            className="h-7 text-xs"
+                                                        >
+                                                            Clear All
+                                                        </Button>
+                                                    </div>
+                                                )}
+                                            </div>
                                         ) : (
-                                            <>
-                                                <FileText className="w-4 h-4 mr-2" />
-                                                Fetch Questions
-                                            </>
-                                        )}
-                                    </Button>
-
-                                    <Button variant="outline" onClick={resetCounts}>
-                                        <RefreshCw className="w-4 h-4 mr-2" />
-                                        Reset
-                                    </Button>
-
-                                    {questions.length > 0 && (
-                                        <Button variant="destructive" onClick={clearQuestions}>
-                                            <Trash2 className="w-4 h-4 mr-2" />
-                                            Clear
-                                        </Button>
-                                    )}
-                                </div>
-
-                                {(beginnerCount + intermediateCount + expertCount + mcqBeginnerCount + mcqIntermediateCount + mcqExpertCount > 0) && (
-                                    <Alert>
-                                        <Info className="w-4 h-4" />
-                                        <AlertDescription>
-                                            <p className="font-medium">Total: {beginnerCount + intermediateCount + expertCount + mcqBeginnerCount + mcqIntermediateCount + mcqExpertCount} questions</p>
-                                            <p className="text-sm mt-1">
-                                                Coding: {beginnerCount + intermediateCount + expertCount} | MCQ: {mcqBeginnerCount + mcqIntermediateCount + mcqExpertCount}
+                                            <p className="text-sm text-muted-foreground text-center py-4">
+                                                Click "Load Tags" to see available tags for filtering
                                             </p>
-                                        </AlertDescription>
-                                    </Alert>
+                                        )}
+                                    </CardContent>
+                                </Card>
+
+                                {/* Manual Selection Mode */}
+                                {!useMarksBasedGeneration && (
+                                    <div className="space-y-4">
+                                        {/* Existing Coding and MCQ cards */}
+                                        <Card className="border-blue-200 dark:border-blue-800">
+                                            <CardHeader>
+                                                <CardTitle className="text-sm text-blue-700 dark:text-blue-400 flex items-center gap-2">
+                                                    <Code className="w-4 h-4" />
+                                                    Coding Questions
+                                                </CardTitle>
+                                            </CardHeader>
+                                            <CardContent>
+                                                <div className="grid grid-cols-3 gap-4">
+                                                    <div className="space-y-2">
+                                                        <Label className="text-xs">Easy</Label>
+                                                        <Input
+                                                            type="number"
+                                                            min="0"
+                                                            max="50"
+                                                            value={beginnerCount}
+                                                            onChange={(e) => setBeginnerCount(Number(e.target.value))}
+                                                        />
+                                                    </div>
+                                                    <div className="space-y-2">
+                                                        <Label className="text-xs">Medium</Label>
+                                                        <Input
+                                                            type="number"
+                                                            min="0"
+                                                            max="50"
+                                                            value={intermediateCount}
+                                                            onChange={(e) => setIntermediateCount(Number(e.target.value))}
+                                                        />
+                                                    </div>
+                                                    <div className="space-y-2">
+                                                        <Label className="text-xs">Hard</Label>
+                                                        <Input
+                                                            type="number"
+                                                            min="0"
+                                                            max="50"
+                                                            value={expertCount}
+                                                            onChange={(e) => setExpertCount(Number(e.target.value))}
+                                                        />
+                                                    </div>
+                                                </div>
+                                            </CardContent>
+                                        </Card>
+
+                                        <Card className="border-purple-200 dark:border-purple-800">
+                                            <CardHeader>
+                                                <CardTitle className="text-sm text-purple-700 dark:text-purple-400 flex items-center gap-2">
+                                                    <FileText className="w-4 h-4" />
+                                                    MCQ Questions
+                                                </CardTitle>
+                                            </CardHeader>
+                                            <CardContent>
+                                                <div className="grid grid-cols-3 gap-4">
+                                                    <div className="space-y-2">
+                                                        <Label className="text-xs">Easy</Label>
+                                                        <Input
+                                                            type="number"
+                                                            min="0"
+                                                            max="50"
+                                                            value={mcqBeginnerCount}
+                                                            onChange={(e) => setMcqBeginnerCount(Number(e.target.value))}
+                                                        />
+                                                    </div>
+                                                    <div className="space-y-2">
+                                                        <Label className="text-xs">Medium</Label>
+                                                        <Input
+                                                            type="number"
+                                                            min="0"
+                                                            max="50"
+                                                            value={mcqIntermediateCount}
+                                                            onChange={(e) => setMcqIntermediateCount(Number(e.target.value))}
+                                                        />
+                                                    </div>
+                                                    <div className="space-y-2">
+                                                        <Label className="text-xs">Hard</Label>
+                                                        <Input
+                                                            type="number"
+                                                            min="0"
+                                                            max="50"
+                                                            value={mcqExpertCount}
+                                                            onChange={(e) => setMcqExpertCount(Number(e.target.value))}
+                                                        />
+                                                    </div>
+                                                </div>
+                                            </CardContent>
+                                        </Card>
+
+                                        <div className="flex flex-wrap gap-3">
+                                            <Button
+                                                onClick={fetchQuestions}
+                                                disabled={loading}
+                                                className="flex-1 min-w-[200px]"
+                                            >
+                                                {loading ? (
+                                                    <>
+                                                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                                        Fetching Questions...
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <FileText className="w-4 h-4 mr-2" />
+                                                        Fetch Questions
+                                                    </>
+                                                )}
+                                            </Button>
+
+                                            <Button variant="outline" onClick={resetCounts}>
+                                                <RefreshCw className="w-4 h-4 mr-2" />
+                                                Reset
+                                            </Button>
+
+                                            {questions.length > 0 && (
+                                                <Button variant="destructive" onClick={clearQuestions}>
+                                                    <Trash2 className="w-4 h-4 mr-2" />
+                                                    Clear
+                                                </Button>
+                                            )}
+                                        </div>
+
+                                        {(beginnerCount + intermediateCount + expertCount + mcqBeginnerCount + mcqIntermediateCount + mcqExpertCount > 0) && (
+                                            <Alert>
+                                                <Info className="w-4 h-4" />
+                                                <AlertDescription>
+                                                    <p className="font-medium">Total: {beginnerCount + intermediateCount + expertCount + mcqBeginnerCount + mcqIntermediateCount + mcqExpertCount} questions</p>
+                                                    <p className="text-sm mt-1">
+                                                        Coding: {beginnerCount + intermediateCount + expertCount} | MCQ: {mcqBeginnerCount + mcqIntermediateCount + mcqExpertCount}
+                                                    </p>
+                                                </AlertDescription>
+                                            </Alert>
+                                        )}
+                                    </div>
                                 )}
 
+                                {/* Marks-Based Generation Mode */}
+                                {useMarksBasedGeneration && (
+                                    <div className="space-y-4">
+                                        <Card className="border-green-200 dark:border-green-800">
+                                            <CardHeader>
+                                                <CardTitle className="text-sm text-green-700 dark:text-green-400">
+                                                    Total Marks Configuration
+                                                </CardTitle>
+                                            </CardHeader>
+                                            <CardContent className="space-y-4">
+                                                <div className="space-y-2">
+                                                    <Label>Total Marks for Exam *</Label>
+                                                    <Input
+                                                        type="number"
+                                                        min="10"
+                                                        max="500"
+                                                        value={totalMarks}
+                                                        onChange={(e) => setTotalMarks(Number(e.target.value))}
+                                                        placeholder="e.g., 100"
+                                                        className="text-lg font-semibold"
+                                                    />
+                                                </div>
+                                            </CardContent>
+                                        </Card>
+
+                                        <Card className="border-orange-200 dark:border-orange-800">
+                                            <CardHeader>
+                                                <CardTitle className="text-sm text-orange-700 dark:text-orange-400">
+                                                    Question Type Distribution (%)
+                                                </CardTitle>
+                                            </CardHeader>
+                                            <CardContent>
+                                                <div className="grid grid-cols-2 gap-4">
+                                                    <div className="space-y-2">
+                                                        <Label className="text-xs flex items-center justify-between">
+                                                            <span>Coding Questions</span>
+                                                            <span className="font-semibold">{marksDistribution.coding}%</span>
+                                                        </Label>
+                                                        <Input
+                                                            type="range"
+                                                            min="0"
+                                                            max="100"
+                                                            value={marksDistribution.coding}
+                                                            onChange={(e) => {
+                                                                const value = Number(e.target.value);
+                                                                setMarksDistribution({
+                                                                    coding: value,
+                                                                    mcq: 100 - value
+                                                                });
+                                                            }}
+                                                        />
+                                                        <p className="text-xs text-muted-foreground text-center">
+                                                            ~{Math.round((totalMarks * marksDistribution.coding) / 100)} marks
+                                                        </p>
+                                                    </div>
+                                                    <div className="space-y-2">
+                                                        <Label className="text-xs flex items-center justify-between">
+                                                            <span>MCQ Questions</span>
+                                                            <span className="font-semibold">{marksDistribution.mcq}%</span>
+                                                        </Label>
+                                                        <Input
+                                                            type="range"
+                                                            min="0"
+                                                            max="100"
+                                                            value={marksDistribution.mcq}
+                                                            onChange={(e) => {
+                                                                const value = Number(e.target.value);
+                                                                setMarksDistribution({
+                                                                    mcq: value,
+                                                                    coding: 100 - value
+                                                                });
+                                                            }}
+                                                        />
+                                                        <p className="text-xs text-muted-foreground text-center">
+                                                            ~{Math.round((totalMarks * marksDistribution.mcq) / 100)} marks
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            </CardContent>
+                                        </Card>
+
+                                        <Card className="border-violet-200 dark:border-violet-800">
+                                            <CardHeader>
+                                                <CardTitle className="text-sm text-violet-700 dark:text-violet-400">
+                                                    Difficulty Distribution (%)
+                                                </CardTitle>
+                                            </CardHeader>
+                                            <CardContent>
+                                                <div className="grid grid-cols-3 gap-4">
+                                                    <div className="space-y-2">
+                                                        <Label className="text-xs flex items-center justify-between">
+                                                            <span>Easy</span>
+                                                            <span className="font-semibold">{difficultyDistribution.easy}%</span>
+                                                        </Label>
+                                                        <Input
+                                                            type="range"
+                                                            min="0"
+                                                            max="100"
+                                                            value={difficultyDistribution.easy}
+                                                            onChange={(e) => {
+                                                                const value = Number(e.target.value);
+                                                                const remaining = 100 - value;
+                                                                const mediumRatio = difficultyDistribution.medium / (difficultyDistribution.medium + difficultyDistribution.hard);
+                                                                setDifficultyDistribution({
+                                                                    easy: value,
+                                                                    medium: Math.round(remaining * mediumRatio),
+                                                                    hard: Math.round(remaining * (1 - mediumRatio))
+                                                                });
+                                                            }}
+                                                        />
+                                                        <p className="text-xs text-muted-foreground text-center">
+                                                            ~{Math.round((totalMarks * difficultyDistribution.easy) / 100)} marks
+                                                        </p>
+                                                    </div>
+                                                    <div className="space-y-2">
+                                                        <Label className="text-xs flex items-center justify-between">
+                                                            <span>Medium</span>
+                                                            <span className="font-semibold">{difficultyDistribution.medium}%</span>
+                                                        </Label>
+                                                        <Input
+                                                            type="range"
+                                                            min="0"
+                                                            max="100"
+                                                            value={difficultyDistribution.medium}
+                                                            onChange={(e) => {
+                                                                const value = Number(e.target.value);
+                                                                const remaining = 100 - value;
+                                                                const easyRatio = difficultyDistribution.easy / (difficultyDistribution.easy + difficultyDistribution.hard);
+                                                                setDifficultyDistribution({
+                                                                    medium: value,
+                                                                    easy: Math.round(remaining * easyRatio),
+                                                                    hard: Math.round(remaining * (1 - easyRatio))
+                                                                });
+                                                            }}
+                                                        />
+                                                        <p className="text-xs text-muted-foreground text-center">
+                                                            ~{Math.round((totalMarks * difficultyDistribution.medium) / 100)} marks
+                                                        </p>
+                                                    </div>
+                                                    <div className="space-y-2">
+                                                        <Label className="text-xs flex items-center justify-between">
+                                                            <span>Hard</span>
+                                                            <span className="font-semibold">{difficultyDistribution.hard}%</span>
+                                                        </Label>
+                                                        <Input
+                                                            type="range"
+                                                            min="0"
+                                                            max="100"
+                                                            value={difficultyDistribution.hard}
+                                                            onChange={(e) => {
+                                                                const value = Number(e.target.value);
+                                                                const remaining = 100 - value;
+                                                                const easyRatio = difficultyDistribution.easy / (difficultyDistribution.easy + difficultyDistribution.medium);
+                                                                setDifficultyDistribution({
+                                                                    hard: value,
+                                                                    easy: Math.round(remaining * easyRatio),
+                                                                    medium: Math.round(remaining * (1 - easyRatio))
+                                                                });
+                                                            }}
+                                                        />
+                                                        <p className="text-xs text-muted-foreground text-center">
+                                                            ~{Math.round((totalMarks * difficultyDistribution.hard) / 100)} marks
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            </CardContent>
+                                        </Card>
+
+                                        <Button
+                                            onClick={generateQuestionsByMarks}
+                                            disabled={loading || totalMarks <= 0}
+                                            className="w-full"
+                                            size="lg"
+                                        >
+                                            {loading ? (
+                                                <>
+                                                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                                    Generating Questions...
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <Sparkles className="w-4 h-4 mr-2" />
+                                                    Generate Question Paper ({totalMarks} marks)
+                                                </>
+                                            )}
+                                        </Button>
+
+                                        {totalMarks > 0 && (
+                                            <Alert>
+                                                <Info className="w-4 h-4" />
+                                                <AlertDescription>
+                                                    <p className="font-medium mb-2">Distribution Preview</p>
+                                                    <div className="text-xs space-y-1">
+                                                        <p>• Coding: ~{Math.round((totalMarks * marksDistribution.coding) / 100)} marks ({marksDistribution.coding}%)</p>
+                                                        <p>• MCQ: ~{Math.round((totalMarks * marksDistribution.mcq) / 100)} marks ({marksDistribution.mcq}%)</p>
+                                                        <p className="mt-2 pt-2 border-t">• Easy: {difficultyDistribution.easy}% | Medium: {difficultyDistribution.medium}% | Hard: {difficultyDistribution.hard}%</p>
+                                                    </div>
+                                                </AlertDescription>
+                                            </Alert>
+                                        )}
+                                    </div>
+                                )}
+
+                                {/* Rest of the existing code (error display, questions display, etc.) */}
                                 {error && (
                                     <Alert variant="destructive">
                                         <AlertDescription>{error}</AlertDescription>
@@ -1277,7 +1788,7 @@ export default function ExaminerDashboard() {
                                                 <Card key={q.id || index} className="bg-muted/30">
                                                     <CardHeader className="pb-3">
                                                         <div className="flex items-center justify-between">
-                                                            <div className="flex items-center gap-2">
+                                                            <div className="flex items-center gap-2 flex-wrap">
                                                                 <Badge className={getDifficultyColor(q.difficulty || '')}>
                                                                     {q.difficulty}
                                                                 </Badge>
@@ -1285,6 +1796,21 @@ export default function ExaminerDashboard() {
                                                                     {q.type === 'mcq' ? 'MCQ' : 'Coding'}
                                                                 </Badge>
                                                                 {q.marks && <Badge variant="secondary">{q.marks} marks</Badge>}
+
+                                                                {/* Display Tags */}
+                                                                {q.tags && q.tags.length > 0 && (
+                                                                    <>
+                                                                        {q.tags.map((tag, tagIndex) => (
+                                                                            <Badge
+                                                                                key={tagIndex}
+                                                                                variant="outline"
+                                                                                className="bg-indigo-50 text-indigo-700 border-indigo-200 dark:bg-indigo-950/50 dark:text-indigo-400 dark:border-indigo-900"
+                                                                            >
+                                                                                #{tag}
+                                                                            </Badge>
+                                                                        ))}
+                                                                    </>
+                                                                )}
                                                             </div>
                                                             <Button
                                                                 variant="ghost"
@@ -1358,6 +1884,9 @@ export default function ExaminerDashboard() {
                                 </div>
                             </div>
                         )}
+
+                        {/* Step 2: Questions */}
+
 
                         {/* Step 3: Batch Assignment */}
                         {currentStep === 3 && (

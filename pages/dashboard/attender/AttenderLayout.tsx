@@ -14,6 +14,8 @@ import {
     FileText,
     LogOut,
     Home,
+    ListChecks,
+    Trophy,
 } from 'lucide-react';
 import ThemeToggle from '@/components/ThemeToggle';
 import {
@@ -46,8 +48,15 @@ const menuItems: MenuItem[] = [
         id: 'ViewExams',
         navigation: 'view-exams',
         label: 'View Exams',
-        icon: FileText,
+        icon: ListChecks,
         description: 'View all exams',
+    },
+    {
+        id: 'ExamResults',
+        navigation: 'exam-results',
+        label: 'Exam Results',
+        icon: Trophy,
+        description: 'View all results',
     },
 ];
 
