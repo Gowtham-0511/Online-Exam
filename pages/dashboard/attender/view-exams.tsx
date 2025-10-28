@@ -1,4 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
+import { GetServerSideProps } from 'next';
+import { getSession } from 'next-auth/react';
+import useSWR from 'swr';
 import { useSession } from 'next-auth/react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -45,8 +48,47 @@ import {
 } from 'lucide-react';
 import AttenderLayout from './AttenderLayout';
 import { useRouter } from "next/router";
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
+const fetcher = (url: string) => fetch(url).then(res => res.json());
+
+interface ViewExamsProps {
+    initialExams: Exam[];
+}
+
+export const getServerSideProps: GetServerSideProps = async (context) => {
+    const session = await getSession(context);
+
+    if (!session?.user?.email) {
+        return {
+            redirect: {
+                destination: '/login',
+                permanent: false,
+            },
+        };
+    }
+
+    try {
+        const baseUrl = process.env.NEXTAUTH_URL || 'http://localhost:3000';
+        const response = await fetch(
+            `${baseUrl}/api/attender/allowed-exam?email=${encodeURIComponent(session.user.email)}`
+        );
+
+        const exams = response.ok ? await response.json() : [];
+
+        return {
+            props: {
+                initialExams: exams,
+            },
+        };
+    } catch (error) {
+        console.error('Error fetching exams:', error);
+        return {
+            props: {
+                initialExams: [],
+            },
+        };
+    }
+};
 
 interface Question {
     id: string;
@@ -79,12 +121,21 @@ interface Exam {
     participants: number;
 }
 
-const ViewExams: React.FC = () => {
+const ViewExams: React.FC<ViewExamsProps> = ({ initialExams }) => {
     const { data: session } = useSession();
     const router = useRouter();
-    const [exams, setExams] = useState<Exam[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
+
+    const { data: exams = initialExams, error, isLoading } = useSWR(
+        session?.user?.email
+            ? `/api/attender/allowed-exam?email=${encodeURIComponent(session.user.email)}`
+            : null,
+        fetcher,
+        {
+            fallbackData: initialExams,
+            revalidateOnMount: false,
+            revalidateOnFocus: false,
+        }
+    );
 
     // Popup states
     const [showExamPopup, setShowExamPopup] = useState(false);
@@ -93,30 +144,30 @@ const ViewExams: React.FC = () => {
     const [cameraEnabled, setCameraEnabled] = useState(false);
     const [microphoneEnabled, setMicrophoneEnabled] = useState(false);
 
-    useEffect(() => {
-        const fetchUserAssessments = async () => {
-            try {
-                setLoading(true);
-                const response = await fetch(`/api/attender/allowed-exam?email=${encodeURIComponent(session?.user?.email || "")}`);
-                if (response.ok) {
-                    const assessments = await response.json();
-                    console.log(assessments);
-                    setExams(assessments);
-                } else {
-                    setError('Failed to fetch exams');
-                }
-            } catch (error) {
-                console.error('Error fetching assessments:', error);
-                setError('Error fetching exams');
-            } finally {
-                setLoading(false);
-            }
-        };
+    // useEffect(() => {
+    //     const fetchUserAssessments = async () => {
+    //         try {
+    //             setLoading(true);
+    //             const response = await fetch(`/api/attender/allowed-exam?email=${encodeURIComponent(session?.user?.email || "")}`);
+    //             if (response.ok) {
+    //                 const assessments = await response.json();
+    //                 console.log(assessments);
+    //                 setExams(assessments);
+    //             } else {
+    //                 setError('Failed to fetch exams');
+    //             }
+    //         } catch (error) {
+    //             console.error('Error fetching assessments:', error);
+    //             setError('Error fetching exams');
+    //         } finally {
+    //             setLoading(false);
+    //         }
+    //     };
 
-        if (session?.user?.email) {
-            fetchUserAssessments();
-        }
-    }, [session?.user?.email]);
+    //     if (session?.user?.email) {
+    //         fetchUserAssessments();
+    //     }
+    // }, [session?.user?.email]);
 
     const getLanguageConfig = (language: string) => {
         const configs = {
@@ -183,40 +234,11 @@ const ViewExams: React.FC = () => {
         return configs[difficulty.toLowerCase() as keyof typeof configs] || configs.easy;
     };
 
-    const getLanguageColor = (language: string) => {
-        const colors = {
-            python: 'bg-accent/10 text-blue-800 dark:bg-blue-900 dark:text-blue-300',
-            javascript: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300',
-            java: 'bg-red-100 text-red-800 dark:bg-destructive dark:text-red-300',
-            cpp: 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300',
-            c: 'bg-gray-100 text-gray-800 dark:bg-muted dark:text-gray-300',
-            default: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300'
-        };
-        return colors[language.toLowerCase() as keyof typeof colors] || colors.default;
-    };
-
-    const getDifficultyColor = (difficulty: string) => {
-        const colors = {
-            easy: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300',
-            medium: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300',
-            hard: 'bg-red-100 text-red-800 dark:bg-destructive dark:text-red-300'
-        };
-        return colors[difficulty.toLowerCase() as keyof typeof colors] || colors.easy;
-    };
-
     const parseQuestions = (questionsStr: string): Question[] => {
         try {
             return JSON.parse(questionsStr);
         } catch {
             return [];
-        }
-    };
-
-    const parseQuestionConfig = (configStr: string): QuestionConfig => {
-        try {
-            return JSON.parse(configStr);
-        } catch {
-            return { beginner: { count: 0, marks: 0 }, intermediate: { count: 0, marks: 0 }, hard: { count: 0, marks: 0 } };
         }
     };
 
@@ -286,7 +308,7 @@ const ViewExams: React.FC = () => {
     };
 
     const handleStartExam = (examId: any) => {
-        const exam = exams.find(e => e.id === examId);
+        const exam = exams.find((e: { id: any; }) => e.id === examId);
         if (exam) {
             setExamData(exam);
             setShowExamPopup(true);
@@ -329,7 +351,7 @@ const ViewExams: React.FC = () => {
         }
     };
 
-    if (loading) {
+    if (isLoading && !exams.length) {
         return (
             <AttenderLayout>
                 <div className="min-h-screen bg-gradient-to-br from-background">
@@ -363,20 +385,22 @@ const ViewExams: React.FC = () => {
 
     if (error) {
         return (
-            <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 flex items-center justify-center">
-                <Alert className="max-w-md border-red-200 dark:border-red-800">
-                    <AlertCircle className="h-4 w-4" />
-                    <AlertDescription className="text-red-700 dark:text-red-300">
-                        {error}. Please try refreshing the page.
-                    </AlertDescription>
-                </Alert>
-            </div>
+            <AttenderLayout>
+                <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 flex items-center justify-center">
+                    <Alert className="max-w-md border-red-200 dark:border-red-800">
+                        <AlertCircle className="h-4 w-4" />
+                        <AlertDescription className="text-red-700 dark:text-red-300">
+                            Failed to fetch exams. Please try refreshing the page.
+                        </AlertDescription>
+                    </Alert>
+                </div>
+            </AttenderLayout>
         );
     }
 
-    const totalActiveExams = exams.filter(exam => isExamActive(exam)).length;
-    const totalProctoredExams = exams.filter(exam => exam.isExamProctored).length;
-    const totalLanguages = new Set(exams.map(exam => exam.language)).size;
+    const totalActiveExams = exams?.filter((exam: Exam) => isExamActive(exam)).length || 0;
+    const totalProctoredExams = exams?.filter((exam: { isExamProctored: any; }) => exam.isExamProctored).length || 0;
+    const totalLanguages = new Set(exams?.map((exam: { language: any; }) => exam.language)).size || 0;
 
     return (
         <AttenderLayout>
@@ -387,12 +411,6 @@ const ViewExams: React.FC = () => {
                             <div className="absolute inset-0 bg-grid-white/[0.1] bg-[size:20px_20px]" />
                             <div className="relative flex items-center justify-between">
                                 <div className="flex items-center space-x-3 mb-2">
-                                    {/* <Avatar className="h-12 w-12 ring-2 ring-primary/20">
-                                        <AvatarImage src={session?.user?.image || ""} />
-                                        <AvatarFallback className="bg-primary text-primary-foreground font-semibold">
-                                            {session?.user?.name?.charAt(0).toUpperCase() || "U"}
-                                        </AvatarFallback>
-                                    </Avatar> */}
                                     <div>
                                         <h1 className="text-4xl font-bold mb-2 bg-systech-gradient bg-clip-text text-transparent">Available Assessments</h1>
                                         <p className="text-muted-foreground text-lg">
@@ -462,7 +480,7 @@ const ViewExams: React.FC = () => {
                         </div>
                     ) : (
                         <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
-                            {exams.map((exam) => {
+                            {exams.map((exam: Exam) => {
                                 const questions = parseQuestions(exam.questions);
                                 const totalMarks = calculateTotalMarks(questions);
                                 const examStatus = getExamStatus(exam);

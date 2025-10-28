@@ -32,6 +32,13 @@ import {
     Loader2,
     Sparkles
 } from "lucide-react";
+import useSWR from 'swr';
+
+const fetcher = async (url: string): Promise<any> => {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error('Failed to fetch');
+    return res.json();
+};
 
 interface QuestionOption {
     id: number;
@@ -51,6 +58,31 @@ interface Question {
     options?: QuestionOption[];
     correctAnswer?: number;
     tags?: string[];
+}
+
+interface Batch {
+    Id: string;
+    Name: string;
+    EmployeeCount?: number;
+}
+
+interface User {
+    id: string;
+    email: string;
+    name: string;
+    type: 'employee' | 'external';
+}
+
+interface SqlCredential {
+    id: string;
+    host: string;
+    port: number;
+    username: string;
+    password: string;
+    database: string;
+    serverType: 'ssms' | 'postgres';
+    examTitle?: string;
+    createdBy: string;
 }
 
 export default function ExaminerDashboard() {
@@ -88,15 +120,11 @@ export default function ExaminerDashboard() {
     const [error, setError] = useState('');
 
     const [selectedBatches, setSelectedBatches] = useState<string[]>([]);
-    const [availableBatches, setAvaileBatches] = useState<any[]>([]);
-    const [loadingBatches, setLoadingBatches] = useState(false);
 
     const [batchTimes, setBatchTimes] = useState<{ [key: string]: { startTime: string, endTime: string } }>({});
 
     const [assignmentType, setAssignmentType] = useState<'batch' | 'users'>('batch');
     const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
-    const [availableUsers, setAvailableUsers] = useState<any[]>([]);
-    const [loadingUsers, setLoadingUsers] = useState(false);
     const [userSearchQuery, setUserSearchQuery] = useState('');
 
     const [sqlServerType, setSqlServerType] = useState<'ssms' | 'postgres' | ''>('');
@@ -119,14 +147,10 @@ export default function ExaminerDashboard() {
     const [mcqIntermediateCount, setMcqIntermediateCount] = useState(0);
     const [mcqExpertCount, setMcqExpertCount] = useState(0);
 
-    const [existingCredentials, setExistingCredentials] = useState<any[]>([]);
-    const [loadingCredentials, setLoadingCredentials] = useState(false);
     const [selectedCredentialId, setSelectedCredentialId] = useState<string>('');
     const [showNewCredentialForm, setShowNewCredentialForm] = useState(false);
 
     const [selectedTags, setSelectedTags] = useState<string[]>([]);
-    const [availableTags, setAvailableTags] = useState<string[]>([]);
-    const [loadingTags, setLoadingTags] = useState(false);
 
     // Add these states with your existing state declarations
     const [useMarksBasedGeneration, setUseMarksBasedGeneration] = useState(false);
@@ -140,6 +164,75 @@ export default function ExaminerDashboard() {
         medium: 40,  // percentage
         hard: 20     // percentage
     });
+
+    const { data: availableBatches = [], error: batchesError, isLoading: loadingBatches, mutate: mutateBatches } = useSWR<Batch[]>(
+        '/api/admin/batch',
+        fetcher,
+        {
+            revalidateOnFocus: false,
+            revalidateOnMount: true,
+        }
+    );
+
+    const { data: usersData, error: usersError, isLoading: loadingUsers, mutate: mutateUsers } = useSWR<User[]>(
+        assignmentType === 'users' ? ['/api/admin/employee', '/api/admin/external-users'] : null,
+        async (urls: [string, string]) => {
+            const [employeesRes, externalUsersRes] = await Promise.all([
+                fetch(urls[0]),
+                fetch(urls[1])
+            ]);
+
+            if (!employeesRes.ok || !externalUsersRes.ok) {
+                throw new Error('Failed to fetch users');
+            }
+
+            const employees = await employeesRes.json();
+            const externalUsers = await externalUsersRes.json();
+
+            return [
+                ...employees.map((emp: any) => ({
+                    id: emp.Id || emp.id,
+                    email: emp.Email || emp.email,
+                    name: emp.Name || emp.name,
+                    type: 'employee' as const
+                })),
+                ...externalUsers.map((user: any) => ({
+                    id: user.id,
+                    email: user.email,
+                    name: user.name,
+                    type: 'external' as const
+                }))
+            ];
+        },
+        {
+            revalidateOnFocus: false,
+        }
+    );
+
+    const availableUsers = usersData || [];
+
+    const { data: existingCredentials = [], error: credentialsError, isLoading: loadingCredentials, mutate: mutateCredentials } = useSWR<SqlCredential[]>(
+        sqlServerType && session?.user?.email ? `/api/sql/list-credentials?createdBy=${session.user.email}` : null,
+        fetcher,
+        {
+            revalidateOnFocus: false,
+        }
+    );
+
+    const { data: tagsData, error: tagsError, isLoading: loadingTags, mutate: mutateTags } = useSWR<string[]>(
+        language ? `/api/questions/tags?language=${language}` : null,
+        async (url: string) => {
+            const response = await fetch(url);
+            if (!response.ok) throw new Error('Failed to fetch tags');
+            const data = await response.json();
+            return data.tags;
+        },
+        {
+            revalidateOnFocus: false,
+        }
+    );
+
+    const availableTags = tagsData || [];
 
     const resetForm = () => {
         setTitle("");
@@ -166,7 +259,6 @@ export default function ExaminerDashboard() {
         setMcqIntermediateCount(0);
         setMcqExpertCount(0);
         setSelectedBatches([]);
-        setAvaileBatches([]);
         setBatchTimes({});
         setSqlServerType('');
         setSqlCredentials({
@@ -183,11 +275,9 @@ export default function ExaminerDashboard() {
         setFileUploadError('');
         setSelectedCredentialId('');
         setShowNewCredentialForm(false);
-        setExistingCredentials([]);
 
         setAssignmentType('batch');
         setSelectedUsers([]);
-        setAvailableUsers([]);
         setUserSearchQuery('');
     };
 
@@ -343,7 +433,7 @@ export default function ExaminerDashboard() {
             if (incompleteBatchSchedules.length > 0) {
                 const batchNames = incompleteBatchSchedules
                     .map((batchId) => {
-                        const batch = availableBatches.find((b) => b.Id === batchId);
+                        const batch = availableBatches.find((b: Batch) => b.Id === batchId);
                         return batch?.Name || batchId;
                     })
                     .join(", ");
@@ -485,59 +575,6 @@ export default function ExaminerDashboard() {
             selectedUsers,
         ]
     );
-
-    const fetchAvailableUsers = async () => {
-        setLoadingUsers(true);
-        try {
-            const [employeesRes, externalUsersRes] = await Promise.all([
-                fetch('/api/admin/employee'),
-                fetch('/api/admin/external-users')
-            ]);
-
-            if (employeesRes.ok && externalUsersRes.ok) {
-                const employees = await employeesRes.json();
-                const externalUsers = await externalUsersRes.json();
-
-                const allUsers = [
-                    ...employees.map((emp: any) => ({
-                        id: emp.Id || emp.id,
-                        email: emp.Email || emp.email,
-                        name: emp.Name || emp.name,
-                        type: 'employee'
-                    })),
-                    ...externalUsers.map((user: any) => ({
-                        id: user.id,
-                        email: user.email,
-                        name: user.name,
-                        type: 'external'
-                    }))
-                ];
-
-                setAvailableUsers(allUsers);
-            }
-        } catch (error) {
-            console.error('Error fetching users:', error);
-            toast.error('Failed to load users');
-        } finally {
-            setLoadingUsers(false);
-        }
-    };
-
-    const fetchAvailableTags = async () => {
-        setLoadingTags(true);
-        try {
-            const response = await fetch(`/api/questions/tags?language=${language}`);
-            if (response.ok) {
-                const data = await response.json();
-                setAvailableTags(data.tags);
-            }
-        } catch (error) {
-            console.error('Error fetching tags:', error);
-            toast.error('Failed to load tags');
-        } finally {
-            setLoadingTags(false);
-        }
-    };
 
     const generateQuestionsByMarks = async (): Promise<void> => {
         if (totalMarks <= 0) {
@@ -805,38 +842,6 @@ export default function ExaminerDashboard() {
         }
     };
 
-    const fetchAvailableBatches = async () => {
-        setLoadingBatches(true);
-        try {
-            const response = await fetch('/api/admin/batch');
-            if (response.ok) {
-                const batches = await response.json();
-                setAvaileBatches(batches);
-            }
-        } catch (error) {
-            console.error('Error fetching batches:', error);
-            toast.error('Failed to load batches');
-        } finally {
-            setLoadingBatches(false);
-        }
-    };
-
-    const fetchExistingCredentials = async () => {
-        setLoadingCredentials(true);
-        try {
-            const response = await fetch(`/api/sql/list-credentials?createdBy=${session?.user?.email}`);
-            if (response.ok) {
-                const data = await response.json();
-                setExistingCredentials(data.credentials);
-            }
-        } catch (error) {
-            console.error('Error fetching credentials:', error);
-            toast.error('Failed to load credentials');
-        } finally {
-            setLoadingCredentials(false);
-        }
-    };
-
     const clearQuestions = () => {
         setQuestions([]);
         setError('');
@@ -1090,9 +1095,6 @@ export default function ExaminerDashboard() {
                                                 <Label htmlFor="sqlServerType">SQL Server Type *</Label>
                                                 <Select value={sqlServerType} onValueChange={(value) => {
                                                     setSqlServerType(value as 'ssms' | 'postgres' | '');
-                                                    if (value) {
-                                                        fetchExistingCredentials();
-                                                    }
                                                 }} disabled={isLoading}>
                                                     <SelectTrigger>
                                                         <SelectValue placeholder="Select SQL Server" />
@@ -1171,8 +1173,8 @@ export default function ExaminerDashboard() {
                                                                             <SelectItem value="none" disabled>No credentials found</SelectItem>
                                                                         ) : (
                                                                             existingCredentials
-                                                                                .filter(c => c.serverType === sqlServerType)
-                                                                                .map((credential) => (
+                                                                                .filter((c: SqlCredential) => c.serverType === sqlServerType)
+                                                                                .map((credential: SqlCredential) => (
                                                                                     <SelectItem key={credential.id} value={credential.id}>
                                                                                         <div className="flex flex-col">
                                                                                             <span className="font-medium">{credential.examTitle || 'Unnamed'}</span>
@@ -1369,7 +1371,7 @@ export default function ExaminerDashboard() {
                                             <Button
                                                 variant="outline"
                                                 size="sm"
-                                                onClick={fetchAvailableTags}
+                                                onClick={() => mutateTags()}
                                                 disabled={loadingTags}
                                             >
                                                 {loadingTags ? (
@@ -1387,7 +1389,7 @@ export default function ExaminerDashboard() {
                                         {availableTags.length > 0 ? (
                                             <div className="space-y-3">
                                                 <div className="flex flex-wrap gap-2">
-                                                    {availableTags.map((tag) => (
+                                                    {availableTags.map((tag: string) => (
                                                         <Badge
                                                             key={tag}
                                                             variant={selectedTags.includes(tag) ? "default" : "outline"}
@@ -1922,9 +1924,6 @@ export default function ExaminerDashboard() {
                                                     setAssignmentType('users');
                                                     setSelectedBatches([]);
                                                     setBatchTimes({});
-                                                    if (availableUsers.length === 0) {
-                                                        fetchAvailableUsers();
-                                                    }
                                                 }}
                                                 className={`flex-1 p-4 rounded-lg border-2 transition-all ${assignmentType === 'users'
                                                     ? 'border-primary bg-primary/10'
@@ -1943,23 +1942,11 @@ export default function ExaminerDashboard() {
 
                                 {assignmentType === 'batch' && (
                                     <div className="space-y-4">
-                                        {availableBatches.length === 0 && (
+                                        {availableBatches.length === 0 && !loadingBatches && !batchesError && (
                                             <div className="text-center py-8">
-                                                <Button
-                                                    onClick={fetchAvailableBatches}
-                                                    disabled={loadingBatches}
-                                                >
-                                                    {loadingBatches ? (
-                                                        <>
-                                                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                                                            Loading Batches...
-                                                        </>
-                                                    ) : (
-                                                        <>
-                                                            <Users className="w-4 h-4 mr-2" />
-                                                            Load Available Batches
-                                                        </>
-                                                    )}
+                                                <Button onClick={() => mutateBatches()}>
+                                                    <Users className="w-4 h-4 mr-2" />
+                                                    Reload Batches
                                                 </Button>
                                             </div>
                                         )}
@@ -1999,7 +1986,7 @@ export default function ExaminerDashboard() {
                                                 </div>
 
                                                 <div className="space-y-3">
-                                                    {availableBatches.map((batch) => (
+                                                    {availableBatches.map((batch: Batch) => (
                                                         <Card
                                                             key={batch.Id}
                                                             className={`transition-all ${selectedBatches.includes(batch.Id)

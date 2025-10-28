@@ -201,36 +201,31 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
 
                         return (
                             <div key={item.id} className="relative group">
-                                <Link href={href} passHref legacyBehavior>
-                                    <Button
-                                        variant="ghost"
-                                        className={cn(
-                                            "w-full justify-start h-10 font-normal transition-colors",
-                                            isCollapsed ? "px-2" : "px-3",
-                                            isActive
-                                                ? "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground"
-                                                : "text-muted-foreground hover:text-foreground hover:bg-accent"
-                                        )}
-                                        onClick={closeMobileSidebar}
-                                        asChild
-                                    >
-                                        <a>
-                                            <Icon className={cn(
-                                                "w-5 h-5 shrink-0",
-                                                !isCollapsed && "mr-3"
-                                            )} />
-                                            {!isCollapsed && (
-                                                <span className="flex-1 text-left text-sm">
-                                                    {item.label}
-                                                </span>
-                                            )}
-                                            {!isCollapsed && item.badge && (
-                                                <span className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs font-medium px-1.5">
-                                                    {item.badge}
-                                                </span>
-                                            )}
-                                        </a>
-                                    </Button>
+                                <Link
+                                    href={href}
+                                    onClick={closeMobileSidebar}
+                                    className={cn(
+                                        "flex items-center w-full justify-start h-10 font-normal transition-colors rounded-md",
+                                        isCollapsed ? "px-2" : "px-3",
+                                        isActive
+                                            ? "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground"
+                                            : "text-muted-foreground hover:text-foreground hover:bg-accent"
+                                    )}
+                                >
+                                    <Icon className={cn(
+                                        "w-5 h-5 shrink-0",
+                                        !isCollapsed && "mr-3"
+                                    )} />
+                                    {!isCollapsed && (
+                                        <span className="flex-1 text-left text-sm">
+                                            {item.label}
+                                        </span>
+                                    )}
+                                    {!isCollapsed && item.badge && (
+                                        <span className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs font-medium px-1.5">
+                                            {item.badge}
+                                        </span>
+                                    )}
                                 </Link>
 
                                 {/* Tooltip for collapsed state */}

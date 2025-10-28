@@ -1,43 +1,30 @@
-import { useEffect, useMemo, useState } from "react";
-import jsPDF from "jspdf";
+import { useMemo, useState } from "react";
 import { useSession } from "next-auth/react";
+import useSWR from 'swr';
 import {
-    Card,
-    CardContent,
-    CardDescription,
-    CardHeader,
-    CardTitle
-} from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import {
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogHeader,
-    DialogTitle,
-} from "@/components/ui/dialog";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Skeleton } from "@/components/ui/skeleton";
-import {
-    AlertCircle,
-    Calendar,
-    CheckCircle2,
-    Clock,
+    Search,
     Download,
-    FileText,
-    Loader2,
-    Mail,
+    Eye,
+    CheckCircle,
+    XCircle,
+    Clock,
     TrendingUp,
-    Users,
+    FileText,
+    Trophy,
     X,
-    XCircle
+    Mail,
+    Calendar,
+    Target,
+    BarChart3,
+    Loader2
 } from "lucide-react";
-import { Separator } from "@/components/ui/separator";
 import ExaminerLayout from "./ExaminerLayout";
-import { Label } from "@/components/ui/label";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Button } from "@/components/ui/button";
+import jsPDF from "jspdf";
 import toast from "react-hot-toast";
+
+const fetcher = (url: string) => fetch(url).then(res => res.json());
 
 interface Submission {
     ai_feedback: any;
@@ -51,192 +38,25 @@ interface Submission {
     answer?: any;
 }
 
-interface Question {
-    id: string;
-    examId: string;
-    questionText: string;
-    expectedOutput?: string;
-    order: number;
-    questions?: string;
-}
-
 export default function ExaminerSubmissions() {
-    const [submissions, setSubmissions] = useState<Submission[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [downloadingId, setDownloadingId] = useState<string | null>(null);
-    const [questionsCache, setQuestionsCache] = useState<{ [examId: string]: Question[] }>({});
     const { data: session } = useSession();
+    const [searchQuery, setSearchQuery] = useState("");
+    const [filterStatus, setFilterStatus] = useState<"all" | "qualified" | "disqualified">("all");
+    const [selectedExam, setSelectedExam] = useState("all");
+    const [selectedSubmission, setSelectedSubmission] = useState<Submission | null>(null);
+    const [downloadingId, setDownloadingId] = useState<string | null>(null);
 
-    const [activeTab, setActiveTab] = useState<'all' | 'qualified' | 'disqualified'>('all');
-
-    const [selectedFeedback, setSelectedFeedback] = useState<{
-        email: string;
-        examId: string;
-        feedback: any[];
-    } | null>(null);
-
-    const parseFeedback = (feedbackString: string | null | any) => {
-        if (!feedbackString) return [];
-
-        if (typeof feedbackString === 'object') {
-            return Array.isArray(feedbackString) ? feedbackString : [feedbackString];
+    const { data: submissions = [], error: submissionsError, isLoading: loading } = useSWR(
+        session?.user?.email
+            ? `/api/submissions/by-examiner?email=${encodeURIComponent(session.user.email)}`
+            : null,
+        fetcher,
+        {
+            revalidateOnFocus: false,
+            revalidateOnReconnect: true,
+            dedupingInterval: 60000,
         }
-
-        try {
-            const cleanedString = feedbackString.trim();
-            return JSON.parse(cleanedString);
-        } catch (e) {
-            console.error('JSON Parse Error:', e);
-
-            try {
-                let fixed = feedbackString
-                    .replace(/data-end=\\"(\d+)"/g, 'data-end=\\"$1\\"')
-                    .replace(/data-end=\\"(\d+)\s/g, 'data-end=\\"$1\\" ')
-                    .replace(/(\d+)"\u003E/g, '$1\\"\u003E')
-                    .replace(/,(\s*[}\]])/g, '$1');
-
-                return JSON.parse(fixed);
-            } catch (fixError) {
-                console.error('Auto-fix failed:', fixError);
-
-                try {
-                    const match = feedbackString.match(/^\s*\[[\s\S]*\]\s*$/);
-                    if (match) {
-                        const objects = [];
-                        const objRegex = /\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\}/g;
-                        let objMatch;
-
-                        while ((objMatch = objRegex.exec(feedbackString)) !== null) {
-                            try {
-                                objects.push(JSON.parse(objMatch[0]));
-                            } catch (e) {
-                            }
-                        }
-
-                        if (objects.length > 0) {
-                            return objects;
-                        }
-                    }
-                } catch (extractError) {
-                    console.error('Extraction failed:', extractError);
-                }
-            }
-
-            return [];
-        }
-    };
-
-    const calculateTotalMarks = (feedback: any[]) => {
-        return feedback.reduce((sum, item) => sum + (item.marks || 0), 0);
-    };
-
-    const calculatePercentage = (feedback: any[], examId: string, email: string) => {
-        const submission = submissions.find(s =>
-            s.examId === examId &&
-            (s.userName === email || s.email === email)
-        );
-
-        if (!submission) return 0;
-
-        const answersData = typeof submission.answersWithQuestionIds === 'string'
-            ? parseFeedback(submission.answersWithQuestionIds)
-            : Array.isArray(submission.answersWithQuestionIds)
-                ? submission.answersWithQuestionIds
-                : [];
-
-        const totalPossibleMarks = feedback.reduce((sum, item) => {
-            const q = answersData.find((a: any) => a.questionId === item.questionId);
-            return sum + (q?.marks || 0);
-        }, 0);
-
-        if (totalPossibleMarks === 0) return 0;
-
-        return Math.round((calculateTotalMarks(feedback) / totalPossibleMarks) * 100);
-    };
-
-    const filteredSubmissions = useMemo(() => {
-        switch (activeTab) {
-            case 'qualified':
-                return submissions.filter(s => !s.disqualified);
-            case 'disqualified':
-                return submissions.filter(s => s.disqualified);
-            default:
-                return submissions;
-        }
-    }, [submissions, activeTab]);
-
-    const groupedSubmissions = useMemo(() => {
-        const groups: { [examId: string]: Submission[] } = {};
-        filteredSubmissions.forEach(sub => {
-            if (!groups[sub.examId]) {
-                groups[sub.examId] = [];
-            }
-            groups[sub.examId].push(sub);
-        });
-        return groups;
-    }, [filteredSubmissions]);
-
-    useEffect(() => {
-        const fetchSubmissions = async () => {
-            if (!session?.user?.email) return;
-
-            try {
-                setLoading(true);
-                const res = await fetch(`/api/submissions/by-examiner?email=${session.user.email}`);
-
-                if (!res.ok) {
-                    throw new Error('Failed to fetch submissions');
-                }
-
-                const data = await res.json();
-                setSubmissions(data);
-            } catch (error) {
-                console.error("Error fetching submissions:", error);
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        fetchSubmissions();
-    }, [session]);
-
-    const fetchQuestions = async (examId: string): Promise<Question[]> => {
-        if (questionsCache[examId]) {
-            return questionsCache[examId];
-        }
-
-        try {
-            const res = await fetch(`/api/submissions/${examId}`);
-            if (!res.ok) {
-                throw new Error('Failed to fetch questions');
-            }
-            const questions = await res.json();
-
-            setQuestionsCache(prev => ({
-                ...prev,
-                [examId]: questions
-            }));
-
-            return questions;
-        } catch (error) {
-            console.error('Error fetching questions:', error);
-            return [];
-        }
-    };
-
-    const fetchViolationImages = async (examId: string, email: string) => {
-        try {
-            const res = await fetch(`/api/submissions/violations?examId=${examId}&email=${email}`);
-            if (!res.ok) {
-                throw new Error("Failed to fetch violation images");
-            }
-            const data = await res.json();
-            return data.map((row: any) => row.imageBase64);
-        } catch (err) {
-            console.error("fetchViolationImages error:", err);
-            return [];
-        }
-    }
+    );
 
     const downloadAsPDF = async (submission: Submission) => {
         try {
@@ -556,31 +376,31 @@ export default function ExaminerSubmissions() {
                 addText('This candidate was disqualified due to exam violations.', 10, false);
                 addSpace(5);
 
-                const violationImages = await fetchViolationImages(submission.examId, submission.email);
-                if (violationImages.length > 0) {
-                    addText('Violation Screenshots:', 11, true);
-                    addSpace(3);
+                // const violationImages = await fetchViolationImages(submission.examId, submission.email);
+                // if (violationImages.length > 0) {
+                //     addText('Violation Screenshots:', 11, true);
+                //     addSpace(3);
 
-                    for (const imgBase64 of violationImages) {
-                        if (y > pageHeight - 100) {
-                            doc.addPage();
-                            y = 20;
-                        }
-                        try {
-                            const imgProps = doc.getImageProperties(imgBase64);
-                            const imgWidth = Math.min(contentWidth, 150);
-                            const imgHeight = (imgProps.height * imgWidth) / imgProps.width;
+                //     for (const imgBase64 of violationImages) {
+                //         if (y > pageHeight - 100) {
+                //             doc.addPage();
+                //             y = 20;
+                //         }
+                //         try {
+                //             const imgProps = doc.getImageProperties(imgBase64);
+                //             const imgWidth = Math.min(contentWidth, 150);
+                //             const imgHeight = (imgProps.height * imgWidth) / imgProps.width;
 
-                            doc.addImage(imgBase64, 'JPEG', margin, y, imgWidth, imgHeight);
-                            y += imgHeight + 8;
-                        } catch (e) {
-                            console.error("Error adding image to PDF:", e);
-                            addText("Error displaying violation image.", 9);
-                        }
-                    }
-                } else {
-                    addText("No violation images recorded.", 9);
-                }
+                //             doc.addImage(imgBase64, 'JPEG', margin, y, imgWidth, imgHeight);
+                //             y += imgHeight + 8;
+                //         } catch (e) {
+                //             console.error("Error adding image to PDF:", e);
+                //             addText("Error displaying violation image.", 9);
+                //         }
+                //     }
+                // } else {
+                //     addText("No violation images recorded.", 9);
+                // }
             }
 
             const filename = `SysRank-Report-${submission.examId}-${submission.email.split('@')[0]}-${Date.now()}.pdf`;
@@ -596,10 +416,126 @@ export default function ExaminerSubmissions() {
         }
     };
 
-    const qualifiedCount = submissions.filter(s => !s.disqualified).length;
-    const disqualifiedCount = submissions.filter(s => s.disqualified).length;
+    const parseFeedback = (feedbackString: string | null | any) => {
+        if (!feedbackString) return [];
 
-    if (loading) {
+        if (typeof feedbackString === 'object') {
+            return Array.isArray(feedbackString) ? feedbackString : [feedbackString];
+        }
+
+        try {
+            const cleanedString = feedbackString.trim();
+            return JSON.parse(cleanedString);
+        } catch (e) {
+            console.error('JSON Parse Error:', e);
+            return [];
+        }
+    };
+
+    const calculateTotalMarks = (feedback: any[]) => {
+        return feedback.reduce((sum, item) => sum + (item.marks || 0), 0);
+    };
+
+    const calculateTotalPossibleMarks = (submission: Submission) => {
+        const answersData = typeof submission.answersWithQuestionIds === 'string'
+            ? parseFeedback(submission.answersWithQuestionIds)
+            : Array.isArray(submission.answersWithQuestionIds)
+                ? submission.answersWithQuestionIds
+                : [];
+
+        return answersData.reduce((sum: any, item: { marks: any; }) => sum + (item.marks || 0), 0);
+    };
+
+    const calculatePercentage = (submission: Submission) => {
+        const feedbackData = parseFeedback(submission.ai_feedback);
+        const totalPossibleMarks = calculateTotalPossibleMarks(submission);
+
+        if (totalPossibleMarks === 0) return 0;
+
+        return Math.round((calculateTotalMarks(feedbackData) / totalPossibleMarks) * 100);
+    };
+
+    const getQuestionsAttempted = (submission: Submission) => {
+        const answersData = typeof submission.answersWithQuestionIds === 'string'
+            ? parseFeedback(submission.answersWithQuestionIds)
+            : Array.isArray(submission.answersWithQuestionIds)
+                ? submission.answersWithQuestionIds
+                : [];
+
+        return answersData.length;
+    };
+
+    const groupedSubmissions = useMemo(() => {
+        const groups: { [examId: string]: Submission[] } = {};
+        submissions.forEach((sub: Submission) => {
+            if (!groups[sub.examId]) {
+                groups[sub.examId] = [];
+            }
+            groups[sub.examId].push(sub);
+        });
+        return groups;
+    }, [submissions]);
+
+    const filteredSubmissions = useMemo(() => {
+        let filtered = submissions;
+
+        if (filterStatus !== "all") {
+            filtered = filtered.filter((s: Submission) =>
+                filterStatus === "qualified" ? !s.disqualified : s.disqualified
+            );
+        }
+
+        if (selectedExam !== "all") {
+            filtered = filtered.filter((s: Submission) => s.examId === selectedExam);
+        }
+
+        if (searchQuery) {
+            filtered = filtered.filter((s: Submission) =>
+                s.userName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                s.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                s.examId.toLowerCase().includes(searchQuery.toLowerCase())
+            );
+        }
+
+        return filtered;
+    }, [submissions, filterStatus, selectedExam, searchQuery]);
+
+    const stats = useMemo(() => {
+        const total = submissions.length;
+        const qualified = submissions.filter((s: Submission) => !s.disqualified).length;
+        const disqualified = submissions.filter((s: Submission) => s.disqualified).length;
+        const avgScore = submissions.reduce((sum: number, s: Submission) => sum + calculatePercentage(s), 0) / (total || 1);
+
+        return {
+            total,
+            qualified,
+            disqualified,
+            avgScore: Math.round(avgScore)
+        };
+    }, [submissions]);
+
+    const getScoreColor = (percentage: number) => {
+        if (percentage >= 80) return "text-emerald-600 dark:text-emerald-400";
+        if (percentage >= 60) return "text-blue-600 dark:text-blue-400";
+        if (percentage >= 40) return "text-amber-600 dark:text-amber-400";
+        return "text-rose-600 dark:text-rose-400";
+    };
+
+    const getScoreBg = (percentage: number) => {
+        if (percentage >= 80) return "bg-emerald-50 dark:bg-emerald-950/30";
+        if (percentage >= 60) return "bg-blue-50 dark:bg-blue-950/30";
+        if (percentage >= 40) return "bg-amber-50 dark:bg-amber-950/30";
+        return "bg-rose-50 dark:bg-rose-950/30";
+    };
+
+    const getProgressBgColor = (percentage: number) => {
+        if (percentage >= 80) return "bg-emerald-500";
+        if (percentage >= 60) return "bg-blue-500";
+        if (percentage >= 40) return "bg-amber-500";
+        return "bg-rose-500";
+    };
+
+    if (loading && !submissions.length) {
         return (
             <ExaminerLayout>
                 <div className="space-y-6">
@@ -610,35 +546,44 @@ export default function ExaminerSubmissions() {
 
                     <div className="grid gap-4 md:grid-cols-4">
                         {[...Array(4)].map((_, i) => (
-                            <Card key={i} className="border-border">
-                                <CardContent className="p-6">
-                                    <Skeleton className="h-4 w-20 mb-2" />
-                                    <Skeleton className="h-8 w-16" />
-                                </CardContent>
-                            </Card>
+                            <div key={i} className="bg-card border border-border rounded-lg p-6">
+                                <Skeleton className="h-4 w-20 mb-2" />
+                                <Skeleton className="h-8 w-16" />
+                            </div>
                         ))}
                     </div>
 
-                    <Card className="border-border">
-                        <CardHeader>
-                            <Skeleton className="h-6 w-40" />
-                        </CardHeader>
-                        <CardContent>
-                            <div className="space-y-4">
-                                {[...Array(5)].map((_, i) => (
-                                    <div key={i} className="flex items-center space-x-4">
-                                        <Skeleton className="h-10 w-10 rounded-full" />
-                                        <div className="space-y-2 flex-1">
-                                            <Skeleton className="h-4 w-48" />
-                                            <Skeleton className="h-4 w-32" />
-                                        </div>
-                                        <Skeleton className="h-8 w-20" />
-                                        <Skeleton className="h-8 w-24" />
+                    <div className="space-y-4">
+                        {[...Array(5)].map((_, i) => (
+                            <div key={i} className="bg-card border border-border rounded-lg p-4">
+                                <div className="flex items-center space-x-4">
+                                    <Skeleton className="h-12 w-12 rounded-full" />
+                                    <div className="space-y-2 flex-1">
+                                        <Skeleton className="h-4 w-48" />
+                                        <Skeleton className="h-4 w-32" />
                                     </div>
-                                ))}
+                                    <Skeleton className="h-8 w-24" />
+                                </div>
                             </div>
-                        </CardContent>
-                    </Card>
+                        ))}
+                    </div>
+                </div>
+            </ExaminerLayout>
+        );
+    }
+
+    if (submissionsError) {
+        return (
+            <ExaminerLayout>
+                <div className="flex flex-col items-center justify-center py-20">
+                    <div className="p-4 bg-rose-50 dark:bg-rose-950/30 rounded-full w-16 h-16 mx-auto mb-4 flex items-center justify-center">
+                        <XCircle className="h-8 w-8 text-rose-600 dark:text-rose-400" />
+                    </div>
+                    <h3 className="text-lg font-medium text-foreground mb-2">Failed to load submissions</h3>
+                    <p className="text-muted-foreground text-sm mb-4">There was an error fetching submissions. Please try again.</p>
+                    <Button onClick={() => window.location.reload()} variant="outline">
+                        Retry
+                    </Button>
                 </div>
             </ExaminerLayout>
         );
@@ -649,465 +594,384 @@ export default function ExaminerSubmissions() {
             <div className="space-y-6">
                 {/* Header */}
                 <div>
-                    <h1 className="text-2xl font-bold text-foreground mb-2">
-                        Exam Submissions
+                    <h1 className="text-3xl font-bold text-foreground mb-2">
+                        Submissions
                     </h1>
                     <p className="text-muted-foreground">
-                        Manage and review all candidate submissions
+                        Review and manage all candidate exam submissions
                     </p>
-                </div>
-
-                {/* Tabs */}
-                <div className="flex items-center gap-2 bg-muted/30 p-1 rounded-lg w-fit border border-border">
-                    <button
-                        onClick={() => setActiveTab('all')}
-                        className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${activeTab === 'all'
-                            ? 'bg-background text-foreground shadow-sm'
-                            : 'text-muted-foreground hover:text-foreground'
-                            }`}
-                    >
-                        All ({submissions.length})
-                    </button>
-                    <button
-                        onClick={() => setActiveTab('qualified')}
-                        className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${activeTab === 'qualified'
-                            ? 'bg-emerald-500 text-white shadow-sm dark:bg-emerald-600'
-                            : 'text-muted-foreground hover:text-foreground'
-                            }`}
-                    >
-                        Qualified ({qualifiedCount})
-                    </button>
-                    <button
-                        onClick={() => setActiveTab('disqualified')}
-                        className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${activeTab === 'disqualified'
-                            ? 'bg-rose-500 text-white shadow-sm dark:bg-rose-600'
-                            : 'text-muted-foreground hover:text-foreground'
-                            }`}
-                    >
-                        Disqualified ({disqualifiedCount})
-                    </button>
                 </div>
 
                 {/* Stats Grid */}
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                    <Card className="border-border">
-                        <CardContent className="p-6">
-                            <div className="flex items-center justify-between">
-                                <div>
-                                    <p className="text-sm font-medium text-muted-foreground">Total Submissions</p>
-                                    <p className="text-2xl font-bold text-foreground mt-1">{submissions.length}</p>
-                                </div>
-                                <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center">
-                                    <FileText className="h-6 w-6 text-primary" />
-                                </div>
+                    <div className="bg-card border border-border rounded-lg p-4 hover:shadow-sm transition-shadow">
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <p className="text-sm text-muted-foreground">Total Submissions</p>
+                                <p className="text-2xl font-bold text-foreground mt-1">{stats.total}</p>
                             </div>
-                        </CardContent>
-                    </Card>
+                            <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center">
+                                <FileText className="w-6 h-6 text-primary" />
+                            </div>
+                        </div>
+                    </div>
 
-                    <Card className="border-border">
-                        <CardContent className="p-6">
-                            <div className="flex items-center justify-between">
-                                <div>
-                                    <p className="text-sm font-medium text-muted-foreground">Qualified</p>
-                                    <p className="text-2xl font-bold text-foreground mt-1">{qualifiedCount}</p>
-                                </div>
-                                <div className="h-12 w-12 rounded-lg bg-emerald-500/10 flex items-center justify-center">
-                                    <CheckCircle2 className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
-                                </div>
+                    <div className="bg-card border border-border rounded-lg p-4 hover:shadow-sm transition-shadow">
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <p className="text-sm text-muted-foreground">Qualified</p>
+                                <p className="text-2xl font-bold text-foreground mt-1">{stats.qualified}</p>
                             </div>
-                        </CardContent>
-                    </Card>
+                            <div className="w-12 h-12 rounded-lg bg-emerald-500/10 flex items-center justify-center">
+                                <CheckCircle className="w-6 h-6 text-emerald-600 dark:text-emerald-400" />
+                            </div>
+                        </div>
+                    </div>
 
-                    <Card className="border-border">
-                        <CardContent className="p-6">
-                            <div className="flex items-center justify-between">
-                                <div>
-                                    <p className="text-sm font-medium text-muted-foreground">Disqualified</p>
-                                    <p className="text-2xl font-bold text-foreground mt-1">{disqualifiedCount}</p>
-                                </div>
-                                <div className="h-12 w-12 rounded-lg bg-rose-500/10 flex items-center justify-center">
-                                    <XCircle className="h-6 w-6 text-rose-600 dark:text-rose-400" />
-                                </div>
+                    <div className="bg-card border border-border rounded-lg p-4 hover:shadow-sm transition-shadow">
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <p className="text-sm text-muted-foreground">Disqualified</p>
+                                <p className="text-2xl font-bold text-foreground mt-1">{stats.disqualified}</p>
                             </div>
-                        </CardContent>
-                    </Card>
+                            <div className="w-12 h-12 rounded-lg bg-rose-500/10 flex items-center justify-center">
+                                <XCircle className="w-6 h-6 text-rose-600 dark:text-rose-400" />
+                            </div>
+                        </div>
+                    </div>
 
-                    <Card className="border-border">
-                        <CardContent className="p-6">
-                            <div className="flex items-center justify-between">
-                                <div>
-                                    <p className="text-sm font-medium text-muted-foreground">Success Rate</p>
-                                    <p className="text-2xl font-bold text-foreground mt-1">
-                                        {submissions.length > 0 ? Math.round((qualifiedCount / submissions.length) * 100) : 0}%
-                                    </p>
-                                </div>
-                                <div className="h-12 w-12 rounded-lg bg-purple-500/10 flex items-center justify-center">
-                                    <TrendingUp className="h-6 w-6 text-purple-600 dark:text-purple-400" />
-                                </div>
+                    <div className="bg-card border border-border rounded-lg p-4 hover:shadow-sm transition-shadow">
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <p className="text-sm text-muted-foreground">Average Score</p>
+                                <p className="text-2xl font-bold text-foreground mt-1">{stats.avgScore}%</p>
                             </div>
-                        </CardContent>
-                    </Card>
+                            <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center">
+                                <TrendingUp className="w-6 h-6 text-primary" />
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
-                {/* Grouped Submissions */}
-                {Object.keys(groupedSubmissions).length === 0 ? (
-                    <Card className="border-2 border-dashed border-border">
-                        <CardContent className="p-12 text-center">
-                            <div className="w-16 h-16 bg-muted/50 rounded-full flex items-center justify-center mx-auto mb-4">
-                                <FileText className="w-8 h-8 text-muted-foreground" />
-                            </div>
-                            <h3 className="text-lg font-semibold mb-2">No submissions found</h3>
-                            <p className="text-muted-foreground text-sm">
-                                {activeTab === 'all'
-                                    ? 'Submissions will appear here once candidates start taking exams'
-                                    : `No ${activeTab} submissions to display`
-                                }
-                            </p>
-                        </CardContent>
-                    </Card>
+                {/* Filters and Search */}
+                <div className="bg-card border border-border rounded-lg p-4">
+                    <div className="flex flex-col sm:flex-row gap-4">
+                        {/* Search */}
+                        <div className="flex-1 relative">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                            <input
+                                type="text"
+                                placeholder="Search by name, email, or exam ID..."
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                className="w-full pl-10 pr-4 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring text-foreground placeholder:text-muted-foreground"
+                            />
+                        </div>
+
+                        {/* Status Filter */}
+                        <select
+                            value={filterStatus}
+                            onChange={(e) => setFilterStatus(e.target.value as "all" | "qualified" | "disqualified")}
+                            className="px-4 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring text-foreground cursor-pointer"
+                        >
+                            <option value="all">All Status</option>
+                            <option value="qualified">Qualified</option>
+                            <option value="disqualified">Disqualified</option>
+                        </select>
+
+                        {/* Exam Filter */}
+                        <select
+                            value={selectedExam}
+                            onChange={(e) => setSelectedExam(e.target.value)}
+                            className="px-4 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring text-foreground cursor-pointer"
+                        >
+                            <option value="all">All Exams</option>
+                            {Object.keys(groupedSubmissions).map(examId => (
+                                <option key={examId} value={examId}>{examId}</option>
+                            ))}
+                        </select>
+                    </div>
+                </div>
+
+                {/* Submissions List */}
+                {filteredSubmissions.length === 0 ? (
+                    <div className="bg-card border-2 border-dashed border-border rounded-lg p-12 text-center">
+                        <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
+                            <FileText className="w-8 h-8 text-muted-foreground" />
+                        </div>
+                        <h3 className="text-lg font-semibold text-foreground mb-2">No submissions found</h3>
+                        <p className="text-muted-foreground">
+                            {filterStatus !== "all" || selectedExam !== "all" || searchQuery
+                                ? "Try adjusting your filters or search query"
+                                : "Submissions will appear here once candidates start taking exams"}
+                        </p>
+                    </div>
                 ) : (
-                    <div className="space-y-4">
-                        {Object.entries(groupedSubmissions).map(([examId, examSubmissions]) => {
-                            const examQualified = examSubmissions.filter(s => !s.disqualified).length;
-                            const examDisqualified = examSubmissions.filter(s => s.disqualified).length;
+                    <div className="space-y-3">
+                        {filteredSubmissions.map((submission: Submission, index: number) => {
+                            const percentage = calculatePercentage(submission);
+                            const totalMarks = calculateTotalPossibleMarks(submission);
+                            const score = calculateTotalMarks(parseFeedback(submission.ai_feedback));
+                            const questionsAttempted = getQuestionsAttempted(submission);
 
                             return (
-                                <Card key={examId} className="border-border">
-                                    <CardHeader className="border-b border-border">
+                                <div
+                                    key={`${submission.examId}-${submission.email}-${index}`}
+                                    className="bg-card border border-border rounded-lg hover:shadow-md transition-all duration-200 overflow-hidden group"
+                                >
+                                    <div className="p-4">
                                         <div className="flex items-center justify-between">
-                                            <div className="flex items-center gap-3">
-                                                <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
-                                                    <FileText className="w-5 h-5 text-primary" />
+                                            {/* Left: Candidate Info */}
+                                            <div className="flex items-center gap-4 flex-1">
+                                                <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center font-bold text-primary text-lg">
+                                                    {(submission.userName || submission.email).charAt(0).toUpperCase()}
                                                 </div>
-                                                <div>
-                                                    <CardTitle className="text-base">{examId}</CardTitle>
-                                                    <CardDescription className="flex items-center gap-3 mt-1 text-xs">
-                                                        <span className="flex items-center gap-1">
-                                                            <Users className="w-3 h-3" />
-                                                            {examSubmissions.length} submissions
-                                                        </span>
-                                                        <span className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400">
-                                                            <CheckCircle2 className="w-3 h-3" />
-                                                            {examQualified} passed
-                                                        </span>
-                                                        {examDisqualified > 0 && (
-                                                            <span className="flex items-center gap-1 text-rose-600 dark:text-rose-400">
+
+                                                <div className="flex-1">
+                                                    <div className="flex items-center gap-2 mb-1">
+                                                        <h3 className="font-semibold text-foreground">
+                                                            {submission.userName || submission.email}
+                                                        </h3>
+                                                        {!submission.disqualified ? (
+                                                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400">
+                                                                <CheckCircle className="w-3 h-3" />
+                                                                Qualified
+                                                            </span>
+                                                        ) : (
+                                                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-rose-50 dark:bg-rose-950/30 text-rose-700 dark:text-rose-400">
                                                                 <XCircle className="w-3 h-3" />
-                                                                {examDisqualified} disqualified
+                                                                Disqualified
                                                             </span>
                                                         )}
-                                                    </CardDescription>
-                                                </div>
-                                            </div>
-
-                                            <div className="text-right">
-                                                <div className="text-xs text-muted-foreground">Pass Rate</div>
-                                                <div className="text-xl font-bold text-primary">
-                                                    {Math.round((examQualified / examSubmissions.length) * 100)}%
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </CardHeader>
-
-                                    <CardContent className="p-0">
-                                        <div className="divide-y divide-border">
-                                            {examSubmissions.map((submission, index) => (
-                                                <div
-                                                    key={index}
-                                                    className="p-4 hover:bg-muted/30 transition-colors"
-                                                >
-                                                    <div className="flex items-center justify-between">
-                                                        <div className="flex items-center gap-3 flex-1">
-                                                            <Avatar className="w-9 h-9 border-2 border-border">
-                                                                <AvatarFallback className="bg-primary/10 text-primary text-sm font-semibold">
-                                                                    {submission.email?.charAt(0).toUpperCase() || 'U'}
-                                                                </AvatarFallback>
-                                                            </Avatar>
-
-                                                            <div className="flex-1">
-                                                                <div className="flex items-center gap-2 mb-1">
-                                                                    <p className="font-semibold text-sm text-foreground">
-                                                                        {submission.userName || submission.email}
-                                                                    </p>
-                                                                    <Badge
-                                                                        variant={submission.disqualified ? "destructive" : "default"}
-                                                                        className="text-xs"
-                                                                    >
-                                                                        {submission.disqualified ? (
-                                                                            <><XCircle className="w-3 h-3 mr-1" />Disqualified</>
-                                                                        ) : (
-                                                                            <><CheckCircle2 className="w-3 h-3 mr-1" />Qualified</>
-                                                                        )}
-                                                                    </Badge>
-                                                                </div>
-                                                                <p className="text-xs text-muted-foreground">
-                                                                    {submission.email}
-                                                                </p>
-                                                            </div>
-                                                        </div>
-
-                                                        <div className="flex items-center gap-2">
-                                                            {submission.ai_feedback && (
-                                                                <Button
-                                                                    onClick={() => setSelectedFeedback({
-                                                                        email: submission.userName || submission.email,
-                                                                        examId: submission.examId,
-                                                                        feedback: parseFeedback(submission.ai_feedback)
-                                                                    })}
-                                                                    variant="outline"
-                                                                    size="sm"
-                                                                >
-                                                                    <FileText className="w-4 h-4 mr-2" />
-                                                                    Feedback
-                                                                </Button>
-                                                            )}
-
-                                                            <Button
-                                                                onClick={() => downloadAsPDF(submission)}
-                                                                disabled={downloadingId === submission.examId + submission.email}
-                                                                variant="outline"
-                                                                size="sm"
-                                                            >
-                                                                {downloadingId === submission.examId + submission.email ? (
-                                                                    <>
-                                                                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                                                                        Generating...
-                                                                    </>
-                                                                ) : (
-                                                                    <>
-                                                                        <Download className="w-4 h-4 mr-2" />
-                                                                        PDF
-                                                                    </>
-                                                                )}
-                                                            </Button>
-                                                        </div>
+                                                    </div>
+                                                    <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                                                        <span className="flex items-center gap-1">
+                                                            <Mail className="w-3 h-3" />
+                                                            {submission.email}
+                                                        </span>
+                                                        <span className="flex items-center gap-1">
+                                                            <FileText className="w-3 h-3" />
+                                                            {submission.examId}
+                                                        </span>
+                                                        <span className="flex items-center gap-1">
+                                                            <Clock className="w-3 h-3" />
+                                                            {new Date(submission.submittedAt).toLocaleDateString()}
+                                                        </span>
                                                     </div>
                                                 </div>
-                                            ))}
+                                            </div>
+
+                                            {/* Right: Score and Actions */}
+                                            <div className="flex items-center gap-6">
+                                                <div className="text-center">
+                                                    <p className="text-xs text-muted-foreground mb-1">Score</p>
+                                                    <div className={`text-2xl font-bold ${getScoreColor(percentage)}`}>
+                                                        {score}/{totalMarks}
+                                                    </div>
+                                                    <div className={`text-xs font-medium mt-1 ${getScoreColor(percentage)}`}>
+                                                        {percentage}%
+                                                    </div>
+                                                </div>
+
+                                                <div className="flex items-center gap-2">
+                                                    <button
+                                                        onClick={() => setSelectedSubmission(submission)}
+                                                        className="px-4 py-2 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-colors flex items-center gap-2 text-sm font-medium"
+                                                    >
+                                                        <Eye className="w-4 h-4" />
+                                                        View Details
+                                                    </button>
+                                                    <button
+                                                        onClick={() => downloadAsPDF(submission)}
+                                                        className="p-2 rounded-lg border border-border hover:bg-muted transition-colors"
+                                                        disabled={downloadingId === submission.examId + submission.email}
+                                                    >
+                                                        {downloadingId === submission.examId + submission.email ? (
+                                                            <Loader2 className="w-4 h-4 animate-spin text-primary" />
+                                                        ) : (
+                                                            <Download className="w-4 h-4 text-foreground" />
+                                                        )}
+                                                    </button>
+                                                </div>
+                                            </div>
                                         </div>
-                                    </CardContent>
-                                </Card>
+
+                                        {/* Progress Bar */}
+                                        <div className="mt-4 flex items-center gap-3">
+                                            <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
+                                                <div
+                                                    className={`h-full transition-all duration-500 ${getProgressBgColor(percentage)}`}
+                                                    style={{ width: `${percentage}%` }}
+                                                />
+                                            </div>
+                                            <span className="text-xs text-muted-foreground whitespace-nowrap">
+                                                {questionsAttempted} questions
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
                             );
                         })}
                     </div>
                 )}
             </div>
 
-            {selectedFeedback && (
-                <div
-                    className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200"
-                    onClick={() => setSelectedFeedback(null)}
-                >
-                    <div
-                        className="relative w-full max-w-4xl max-h-[90vh] bg-white dark:bg-gray-900 rounded-2xl shadow-2xl flex flex-col animate-in zoom-in-95 duration-300"
-                        onClick={(e) => e.stopPropagation()}
-                    >
+            {/* Detail Modal */}
+            {selectedSubmission && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+                    <div className="relative w-full max-w-4xl max-h-[90vh] bg-card rounded-xl shadow-2xl flex flex-col animate-in zoom-in-95 duration-300 border border-border">
                         {/* Modal Header */}
-                        <div className="relative p-6 border-b border-border bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-gray-800 dark:to-gray-700 rounded-t-2xl">
+                        <div className="relative p-6 border-b border-border">
                             <button
-                                onClick={() => setSelectedFeedback(null)}
-                                className="absolute top-4 right-4 w-10 h-10 rounded-full hover:bg-white/50 dark:hover:bg-gray-700/50 flex items-center justify-center transition-colors group"
+                                onClick={() => setSelectedSubmission(null)}
+                                className="absolute top-4 right-4 w-10 h-10 rounded-lg hover:bg-muted flex items-center justify-center transition-colors group"
                             >
-                                <X className="w-5 h-5 text-gray-600 dark:text-gray-300 group-hover:text-gray-900 dark:group-hover:text-white" />
+                                <X className="w-5 h-5 text-muted-foreground group-hover:text-foreground" />
                             </button>
 
-                            <div className="flex items-center gap-3 mb-2">
-                                <div className="w-12 h-12 bg-primary rounded-xl flex items-center justify-center">
-                                    <FileText className="w-6 h-6 text-primary-foreground" />
+                            <div className="flex items-start gap-4">
+                                <div className="w-16 h-16 rounded-xl bg-primary/10 flex items-center justify-center font-bold text-primary text-2xl">
+                                    {(selectedSubmission.userName || selectedSubmission.email).charAt(0).toUpperCase()}
                                 </div>
-                                <div>
-                                    <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
-                                        AI Feedback Report
+                                <div className="flex-1">
+                                    <h2 className="text-2xl font-bold text-foreground mb-2">
+                                        {selectedSubmission.userName || selectedSubmission.email}
                                     </h2>
-                                    <div className="flex items-center gap-4 mt-1 text-sm text-gray-600 dark:text-gray-400">
+                                    <div className="flex items-center gap-4 text-sm text-muted-foreground">
                                         <span className="flex items-center gap-1">
-                                            <Mail className="w-3 h-3" />
-                                            {selectedFeedback.email}
+                                            <Mail className="w-4 h-4" />
+                                            {selectedSubmission.email}
                                         </span>
                                         <span className="flex items-center gap-1">
-                                            <FileText className="w-3 h-3" />
-                                            {selectedFeedback.examId}
+                                            <FileText className="w-4 h-4" />
+                                            {selectedSubmission.examId}
+                                        </span>
+                                        <span className="flex items-center gap-1">
+                                            <Calendar className="w-4 h-4" />
+                                            {new Date(selectedSubmission.submittedAt).toLocaleString()}
                                         </span>
                                     </div>
                                 </div>
                             </div>
                         </div>
 
-                        {/* Modal Body - Scrollable */}
+                        {/* Modal Body */}
                         <div className="flex-1 overflow-y-auto p-6 space-y-6">
-                            {/* Overall Score Card */}
-                            <Card className="border-2 border-primary/20 bg-gradient-to-r from-primary/5 to-primary/10">
-                                <CardContent className="p-6">
-                                    <div className="flex items-center justify-between">
-                                        <div>
-                                            <p className="text-sm font-medium text-muted-foreground mb-1">Total Score</p>
-                                            <p className="text-4xl font-bold text-primary">
-                                                {calculateTotalMarks(selectedFeedback.feedback)}
-                                            </p>
-                                            <p className="text-sm text-muted-foreground mt-1">
-                                                out of {(() => {
-                                                    const submission = submissions.find(s =>
-                                                        s.examId === selectedFeedback.examId &&
-                                                        (s.userName === selectedFeedback.email || s.email === selectedFeedback.email)
-                                                    );
+                            {(() => {
+                                const percentage = calculatePercentage(selectedSubmission);
+                                const totalMarks = calculateTotalPossibleMarks(selectedSubmission);
+                                const score = calculateTotalMarks(parseFeedback(selectedSubmission.ai_feedback));
+                                const questionsAttempted = getQuestionsAttempted(selectedSubmission);
 
-                                                    if (!submission) return 0;
+                                return (
+                                    <>
+                                        {/* Score Overview */}
+                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                            <div className={`p-6 rounded-lg border-2 ${getScoreBg(percentage)} border-transparent`}>
+                                                <div className="flex items-center justify-between mb-2">
+                                                    <p className="text-sm font-medium text-muted-foreground">Total Score</p>
+                                                    <Trophy className={`w-5 h-5 ${getScoreColor(percentage)}`} />
+                                                </div>
+                                                <p className={`text-3xl font-bold ${getScoreColor(percentage)}`}>
+                                                    {score}/{totalMarks}
+                                                </p>
+                                                <p className={`text-sm font-medium mt-1 ${getScoreColor(percentage)}`}>
+                                                    {percentage}% accuracy
+                                                </p>
+                                            </div>
 
-                                                    const answersData = typeof submission.answersWithQuestionIds === 'string'
-                                                        ? parseFeedback(submission.answersWithQuestionIds)
-                                                        : Array.isArray(submission.answersWithQuestionIds)
-                                                            ? submission.answersWithQuestionIds
-                                                            : [];
+                                            <div className="p-6 bg-muted/50 rounded-lg border border-border">
+                                                <div className="flex items-center justify-between mb-2">
+                                                    <p className="text-sm font-medium text-muted-foreground">Questions</p>
+                                                    <Target className="w-5 h-5 text-primary" />
+                                                </div>
+                                                <p className="text-3xl font-bold text-foreground">
+                                                    {questionsAttempted}
+                                                </p>
+                                                <p className="text-sm text-muted-foreground mt-1">
+                                                    attempted
+                                                </p>
+                                            </div>
 
-                                                    return selectedFeedback.feedback.reduce((sum, item) => {
-                                                        const q = answersData.find((a: any) => a.questionId === item.questionId);
-                                                        return sum + (q?.marks || 0);
-                                                    }, 0);
-                                                })()} marks
-                                            </p>
-                                        </div>
-                                        <div className="text-right">
-                                            <div className="w-24 h-24 rounded-full border-8 border-primary/20 flex items-center justify-center bg-primary/5">
-                                                <span className="text-2xl font-bold text-primary">
-                                                    {calculatePercentage(selectedFeedback.feedback, selectedFeedback.examId, selectedFeedback.email)}%
-                                                </span>
+                                            <div className="p-6 bg-muted/50 rounded-lg border border-border">
+                                                <div className="flex items-center justify-between mb-2">
+                                                    <p className="text-sm font-medium text-muted-foreground">Submitted</p>
+                                                    <Clock className="w-5 h-5 text-primary" />
+                                                </div>
+                                                <p className="text-lg font-bold text-foreground">
+                                                    {new Date(selectedSubmission.submittedAt).toLocaleDateString()}
+                                                </p>
+                                                <p className="text-sm text-muted-foreground mt-1">
+                                                    {new Date(selectedSubmission.submittedAt).toLocaleTimeString()}
+                                                </p>
                                             </div>
                                         </div>
-                                    </div>
-                                </CardContent>
-                            </Card>
 
-                            {/* Question-wise Feedback */}
-                            {selectedFeedback.feedback.map((item, index) => (
-                                <Card key={index} className="border border-border hover:shadow-md transition-shadow">
-                                    <CardHeader className="pb-3">
-                                        <div className="flex items-center justify-between">
+                                        {/* Status Alert */}
+                                        <div className={`p-4 rounded-lg border ${!selectedSubmission.disqualified
+                                            ? "bg-emerald-50 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-800"
+                                            : "bg-rose-50 dark:bg-rose-950/30 border-rose-200 dark:border-rose-800"
+                                            }`}>
                                             <div className="flex items-center gap-3">
-                                                <div className={`w-10 h-10 rounded-lg flex items-center justify-center font-bold text-white ${item.marks > 0 ? 'bg-green-500' : 'bg-red-500'
-                                                    }`}>
-                                                    {index + 1}
-                                                </div>
-                                                <div>
-                                                    <CardTitle className="text-base">Question {index + 1}</CardTitle>
-                                                    <p className="text-xs text-muted-foreground">ID: {item.questionId}</p>
-                                                </div>
-                                            </div>
-
-                                            {/* Score Badge */}
-                                            <Badge
-                                                variant={item.marks > 0 ? "default" : "destructive"}
-                                                className="text-lg px-4 py-1"
-                                            >
-                                                {item.marks} marks
-                                            </Badge>
-                                        </div>
-                                    </CardHeader>
-
-                                    <CardContent className="space-y-4">
-                                        {/* Question Text */}
-                                        <div>
-                                            <Label className="text-sm font-semibold text-muted-foreground mb-2 block">
-                                                Question:
-                                            </Label>
-                                            <div className="p-3 bg-muted/50 rounded-lg border border-border">
-                                                <div
-                                                    className="text-sm prose prose-sm max-w-none dark:prose-invert"
-                                                    dangerouslySetInnerHTML={{ __html: item.question }}
-                                                />
+                                                {!selectedSubmission.disqualified ? (
+                                                    <>
+                                                        <CheckCircle className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+                                                        <div>
+                                                            <p className="font-semibold text-emerald-900 dark:text-emerald-100">Candidate Qualified</p>
+                                                            <p className="text-sm text-emerald-700 dark:text-emerald-300">This candidate has successfully passed the exam</p>
+                                                        </div>
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <XCircle className="w-5 h-5 text-rose-600 dark:text-rose-400" />
+                                                        <div>
+                                                            <p className="font-semibold text-rose-900 dark:text-rose-100">Candidate Disqualified</p>
+                                                            <p className="text-sm text-rose-700 dark:text-rose-300">This candidate was disqualified due to exam violations</p>
+                                                        </div>
+                                                    </>
+                                                )}
                                             </div>
                                         </div>
 
-                                        {/* AI Feedback */}
-                                        <div>
-                                            <Label className="text-sm font-semibold text-muted-foreground mb-2 flex items-center gap-2">
-                                                <span className="text-lg">🤖</span>
-                                                AI Feedback:
-                                            </Label>
-                                            <div className={`p-4 rounded-lg border-l-4 ${item.marks > 0
-                                                ? 'border-l-green-500 bg-green-50 dark:bg-green-900/10'
-                                                : 'border-l-red-500 bg-red-50 dark:bg-red-900/10'
-                                                }`}>
-                                                <p className="text-sm leading-relaxed">{item.feedback}</p>
+                                        {/* AI Feedback Section */}
+                                        {selectedSubmission.ai_feedback && (
+                                            <div className="space-y-4">
+                                                <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
+                                                    <BarChart3 className="w-5 h-5" />
+                                                    AI Feedback Summary
+                                                </h3>
+                                                {parseFeedback(selectedSubmission.ai_feedback).map((feedback: any, idx: number) => (
+                                                    <div key={idx} className="p-4 bg-muted/30 border border-border rounded-lg">
+                                                        <div className="flex items-center justify-between mb-2">
+                                                            <span className="text-sm font-medium text-foreground">Question {idx + 1}</span>
+                                                            <span className={`text-sm font-bold ${getScoreColor(feedback.marks > 0 ? 100 : 0)}`}>
+                                                                {feedback.marks || 0} marks
+                                                            </span>
+                                                        </div>
+                                                        <p className="text-sm text-muted-foreground">{feedback.feedback}</p>
+                                                    </div>
+                                                ))}
                                             </div>
-                                        </div>
-
-                                        {/* Performance Indicator */}
-                                        <div className="flex items-center gap-2 pt-2">
-                                            {item.marks > 0 ? (
-                                                <>
-                                                    <CheckCircle2 className="w-5 h-5 text-green-600" />
-                                                    <span className="text-sm font-medium text-green-600 dark:text-green-400">
-                                                        Correct Answer
-                                                    </span>
-                                                </>
-                                            ) : (
-                                                <>
-                                                    <XCircle className="w-5 h-5 text-red-600" />
-                                                    <span className="text-sm font-medium text-red-600 dark:text-red-400">
-                                                        Incorrect Answer
-                                                    </span>
-                                                </>
-                                            )}
-                                        </div>
-                                    </CardContent>
-                                </Card>
-                            ))}
-
-                            {/* Summary Stats */}
-                            <Card className="bg-muted/50 border-border">
-                                <CardContent className="p-6">
-                                    <h3 className="font-semibold mb-4 flex items-center gap-2">
-                                        <TrendingUp className="w-4 h-4" />
-                                        Performance Summary
-                                    </h3>
-                                    <div className="grid grid-cols-3 gap-4">
-                                        <div className="text-center p-4 bg-green-50 dark:bg-green-900/10 rounded-lg border border-green-200 dark:border-green-800">
-                                            <p className="text-3xl font-bold text-green-600 dark:text-green-400">
-                                                {selectedFeedback.feedback.filter(f => f.marks > 0).length}
-                                            </p>
-                                            <p className="text-sm text-muted-foreground mt-1">Correct</p>
-                                        </div>
-                                        <div className="text-center p-4 bg-red-50 dark:bg-red-900/10 rounded-lg border border-red-200 dark:border-red-800">
-                                            <p className="text-3xl font-bold text-red-600 dark:text-red-400">
-                                                {selectedFeedback.feedback.filter(f => f.marks === 0).length}
-                                            </p>
-                                            <p className="text-sm text-muted-foreground mt-1">Incorrect</p>
-                                        </div>
-                                        <div className="text-center p-4 bg-blue-50 dark:bg-blue-900/10 rounded-lg border border-blue-200 dark:border-blue-800">
-                                            <p className="text-3xl font-bold text-primary">
-                                                {selectedFeedback.feedback.length}
-                                            </p>
-                                            <p className="text-sm text-muted-foreground mt-1">Total Questions</p>
-                                        </div>
-                                    </div>
-                                </CardContent>
-                            </Card>
+                                        )}
+                                    </>
+                                );
+                            })()}
                         </div>
 
                         {/* Modal Footer */}
-                        <div className="p-6 border-t border-border bg-gray-50 dark:bg-gray-800/50 rounded-b-2xl flex justify-end gap-3">
-                            <Button
-                                onClick={() => setSelectedFeedback(null)}
-                                variant="outline"
-                                className="px-6"
-                            >
-                                Close
-                            </Button>
-                            <Button
-                                onClick={() => {
-                                    const submission = submissions.find(s =>
-                                        s.examId === selectedFeedback.examId &&
-                                        (s.userName === selectedFeedback.email || s.email === selectedFeedback.email)
-                                    );
-                                    if (submission) {
-                                        downloadAsPDF(submission);
-                                    }
-                                }}
-                                className="px-6 gap-2"
-                            >
-                                <Download className="w-4 h-4" />
-                                Download Report
-                            </Button>
+                        <div className="p-6 border-t border-border bg-muted/30">
+                            <div className="flex justify-end gap-3">
+                                <Button
+                                    onClick={() => setSelectedSubmission(null)}
+                                    variant="outline"
+                                >
+                                    Close
+                                </Button>
+                                {/* <Button className="gap-2">
+                                    <Download className="w-4 h-4" />
+                                    Download Report
+                                </Button> */}
+                            </div>
                         </div>
                     </div>
                 </div>

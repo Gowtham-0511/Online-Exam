@@ -1,10 +1,11 @@
-import React, { useEffect, useState } from 'react'
+import React from 'react'
+import useSWR from 'swr'
 import AttenderLayout from './AttenderLayout'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Progress } from '@/components/ui/progress'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
+import { Skeleton } from '@/components/ui/skeleton'
 import {
     BookOpen,
     Trophy,
@@ -28,75 +29,68 @@ import {
 } from 'lucide-react'
 import { useSession } from "next-auth/react";
 
+const fetcher = (url: string) => fetch(url).then(res => res.json());
+
+type Exam = {
+    id: React.Key | null | undefined;
+    title: string;
+    language: string;
+    date: string;
+    time: string;
+    duration: string;
+    difficulty: string;
+    participants: number;
+    startTime: string;
+    endTime: string;
+};
+
+type CompletedExam = {
+    id: number;
+    examId: string;
+    title: string;
+    language: string;
+    submittedAt: string;
+    disqualified: boolean;
+    duration: number;
+    totalMarksObtained?: number;
+    totalPossibleMarks?: number;
+    percentage?: number;
+};
+
 const index = () => {
     const { data: session, status } = useSession();
 
-    type Exam = {
-        id: React.Key | null | undefined;
-        title: string;
-        language: string;
-        date: string;
-        time: string;
-        duration: string;
-        difficulty: string;
-        participants: number;
-        startTime: string;
-        endTime: string;
-    };
+    // Fetch upcoming exams using SWR
+    const { data: upcomingExams = [], error: upcomingError, isLoading: upcomingLoading } = useSWR(
+        session?.user?.email
+            ? `/api/attender/allowed-exam?email=${encodeURIComponent(session.user.email)}`
+            : null,
+        fetcher,
+        {
+            revalidateOnFocus: false,
+            revalidateOnReconnect: true,
+            dedupingInterval: 60000, // Dedupe requests within 60 seconds
+        }
+    );
 
-    type CompletedExam = {
-        id: number;
-        examId: string;
-        title: string;
-        language: string;
-        submittedAt: string;
-        disqualified: boolean;
-        duration: number;
-        totalMarksObtained?: number;
-        totalPossibleMarks?: number;
-        percentage?: number;
-    };
-
-    const [upcomingExams, setUpcomingExams] = useState<Exam[]>([]);
-    const [completedExams, setCompletedExams] = useState<CompletedExam[]>([]);
-
-    useEffect(() => {
-        const fetchUserAssessments = async () => {
-            if (!session?.user?.email) return;
-
-            try {
-                // Fetch upcoming exams (not submitted)
-                const upcomingResponse = await fetch(
-                    `/api/attender/allowed-exam?email=${encodeURIComponent(session.user.email)}`
-                );
-                if (upcomingResponse.ok) {
-                    const assessments = await upcomingResponse.json();
-                    console.log('Upcoming exams:', assessments);
-                    setUpcomingExams(assessments);
-                }
-
-                // Fetch completed exams
-                const completedResponse = await fetch(
-                    `/api/attender/completed-exams?email=${encodeURIComponent(session.user.email)}`
-                );
-                if (completedResponse.ok) {
-                    const completed = await completedResponse.json();
-                    console.log('Completed exams:', completed);
-                    setCompletedExams(completed);
-                }
-            } catch (error) {
-                console.error('Error fetching assessments:', error);
-            }
-        };
-
-        fetchUserAssessments();
-    }, [session]);
+    // Fetch completed exams using SWR
+    const { data: completedExams = [], error: completedError, isLoading: completedLoading } = useSWR(
+        session?.user?.email
+            ? `/api/attender/completed-exams?email=${encodeURIComponent(session.user.email)}`
+            : null,
+        fetcher,
+        {
+            revalidateOnFocus: false,
+            revalidateOnReconnect: true,
+            dedupingInterval: 60000,
+        }
+    );
 
     const stats = {
         totalExams: upcomingExams.length || 0,
         averageScore: completedExams.length > 0
             ? (
-                completedExams.reduce((sum, exam) => {
+                completedExams.reduce((sum: number, exam: CompletedExam) => {
                     const pct = Number(exam.percentage)
                     return sum + (isNaN(pct) ? 0 : pct)
                 }, 0) / completedExams.length
@@ -125,6 +119,88 @@ const index = () => {
         const endTimeStr = end.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
         return `${startDate} • ${startTimeStr} - ${endTimeStr}`;
     };
+
+    // Loading state
+    const isLoading = upcomingLoading || completedLoading;
+    const hasError = upcomingError || completedError;
+
+    if (status === 'loading' || (isLoading && !upcomingExams.length && !completedExams.length)) {
+        return (
+            <AttenderLayout>
+                <div className="space-y-8">
+                    {/* Header Skeleton */}
+                    <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+                        <div>
+                            <Skeleton className="h-10 w-64 mb-2" />
+                            <Skeleton className="h-6 w-96" />
+                        </div>
+                        <Skeleton className="h-10 w-48" />
+                    </div>
+
+                    {/* Stats Grid Skeleton */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {[1, 2, 3].map((i) => (
+                            <Card key={i} className="border-border">
+                                <CardContent className="p-6">
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex-1">
+                                            <Skeleton className="h-4 w-24 mb-2" />
+                                            <Skeleton className="h-8 w-16" />
+                                        </div>
+                                        <Skeleton className="h-12 w-12 rounded-lg" />
+                                    </div>
+                                    <Skeleton className="h-4 w-32 mt-4" />
+                                </CardContent>
+                            </Card>
+                        ))}
+                    </div>
+
+                    {/* Main Content Grid Skeleton */}
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        {[1, 2].map((i) => (
+                            <Card key={i} className="border-border">
+                                <CardHeader>
+                                    <Skeleton className="h-6 w-48 mb-2" />
+                                    <Skeleton className="h-4 w-32" />
+                                </CardHeader>
+                                <CardContent>
+                                    <div className="space-y-3">
+                                        {[1, 2, 3].map((j) => (
+                                            <Skeleton key={j} className="h-24 w-full" />
+                                        ))}
+                                    </div>
+                                </CardContent>
+                            </Card>
+                        ))}
+                    </div>
+                </div>
+            </AttenderLayout>
+        );
+    }
+
+    if (hasError) {
+        return (
+            <AttenderLayout>
+                <div className="space-y-8">
+                    <div className="flex flex-col items-center justify-center py-20">
+                        <div className="p-4 bg-red-50 dark:bg-red-950/30 rounded-full w-16 h-16 mx-auto mb-4 flex items-center justify-center">
+                            <AlertCircle className="h-8 w-8 text-red-600 dark:text-red-400" />
+                        </div>
+                        <h3 className="text-lg font-medium text-foreground mb-2">Failed to load data</h3>
+                        <p className="text-muted-foreground text-sm mb-4">There was an error fetching your exams. Please try again.</p>
+                        <Button
+                            onClick={() => {
+                                window.location.reload();
+                            }}
+                            variant="outline"
+                        >
+                            Retry
+                        </Button>
+                    </div>
+                </div>
+            </AttenderLayout>
+        );
+    }
 
     return (
         <AttenderLayout>
@@ -234,9 +310,15 @@ const index = () => {
                             </div>
                         </CardHeader>
                         <CardContent>
-                            {upcomingExams && upcomingExams.length > 0 ? (
+                            {upcomingLoading ? (
                                 <div className="space-y-3">
-                                    {upcomingExams.slice(0, 5).map((exam) => (
+                                    {[1, 2, 3].map((i) => (
+                                        <Skeleton key={i} className="h-24 w-full" />
+                                    ))}
+                                </div>
+                            ) : upcomingExams && upcomingExams.length > 0 ? (
+                                <div className="space-y-3">
+                                    {upcomingExams.slice(0, 5).map((exam: Exam) => (
                                         <Card key={exam.id} className="p-4 border-border hover:border-primary/50 transition-all duration-200 hover:shadow-sm cursor-pointer group">
                                             <div className="flex items-start justify-between gap-4">
                                                 <div className="flex-1 min-w-0">
@@ -298,9 +380,15 @@ const index = () => {
                             </div>
                         </CardHeader>
                         <CardContent>
-                            {completedExams && completedExams.length > 0 ? (
+                            {completedLoading ? (
                                 <div className="space-y-3">
-                                    {completedExams.slice(0, 5).map((exam) => (
+                                    {[1, 2, 3].map((i) => (
+                                        <Skeleton key={i} className="h-24 w-full" />
+                                    ))}
+                                </div>
+                            ) : completedExams && completedExams.length > 0 ? (
+                                <div className="space-y-3">
+                                    {completedExams.slice(0, 5).map((exam: CompletedExam) => (
                                         <Card key={exam.id} className="p-4 border-border">
                                             <div className="flex items-start justify-between gap-4">
                                                 <div className="flex-1 min-w-0">
@@ -321,7 +409,6 @@ const index = () => {
                                                                     <Code className="h-3 w-3 mr-1" />
                                                                     {exam.language}
                                                                 </Badge>
-                                                                {/* Add percentage badge */}
                                                                 {exam.percentage !== null && exam.percentage !== undefined && (
                                                                     <Badge
                                                                         variant="outline"
@@ -352,7 +439,6 @@ const index = () => {
                                                                     {new Date(exam.submittedAt).toLocaleDateString()}
                                                                 </span>
                                                             </div>
-                                                            {/* Add marks display */}
                                                             {exam.totalMarksObtained !== null && exam.totalPossibleMarks !== null && (
                                                                 <div className="flex items-center gap-2">
                                                                     <Target className="h-3.5 w-3.5" />

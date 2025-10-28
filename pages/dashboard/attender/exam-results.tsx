@@ -1,12 +1,14 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { useRouter } from 'next/router';
 import { useSession } from 'next-auth/react';
+import useSWR from 'swr';
 import AttenderLayout from './AttenderLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Progress } from '@/components/ui/progress';
+import { Skeleton } from '@/components/ui/skeleton';
 import {
     CheckCircle2,
     XCircle,
@@ -24,6 +26,8 @@ import {
     ThumbsDown,
     MessageSquare,
 } from 'lucide-react';
+
+const fetcher = (url: string) => fetch(url).then(res => res.json());
 
 type Answer = {
     questionId: string;
@@ -64,34 +68,26 @@ type ExamResult = {
 const ExamResultsPage = () => {
     const router = useRouter();
     const { data: session } = useSession();
-    const [completedExams, setCompletedExams] = useState<ExamResult[]>([]);
     const [selectedExam, setSelectedExam] = useState<ExamResult | null>(null);
-    const [loading, setLoading] = useState(true);
 
-    useEffect(() => {
-        const fetchCompletedExams = async () => {
-            if (!session?.user?.email) return;
-
-            try {
-                const response = await fetch(
-                    `/api/attender/completed-exams?email=${encodeURIComponent(session.user.email)}`
-                );
-                if (response.ok) {
-                    const data = await response.json();
-                    setCompletedExams(data);
-                    if (data.length > 0) {
-                        setSelectedExam(data[0]);
-                    }
+    // Fetch completed exams using SWR
+    const { data: completedExams = [], error, isLoading } = useSWR<ExamResult[]>(
+        session?.user?.email
+            ? `/api/attender/completed-exams?email=${encodeURIComponent(session.user.email)}`
+            : null,
+        fetcher,
+        {
+            revalidateOnFocus: false,
+            revalidateOnReconnect: true,
+            dedupingInterval: 60000,
+            onSuccess: (data) => {
+                // Set the first exam as selected if not already selected
+                if (data.length > 0 && !selectedExam) {
+                    setSelectedExam(data[0]);
                 }
-            } catch (error) {
-                console.error('Error fetching completed exams:', error);
-            } finally {
-                setLoading(false);
             }
-        };
-
-        fetchCompletedExams();
-    }, [session]);
+        }
+    );
 
     const parseAnswers = (answersData: string | Answer[]): Answer[] => {
         if (Array.isArray(answersData)) return answersData;
@@ -136,19 +132,90 @@ const ExamResultsPage = () => {
         return tmp.textContent || tmp.innerText || '';
     };
 
-    if (loading) {
+    // Loading State
+    if (isLoading) {
         return (
             <AttenderLayout>
-                <div className="flex items-center justify-center min-h-[60vh]">
-                    <div className="text-center">
-                        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-                        <p className="text-muted-foreground">Loading your results...</p>
+                <div className="space-y-6">
+                    {/* Header Skeleton */}
+                    <div className="flex items-center gap-4">
+                        <div>
+                            <Skeleton className="h-9 w-80 mb-2" />
+                            <Skeleton className="h-5 w-64" />
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        {/* Sidebar Skeleton */}
+                        <div className="lg:col-span-1">
+                            <Card className="border-border">
+                                <CardHeader>
+                                    <Skeleton className="h-6 w-32 mb-2" />
+                                    <Skeleton className="h-4 w-24" />
+                                </CardHeader>
+                                <CardContent className="space-y-2">
+                                    {[1, 2, 3].map((i) => (
+                                        <Skeleton key={i} className="h-24 w-full" />
+                                    ))}
+                                </CardContent>
+                            </Card>
+                        </div>
+
+                        {/* Main Content Skeleton */}
+                        <div className="lg:col-span-2 space-y-6">
+                            <Card className="border-border">
+                                <CardHeader>
+                                    <Skeleton className="h-8 w-3/4 mb-2" />
+                                    <Skeleton className="h-4 w-1/2" />
+                                </CardHeader>
+                                <CardContent className="space-y-6">
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                        {[1, 2, 3].map((i) => (
+                                            <Skeleton key={i} className="h-32 w-full" />
+                                        ))}
+                                    </div>
+                                </CardContent>
+                            </Card>
+
+                            <Card className="border-border">
+                                <CardHeader>
+                                    <Skeleton className="h-6 w-64 mb-2" />
+                                    <Skeleton className="h-4 w-48" />
+                                </CardHeader>
+                                <CardContent className="space-y-4">
+                                    {[1, 2].map((i) => (
+                                        <Skeleton key={i} className="h-64 w-full" />
+                                    ))}
+                                </CardContent>
+                            </Card>
+                        </div>
                     </div>
                 </div>
             </AttenderLayout>
         );
     }
 
+    // Error State
+    if (error) {
+        return (
+            <AttenderLayout>
+                <div className="flex items-center justify-center min-h-[60vh]">
+                    <div className="text-center">
+                        <div className="p-4 bg-red-50 dark:bg-red-950/30 rounded-full w-20 h-20 mx-auto mb-4 flex items-center justify-center">
+                            <AlertCircle className="h-10 w-10 text-red-600 dark:text-red-400" />
+                        </div>
+                        <h2 className="text-2xl font-bold text-foreground mb-2">Failed to load results</h2>
+                        <p className="text-muted-foreground mb-6">There was an error fetching your exam results. Please try again.</p>
+                        <Button onClick={() => window.location.reload()}>
+                            Retry
+                        </Button>
+                    </div>
+                </div>
+            </AttenderLayout>
+        );
+    }
+
+    // Empty State
     if (completedExams.length === 0) {
         return (
             <AttenderLayout>
@@ -352,6 +419,12 @@ const ExamResultsPage = () => {
                                                 <h3 className="text-lg font-medium text-foreground mb-2">Exam Disqualified</h3>
                                                 <p className="text-muted-foreground">No feedback available for disqualified exams</p>
                                             </div>
+                                        ) : feedback.length === 0 || !selectedExam.ai_feedback ? (
+                                            <div className="text-center py-12">
+                                                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+                                                <h3 className="text-lg font-medium text-foreground mb-2">AI is Evaluating Your Answers</h3>
+                                                <p className="text-muted-foreground">Please wait while we generate feedback for your submission</p>
+                                            </div>
                                         ) : (
                                             <>
                                                 {answers.map((answer, index) => {
@@ -456,25 +529,6 @@ const ExamResultsPage = () => {
                                         )}
                                     </CardContent>
                                 </Card>
-
-                                {/* Code Submission (if available) */}
-                                {/* {selectedExam.code && selectedExam.code !== '1' && (
-                                    <Card className="border-border">
-                                        <CardHeader>
-                                            <CardTitle className="flex items-center gap-2">
-                                                <Code className="h-5 w-5" />
-                                                Code Submission
-                                            </CardTitle>
-                                        </CardHeader>
-                                        <CardContent>
-                                            <Card className="p-4 bg-muted border-border">
-                                                <pre className="text-sm text-foreground overflow-x-auto">
-                                                    <code>{selectedExam.code}</code>
-                                                </pre>
-                                            </Card>
-                                        </CardContent>
-                                    </Card>
-                                )} */}
                             </div>
                         );
                     })()}

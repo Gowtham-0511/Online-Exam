@@ -32,6 +32,9 @@ import {
     DialogTrigger,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import useSWR from 'swr';
+
+const fetcher = (url: string) => fetch(url).then(res => res.json());
 
 declare global {
     interface Window {
@@ -238,7 +241,6 @@ export default function ExamPage() {
             console.log('Auto-saved to server');
         } catch (error) {
             console.error('Auto-save failed:', error);
-            // Fallback to localStorage if server save fails
             saveToLocalStorage();
         } finally {
             setIsSaving(false);
@@ -253,7 +255,6 @@ export default function ExamPage() {
             if (savedState) {
                 const state = JSON.parse(savedState);
 
-                // Verify it's the same exam and user
                 if (state.examId === examId.toString() && state.userEmail === session.user.email) {
                     setAnswers(state.answers || []);
                     setMcqAnswers(Object.fromEntries(state.mcqAnswers || []));
@@ -332,7 +333,6 @@ export default function ExamPage() {
             const hadAnswer = updated[index] && updated[index].trim() !== "";
             updated[index] = code;
 
-            // Track answer update if significant change
             if (!hadAnswer && code.trim() !== "") {
                 trackAction('answer_update', {
                     answerLength: code.length,
@@ -374,23 +374,16 @@ export default function ExamPage() {
         }
     }, [theme]);
 
-    useEffect(() => {
-        const fetchExam = async () => {
-            if (!examId) return;
+    const { data: examData, error: examError, isLoading: examLoading } = useSWR(
+        examId ? `/api/assessment/${examId}` : null,
+        fetcher,
+        {
+            revalidateOnFocus: false,
+            revalidateOnReconnect: false,
+            dedupingInterval: 300000,
+            onSuccess: (data) => {
+                if (!examId) return;
 
-            try {
-                setLoading(true); // Add this state if missing
-
-                // Fetch exam data first (critical path)
-                const response = await fetch(`/api/assessment/${examId}`);
-                if (!response.ok) {
-                    toast.error("Exam not found");
-                    router.push("/dashboard/attender");
-                    return;
-                }
-                const data = await response.json();
-
-                // Set exam data immediately so UI can render
                 const seed = examId.toString().split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
                 const shuffled = shuffleArrayWithSeed(data.questions || [], seed);
                 setExam({ ...data, questions: shuffled });
@@ -398,31 +391,40 @@ export default function ExamPage() {
                 setTimeLeft(data.duration * 60);
                 setAnswers(new Array(shuffled.length).fill(""));
                 setMcqAnswers({});
-
-                // Fetch additional data in parallel (non-blocking)
-                Promise.all([
-                    data.language === 'python'
-                        ? fetch(`/api/exam-files/${examId}`).then(r => r.ok ? r.json() : { files: [] })
-                        : Promise.resolve({ files: [] }),
-                    data.language === 'sql'
-                        ? fetch(`/api/sql/er-diagram?examId=${examId}`).then(r => r.ok ? r.json() : null)
-                        : Promise.resolve(null)
-                ]).then(([filesData, schemaResult]) => {
-                    if (filesData.files) setExamFiles(filesData.files);
-                    if (schemaResult) setSchemaData(schemaResult);
-                }).catch(err => console.error('Error fetching additional data:', err));
-
-            } catch (error) {
+            },
+            onError: (error) => {
                 console.error('Error fetching exam:', error);
                 toast.error("Failed to load exam");
                 router.push("/dashboard/attender");
-            } finally {
-                setLoading(false);
             }
-        };
+        }
+    );
 
-        fetchExam();
-    }, [examId]);
+    const { data: filesData } = useSWR(
+        exam?.language === 'python' && examId
+            ? `/api/exam-files/${examId}`
+            : null,
+        fetcher,
+        {
+            revalidateOnFocus: false,
+            onSuccess: (data) => {
+                if (data.files) setExamFiles(data.files);
+            }
+        }
+    );
+
+    const { data: schemaResult } = useSWR(
+        exam?.language === 'sql' && examId
+            ? `/api/sql/er-diagram?examId=${examId}`
+            : null,
+        fetcher,
+        {
+            revalidateOnFocus: false,
+            onSuccess: (data) => {
+                if (data) setSchemaData(data);
+            }
+        }
+    );
 
     useEffect(() => {
         const onFsChange = () => {
@@ -1195,7 +1197,7 @@ export default function ExamPage() {
         toast.success(`${label} copied to clipboard!`);
     };
 
-    if (!exam || loading) {
+    if (examLoading || !exam) {
         return (
             <div className="h-screen w-screen bg-background flex items-center justify-center">
                 <Card className="w-full max-w-md">
@@ -1209,6 +1211,30 @@ export default function ExamPage() {
                             <div className="text-center space-y-2">
                                 <h3 className="text-2xl font-bold">Loading Exam</h3>
                                 <p className="text-muted-foreground">Preparing your assessment...</p>
+                            </div>
+                        </div>
+                    </CardContent>
+                </Card>
+            </div>
+        );
+    }
+
+    // Add error handling
+    if (examError) {
+        return (
+            <div className="h-screen w-screen bg-background flex items-center justify-center">
+                <Card className="w-full max-w-md">
+                    <CardContent className="p-8">
+                        <div className="flex flex-col items-center gap-6 text-center">
+                            <div className="p-4 bg-red-50 dark:bg-red-950/30 rounded-full">
+                                <X className="w-12 h-12 text-red-600 dark:text-red-400" />
+                            </div>
+                            <div>
+                                <h3 className="text-2xl font-bold mb-2">Failed to Load Exam</h3>
+                                <p className="text-muted-foreground mb-6">There was an error loading your exam. Please try again.</p>
+                                <Button onClick={() => router.push('/dashboard/attender')}>
+                                    Return to Dashboard
+                                </Button>
                             </div>
                         </div>
                     </CardContent>
