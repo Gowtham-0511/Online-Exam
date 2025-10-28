@@ -1,7 +1,5 @@
 import { useState } from "react";
 import { useSession } from "next-auth/react";
-import { GetServerSideProps } from 'next';
-import { getSession } from 'next-auth/react';
 import useSWR, { mutate } from 'swr';
 import toast from "react-hot-toast";
 import { useRouter } from "next/router";
@@ -35,57 +33,16 @@ interface Batch {
     description?: string;
 }
 
-interface ViewExamsProps {
-    initialExams: Exam[];
-}
-
-export const getServerSideProps: GetServerSideProps = async (context) => {
-    const session = await getSession(context);
-
-    if (!session?.user?.email) {
-        return {
-            redirect: {
-                destination: '/login',
-                permanent: false,
-            },
-        };
-    }
-
-    try {
-        const baseUrl = process.env.NEXTAUTH_URL || 'http://localhost:3000';
-        const response = await fetch(
-            `${baseUrl}/api/assessment/by-user?email=${encodeURIComponent(session.user.email)}`
-        );
-
-        const exams = response.ok ? await response.json() : [];
-
-        return {
-            props: {
-                initialExams: exams,
-            },
-        };
-    } catch (error) {
-        console.error('Error fetching exams:', error);
-        return {
-            props: {
-                initialExams: [],
-            },
-        };
-    }
-};
-
-export default function ViewExamsPage({ initialExams }: ViewExamsProps) {
+export default function ViewExamsPage() {
     const { data: session } = useSession();
     const router = useRouter();
 
-    const { data: exams = initialExams, error, isLoading } = useSWR(
+    const { data: exams = [], error, isLoading } = useSWR(
         session?.user?.email
             ? `/api/assessment/by-user?email=${encodeURIComponent(session.user.email)}`
             : null,
         fetcher,
         {
-            fallbackData: initialExams,
-            revalidateOnMount: false,
             revalidateOnFocus: false,
         }
     );
