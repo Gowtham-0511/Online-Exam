@@ -492,3 +492,87 @@ export async function compareStudents(
         };
     }
 }
+
+export async function generateLearningPlanQuestions(
+    weekData: {
+        weekNumber: number;
+        topics: string[];
+        goals: string[];
+        language: string;
+        difficulty: string;
+    },
+    questionCount: number = 3
+): Promise<Array<{
+    questionText: string;
+    difficulty: string;
+    totalMarks: number;
+    testCases: Array<{ input: string; expectedOutput: string; isHidden: boolean }>;
+    starterCode: string;
+    solution: string;
+    hints: string[];
+}>> {
+    const isDeterministicModel = /(mini|instruct)/i.test(deploymentName);
+
+    const prompt = `Generate ${questionCount} coding practice questions for a learning plan.
+
+        Week ${weekData.weekNumber} Details:
+        Topics: ${weekData.topics.join(', ')}
+        Goals: ${weekData.goals.join(', ')}
+        Language: ${weekData.language}
+        Difficulty: ${weekData.difficulty}
+
+        For each question, provide:
+        1. Clear problem statement
+        2. Difficulty level (beginner/intermediate/advanced)
+        3. Total marks (5-20 based on complexity)
+        4. 3-4 test cases (mix of visible and hidden)
+        5. Starter code template
+        6. Complete solution
+        7. 2-3 helpful hints
+
+        Return JSON:
+        {
+        "questions": [
+            {
+            "questionText": "Problem description with examples",
+            "difficulty": "beginner|intermediate|advanced",
+            "totalMarks": number,
+            "testCases": [
+                {"input": "test input", "expectedOutput": "expected result", "isHidden": false}
+            ],
+            "starterCode": "function template code",
+            "solution": "complete working solution",
+            "hints": ["hint 1", "hint 2"]
+            }
+        ]
+        }
+    `;
+
+    const params: any = {
+        model: deploymentName,
+        messages: [
+            {
+                role: "system",
+                content: "You are an educational AI that creates programming practice questions. Return only valid JSON with realistic, practical coding problems."
+            },
+            { role: "user", content: prompt }
+        ],
+        response_format: { type: "json_object" }
+    };
+
+    if (!isDeterministicModel) {
+        params.temperature = 0.8;
+        params.top_p = 0.95;
+    }
+
+    try {
+        const result = await client.chat.completions.create(params);
+        const content = result.choices[0]?.message?.content?.trim() || "{}";
+        const data = JSON.parse(content);
+
+        return data.questions || [];
+    } catch (error: any) {
+        console.error("Question generation error:", error.message);
+        return [];
+    }
+}

@@ -55,41 +55,6 @@ interface ViewExamsProps {
     initialExams: Exam[];
 }
 
-export const getServerSideProps: GetServerSideProps = async (context) => {
-    const session = await getSession(context);
-
-    if (!session?.user?.email) {
-        return {
-            redirect: {
-                destination: '/login',
-                permanent: false,
-            },
-        };
-    }
-
-    try {
-        const baseUrl = process.env.NEXTAUTH_URL || 'http://localhost:3000';
-        const response = await fetch(
-            `${baseUrl}/api/attender/allowed-exam?email=${encodeURIComponent(session.user.email)}`
-        );
-
-        const exams = response.ok ? await response.json() : [];
-
-        return {
-            props: {
-                initialExams: exams,
-            },
-        };
-    } catch (error) {
-        console.error('Error fetching exams:', error);
-        return {
-            props: {
-                initialExams: [],
-            },
-        };
-    }
-};
-
 interface Question {
     id: string;
     question: string;
@@ -121,18 +86,16 @@ interface Exam {
     participants: number;
 }
 
-const ViewExams: React.FC<ViewExamsProps> = ({ initialExams }) => {
+const ViewExams: React.FC = () => {
     const { data: session } = useSession();
     const router = useRouter();
 
-    const { data: exams = initialExams, error, isLoading } = useSWR(
+    const { data: exams = [], error, isLoading } = useSWR(
         session?.user?.email
             ? `/api/attender/allowed-exam?email=${encodeURIComponent(session.user.email)}`
             : null,
         fetcher,
         {
-            fallbackData: initialExams,
-            revalidateOnMount: false,
             revalidateOnFocus: false,
         }
     );
@@ -351,7 +314,7 @@ const ViewExams: React.FC<ViewExamsProps> = ({ initialExams }) => {
         }
     };
 
-    if (isLoading && !exams.length) {
+    if (isLoading || !session) {
         return (
             <AttenderLayout>
                 <div className="min-h-screen bg-gradient-to-br from-background">
