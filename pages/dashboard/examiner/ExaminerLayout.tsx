@@ -1,7 +1,7 @@
 import { useState, useMemo, useCallback } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
-import { useSession } from 'next-auth/react';
+import { signOut, useSession } from 'next-auth/react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -132,6 +132,13 @@ export default function ExaminerLayout({ children }: ExaminerLayoutProps) {
             : `/dashboard/examiner/${item.navigation}`;
     }, []);
 
+    const handleSignOut = useCallback(async () => {
+        await signOut({
+            callbackUrl: '/',
+            redirect: true
+        });
+    }, []);
+
     const SidebarContent = ({ isCollapsed = false }: { isCollapsed?: boolean }) => (
         <div className="flex flex-col h-full bg-card border-r border-border">
             {/* Logo Section */}
@@ -260,13 +267,7 @@ export default function ExaminerLayout({ children }: ExaminerLayoutProps) {
                             </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="w-56">
-                            <DropdownMenuLabel>My Account</DropdownMenuLabel>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem>
-                                <Settings className="mr-2 h-4 w-4" />
-                                Settings
-                            </DropdownMenuItem>
-                            <DropdownMenuItem className="text-destructive focus:text-destructive">
+                            <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={handleSignOut}>
                                 <LogOut className="mr-2 h-4 w-4" />
                                 Logout
                             </DropdownMenuItem>

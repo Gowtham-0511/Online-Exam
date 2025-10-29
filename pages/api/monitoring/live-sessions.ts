@@ -48,10 +48,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             INNER JOIN "Assessment" a ON s."examId" = a.title
             LEFT JOIN LatestActivity la ON la."examId" = s."examId" AND la."userEmail" = s."email"
             LEFT JOIN QuestionProgress qp ON qp."examId" = s."examId" AND qp."userEmail" = s."email"
-            WHERE s."submittedAt" IS NULL
-            ${examId ? 'AND (s."examId" = $1 OR a.title = $1)' : ''}
-            ORDER BY la."lastActivity" DESC NULLS LAST;
+            WHERE (EXTRACT(EPOCH FROM (NOW() - la."lastActivity")) <= 300 OR la."lastActivity" IS NOT NULL) AND (s."submittedAt" IS NULL OR s."submittedAt" > NOW() - INTERVAL '1 minute') 
+            ${examId ? 'AND (s."examId" = $1 OR a.title = $1)' : ''}ORDER BY la."lastActivity" DESC NULLS LAST;
         `;
+
+        console.log(sessionsQuery)
 
         const sessions = await pool.query(
             sessionsQuery,

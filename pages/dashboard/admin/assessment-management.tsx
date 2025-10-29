@@ -12,6 +12,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import AdminLayout from './layout';
+import { useRouter } from 'next/router';
 
 
 interface QuestionConfig {
@@ -42,6 +43,9 @@ interface Assessment {
     startTime: string | null;
     endTime: string | null;
     allowedUsers: string | null;
+    sqlCredentialId?: number | null;
+    assignmentType?: string;
+    tags?: string[];
 }
 
 const AssessmentManagement = () => {
@@ -49,15 +53,10 @@ const AssessmentManagement = () => {
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
     const [filterLanguage, setFilterLanguage] = useState('all');
-    const [showAddModal, setShowAddModal] = useState(false);
     const [editingAssessment, setEditingAssessment] = useState<Assessment | null>(null);
-    const [newAssessment, setNewAssessment] = useState({
-        title: '',
-        language: '',
-        duration: 60,
-        isExamProctored: false,
-        questions: ''
-    });
+    const [viewingAssessment, setViewingAssessment] = useState<Assessment | null>(null);
+
+    const router = useRouter();
 
     useEffect(() => {
         const fetchAssessment = async () => {
@@ -76,6 +75,14 @@ const AssessmentManagement = () => {
 
         fetchAssessment();
     }, []);
+
+    const getQuestionsWithDetails = (questionsStr: string) => {
+        try {
+            return JSON.parse(questionsStr);
+        } catch {
+            return [];
+        }
+    };
 
     const getQuestionCount = (questionsStr: string): number => {
         try {
@@ -114,29 +121,6 @@ const AssessmentManagement = () => {
             default: 'secondary'
         };
         return variants[language as keyof typeof variants] || variants.default;
-    };
-
-    const handleAddAssessment = () => {
-        const newId = Math.max(...assessments.map(a => a.id)) + 1;
-        const assessment: Assessment = {
-            id: newId,
-            title: newAssessment.title,
-            language: newAssessment.language,
-            duration: newAssessment.duration,
-            createdBy: "current-user@systechusa.com",
-            createdAt: new Date().toISOString(),
-            isExamProctored: newAssessment.isExamProctored,
-            isGeneratedFromExcel: false,
-            questionConfig: '{"beginner":{"count":0,"marks":0},"intermediate":{"count":0,"marks":0},"hard":{"count":0,"marks":0}}',
-            questions: newAssessment.questions || '[]',
-            startTime: null,
-            endTime: null,
-            allowedUsers: null
-        };
-
-        setAssessments([...assessments, assessment]);
-        setNewAssessment({ title: '', language: '', duration: 60, isExamProctored: false, questions: '' });
-        setShowAddModal(false);
     };
 
     const handleDeleteAssessment = (id: number) => {
@@ -205,74 +189,10 @@ const AssessmentManagement = () => {
                             Create, edit, and manage your coding assessments
                         </p>
                     </div>
-                    <Dialog open={showAddModal} onOpenChange={setShowAddModal}>
-                        <DialogTrigger asChild>
-                            <Button>
-                                <Plus className="w-4 h-4 mr-2" />
-                                New Assessment
-                            </Button>
-                        </DialogTrigger>
-                        <DialogContent className="sm:max-w-[425px]">
-                            <DialogHeader>
-                                <DialogTitle>Create New Assessment</DialogTitle>
-                                <DialogDescription>
-                                    Add a new assessment to your collection. Fill in the details below.
-                                </DialogDescription>
-                            </DialogHeader>
-                            <div className="grid gap-4 py-4">
-                                <div className="grid gap-2">
-                                    <Label htmlFor="title">Assessment Title</Label>
-                                    <Input
-                                        id="title"
-                                        value={newAssessment.title}
-                                        onChange={(e) => setNewAssessment({ ...newAssessment, title: e.target.value })}
-                                        placeholder="Enter assessment title"
-                                    />
-                                </div>
-                                <div className="grid gap-2">
-                                    <Label htmlFor="language">Programming Language</Label>
-                                    <Select value={newAssessment.language} onValueChange={(value) => setNewAssessment({ ...newAssessment, language: value })}>
-                                        <SelectTrigger>
-                                            <SelectValue placeholder="Select language" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="python">Python</SelectItem>
-                                            <SelectItem value="javascript">JavaScript</SelectItem>
-                                            <SelectItem value="java">Java</SelectItem>
-                                            <SelectItem value="sql">SQL</SelectItem>
-                                            <SelectItem value="cpp">C++</SelectItem>
-                                        </SelectContent>
-                                    </Select>
-                                </div>
-                                <div className="grid gap-2">
-                                    <Label htmlFor="duration">Duration (minutes)</Label>
-                                    <Input
-                                        id="duration"
-                                        type="number"
-                                        value={newAssessment.duration}
-                                        onChange={(e) => setNewAssessment({ ...newAssessment, duration: parseInt(e.target.value) || 60 })}
-                                        placeholder="60"
-                                    />
-                                </div>
-                                <div className="flex items-center space-x-2">
-                                    <Switch
-                                        id="proctored"
-                                        checked={newAssessment.isExamProctored}
-                                        onCheckedChange={(checked) => setNewAssessment({ ...newAssessment, isExamProctored: checked })}
-                                    />
-                                    <Label htmlFor="proctored">Enable Exam Proctoring</Label>
-                                </div>
-                            </div>
-                            <div className="flex justify-end gap-2">
-                                <Button variant="outline" onClick={() => setShowAddModal(false)}>
-                                    Cancel
-                                </Button>
-                                <Button onClick={handleAddAssessment} disabled={!newAssessment.title || !newAssessment.language}>
-                                    Create Assessment
-                                </Button>
-                            </div>
-                        </DialogContent>
-                    </Dialog>
+                    <Button onClick={() => router.push('/dashboard/examiner')}>
+                        <Plus className="w-4 h-4 mr-2" />
+                        New Assessment
+                    </Button>
                 </div>
 
                 {/* Stats Cards */}
@@ -432,11 +352,14 @@ const AssessmentManagement = () => {
                                     </div>
                                 </div>
 
-                                <div className="flex gap-2 pt-2">
-                                    <Button variant="outline" size="sm" className="flex-1">
-                                        View Details
-                                    </Button>
-                                </div>
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="flex-1"
+                                    onClick={() => setViewingAssessment(assessment)}
+                                >
+                                    View Details
+                                </Button>
                             </CardContent>
                         </Card>
                     ))}
@@ -452,7 +375,7 @@ const AssessmentManagement = () => {
                                     ? 'Try adjusting your search or filter criteria.'
                                     : 'Get started by creating your first assessment.'}
                             </CardDescription>
-                            <Button onClick={() => setShowAddModal(true)}>
+                            <Button onClick={() => router.push('/dashboard/examiner')}>
                                 <Plus className="w-4 h-4 mr-2" />
                                 Create Assessment
                             </Button>
@@ -460,6 +383,126 @@ const AssessmentManagement = () => {
                     </Card>
                 )}
             </div>
+            {/* View Assessment Details Dialog */}
+            <Dialog open={!!viewingAssessment} onOpenChange={() => setViewingAssessment(null)}>
+                <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+                    <DialogHeader>
+                        <DialogTitle>{viewingAssessment?.title}</DialogTitle>
+                        <DialogDescription>
+                            Assessment Details and Questions
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    {viewingAssessment && (
+                        <div className="space-y-6">
+                            {/* Assessment Info */}
+                            <div className="grid grid-cols-2 gap-4 p-4 bg-muted rounded-lg">
+                                <div>
+                                    <p className="text-sm text-muted-foreground">Language</p>
+                                    <Badge variant={getLanguageBadgeVariant(viewingAssessment.language) as any}>
+                                        {viewingAssessment.language.toUpperCase()}
+                                    </Badge>
+                                </div>
+                                <div>
+                                    <p className="text-sm text-muted-foreground">Duration</p>
+                                    <p className="font-medium">{viewingAssessment.duration} minutes</p>
+                                </div>
+                                <div>
+                                    <p className="text-sm text-muted-foreground">Total Questions</p>
+                                    <p className="font-medium">{getQuestionCount(viewingAssessment.questions)}</p>
+                                </div>
+                                <div>
+                                    <p className="text-sm text-muted-foreground">Total Marks</p>
+                                    <p className="font-medium">{getTotalMarks(viewingAssessment.questions)}</p>
+                                </div>
+                            </div>
+
+                            {/* Tags */}
+                            {viewingAssessment.tags && viewingAssessment.tags.length > 0 && (
+                                <div>
+                                    <h3 className="text-sm font-semibold mb-2">Tags</h3>
+                                    <div className="flex flex-wrap gap-2">
+                                        {viewingAssessment.tags.map((tag, idx) => (
+                                            <Badge key={idx} variant="secondary">{tag}</Badge>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Questions */}
+                            <div>
+                                <h3 className="text-lg font-semibold mb-4">Questions</h3>
+                                <div className="space-y-4">
+                                    {getQuestionsWithDetails(viewingAssessment.questions).map((question: any, index: number) => (
+                                        <Card key={question.id}>
+                                            <CardHeader>
+                                                <div className="flex justify-between items-start">
+                                                    <div className="flex-1">
+                                                        <CardTitle className="text-base">
+                                                            Question {index + 1}
+                                                        </CardTitle>
+                                                    </div>
+                                                    <div className="flex gap-2">
+                                                        <Badge variant="outline">
+                                                            {question.difficulty}
+                                                        </Badge>
+                                                        <Badge variant="secondary">
+                                                            {question.marks} marks
+                                                        </Badge>
+                                                        <Badge>
+                                                            {question.type}
+                                                        </Badge>
+                                                    </div>
+                                                </div>
+                                            </CardHeader>
+                                            <CardContent className="space-y-3">
+                                                <div
+                                                    className="prose prose-sm max-w-none"
+                                                    dangerouslySetInnerHTML={{ __html: question.question }}
+                                                />
+
+                                                {question.type === 'mcq' && question.options && (
+                                                    <div className="mt-4">
+                                                        <p className="text-sm font-medium mb-2">Options:</p>
+                                                        <div className="space-y-2">
+                                                            {question.options.map((option: any, optIdx: number) => (
+                                                                <div
+                                                                    key={option.id}
+                                                                    className={`p-2 rounded border ${option.isCorrect
+                                                                            ? 'bg-green-50 border-green-200'
+                                                                            : 'bg-background'
+                                                                        }`}
+                                                                >
+                                                                    <span className="font-medium">{optIdx + 1}. </span>
+                                                                    {option.text}
+                                                                    {option.isCorrect && (
+                                                                        <Badge variant="outline" className="ml-2 text-green-600">
+                                                                            Correct
+                                                                        </Badge>
+                                                                    )}
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                )}
+
+                                                {question.type === 'coding' && question.expectedOutput && (
+                                                    <div className="mt-4">
+                                                        <p className="text-sm font-medium mb-2">Expected Solution:</p>
+                                                        <pre className="bg-muted p-3 rounded text-xs overflow-x-auto">
+                                                            <code>{question.expectedOutput}</code>
+                                                        </pre>
+                                                    </div>
+                                                )}
+                                            </CardContent>
+                                        </Card>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </DialogContent>
+            </Dialog>
         </AdminLayout>
     );
 };

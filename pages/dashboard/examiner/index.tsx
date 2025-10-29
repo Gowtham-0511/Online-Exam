@@ -213,7 +213,13 @@ export default function ExaminerDashboard() {
 
     const { data: existingCredentials = [], error: credentialsError, isLoading: loadingCredentials, mutate: mutateCredentials } = useSWR<SqlCredential[]>(
         sqlServerType && session?.user?.email ? `/api/sql/list-credentials?createdBy=${session.user.email}` : null,
-        fetcher,
+        async (url: string) => {
+            const response = await fetch(url);
+            if (!response.ok) throw new Error('Failed to fetch credentials');
+            const data = await response.json();
+            console.log(data)
+            return data.credentials;
+        },
         {
             revalidateOnFocus: false,
         }
@@ -1169,10 +1175,10 @@ export default function ExaminerDashboard() {
                                                                                     Loading...
                                                                                 </div>
                                                                             </SelectItem>
-                                                                        ) : existingCredentials.length === 0 ? (
+                                                                        ) : !existingCredentials || !Array.isArray(existingCredentials) || existingCredentials.length === 0 ? (
                                                                             <SelectItem value="none" disabled>No credentials found</SelectItem>
                                                                         ) : (
-                                                                            existingCredentials
+                                                                            (Array.isArray(existingCredentials) ? existingCredentials : [])
                                                                                 .filter((c: SqlCredential) => c.serverType === sqlServerType)
                                                                                 .map((credential: SqlCredential) => (
                                                                                     <SelectItem key={credential.id} value={credential.id}>

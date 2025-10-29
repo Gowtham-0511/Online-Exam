@@ -24,6 +24,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
         const result = await client.query(query, params);
 
+        console.log(result)
+
         return res.status(200).json({
             credentials: result.rows.map(row => ({
                 id: row.id,

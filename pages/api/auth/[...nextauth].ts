@@ -29,6 +29,11 @@ export const authOptions: NextAuthOptions = {
             clientId: process.env.AZURE_AD_CLIENT_ID!,
             clientSecret: process.env.AZURE_AD_CLIENT_SECRET!,
             tenantId: process.env.AZURE_AD_TENANT_ID!,
+            authorization: {
+                params: {
+                    prompt: "select_account",
+                }
+            },
         }),
 
         GoogleProvider({
@@ -81,13 +86,21 @@ export const authOptions: NextAuthOptions = {
 
     session: {
         strategy: "jwt",
+        maxAge: 30 * 24 * 60 * 60,
     },
 
     pages: {
-        signIn: "/", 
+        signIn: "/",
     },
 
     secret: process.env.NEXTAUTH_SECRET,
+
+    // Add events to handle sign out
+    events: {
+        async signOut({ token }) {
+            console.log('User signed out:', token?.email);
+        },
+    },
 
     callbacks: {
         async signIn({ user, account, profile }) {
@@ -102,12 +115,24 @@ export const authOptions: NextAuthOptions = {
             return token;
         },
         async session({ session, token }) {
-            if (session.user) {
+            if (session.user && token.id) {
                 session.user.id = token.id as string;
                 session.user.email = token.email as string;
                 session.user.name = token.name as string;
             }
             return session;
+        },
+    },
+
+    cookies: {
+        sessionToken: {
+            name: `next-auth.session-token`,
+            options: {
+                httpOnly: true,
+                sameSite: 'lax',
+                path: '/',
+                secure: process.env.NODE_ENV === 'production',
+            },
         },
     },
 };

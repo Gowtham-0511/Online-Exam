@@ -62,13 +62,14 @@ export default function ExamAnalytics() {
     const [selectedExam, setSelectedExam] = useState("all");
     const [sortBy, setSortBy] = useState<'successRate' | 'avgScore' | 'attempts'>('successRate');
     const [expandedQuestion, setExpandedQuestion] = useState<string | null>(null);
-    const [filterDifficulty, setFilterDifficulty] = useState<'all' | 'Easy' | 'Medium' | 'Hard'>('all');
 
     const [selectedStudent, setSelectedStudent] = useState<string | null>(null);
     const [viewMode, setViewMode] = useState<'questions' | 'students'>('questions');
 
     const [compareStudent1, setCompareStudent1] = useState<string>("");
     const [compareStudent2, setCompareStudent2] = useState<string>("");
+
+    const [filterPerformance, setFilterPerformance] = useState<'all' | 'high' | 'medium' | 'low'>('all');
 
     const { data: submissions = [], error, isLoading } = useSWR(
         session?.user?.email
@@ -162,41 +163,6 @@ export default function ExamAnalytics() {
         return [];
     };
 
-    const getStudentsForQuestion = (questionId: string) => {
-        const studentsData: Array<{
-            email: string;
-            userName: string;
-            score: number;
-            maxMarks: number;
-            feedback: string;
-            submittedAt: string;
-            examId: string;
-            answer: string;
-        }> = [];
-
-        filteredSubmissions.forEach((submission: Submission) => {
-            const answers = parseAnswers(submission.answersWithQuestionIds);
-            const feedback = parseFeedback(submission.ai_feedback);
-
-            const answer = answers.find((a: any) => (a.questionId || a.id) === questionId);
-            if (answer) {
-                const feedbackItem = feedback.find((f: any) => f.questionId === questionId);
-                studentsData.push({
-                    email: submission.email,
-                    userName: submission.userName || submission.email,
-                    score: feedbackItem?.marks || 0,
-                    maxMarks: answer.marks || 0,
-                    feedback: feedbackItem?.feedback || 'No feedback',
-                    submittedAt: submission.submittedAt,
-                    examId: submission.examId,
-                    answer: answer.answer || answer.selectedOptionText || 'No answer'
-                });
-            }
-        });
-
-        return studentsData.sort((a, b) => b.score - a.score);
-    };
-
     const examList = useMemo(() => {
         const exams = new Set<string>();
         submissions.forEach((s: Submission) => exams.add(s.examId));
@@ -208,72 +174,99 @@ export default function ExamAnalytics() {
         return submissions.filter((s: Submission) => s.examId === selectedExam);
     }, [submissions, selectedExam]);
 
-    const questionAnalytics = useMemo(() => {
-        const questionsMap = new Map<string, QuestionAnalytics>();
+    const examAnalytics = useMemo(() => {
+        const examsMap = new Map<string, any>();
 
         filteredSubmissions.forEach((submission: Submission) => {
+            const examId = submission.examId;
             const answers = parseAnswers(submission.answersWithQuestionIds);
             const feedback = parseFeedback(submission.ai_feedback);
 
+            if (!examsMap.has(examId)) {
+                examsMap.set(examId, {
+                    examId,
+                    examTitle: examId, // You might want to fetch actual exam titles
+                    totalSubmissions: 0,
+                    totalStudents: new Set(),
+                    avgScore: 0,
+                    totalScore: 0,
+                    totalPossibleScore: 0,
+                    successRate: 0,
+                    highScores: 0, // >= 70%
+                    mediumScores: 0, // 40-69%
+                    lowScores: 0, // < 40%
+                    topPerformers: [],
+                    completionRate: 0,
+                    disqualifiedCount: 0
+                });
+            }
+
+            const exam = examsMap.get(examId)!;
+            exam.totalSubmissions++;
+            exam.totalStudents.add(submission.email);
+
+            if (submission.disqualified) {
+                exam.disqualifiedCount++;
+            }
+
+            let submissionScore = 0;
+            let submissionMaxScore = 0;
+
             answers.forEach((answer: any) => {
-                const questionId = answer.questionId || answer.id;
-                const feedbackItem = feedback.find((f: any) => f.questionId === questionId);
+                const feedbackItem = feedback.find((f: any) => f.questionId === (answer.questionId || answer.id));
+                const score = feedbackItem?.marks || 0;
+                const maxMarks = answer.marks || 0;
 
-                if (!questionsMap.has(questionId)) {
-                    questionsMap.set(questionId, {
-                        questionId,
-                        questionText: answer.question || 'Unknown Question',
-                        questionType: answer.type || 'unknown',
-                        totalMarks: answer.marks || 0,
-                        avgScore: 0,
-                        successRate: 0,
-                        totalAttempts: 0,
-                        correctAnswers: 0,
-                        incorrectAnswers: 0,
-                        partialCredit: 0,
-                        difficulty: 'Medium',
-                        commonMistakes: [],
-                        topPerformers: []
-                    });
-                }
-
-                const q = questionsMap.get(questionId)!;
-                q.totalAttempts++;
-
-                if (feedbackItem) {
-                    const score = feedbackItem.marks || 0;
-                    const maxMarks = answer.marks || 1;
-
-                    q.avgScore += score;
-
-                    if (score === maxMarks) {
-                        q.correctAnswers++;
-                    } else if (score === 0) {
-                        q.incorrectAnswers++;
-                    } else {
-                        q.partialCredit++;
-                    }
-
-                    if (score === maxMarks && q.topPerformers.length < 3) {
-                        q.topPerformers.push(submission.userName || submission.email);
-                    }
-                }
+                submissionScore += score;
+                submissionMaxScore += maxMarks;
             });
-        });
 
-        questionsMap.forEach((q) => {
-            if (q.totalAttempts > 0) {
-                q.avgScore = q.avgScore / q.totalAttempts;
-                q.successRate = (q.correctAnswers / q.totalAttempts) * 100;
+            exam.totalScore += submissionScore;
+            exam.totalPossibleScore += submissionMaxScore;
 
-                if (q.successRate >= 70) q.difficulty = 'Easy';
-                else if (q.successRate >= 40) q.difficulty = 'Medium';
-                else q.difficulty = 'Hard';
+            const percentage = submissionMaxScore > 0 ? (submissionScore / submissionMaxScore) * 100 : 0;
+
+            if (percentage >= 70) exam.highScores++;
+            else if (percentage >= 40) exam.mediumScores++;
+            else exam.lowScores++;
+
+            // Track top performers
+            if (percentage >= 80 && exam.topPerformers.length < 5) {
+                exam.topPerformers.push({
+                    name: submission.userName || submission.email,
+                    score: percentage
+                });
             }
         });
 
-        return Array.from(questionsMap.values());
+        examsMap.forEach((exam) => {
+            if (exam.totalSubmissions > 0) {
+                exam.avgScore = (exam.totalScore / exam.totalPossibleScore) * 100;
+                exam.successRate = (exam.highScores / exam.totalSubmissions) * 100;
+                exam.completionRate = ((exam.totalSubmissions - exam.disqualifiedCount) / exam.totalSubmissions) * 100;
+                exam.totalStudents = exam.totalStudents.size;
+            }
+            // Sort top performers
+            exam.topPerformers.sort((a: any, b: any) => b.score - a.score);
+        });
+
+        return Array.from(examsMap.values());
     }, [filteredSubmissions]);
+
+    const sortedExams = useMemo(() => {
+        let sorted = [...examAnalytics];
+
+        if (filterPerformance !== 'all') {
+            sorted = sorted.filter(e => {
+                if (filterPerformance === 'high') return e.successRate >= 70;
+                if (filterPerformance === 'medium') return e.successRate >= 40 && e.successRate < 70;
+                if (filterPerformance === 'low') return e.successRate < 40;
+                return true;
+            });
+        }
+
+        return sorted;
+    }, [examAnalytics, sortBy]);
 
     const studentAnalytics = useMemo(() => {
         const studentsMap = new Map<string, any>();
@@ -357,97 +350,143 @@ export default function ExamAnalytics() {
         return Array.from(studentsMap.values()).sort((a, b) => b.successRate - a.successRate);
     }, [filteredSubmissions]);
 
-    const sortedQuestions = useMemo(() => {
-        let sorted = [...questionAnalytics];
-
-        if (filterDifficulty !== 'all') {
-            sorted = sorted.filter(q => q.difficulty === filterDifficulty);
-        }
-
-        sorted.sort((a, b) => {
-            if (sortBy === 'successRate') return b.successRate - a.successRate;
-            if (sortBy === 'avgScore') return b.avgScore - a.avgScore;
-            if (sortBy === 'attempts') return b.totalAttempts - a.totalAttempts;
-            return 0;
-        });
-
-        return sorted;
-    }, [questionAnalytics, sortBy, filterDifficulty]);
-
     const overallStats = useMemo(() => {
-        const totalQuestions = questionAnalytics.length;
-        const avgSuccessRate = questionAnalytics.reduce((sum, q) => sum + q.successRate, 0) / (totalQuestions || 1);
-        const totalAttempts = questionAnalytics.reduce((sum, q) => sum + q.totalAttempts, 0);
-        const easyQuestions = questionAnalytics.filter(q => q.difficulty === 'Easy').length;
-        const mediumQuestions = questionAnalytics.filter(q => q.difficulty === 'Medium').length;
-        const hardQuestions = questionAnalytics.filter(q => q.difficulty === 'Hard').length;
+        const totalExams = examAnalytics.length;
+        const avgSuccessRate = examAnalytics.reduce((sum, e) => sum + e.successRate, 0) / (totalExams || 1);
+        const totalSubmissions = examAnalytics.reduce((sum, e) => sum + e.totalSubmissions, 0);
+        const highPerformingExams = examAnalytics.filter(e => e.successRate >= 70).length;
+        const mediumPerformingExams = examAnalytics.filter(e => e.successRate >= 40 && e.successRate < 70).length;
+        const lowPerformingExams = examAnalytics.filter(e => e.successRate < 40).length;
 
         return {
-            totalQuestions,
+            totalExams,
             avgSuccessRate,
-            totalAttempts,
-            easyQuestions,
-            mediumQuestions,
-            hardQuestions
+            totalSubmissions,
+            highPerformingExams,
+            mediumPerformingExams,
+            lowPerformingExams
         };
-    }, [questionAnalytics]);
+    }, [examAnalytics]);
 
-    // 1. Predict Question Difficulty
-    const predictDifficulty = async (question: QuestionAnalytics) => {
-        const key = `difficulty-${question.questionId}`;
+    const getStudentsForExam = (examId: string) => {
+        const studentsData: Array<{
+            email: string;
+            userName: string;
+            totalScore: number;
+            totalPossible: number;
+            correctAnswers: number;
+            incorrectAnswers: number;
+            submittedAt: string;
+            disqualified: boolean;
+        }> = [];
+
+        filteredSubmissions
+            .filter((s: Submission) => s.examId === examId)
+            .forEach((submission: Submission) => {
+                const answers = parseAnswers(submission.answersWithQuestionIds);
+                const feedback = parseFeedback(submission.ai_feedback);
+
+                let totalScore = 0;
+                let totalPossible = 0;
+                let correctAnswers = 0;
+                let incorrectAnswers = 0;
+
+                answers.forEach((answer: any) => {
+                    const feedbackItem = feedback.find((f: any) => f.questionId === (answer.questionId || answer.id));
+                    const score = feedbackItem?.marks || 0;
+                    const maxMarks = answer.marks || 0;
+
+                    totalScore += score;
+                    totalPossible += maxMarks;
+
+                    if (score === maxMarks) correctAnswers++;
+                    else if (score === 0) incorrectAnswers++;
+                });
+
+                studentsData.push({
+                    email: submission.email,
+                    userName: submission.userName || submission.email,
+                    totalScore,
+                    totalPossible,
+                    correctAnswers,
+                    incorrectAnswers,
+                    submittedAt: submission.submittedAt,
+                    disqualified: submission.disqualified
+                });
+            });
+
+        return studentsData.sort((a, b) => (b.totalScore / b.totalPossible) - (a.totalScore / a.totalPossible));
+    };
+
+    const analyzeExamDifficulty = async (exam: any) => {
+        const key = `exam-difficulty-${exam.examId}`;
         setLoadingInsights(prev => ({ ...prev, [key]: true }));
 
         try {
-            const response = await fetch('/api/ai/predict-difficulty', {
+            const response = await fetch('/api/ai/analyze-exam-difficulty', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    questionText: question.questionText,
-                    questionType: question.questionType,
-                    totalMarks: question.totalMarks
+                    examId: exam.examId,
+                    avgScore: exam.avgScore,
+                    successRate: exam.successRate,
+                    totalSubmissions: exam.totalSubmissions
                 })
             });
             const data = await response.json();
             setAiInsights(prev => ({ ...prev, [key]: data }));
         } catch (error) {
-            console.error('Failed to predict difficulty:', error);
+            console.error('Failed to analyze exam difficulty:', error);
         } finally {
             setLoadingInsights(prev => ({ ...prev, [key]: false }));
         }
     };
 
-    // 2. Analyze Common Mistakes
-    const analyzeQuestionMistakes = async (question: QuestionAnalytics) => {
-        const key = `mistakes-${question.questionId}`;
+    const identifyStrugglingAreas = async (exam: any) => {
+        const key = `exam-struggles-${exam.examId}`;
         setLoadingInsights(prev => ({ ...prev, [key]: true }));
 
-        const studentsData = getStudentsForQuestion(question.questionId);
-        const studentAnswers = studentsData.map(s => ({
-            answer: s.answer,
-            score: s.score,
-            maxMarks: s.maxMarks,
-            feedback: s.feedback
-        }));
+        const studentsData = getStudentsForExam(exam.examId);
 
         try {
-            const response = await fetch('/api/ai/analyze-mistakes', {
+            const response = await fetch('/api/ai/identify-struggling-areas', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    questionText: question.questionText,
-                    studentAnswers
+                    examId: exam.examId,
+                    studentsData
                 })
             });
             const data = await response.json();
             setAiInsights(prev => ({ ...prev, [key]: data }));
         } catch (error) {
-            console.error('Failed to analyze mistakes:', error);
+            console.error('Failed to identify struggling areas:', error);
         } finally {
             setLoadingInsights(prev => ({ ...prev, [key]: false }));
         }
     };
 
-    // 3. Generate Study Plan
+    const generateExamReport = async (exam: any) => {
+        const key = `exam-report-${exam.examId}`;
+        setLoadingInsights(prev => ({ ...prev, [key]: true }));
+
+        try {
+            const response = await fetch('/api/ai/generate-exam-report', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    examData: exam
+                })
+            });
+            const data = await response.json();
+            setAiInsights(prev => ({ ...prev, [key]: data }));
+        } catch (error) {
+            console.error('Failed to generate exam report:', error);
+        } finally {
+            setLoadingInsights(prev => ({ ...prev, [key]: false }));
+        }
+    };
+
     const generateStudyPlanForStudent = async (student: any) => {
         const key = `studyplan-${student.email}`;
         setLoadingInsights(prev => ({ ...prev, [key]: true }));
@@ -475,7 +514,6 @@ export default function ExamAnalytics() {
         }
     };
 
-    // 4. Predict Future Performance
     const predictStudentPerformance = async (student: any) => {
         const key = `performance-${student.email}`;
         setLoadingInsights(prev => ({ ...prev, [key]: true }));
@@ -502,7 +540,6 @@ export default function ExamAnalytics() {
         }
     };
 
-    // 5. Compare Two Students
     const compareStudentsAI = async (student1: any, student2: any) => {
         const key = `compare-${student1.email}-${student2.email}`;
         setLoadingInsights(prev => ({ ...prev, [key]: true }));
@@ -615,8 +652,8 @@ export default function ExamAnalytics() {
                                 </div>
                                 <TrendingUp className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
                             </div>
-                            <p className="text-sm text-muted-foreground mb-1">Total Questions</p>
-                            <p className="text-3xl font-bold text-foreground">{overallStats.totalQuestions}</p>
+                            <p className="text-sm text-muted-foreground mb-1">Total Exams</p>
+                            <p className="text-3xl font-bold text-foreground">{overallStats.totalExams}</p>
                         </div>
 
                         <div className="bg-card border border-border rounded-lg p-6 hover:shadow-md transition-all">
@@ -630,7 +667,7 @@ export default function ExamAnalytics() {
                             <p className="text-3xl font-bold text-foreground">{overallStats.avgSuccessRate.toFixed(1)}%</p>
                         </div>
 
-                        <div className="bg-card border border-border rounded-lg p-6 hover:shadow-md transition-all">
+                        {/* <div className="bg-card border border-border rounded-lg p-6 hover:shadow-md transition-all">
                             <div className="flex items-center justify-between mb-3">
                                 <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center">
                                     <Users className="w-6 h-6 text-primary" />
@@ -639,7 +676,7 @@ export default function ExamAnalytics() {
                             </div>
                             <p className="text-sm text-muted-foreground mb-1">Total Attempts</p>
                             <p className="text-3xl font-bold text-foreground">{overallStats.totalAttempts}</p>
-                        </div>
+                        </div> */}
 
                         <div className="bg-card border border-border rounded-lg p-6 hover:shadow-md transition-all">
                             <div className="flex items-center justify-between mb-3">
@@ -648,16 +685,16 @@ export default function ExamAnalytics() {
                                 </div>
                                 <PieChart className="w-5 h-5 text-muted-foreground" />
                             </div>
-                            <p className="text-sm text-muted-foreground mb-1">Difficulty Mix</p>
+                            <p className="text-sm text-muted-foreground mb-1">Performance Mix</p>
                             <div className="flex gap-2 mt-2">
                                 <span className="text-xs px-2 py-1 rounded bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 font-medium">
-                                    {overallStats.easyQuestions}E
+                                    {overallStats.highPerformingExams}H
                                 </span>
                                 <span className="text-xs px-2 py-1 rounded bg-amber-50 dark:bg-amber-950/30 text-amber-600 dark:text-amber-400 font-medium">
-                                    {overallStats.mediumQuestions}M
+                                    {overallStats.mediumPerformingExams}M
                                 </span>
                                 <span className="text-xs px-2 py-1 rounded bg-rose-50 dark:bg-rose-950/30 text-rose-600 dark:text-rose-400 font-medium">
-                                    {overallStats.hardQuestions}H
+                                    {overallStats.lowPerformingExams}L
                                 </span>
                             </div>
                         </div>
@@ -684,14 +721,14 @@ export default function ExamAnalytics() {
                                 </select>
 
                                 <select
-                                    value={filterDifficulty}
-                                    onChange={(e) => setFilterDifficulty(e.target.value as any)}
+                                    value={filterPerformance}
+                                    onChange={(e) => setFilterPerformance(e.target.value as any)}
                                     className="px-4 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring text-foreground text-sm"
                                 >
-                                    <option value="all">All Difficulty</option>
-                                    <option value="Easy">Easy</option>
-                                    <option value="Medium">Medium</option>
-                                    <option value="Hard">Hard</option>
+                                    <option value="all">All Performance</option>
+                                    <option value="high">High (≥70%)</option>
+                                    <option value="medium">Medium (40-69%)</option>
+                                    <option value="low">Low (40%)</option>
                                 </select>
 
                                 <select
@@ -701,7 +738,7 @@ export default function ExamAnalytics() {
                                 >
                                     <option value="successRate">Sort by Success Rate</option>
                                     <option value="avgScore">Sort by Avg Score</option>
-                                    <option value="attempts">Sort by Attempts</option>
+                                    <option value="attempts">Sort by Submissions</option>
                                 </select>
                             </div>
 
@@ -714,7 +751,7 @@ export default function ExamAnalytics() {
                                         }`}
                                 >
                                     <FileText className="w-4 h-4 inline mr-2" />
-                                    Questions
+                                    Exams
                                 </button>
                                 <button
                                     onClick={() => setViewMode('students')}
@@ -731,408 +768,459 @@ export default function ExamAnalytics() {
                     </div>
 
                     {viewMode === 'questions' ? (
-                        sortedQuestions.length === 0 ? (
-                            <div className="bg-card border-2 border-dashed border-border rounded-lg p-12 text-center">
-                                <FileText className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
-                                <h3 className="text-lg font-semibold text-foreground mb-2">No analytics available</h3>
-                                <p className="text-muted-foreground">
-                                    Analytics will appear once students start submitting exams
-                                </p>
-                            </div>
-                        ) : (
-                            <div className="space-y-3">
-                                {sortedQuestions.map((question, index) => (
-                                    <div
-                                        key={question.questionId}
-                                        className="bg-card border border-border rounded-lg overflow-hidden hover:shadow-md transition-all"
-                                    >
-                                        <div
-                                            className="p-5 cursor-pointer"
-                                            onClick={() => setExpandedQuestion(
-                                                expandedQuestion === question.questionId ? null : question.questionId
-                                            )}
-                                        >
-                                            <div className="flex items-start justify-between gap-4">
-                                                <div className="flex-1 min-w-0">
-                                                    <div className="flex items-center gap-3 mb-3">
-                                                        <span className="flex-shrink-0 w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-sm font-bold text-primary">
-                                                            {index + 1}
+                        sortedExams.map((exam, index) => (
+                            <div key={exam.examId} className="bg-card border border-border rounded-lg overflow-hidden hover:shadow-md transition-all">
+                                <div className="p-5 cursor-pointer" onClick={() => setExpandedQuestion(expandedQuestion === exam.examId ? null : exam.examId)}>
+                                    <div className="flex items-start justify-between gap-4">
+                                        <div className="flex-1 min-w-0">
+                                            <div className="flex items-center gap-3 mb-3">
+                                                <span className="flex-shrink-0 w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-sm font-bold text-primary">
+                                                    {index + 1}
+                                                </span>
+                                                <h3 className="font-semibold text-foreground flex-1">
+                                                    {exam.examTitle}
+                                                </h3>
+                                                <span className={`flex-shrink-0 px-3 py-1 rounded-full text-xs font-medium ${exam.successRate >= 70 ? 'bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400' :
+                                                    exam.successRate >= 40 ? 'bg-amber-50 dark:bg-amber-950/30 text-amber-600 dark:text-amber-400' :
+                                                        'bg-rose-50 dark:bg-rose-950/30 text-rose-600 dark:text-rose-400'
+                                                    }`}>
+                                                    {exam.successRate >= 70 ? 'High' : exam.successRate >= 40 ? 'Medium' : 'Low'} Performance
+                                                </span>
+                                            </div>
+
+                                            <div className="flex items-center gap-6 text-sm text-muted-foreground mb-3">
+                                                <span className="flex items-center gap-1">
+                                                    <Users className="w-4 h-4" />
+                                                    {exam.totalStudents} students
+                                                </span>
+                                                <span className="flex items-center gap-1">
+                                                    <FileText className="w-4 h-4" />
+                                                    {exam.totalSubmissions} submissions
+                                                </span>
+                                                <span className="flex items-center gap-1">
+                                                    <Award className="w-4 h-4" />
+                                                    {exam.avgScore.toFixed(1)}% avg
+                                                </span>
+                                            </div>
+
+                                            <div className="flex items-center gap-4">
+                                                <div className="flex-1">
+                                                    <div className="flex items-center justify-between mb-2">
+                                                        <span className="text-xs text-muted-foreground">Average Score</span>
+                                                        <span className={`text-sm font-bold ${getSuccessRateColor(exam.avgScore)}`}>
+                                                            {exam.avgScore.toFixed(1)}%
                                                         </span>
-                                                        <h3
-                                                            className="font-semibold text-foreground flex-1"
-                                                            dangerouslySetInnerHTML={{ __html: question.questionText }}
+                                                    </div>
+                                                    <div className="h-2 bg-muted rounded-full overflow-hidden">
+                                                        <div
+                                                            className={`h-full transition-all ${getProgressBarColor(exam.avgScore)}`}
+                                                            style={{ width: `${exam.avgScore}%` }}
                                                         />
-                                                        <span className={`flex-shrink-0 px-3 py-1 rounded-full text-xs font-medium ${getDifficultyColor(question.difficulty)}`}>
-                                                            {question.difficulty}
-                                                        </span>
-                                                    </div>
-
-                                                    <div className="flex items-center gap-6 text-sm text-muted-foreground mb-3">
-                                                        <span className="flex items-center gap-1">
-                                                            <Users className="w-4 h-4" />
-                                                            {question.totalAttempts} attempts
-                                                        </span>
-                                                        <span className="flex items-center gap-1">
-                                                            <Award className="w-4 h-4" />
-                                                            {question.totalMarks} marks
-                                                        </span>
-                                                        <span className="flex items-center gap-1">
-                                                            <FileText className="w-4 h-4" />
-                                                            {question.questionType.toUpperCase()}
-                                                        </span>
-                                                    </div>
-
-                                                    <div className="flex items-center gap-4">
-                                                        <div className="flex-1">
-                                                            <div className="flex items-center justify-between mb-2">
-                                                                <span className="text-xs text-muted-foreground">Success Rate</span>
-                                                                <span className={`text-sm font-bold ${getSuccessRateColor(question.successRate)}`}>
-                                                                    {question.successRate.toFixed(1)}%
-                                                                </span>
-                                                            </div>
-                                                            <div className="h-2 bg-muted rounded-full overflow-hidden">
-                                                                <div
-                                                                    className={`h-full transition-all ${getProgressBarColor(question.successRate)}`}
-                                                                    style={{ width: `${question.successRate}%` }}
-                                                                />
-                                                            </div>
-                                                        </div>
-
-                                                        <div className="flex gap-2">
-                                                            <div className="text-center px-3 py-2 bg-emerald-50 dark:bg-emerald-950/30 rounded-lg">
-                                                                <p className="text-xs text-muted-foreground mb-1">Correct</p>
-                                                                <p className="text-lg font-bold text-emerald-600 dark:text-emerald-400">
-                                                                    {question.correctAnswers}
-                                                                </p>
-                                                            </div>
-                                                            <div className="text-center px-3 py-2 bg-rose-50 dark:bg-rose-950/30 rounded-lg">
-                                                                <p className="text-xs text-muted-foreground mb-1">Incorrect</p>
-                                                                <p className="text-lg font-bold text-rose-600 dark:text-rose-400">
-                                                                    {question.incorrectAnswers}
-                                                                </p>
-                                                            </div>
-                                                        </div>
                                                     </div>
                                                 </div>
 
-                                                <button className="flex-shrink-0 w-8 h-8 rounded-lg hover:bg-muted flex items-center justify-center transition-colors">
-                                                    {expandedQuestion === question.questionId ? (
-                                                        <ChevronUp className="w-5 h-5 text-foreground" />
-                                                    ) : (
-                                                        <ChevronDown className="w-5 h-5 text-foreground" />
-                                                    )}
-                                                </button>
+                                                <div className="flex gap-2">
+                                                    <div className="text-center px-3 py-2 bg-emerald-50 dark:bg-emerald-950/30 rounded-lg">
+                                                        <p className="text-xs text-muted-foreground mb-1">High</p>
+                                                        <p className="text-lg font-bold text-emerald-600 dark:text-emerald-400">
+                                                            {exam.highScores}
+                                                        </p>
+                                                    </div>
+                                                    <div className="text-center px-3 py-2 bg-amber-50 dark:bg-amber-950/30 rounded-lg">
+                                                        <p className="text-xs text-muted-foreground mb-1">Medium</p>
+                                                        <p className="text-lg font-bold text-amber-600 dark:text-amber-400">
+                                                            {exam.mediumScores}
+                                                        </p>
+                                                    </div>
+                                                    <div className="text-center px-3 py-2 bg-rose-50 dark:bg-rose-950/30 rounded-lg">
+                                                        <p className="text-xs text-muted-foreground mb-1">Low</p>
+                                                        <p className="text-lg font-bold text-rose-600 dark:text-rose-400">
+                                                            {exam.lowScores}
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            {/* <button className="flex-shrink-0 w-8 h-8 rounded-lg hover:bg-muted flex items-center justify-center transition-colors">
+                                                {expandedQuestion === exam.examId ? (
+                                                    <ChevronUp className="w-5 h-5 text-foreground" />
+                                                ) : (
+                                                    <ChevronDown className="w-5 h-5 text-foreground" />
+                                                )}
+                                            </button> */}
+                                        </div>
+                                    </div>
+                                </div>
+                                {expandedQuestion === exam.examId && (
+                                    <div className="border-t border-border bg-muted/30 p-5 space-y-4">
+                                        {/* Key Metrics Grid */}
+                                        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                                            <div className="bg-card border border-border rounded-lg p-4">
+                                                <div className="flex items-center gap-2 mb-2">
+                                                    <Target className="w-4 h-4 text-primary" />
+                                                    <p className="text-sm font-medium text-muted-foreground">Average Score</p>
+                                                </div>
+                                                <p className="text-2xl font-bold text-foreground">
+                                                    {exam.avgScore.toFixed(2)}%
+                                                </p>
+                                            </div>
+
+                                            <div className="bg-card border border-border rounded-lg p-4">
+                                                <div className="flex items-center gap-2 mb-2">
+                                                    <Users className="w-4 h-4 text-primary" />
+                                                    <p className="text-sm font-medium text-muted-foreground">Total Students</p>
+                                                </div>
+                                                <p className="text-2xl font-bold text-foreground">
+                                                    {exam.totalStudents}
+                                                </p>
+                                            </div>
+
+                                            <div className="bg-card border border-border rounded-lg p-4">
+                                                <div className="flex items-center gap-2 mb-2">
+                                                    <CheckCircle className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                                                    <p className="text-sm font-medium text-muted-foreground">Success Rate</p>
+                                                </div>
+                                                <p className={`text-2xl font-bold ${getSuccessRateColor(exam.successRate)}`}>
+                                                    {exam.successRate.toFixed(1)}%
+                                                </p>
+                                            </div>
+
+                                            <div className="bg-card border border-border rounded-lg p-4">
+                                                <div className="flex items-center gap-2 mb-2">
+                                                    <Activity className="w-4 h-4 text-primary" />
+                                                    <p className="text-sm font-medium text-muted-foreground">Completion Rate</p>
+                                                </div>
+                                                <p className="text-2xl font-bold text-foreground">
+                                                    {exam.completionRate.toFixed(1)}%
+                                                </p>
                                             </div>
                                         </div>
 
-                                        {expandedQuestion === question.questionId && (
-                                            <div className="border-t border-border bg-muted/30 p-5 space-y-4">
-                                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                                    <div className="bg-card border border-border rounded-lg p-4">
-                                                        <div className="flex items-center gap-2 mb-2">
-                                                            <Target className="w-4 h-4 text-primary" />
-                                                            <p className="text-sm font-medium text-muted-foreground">Average Score</p>
-                                                        </div>
-                                                        <p className="text-2xl font-bold text-foreground">
-                                                            {question.avgScore.toFixed(2)}/{question.totalMarks}
-                                                        </p>
-                                                    </div>
-
-                                                    <div className="bg-card border border-border rounded-lg p-4">
-                                                        <div className="flex items-center gap-2 mb-2">
-                                                            <Activity className="w-4 h-4 text-primary" />
-                                                            <p className="text-sm font-medium text-muted-foreground">Partial Credit</p>
-                                                        </div>
-                                                        <p className="text-2xl font-bold text-foreground">
-                                                            {question.partialCredit}
-                                                        </p>
-                                                    </div>
-
-                                                    <div className="bg-card border border-border rounded-lg p-4">
-                                                        <div className="flex items-center gap-2 mb-2">
-                                                            <CheckCircle className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                                                            <p className="text-sm font-medium text-muted-foreground">Success Rate</p>
-                                                        </div>
-                                                        <p className={`text-2xl font-bold ${getSuccessRateColor(question.successRate)}`}>
-                                                            {question.successRate.toFixed(1)}%
-                                                        </p>
-                                                    </div>
+                                        {/* Top Performers */}
+                                        {exam.topPerformers.length > 0 && (
+                                            <div className="bg-card border border-border rounded-lg p-4">
+                                                <div className="flex items-center gap-2 mb-3">
+                                                    <Trophy className="w-4 h-4 text-primary" />
+                                                    <h4 className="font-semibold text-foreground">Top Performers</h4>
                                                 </div>
-
-                                                {question.topPerformers.length > 0 && (
-                                                    <div className="bg-card border border-border rounded-lg p-4">
-                                                        <div className="flex items-center gap-2 mb-3">
-                                                            <Award className="w-4 h-4 text-primary" />
-                                                            <h4 className="font-semibold text-foreground">Top Performers</h4>
-                                                        </div>
-                                                        <div className="flex flex-wrap gap-2">
-                                                            {question.topPerformers.map((name, idx) => (
-                                                                <span
-                                                                    key={idx}
-                                                                    className="px-3 py-1 bg-primary/10 text-primary rounded-full text-sm font-medium"
-                                                                >
-                                                                    {name}
-                                                                </span>
-                                                            ))}
-                                                        </div>
-                                                    </div>
-                                                )}
-
-                                                <div className="bg-card border border-border rounded-lg p-4">
-                                                    <h4 className="font-semibold text-foreground mb-3 flex items-center gap-2">
-                                                        <FileText className="w-4 h-4" />
-                                                        Response Distribution
-                                                    </h4>
-                                                    <div className="space-y-2">
-                                                        <div className="flex items-center justify-between text-sm">
-                                                            <span className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400">
-                                                                <CheckCircle className="w-4 h-4" />
-                                                                Correct Answers
-                                                            </span>
-                                                            <span className="font-bold">{question.correctAnswers}</span>
-                                                        </div>
-                                                        <div className="flex items-center justify-between text-sm">
-                                                            <span className="flex items-center gap-2 text-amber-600 dark:text-amber-400">
-                                                                <AlertCircle className="w-4 h-4" />
-                                                                Partial Credit
-                                                            </span>
-                                                            <span className="font-bold">{question.partialCredit}</span>
-                                                        </div>
-                                                        <div className="flex items-center justify-between text-sm">
-                                                            <span className="flex items-center gap-2 text-rose-600 dark:text-rose-400">
-                                                                <XCircle className="w-4 h-4" />
-                                                                Incorrect Answers
-                                                            </span>
-                                                            <span className="font-bold">{question.incorrectAnswers}</span>
-                                                        </div>
-                                                    </div>
-                                                </div>
-
-                                                {/* NEW: Students who attempted this question */}
-                                                <div className="bg-card border border-border rounded-lg p-4">
-                                                    <h4 className="font-semibold text-foreground mb-4 flex items-center gap-2">
-                                                        <Users className="w-4 h-4" />
-                                                        Students Who Attempted ({getStudentsForQuestion(question.questionId).length})
-                                                    </h4>
-                                                    <div className="space-y-2 max-h-96 overflow-y-auto">
-                                                        {getStudentsForQuestion(question.questionId).map((student, idx) => {
-                                                            const percentage = (student.score / student.maxMarks) * 100;
-                                                            return (
-                                                                <div key={idx} className="p-4 bg-muted/50 rounded-lg hover:bg-muted/70 transition-colors">
-                                                                    <div className="flex items-start justify-between gap-4 mb-3">
-                                                                        <div className="flex items-center gap-3 flex-1 min-w-0">
-                                                                            <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center font-bold text-primary text-sm flex-shrink-0">
-                                                                                {student.userName.charAt(0).toUpperCase()}
-                                                                            </div>
-                                                                            <div className="flex-1 min-w-0">
-                                                                                <p className="font-semibold text-foreground truncate">
-                                                                                    {student.userName}
-                                                                                </p>
-                                                                                <p className="text-xs text-muted-foreground truncate">
-                                                                                    {student.email}
-                                                                                </p>
-                                                                            </div>
-                                                                        </div>
-                                                                        <div className="text-right flex-shrink-0">
-                                                                            <p className={`text-lg font-bold ${getSuccessRateColor(percentage)}`}>
-                                                                                {student.score}/{student.maxMarks}
-                                                                            </p>
-                                                                            <p className={`text-xs font-medium ${getSuccessRateColor(percentage)}`}>
-                                                                                {percentage.toFixed(0)}%
-                                                                            </p>
-                                                                        </div>
-                                                                    </div>
-
-                                                                    {/* Score bar */}
-                                                                    <div className="mb-3">
-                                                                        <div className="h-1.5 bg-muted rounded-full overflow-hidden">
-                                                                            <div
-                                                                                className={`h-full transition-all ${getProgressBarColor(percentage)}`}
-                                                                                style={{ width: `${percentage}%` }}
-                                                                            />
-                                                                        </div>
-                                                                    </div>
-
-                                                                    {/* Student's answer preview */}
-                                                                    <div className="space-y-2">
-                                                                        <div className="flex items-center gap-2">
-                                                                            <span className="text-xs font-medium text-muted-foreground">Answer:</span>
-                                                                            <span className="text-xs text-foreground bg-background px-2 py-1 rounded border border-border">
-                                                                                {student.answer.length > 100
-                                                                                    ? student.answer.substring(0, 100) + '...'
-                                                                                    : student.answer}
-                                                                            </span>
-                                                                        </div>
-
-                                                                        {/* AI Feedback */}
-                                                                        <div className="p-2 bg-background rounded border border-border">
-                                                                            <div className="flex items-start gap-2">
-                                                                                <Activity className="w-3 h-3 text-primary mt-0.5 flex-shrink-0" />
-                                                                                <div className="flex-1 min-w-0">
-                                                                                    <p className="text-xs font-medium text-muted-foreground mb-1">
-                                                                                        AI Feedback:
-                                                                                    </p>
-                                                                                    <p className="text-xs text-foreground">
-                                                                                        {student.feedback}
-                                                                                    </p>
-                                                                                </div>
-                                                                            </div>
-                                                                        </div>
-
-                                                                        {/* Metadata */}
-                                                                        <div className="flex items-center gap-3 text-xs text-muted-foreground pt-1">
-                                                                            <span className="flex items-center gap-1">
-                                                                                <Clock className="w-3 h-3" />
-                                                                                {new Date(student.submittedAt).toLocaleDateString()}
-                                                                            </span>
-                                                                            <span className="flex items-center gap-1">
-                                                                                <FileText className="w-3 h-3" />
-                                                                                {student.examId}
-                                                                            </span>
-                                                                        </div>
-                                                                    </div>
-                                                                </div>
-                                                            );
-                                                        })}
-                                                    </div>
-                                                </div>
-
-                                                <div className="bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-950/20 dark:to-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-lg p-5">
-                                                    <h4 className="font-semibold text-foreground mb-4 flex items-center gap-2">
-                                                        <Activity className="w-5 h-5 text-purple-600" />
-                                                        AI-Powered Question Insights
-                                                    </h4>
-
-                                                    <div className="flex flex-wrap gap-3 mb-4">
-                                                        <Button
-                                                            onClick={() => predictDifficulty(question)}
-                                                            disabled={loadingInsights[`difficulty-${question.questionId}`]}
-                                                            size="sm"
-                                                            variant="outline"
+                                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                                                    {exam.topPerformers.map((performer: any, idx: number) => (
+                                                        <div
+                                                            key={idx}
+                                                            className="p-3 bg-gradient-to-br from-primary/5 to-primary/10 border border-primary/20 rounded-lg"
                                                         >
-                                                            {loadingInsights[`difficulty-${question.questionId}`] ? (
-                                                                <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Analyzing...</>
-                                                            ) : (
-                                                                <><Target className="w-4 h-4 mr-2" />Predict Difficulty</>
-                                                            )}
-                                                        </Button>
-
-                                                        <Button
-                                                            onClick={() => analyzeQuestionMistakes(question)}
-                                                            disabled={loadingInsights[`mistakes-${question.questionId}`]}
-                                                            size="sm"
-                                                            variant="outline"
-                                                        >
-                                                            {loadingInsights[`mistakes-${question.questionId}`] ? (
-                                                                <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Analyzing...</>
-                                                            ) : (
-                                                                <><AlertCircle className="w-4 h-4 mr-2" />Analyze Mistakes</>
-                                                            )}
-                                                        </Button>
-                                                    </div>
-
-                                                    {/* Difficulty Prediction Results */}
-                                                    {aiInsights[`difficulty-${question.questionId}`] && (
-                                                        <div className="bg-card border border-border rounded-lg p-4 mb-3">
-                                                            <h5 className="font-medium text-foreground mb-3 flex items-center gap-2">
-                                                                <Target className="w-4 h-4 text-primary" />
-                                                                Difficulty Prediction
-                                                            </h5>
-                                                            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-3">
-                                                                <div className="text-center p-3 bg-muted rounded-lg">
-                                                                    <p className="text-xs text-muted-foreground mb-1">Predicted</p>
-                                                                    <p className={`text-lg font-bold ${getDifficultyColor(aiInsights[`difficulty-${question.questionId}`].predictedDifficulty)}`}>
-                                                                        {aiInsights[`difficulty-${question.questionId}`].predictedDifficulty}
-                                                                    </p>
+                                                            <div className="flex items-center gap-3">
+                                                                <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center font-bold text-primary">
+                                                                    {idx + 1}
                                                                 </div>
-                                                                <div className="text-center p-3 bg-muted rounded-lg">
-                                                                    <p className="text-xs text-muted-foreground mb-1">Actual</p>
-                                                                    <p className={`text-lg font-bold ${getDifficultyColor(question.difficulty)}`}>
-                                                                        {question.difficulty}
+                                                                <div className="flex-1 min-w-0">
+                                                                    <p className="font-semibold text-foreground truncate">
+                                                                        {performer.name}
                                                                     </p>
-                                                                </div>
-                                                                <div className="text-center p-3 bg-muted rounded-lg">
-                                                                    <p className="text-xs text-muted-foreground mb-1">Confidence</p>
-                                                                    <p className="text-lg font-bold text-foreground">
-                                                                        {aiInsights[`difficulty-${question.questionId}`].confidence}%
-                                                                    </p>
-                                                                </div>
-                                                                <div className="text-center p-3 bg-muted rounded-lg">
-                                                                    <p className="text-xs text-muted-foreground mb-1">Est. Success</p>
-                                                                    <p className="text-lg font-bold text-foreground">
-                                                                        {aiInsights[`difficulty-${question.questionId}`].estimatedSuccessRate}%
+                                                                    <p className="text-sm font-bold text-primary">
+                                                                        {performer.score.toFixed(1)}%
                                                                     </p>
                                                                 </div>
                                                             </div>
-                                                            <div className="p-3 bg-muted/50 rounded-lg">
-                                                                <p className="text-xs font-medium text-muted-foreground mb-1">Reasoning:</p>
-                                                                <p className="text-sm text-foreground">{aiInsights[`difficulty-${question.questionId}`].reasoning}</p>
-                                                            </div>
                                                         </div>
-                                                    )}
-
-                                                    {/* Common Mistakes Results */}
-                                                    {aiInsights[`mistakes-${question.questionId}`] && (
-                                                        <div className="bg-card border border-border rounded-lg p-4">
-                                                            <h5 className="font-medium text-foreground mb-3 flex items-center gap-2">
-                                                                <AlertCircle className="w-4 h-4 text-rose-600" />
-                                                                Common Mistakes Analysis
-                                                            </h5>
-
-                                                            {aiInsights[`mistakes-${question.questionId}`].commonMistakes.length > 0 && (
-                                                                <div className="mb-4">
-                                                                    <p className="text-sm font-medium text-muted-foreground mb-2">Common Patterns:</p>
-                                                                    <div className="space-y-2">
-                                                                        {aiInsights[`mistakes-${question.questionId}`].commonMistakes.map((mistake: any, idx: number) => (
-                                                                            <div key={idx} className="p-3 bg-rose-50 dark:bg-rose-950/30 rounded-lg">
-                                                                                <div className="flex items-start justify-between mb-1">
-                                                                                    <p className="text-sm font-medium text-foreground">{mistake.pattern}</p>
-                                                                                    <span className="text-xs font-bold text-rose-600 dark:text-rose-400">
-                                                                                        {mistake.frequency}%
-                                                                                    </span>
-                                                                                </div>
-                                                                                <p className="text-xs text-muted-foreground mt-1">💡 {mistake.suggestion}</p>
-                                                                            </div>
-                                                                        ))}
-                                                                    </div>
-                                                                </div>
-                                                            )}
-
-                                                            {aiInsights[`mistakes-${question.questionId}`].insights.length > 0 && (
-                                                                <div className="mb-4">
-                                                                    <p className="text-sm font-medium text-muted-foreground mb-2">Key Insights:</p>
-                                                                    <ul className="space-y-1">
-                                                                        {aiInsights[`mistakes-${question.questionId}`].insights.map((insight: string, idx: number) => (
-                                                                            <li key={idx} className="text-sm text-foreground flex items-start gap-2">
-                                                                                <span className="text-primary mt-1">•</span>
-                                                                                <span>{insight}</span>
-                                                                            </li>
-                                                                        ))}
-                                                                    </ul>
-                                                                </div>
-                                                            )}
-
-                                                            {aiInsights[`mistakes-${question.questionId}`].improvementTips.length > 0 && (
-                                                                <div>
-                                                                    <p className="text-sm font-medium text-muted-foreground mb-2">Teaching Tips:</p>
-                                                                    <div className="space-y-2">
-                                                                        {aiInsights[`mistakes-${question.questionId}`].improvementTips.map((tip: string, idx: number) => (
-                                                                            <div key={idx} className="p-2 bg-emerald-50 dark:bg-emerald-950/30 rounded border-l-2 border-emerald-500">
-                                                                                <p className="text-sm text-foreground">{tip}</p>
-                                                                            </div>
-                                                                        ))}
-                                                                    </div>
-                                                                </div>
-                                                            )}
-                                                        </div>
-                                                    )}
+                                                    ))}
                                                 </div>
                                             </div>
                                         )}
+
+                                        {/* Score Distribution */}
+                                        <div className="bg-card border border-border rounded-lg p-4">
+                                            <h4 className="font-semibold text-foreground mb-3 flex items-center gap-2">
+                                                <BarChart3 className="w-4 h-4" />
+                                                Score Distribution
+                                            </h4>
+                                            <div className="space-y-3">
+                                                <div>
+                                                    <div className="flex items-center justify-between text-sm mb-2">
+                                                        <span className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400">
+                                                            <CheckCircle className="w-4 h-4" />
+                                                            High Performers (≥70%)
+                                                        </span>
+                                                        <span className="font-bold">{exam.highScores}</span>
+                                                    </div>
+                                                    <div className="h-2 bg-muted rounded-full overflow-hidden">
+                                                        <div
+                                                            className="h-full bg-emerald-500 transition-all"
+                                                            style={{ width: `${(exam.highScores / exam.totalSubmissions) * 100}%` }}
+                                                        />
+                                                    </div>
+                                                </div>
+
+                                                <div>
+                                                    <div className="flex items-center justify-between text-sm mb-2">
+                                                        <span className="flex items-center gap-2 text-amber-600 dark:text-amber-400">
+                                                            <AlertCircle className="w-4 h-4" />
+                                                            Medium Performers (40-69%)
+                                                        </span>
+                                                        <span className="font-bold">{exam.mediumScores}</span>
+                                                    </div>
+                                                    <div className="h-2 bg-muted rounded-full overflow-hidden">
+                                                        <div
+                                                            className="h-full bg-amber-500 transition-all"
+                                                            style={{ width: `${(exam.mediumScores / exam.totalSubmissions) * 100}%` }}
+                                                        />
+                                                    </div>
+                                                </div>
+
+                                                <div>
+                                                    <div className="flex items-center justify-between text-sm mb-2">
+                                                        <span className="flex items-center gap-2 text-rose-600 dark:text-rose-400">
+                                                            <XCircle className="w-4 h-4" />
+                                                            Low Performers (40%)
+                                                        </span>
+                                                        <span className="font-bold">{exam.lowScores}</span>
+                                                    </div>
+                                                    <div className="h-2 bg-muted rounded-full overflow-hidden">
+                                                        <div
+                                                            className="h-full bg-rose-500 transition-all"
+                                                            style={{ width: `${(exam.lowScores / exam.totalSubmissions) * 100}%` }}
+                                                        />
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Students Who Took This Exam */}
+                                        <div className="bg-card border border-border rounded-lg p-4">
+                                            <h4 className="font-semibold text-foreground mb-4 flex items-center gap-2">
+                                                <Users className="w-4 h-4" />
+                                                Students Who Took This Exam ({getStudentsForExam(exam.examId).length})
+                                            </h4>
+                                            <div className="space-y-2 max-h-96 overflow-y-auto">
+                                                {getStudentsForExam(exam.examId).map((student: any, idx: number) => {
+                                                    const percentage = (student.totalScore / student.totalPossible) * 100;
+                                                    return (
+                                                        <div key={idx} className="p-4 bg-muted/50 rounded-lg hover:bg-muted/70 transition-colors">
+                                                            <div className="flex items-start justify-between gap-4 mb-3">
+                                                                <div className="flex items-center gap-3 flex-1 min-w-0">
+                                                                    <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center font-bold text-primary text-sm flex-shrink-0">
+                                                                        {student.userName.charAt(0).toUpperCase()}
+                                                                    </div>
+                                                                    <div className="flex-1 min-w-0">
+                                                                        <p className="font-semibold text-foreground truncate">
+                                                                            {student.userName}
+                                                                        </p>
+                                                                        <p className="text-xs text-muted-foreground truncate">
+                                                                            {student.email}
+                                                                        </p>
+                                                                    </div>
+                                                                </div>
+                                                                <div className="text-right flex-shrink-0">
+                                                                    <p className={`text-lg font-bold ${getSuccessRateColor(percentage)}`}>
+                                                                        {student.totalScore}/{student.totalPossible}
+                                                                    </p>
+                                                                    <p className={`text-xs font-medium ${getSuccessRateColor(percentage)}`}>
+                                                                        {percentage.toFixed(0)}%
+                                                                    </p>
+                                                                </div>
+                                                            </div>
+
+                                                            {/* Score bar */}
+                                                            <div className="mb-3">
+                                                                <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+                                                                    <div
+                                                                        className={`h-full transition-all ${getProgressBarColor(percentage)}`}
+                                                                        style={{ width: `${percentage}%` }}
+                                                                    />
+                                                                </div>
+                                                            </div>
+
+                                                            {/* Performance Summary */}
+                                                            <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                                                                <span className="flex items-center gap-1">
+                                                                    <CheckCircle className="w-3 h-3 text-emerald-600" />
+                                                                    {student.correctAnswers} correct
+                                                                </span>
+                                                                <span className="flex items-center gap-1">
+                                                                    <XCircle className="w-3 h-3 text-rose-600" />
+                                                                    {student.incorrectAnswers} incorrect
+                                                                </span>
+                                                                <span className="flex items-center gap-1">
+                                                                    <Clock className="w-3 h-3" />
+                                                                    {new Date(student.submittedAt).toLocaleDateString()}
+                                                                </span>
+                                                                {student.disqualified && (
+                                                                    <span className="flex items-center gap-1 text-rose-600">
+                                                                        <AlertCircle className="w-3 h-3" />
+                                                                        Disqualified
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        </div>
+
+                                        {/* Disqualification Stats */}
+                                        {exam.disqualifiedCount > 0 && (
+                                            <div className="bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-800 rounded-lg p-4">
+                                                <div className="flex items-center gap-2 mb-2">
+                                                    <AlertCircle className="w-4 h-4 text-rose-600 dark:text-rose-400" />
+                                                    <h4 className="font-semibold text-rose-600 dark:text-rose-400">Disqualifications</h4>
+                                                </div>
+                                                <div className="flex items-center justify-between">
+                                                    <p className="text-sm text-muted-foreground">
+                                                        {exam.disqualifiedCount} student(s) were disqualified from this exam
+                                                    </p>
+                                                    <span className="text-2xl font-bold text-rose-600 dark:text-rose-400">
+                                                        {exam.disqualifiedCount}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {/* AI-Powered Exam Insights */}
+                                        <div className="bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-950/20 dark:to-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-lg p-5">
+                                            <h4 className="font-semibold text-foreground mb-4 flex items-center gap-2">
+                                                <Activity className="w-5 h-5 text-purple-600" />
+                                                AI-Powered Exam Insights
+                                            </h4>
+
+                                            <div className="flex flex-wrap gap-3 mb-4">
+                                                <Button
+                                                    onClick={() => analyzeExamDifficulty(exam)}
+                                                    disabled={loadingInsights[`exam-difficulty-${exam.examId}`]}
+                                                    size="sm"
+                                                    variant="outline"
+                                                >
+                                                    {loadingInsights[`exam-difficulty-${exam.examId}`] ? (
+                                                        <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Analyzing...</>
+                                                    ) : (
+                                                        <><Target className="w-4 h-4 mr-2" />Analyze Exam Difficulty</>
+                                                    )}
+                                                </Button>
+
+                                                <Button
+                                                    onClick={() => identifyStrugglingAreas(exam)}
+                                                    disabled={loadingInsights[`exam-struggles-${exam.examId}`]}
+                                                    size="sm"
+                                                    variant="outline"
+                                                >
+                                                    {loadingInsights[`exam-struggles-${exam.examId}`] ? (
+                                                        <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Analyzing...</>
+                                                    ) : (
+                                                        <><AlertCircle className="w-4 h-4 mr-2" />Identify Struggling Areas</>
+                                                    )}
+                                                </Button>
+
+                                                <Button
+                                                    onClick={() => generateExamReport(exam)}
+                                                    disabled={loadingInsights[`exam-report-${exam.examId}`]}
+                                                    size="sm"
+                                                    variant="outline"
+                                                >
+                                                    {loadingInsights[`exam-report-${exam.examId}`] ? (
+                                                        <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Generating...</>
+                                                    ) : (
+                                                        <><FileText className="w-4 h-4 mr-2" />Generate Report</>
+                                                    )}
+                                                </Button>
+                                            </div>
+
+                                            {/* Display AI Insights Results */}
+                                            {aiInsights[`exam-difficulty-${exam.examId}`] && (
+                                                <div className="bg-card border border-border rounded-lg p-4 mb-3">
+                                                    <h5 className="font-medium text-foreground mb-3 flex items-center gap-2">
+                                                        <Target className="w-4 h-4 text-primary" />
+                                                        Exam Difficulty Analysis
+                                                    </h5>
+                                                    <div className="space-y-3">
+                                                        <div className="grid grid-cols-3 gap-3">
+                                                            <div className="text-center p-3 bg-muted rounded-lg">
+                                                                <p className="text-xs text-muted-foreground mb-1">Overall Difficulty</p>
+                                                                <p className={`text-lg font-bold ${getDifficultyColor(aiInsights[`exam-difficulty-${exam.examId}`].overallDifficulty)}`}>
+                                                                    {aiInsights[`exam-difficulty-${exam.examId}`].overallDifficulty}
+                                                                </p>
+                                                            </div>
+                                                            <div className="text-center p-3 bg-muted rounded-lg">
+                                                                <p className="text-xs text-muted-foreground mb-1">Recommended Level</p>
+                                                                <p className="text-lg font-bold text-foreground">
+                                                                    {aiInsights[`exam-difficulty-${exam.examId}`].recommendedLevel}
+                                                                </p>
+                                                            </div>
+                                                            <div className="text-center p-3 bg-muted rounded-lg">
+                                                                <p className="text-xs text-muted-foreground mb-1">Pass Rate</p>
+                                                                <p className="text-lg font-bold text-foreground">
+                                                                    {aiInsights[`exam-difficulty-${exam.examId}`].passRate}%
+                                                                </p>
+                                                            </div>
+                                                        </div>
+                                                        <div className="p-3 bg-muted/50 rounded-lg">
+                                                            <p className="text-xs font-medium text-muted-foreground mb-1">Analysis:</p>
+                                                            <p className="text-sm text-foreground">{aiInsights[`exam-difficulty-${exam.examId}`].analysis}</p>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            {aiInsights[`exam-struggles-${exam.examId}`] && (
+                                                <div className="bg-card border border-border rounded-lg p-4 mb-3">
+                                                    <h5 className="font-medium text-foreground mb-3 flex items-center gap-2">
+                                                        <AlertCircle className="w-4 h-4 text-rose-600" />
+                                                        Areas Where Students Struggled
+                                                    </h5>
+                                                    <div className="space-y-2">
+                                                        {aiInsights[`exam-struggles-${exam.examId}`].strugglingAreas.map((area: any, idx: number) => (
+                                                            <div key={idx} className="p-3 bg-rose-50 dark:bg-rose-950/30 rounded-lg">
+                                                                <div className="flex items-start justify-between mb-1">
+                                                                    <p className="text-sm font-medium text-foreground">{area.topic}</p>
+                                                                    <span className="text-xs font-bold text-rose-600 dark:text-rose-400">
+                                                                        {area.failureRate}% struggled
+                                                                    </span>
+                                                                </div>
+                                                                <p className="text-xs text-muted-foreground mt-1">💡 {area.recommendation}</p>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            {aiInsights[`exam-report-${exam.examId}`] && (
+                                                <div className="bg-card border border-border rounded-lg p-4">
+                                                    <h5 className="font-medium text-foreground mb-3 flex items-center gap-2">
+                                                        <FileText className="w-4 h-4 text-primary" />
+                                                        Comprehensive Exam Report
+                                                    </h5>
+                                                    <div className="space-y-3 text-sm text-foreground">
+                                                        <div>
+                                                            <p className="font-medium text-muted-foreground mb-1">Executive Summary:</p>
+                                                            <p>{aiInsights[`exam-report-${exam.examId}`].summary}</p>
+                                                        </div>
+                                                        <div>
+                                                            <p className="font-medium text-muted-foreground mb-2">Key Findings:</p>
+                                                            <ul className="space-y-1">
+                                                                {aiInsights[`exam-report-${exam.examId}`].keyFindings.map((finding: string, idx: number) => (
+                                                                    <li key={idx} className="flex items-start gap-2">
+                                                                        <span className="text-primary mt-1">•</span>
+                                                                        <span>{finding}</span>
+                                                                    </li>
+                                                                ))}
+                                                            </ul>
+                                                        </div>
+                                                        <div>
+                                                            <p className="font-medium text-muted-foreground mb-2">Recommendations:</p>
+                                                            <div className="space-y-2">
+                                                                {aiInsights[`exam-report-${exam.examId}`].recommendations.map((rec: string, idx: number) => (
+                                                                    <div key={idx} className="p-2 bg-emerald-50 dark:bg-emerald-950/30 rounded border-l-2 border-emerald-500">
+                                                                        <p>{rec}</p>
+                                                                    </div>
+                                                                ))}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
                                     </div>
-                                ))}
+                                )}
                             </div>
-                        )
+                        ))
                     ) : (
                         studentAnalytics.length === 0 ? (
                             <div className="bg-card border-2 border-dashed border-border rounded-lg p-12 text-center">

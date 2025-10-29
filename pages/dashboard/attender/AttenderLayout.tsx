@@ -122,8 +122,11 @@ export default function AttenderLayout({ children }: AttenderLayoutProps) {
             : `/dashboard/attender/${item.navigation}`;
     }, []);
 
-    const handleSignOut = useCallback(() => {
-        signOut({ callbackUrl: '/' });
+    const handleSignOut = useCallback(async () => {
+        await signOut({
+            callbackUrl: '/',
+            redirect: true
+        });
     }, []);
 
     const SidebarContent = ({ isCollapsed = false }: { isCollapsed?: boolean }) => (

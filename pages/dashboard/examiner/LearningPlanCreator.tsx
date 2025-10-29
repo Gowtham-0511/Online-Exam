@@ -351,6 +351,14 @@ export default function LearningPlanCreator() {
         const week = weeks.find(w => w.id === weekNumber);
         if (!week) return;
 
+        const existingCount = questions.filter(q => q.weekNumber === weekNumber).length;
+        if (existingCount > 0) {
+            const confirmed = window.confirm(
+                `Week ${weekNumber} already has ${existingCount} question(s). Generate more?`
+            );
+            if (!confirmed) return;
+        }
+
         setIsGeneratingQuestions(true);
         setGeneratingForWeek(weekNumber);
 
@@ -386,7 +394,8 @@ export default function LearningPlanCreator() {
                     hints: q.hints || []
                 }));
 
-                setQuestions([...questions, ...newQuestions]);
+                // FIX: Use functional update to ensure we're working with the latest state
+                setQuestions(prevQuestions => [...prevQuestions, ...newQuestions]);
                 toast.success(`Generated ${newQuestions.length} questions for Week ${weekNumber}!`);
             }
         } catch (error) {
@@ -816,8 +825,8 @@ export default function LearningPlanCreator() {
                                         <ArrowLeft className="w-4 h-4 mr-2" />
                                         Back
                                     </Button>
-                                    <Button onClick={() => setCurrentStep(4)}>
-                                        Next: Assign Users
+                                    <Button onClick={() => setCurrentStep(3)}>
+                                        Next: Questions
                                         <ArrowRight className="w-4 h-4 ml-2" />
                                     </Button>
                                 </div>
@@ -1065,7 +1074,7 @@ export default function LearningPlanCreator() {
                                         <ArrowLeft className="w-4 h-4 mr-2" />
                                         Back
                                     </Button>
-                                    <Button onClick={() => setCurrentStep(3)}>
+                                    <Button onClick={() => setCurrentStep(4)}>
                                         Next: Assign Users
                                         <ArrowRight className="w-4 h-4 ml-2" />
                                     </Button>

@@ -4,30 +4,23 @@ import AttenderLayout from './AttenderLayout'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Separator } from '@/components/ui/separator'
 import { Skeleton } from '@/components/ui/skeleton'
 import {
     BookOpen,
-    Trophy,
     TrendingUp,
-    Calendar,
-    Award,
     Target,
-    Zap,
     ChevronRight,
-    BarChart3,
     Activity,
     Code,
     Brain,
     Timer,
-    PlayCircle,
     CheckCircle2,
     AlertCircle,
     Clock,
-    Users,
     XCircle
 } from 'lucide-react'
 import { useSession } from "next-auth/react";
+import { useRouter } from 'next/router'
 
 const fetcher = (url: string) => fetch(url).then(res => res.json());
 
@@ -59,8 +52,7 @@ type CompletedExam = {
 
 const index = () => {
     const { data: session, status } = useSession();
-
-    // Fetch upcoming exams using SWR
+    const router = useRouter();
     const { data: upcomingExams = [], error: upcomingError, isLoading: upcomingLoading } = useSWR(
         session?.user?.email
             ? `/api/attender/allowed-exam?email=${encodeURIComponent(session.user.email)}`
@@ -69,11 +61,10 @@ const index = () => {
         {
             revalidateOnFocus: false,
             revalidateOnReconnect: true,
-            dedupingInterval: 60000, // Dedupe requests within 60 seconds
+            dedupingInterval: 60000,
         }
     );
 
-    // Fetch completed exams using SWR
     const { data: completedExams = [], error: completedError, isLoading: completedLoading } = useSWR(
         session?.user?.email
             ? `/api/attender/completed-exams?email=${encodeURIComponent(session.user.email)}`
@@ -101,25 +92,7 @@ const index = () => {
         completedExams: completedExams.length,
         skillRating: 1200
     };
-
-    const getDifficultyColor = (difficulty: string) => {
-        switch (difficulty?.toLowerCase()) {
-            case 'easy': return 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-400 border-emerald-200 dark:border-emerald-900';
-            case 'medium': return 'bg-amber-100 text-amber-700 dark:bg-amber-950/50 dark:text-amber-400 border-amber-200 dark:border-amber-900';
-            case 'hard': return 'bg-rose-100 text-rose-700 dark:bg-rose-950/50 dark:text-rose-400 border-rose-200 dark:border-rose-900';
-            default: return 'bg-secondary text-secondary-foreground border-border';
-        }
-    };
-
-    const formatDateTime = (startTime: string, endTime: string) => {
-        const start = new Date(startTime);
-        const end = new Date(endTime);
-        const startDate = start.toLocaleDateString();
-        const startTimeStr = start.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-        const endTimeStr = end.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-        return `${startDate} • ${startTimeStr} - ${endTimeStr}`;
-    };
-
+    
     // Loading state
     const isLoading = upcomingLoading || completedLoading;
     const hasError = upcomingError || completedError;
@@ -209,7 +182,7 @@ const index = () => {
                 <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
                     <div>
                         <h1 className="text-3xl font-bold text-foreground mb-2">
-                            Welcome back, {session?.user?.name?.split(' ')[0] || 'Coder'}!
+                            Welcome, {session?.user?.name?.split(' ')[0] || 'Coder'}!
                         </h1>
                         <p className="text-muted-foreground">
                             Ready to ace your next challenge?
@@ -319,7 +292,11 @@ const index = () => {
                             ) : upcomingExams && upcomingExams.length > 0 ? (
                                 <div className="space-y-3">
                                     {upcomingExams.slice(0, 5).map((exam: Exam) => (
-                                        <Card key={exam.id} className="p-4 border-border hover:border-primary/50 transition-all duration-200 hover:shadow-sm cursor-pointer group">
+                                        <Card
+                                            key={exam.id}
+                                            className="p-4 border-border hover:border-primary/50 transition-all duration-200 hover:shadow-sm cursor-pointer group"
+                                            onClick={() => router.push('/dashboard/attender/view-exams')}
+                                        >
                                             <div className="flex items-start justify-between gap-4">
                                                 <div className="flex-1 min-w-0">
                                                     <div className="flex items-start gap-3 mb-3">

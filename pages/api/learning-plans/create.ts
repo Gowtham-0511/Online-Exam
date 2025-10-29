@@ -44,7 +44,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
         const planId = `plan-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
-        // Insert learning plan
+        // When creating the learning plan, ensure weeks includes questions
         await client.query(
             `INSERT INTO "LearningPlan" (
                 id, name, description, language, difficulty, duration, 
@@ -57,7 +57,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                 language,
                 difficulty,
                 duration,
-                JSON.stringify(weeks),
+                JSON.stringify(weeks), // weeks already contains questions from frontend
                 createdBy || session.user.email,
                 true,
                 `{${language},${difficulty}}`

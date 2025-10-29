@@ -1,7 +1,7 @@
 import { useState, useMemo, useCallback } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
-import { useSession } from 'next-auth/react';
+import { signOut, useSession } from 'next-auth/react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -21,6 +21,11 @@ import {
     LogOut,
     Settings,
     Activity,
+    ShieldCheck,
+    Layers,
+    ClipboardCheck,
+    KeyRound,
+    MonitorPlay,
 } from 'lucide-react';
 import ThemeToggle from '@/components/ThemeToggle';
 import {
@@ -59,8 +64,8 @@ const menuItems: MenuItem[] = [
     {
         id: 'system-user-management',
         navigation: 'system-user-management',
-        label: 'System User Management',
-        icon: Users,
+        label: 'User Management',
+        icon: ShieldCheck,
         description: 'Manage System Users',
     },
     {
@@ -74,35 +79,35 @@ const menuItems: MenuItem[] = [
         id: 'batchManagement',
         navigation: 'batch-management',
         label: 'Batch Management',
-        icon: Package,
+        icon: Layers,
         description: 'Manage batch'
     },
-    {
-        id: 'scheduleExam',
-        navigation: 'schedule-exam',
-        label: 'Exam Scheduling',
-        icon: CalendarClock,
-        description: 'Schedule Exam'
-    },
+    // {
+    //     id: 'scheduleExam',
+    //     navigation: 'schedule-exam',
+    //     label: 'Exam Scheduling',
+    //     icon: CalendarClock,
+    //     description: 'Schedule Exam'
+    // },
     {
         id: 'assessmentManagement',
         navigation: 'assessment-management',
         label: 'Assessment Management',
-        icon: ClipboardList,
+        icon: ClipboardCheck,
         description: 'Create and Manage Assessment'
     },
     {
         id: 'credentialManagement',
         navigation: 'credential-management',
         label: 'Credentials Management',
-        icon: LockKeyhole,
+        icon: KeyRound,
         description: 'Manage all Credentials'
     },
     {
         id: 'exam-monitoring',
         navigation: 'exam-monitoring',
         label: 'Exam Monitoring',
-        icon: Activity,
+        icon: MonitorPlay,
         description: 'Real-time exam monitoring',
     },
 ];
@@ -167,6 +172,13 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
         return item.navigation === 'index'
             ? '/dashboard/admin'
             : `/dashboard/admin/${item.navigation}`;
+    }, []);
+
+    const handleSignOut = useCallback(async () => {
+        await signOut({
+            callbackUrl: '/',
+            redirect: true
+        });
     }, []);
 
     const SidebarContent = ({ isCollapsed = false }: { isCollapsed?: boolean }) => (
@@ -297,13 +309,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                             </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="w-56">
-                            <DropdownMenuLabel>My Account</DropdownMenuLabel>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem>
-                                <Settings className="mr-2 h-4 w-4" />
-                                Settings
-                            </DropdownMenuItem>
-                            <DropdownMenuItem className="text-destructive focus:text-destructive">
+                            <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={handleSignOut}>
                                 <LogOut className="mr-2 h-4 w-4" />
                                 Logout
                             </DropdownMenuItem>

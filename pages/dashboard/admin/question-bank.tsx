@@ -531,7 +531,7 @@ export default function QuestionBankPage() {
     const languageConfig = {
         python: { emoji: '🐍', name: 'Python' },
         sql: { emoji: '🗄️', name: 'SQL' },
-        javascript: { emoji: '💛', name: 'JavaScript' }
+        // javascript: { emoji: '💛', name: 'JavaScript' }
     };
 
     interface TemplateQuestion {
@@ -856,7 +856,7 @@ export default function QuestionBankPage() {
                                 </div>
 
                                 <div className="space-y-2">
-                                    <Label className="text-sm font-semibold">Programming Language</Label>
+                                    <Label className="text-sm font-semibold">Skill Sets</Label>
                                     <Select
                                         value={question.language}
                                         onValueChange={(value) => setQuestion({ ...question, language: value })}
