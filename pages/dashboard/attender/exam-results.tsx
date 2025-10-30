@@ -24,8 +24,16 @@ import {
     Lightbulb,
     ThumbsUp,
     ThumbsDown,
-    MessageSquare,
+    MessageSquare, Loader2, Sparkles, BookOpen, Send
 } from 'lucide-react';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
+import { Textarea } from '@/components/ui/textarea';
 
 const fetcher = (url: string) => fetch(url).then(res => res.json());
 
@@ -69,6 +77,23 @@ const ExamResultsPage = () => {
     const router = useRouter();
     const { data: session } = useSession();
     const [selectedExam, setSelectedExam] = useState<ExamResult | null>(null);
+
+    const [expandedFeedback, setExpandedFeedback] = useState<string | null>(null);
+    const [loadingExplanation, setLoadingExplanation] = useState(false);
+    const [explanation, setExplanation] = useState<string>("");
+
+    const [showAlternatives, setShowAlternatives] = useState<string | null>(null);
+    const [alternatives, setAlternatives] = useState<any>(null);
+    const [loadingAlternatives, setLoadingAlternatives] = useState(false);
+
+    const [showCodeReview, setShowCodeReview] = useState(false);
+    const [codeReview, setCodeReview] = useState<any>(null);
+    const [loadingCodeReview, setLoadingCodeReview] = useState(false);
+
+    const [showTutorChat, setShowTutorChat] = useState<string | null>(null);
+    const [chatHistory, setChatHistory] = useState<Array<{ role: 'user' | 'assistant'; content: string }>>([]);
+    const [chatInput, setChatInput] = useState("");
+    const [loadingChat, setLoadingChat] = useState(false);
 
     // Fetch completed exams using SWR
     const { data: completedExams = [], error, isLoading } = useSWR<ExamResult[]>(
@@ -130,6 +155,120 @@ const ExamResultsPage = () => {
         const tmp = document.createElement('div');
         tmp.innerHTML = html;
         return tmp.textContent || tmp.innerText || '';
+    };
+
+    const handleExplainFurther = async (answer: Answer, feedback: Feedback, query?: string) => {
+        setLoadingExplanation(true);
+        setExpandedFeedback(answer.questionId);
+
+        try {
+            const response = await fetch('/api/ai/explain-feedback', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    questionText: answer.question,
+                    studentAnswer: answer.selectedOptionText || answer.answer,
+                    originalFeedback: feedback.feedback,
+                    query
+                })
+            });
+
+            const data = await response.json();
+            setExplanation(data.explanation);
+        } catch (error) {
+            console.error("Error explaining feedback:", error);
+            setExplanation("Failed to generate explanation. Please try again.");
+        } finally {
+            setLoadingExplanation(false);
+        }
+    };
+
+    const handleShowAlternatives = async (answer: Answer) => {
+        setLoadingAlternatives(true);
+        setShowAlternatives(answer.questionId);
+
+        try {
+            const response = await fetch('/api/ai/alternative-solutions', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    questionText: answer.question,
+                    studentAnswer: answer.selectedOptionText || answer.answer,
+                    questionType: answer.type || 'general',
+                    language: selectedExam?.language
+                })
+            });
+
+            const data = await response.json();
+            setAlternatives(data);
+        } catch (error) {
+            console.error("Error generating alternatives:", error);
+            setAlternatives({ approaches: [], comparison: "Failed to generate alternatives." });
+        } finally {
+            setLoadingAlternatives(false);
+        }
+    };
+
+    const handleCodeReview = async () => {
+        if (!selectedExam?.code) return;
+
+        setLoadingCodeReview(true);
+        setShowCodeReview(true);
+
+        try {
+            const response = await fetch('/api/ai/review-code', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    code: selectedExam.code,
+                    language: selectedExam.language,
+                    questionContext: selectedExam.title
+                })
+            });
+
+            const data = await response.json();
+            setCodeReview(data);
+        } catch (error) {
+            console.error("Error reviewing code:", error);
+            setCodeReview(null);
+        } finally {
+            setLoadingCodeReview(false);
+        }
+    };
+
+    const handleSendChatMessage = async (answer: Answer, feedback: Feedback) => {
+        if (!chatInput.trim()) return;
+
+        const userMessage = { role: 'user' as const, content: chatInput };
+        const newHistory = [...chatHistory, userMessage];
+        setChatHistory(newHistory);
+        setChatInput("");
+        setLoadingChat(true);
+
+        try {
+            const response = await fetch('/api/ai/tutor-chat', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    conversationHistory: newHistory,
+                    examContext: {
+                        questionText: answer.question,
+                        studentAnswer: answer.selectedOptionText || answer.answer,
+                        feedback: feedback.feedback,
+                        marks: feedback.marks,
+                        maxMarks: answer.marks
+                    }
+                })
+            });
+
+            const data = await response.json();
+            setChatHistory([...newHistory, { role: 'assistant', content: data.response }]);
+        } catch (error) {
+            console.error("Error in chat:", error);
+            setChatHistory([...newHistory, { role: 'assistant', content: "I'm having trouble responding. Please try again." }]);
+        } finally {
+            setLoadingChat(false);
+        }
     };
 
     // Loading State
@@ -398,6 +537,18 @@ const ExamResultsPage = () => {
                                                 {answers.length} Questions
                                             </Badge>
                                         </div>
+
+                                        {/* Code Review Button */}
+                                        {selectedExam.code && (
+                                            <Button
+                                                onClick={handleCodeReview}
+                                                className="w-full sm:w-auto gap-2"
+                                                variant="outline"
+                                            >
+                                                <Code className="h-4 w-4" />
+                                                AI Code Review
+                                            </Button>
+                                        )}
                                     </CardContent>
                                 </Card>
 
@@ -513,7 +664,44 @@ const ExamResultsPage = () => {
                                                                             <Progress value={marksPercentage} className="h-2" />
                                                                         </div>
                                                                     </div>
+
                                                                 )}
+
+                                                                {/* AI Enhancement Buttons */}
+                                                                <div className="flex flex-wrap gap-2 mt-4">
+                                                                    <Button
+                                                                        variant="outline"
+                                                                        size="sm"
+                                                                        onClick={() => handleExplainFurther(answer, questionFeedback!)}
+                                                                        className="gap-2"
+                                                                    >
+                                                                        <Sparkles className="h-4 w-4" />
+                                                                        Explain Further
+                                                                    </Button>
+
+                                                                    <Button
+                                                                        variant="outline"
+                                                                        size="sm"
+                                                                        onClick={() => handleShowAlternatives(answer)}
+                                                                        className="gap-2"
+                                                                    >
+                                                                        <BookOpen className="h-4 w-4" />
+                                                                        Show Alternatives
+                                                                    </Button>
+
+                                                                    <Button
+                                                                        variant="outline"
+                                                                        size="sm"
+                                                                        onClick={() => {
+                                                                            setShowTutorChat(answer.questionId);
+                                                                            setChatHistory([]);
+                                                                        }}
+                                                                        className="gap-2"
+                                                                    >
+                                                                        <MessageSquare className="h-4 w-4" />
+                                                                        Ask AI Tutor
+                                                                    </Button>
+                                                                </div>
                                                             </CardContent>
                                                         </Card>
                                                     );
@@ -534,6 +722,284 @@ const ExamResultsPage = () => {
                     })()}
                 </div>
             </div>
+
+            {/* Explain Further Dialog */}
+            <Dialog open={expandedFeedback !== null} onOpenChange={() => setExpandedFeedback(null)}>
+                <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2">
+                            <Sparkles className="h-5 w-5 text-primary" />
+                            Detailed Explanation
+                        </DialogTitle>
+                        <DialogDescription>
+                            In-depth breakdown of the feedback
+                        </DialogDescription>
+                    </DialogHeader>
+                    {loadingExplanation ? (
+                        <div className="flex items-center justify-center py-12">
+                            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                        </div>
+                    ) : (
+                        <div className="prose prose-sm max-w-none dark:prose-invert">
+                            <p className="whitespace-pre-wrap text-foreground">{explanation}</p>
+                        </div>
+                    )}
+                </DialogContent>
+            </Dialog>
+
+            {/* Alternative Solutions Dialog */}
+            <Dialog open={showAlternatives !== null} onOpenChange={() => setShowAlternatives(null)}>
+                <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2">
+                            <BookOpen className="h-5 w-5 text-primary" />
+                            Alternative Approaches
+                        </DialogTitle>
+                        <DialogDescription>
+                            Different ways to solve this problem
+                        </DialogDescription>
+                    </DialogHeader>
+                    {loadingAlternatives ? (
+                        <div className="flex items-center justify-center py-12">
+                            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                        </div>
+                    ) : alternatives && (
+                        <div className="space-y-6">
+                            {alternatives.approaches?.map((approach: any, idx: number) => (
+                                <Card key={idx} className="p-4 border-border">
+                                    <h4 className="font-semibold text-foreground mb-2">{approach.title}</h4>
+                                    <p className="text-sm text-muted-foreground mb-3">{approach.description}</p>
+                                    {approach.code && (
+                                        <pre className="bg-muted p-3 rounded text-xs overflow-x-auto">
+                                            <code>{approach.code}</code>
+                                        </pre>
+                                    )}
+                                </Card>
+                            ))}
+                            {alternatives.comparison && (
+                                <Card className="p-4 bg-primary/5 border-primary/20">
+                                    <h4 className="font-semibold text-foreground mb-2">Comparison</h4>
+                                    <p className="text-sm text-foreground">{alternatives.comparison}</p>
+                                </Card>
+                            )}
+                        </div>
+                    )}
+                </DialogContent>
+            </Dialog>
+
+            {/* Code Review Dialog */}
+            <Dialog open={showCodeReview} onOpenChange={setShowCodeReview}>
+                <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2">
+                            <Code className="h-5 w-5 text-primary" />
+                            AI Code Review
+                        </DialogTitle>
+                        <DialogDescription>
+                            Detailed analysis of your code submission
+                        </DialogDescription>
+                    </DialogHeader>
+                    {loadingCodeReview ? (
+                        <div className="flex items-center justify-center py-12">
+                            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                        </div>
+                    ) : codeReview && (
+                        <div className="space-y-6">
+                            {/* Overall Quality */}
+                            <Card className="p-4 border-border">
+                                <div className="flex items-center justify-between mb-2">
+                                    <h4 className="font-semibold text-foreground">Overall Quality</h4>
+                                    <Badge variant="outline" className={`text-lg ${codeReview.overallQuality >= 80 ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50' :
+                                        codeReview.overallQuality >= 60 ? 'bg-amber-100 text-amber-700 dark:bg-amber-950/50' :
+                                            'bg-rose-100 text-rose-700 dark:bg-rose-950/50'
+                                        }`}>
+                                        {codeReview.overallQuality}/100
+                                    </Badge>
+                                </div>
+                                <Progress value={codeReview.overallQuality} className="h-2" />
+                            </Card>
+
+                            {/* Strengths */}
+                            {codeReview.strengths?.length > 0 && (
+                                <Card className="p-4 bg-emerald-50 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-900">
+                                    <h4 className="font-semibold text-foreground mb-3 flex items-center gap-2">
+                                        <ThumbsUp className="h-4 w-4 text-emerald-600" />
+                                        Strengths
+                                    </h4>
+                                    <ul className="space-y-2">
+                                        {codeReview.strengths.map((strength: string, idx: number) => (
+                                            <li key={idx} className="text-sm text-foreground flex items-start gap-2">
+                                                <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0 mt-0.5" />
+                                                {strength}
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </Card>
+                            )}
+
+                            {/* Improvements */}
+                            {codeReview.improvements?.length > 0 && (
+                                <Card className="p-4 bg-amber-50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-900">
+                                    <h4 className="font-semibold text-foreground mb-3 flex items-center gap-2">
+                                        <Info className="h-4 w-4 text-amber-600" />
+                                        Areas for Improvement
+                                    </h4>
+                                    <ul className="space-y-2">
+                                        {codeReview.improvements.map((improvement: string, idx: number) => (
+                                            <li key={idx} className="text-sm text-foreground flex items-start gap-2">
+                                                <AlertCircle className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
+                                                {improvement}
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </Card>
+                            )}
+
+                            {/* Bugs */}
+                            {codeReview.bugs?.length > 0 && (
+                                <Card className="p-4 bg-rose-50 dark:bg-rose-950/20 border-rose-200 dark:border-rose-900">
+                                    <h4 className="font-semibold text-foreground mb-3 flex items-center gap-2">
+                                        <XCircle className="h-4 w-4 text-rose-600" />
+                                        Potential Issues
+                                    </h4>
+                                    <div className="space-y-3">
+                                        {codeReview.bugs.map((bug: any, idx: number) => (
+                                            <div key={idx} className="text-sm">
+                                                <p className="font-medium text-foreground">{bug.line}</p>
+                                                <p className="text-muted-foreground mt-1">{bug.issue}</p>
+                                                <p className="text-emerald-700 dark:text-emerald-400 mt-1">
+                                                    <strong>Fix:</strong> {bug.fix}
+                                                </p>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </Card>
+                            )}
+
+                            {/* Best Practices & Optimizations */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                {codeReview.bestPractices?.length > 0 && (
+                                    <Card className="p-4 border-border">
+                                        <h4 className="font-semibold text-foreground mb-3">Best Practices</h4>
+                                        <ul className="space-y-2">
+                                            {codeReview.bestPractices.map((practice: string, idx: number) => (
+                                                <li key={idx} className="text-sm text-muted-foreground">• {practice}</li>
+                                            ))}
+                                        </ul>
+                                    </Card>
+                                )}
+
+                                {codeReview.optimizations?.length > 0 && (
+                                    <Card className="p-4 border-border">
+                                        <h4 className="font-semibold text-foreground mb-3">Optimizations</h4>
+                                        <ul className="space-y-2">
+                                            {codeReview.optimizations.map((opt: string, idx: number) => (
+                                                <li key={idx} className="text-sm text-muted-foreground">• {opt}</li>
+                                            ))}
+                                        </ul>
+                                    </Card>
+                                )}
+                            </div>
+                        </div>
+                    )}
+                </DialogContent>
+            </Dialog>
+
+            {/* AI Tutor Chat Dialog */}
+            {selectedExam && (() => {
+                const answers = parseAnswers(selectedExam.answersWithQuestionIds);
+                const feedback = parseFeedback(selectedExam.ai_feedback);
+
+                return (
+                    <Dialog open={showTutorChat !== null} onOpenChange={() => {
+                        setShowTutorChat(null);
+                        setChatHistory([]);
+                    }}>
+                        <DialogContent className="max-w-2xl h-[600px] flex flex-col">
+                            <DialogHeader>
+                                <DialogTitle className="flex items-center gap-2">
+                                    <MessageSquare className="h-5 w-5 text-primary" />
+                                    AI Tutor
+                                </DialogTitle>
+                                <DialogDescription>
+                                    Ask questions about this question and your answer
+                                </DialogDescription>
+                            </DialogHeader>
+
+                            {/* Chat Messages */}
+                            <div className="flex-1 overflow-y-auto space-y-4 p-4 border rounded-lg bg-muted/30">
+                                {chatHistory.length === 0 ? (
+                                    <div className="text-center text-muted-foreground py-8">
+                                        <MessageSquare className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                                        <p>Ask me anything about this question!</p>
+                                        <p className="text-sm mt-2">For example:</p>
+                                        <ul className="text-sm mt-2 space-y-1">
+                                            <li>• Why did I lose marks?</li>
+                                            <li>• Can you explain this concept?</li>
+                                            <li>• How can I improve?</li>
+                                        </ul>
+                                    </div>
+                                ) : (
+                                    chatHistory.map((msg, idx) => (
+                                        <div
+                                            key={idx}
+                                            className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                                        >
+                                            <Card className={`p-3 max-w-[80%] ${msg.role === 'user'
+                                                    ? 'bg-primary text-primary-foreground'
+                                                    : 'bg-card border-border'
+                                                }`}>
+                                                <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
+                                            </Card>
+                                        </div>
+                                    ))
+                                )}
+                                {loadingChat && (
+                                    <div className="flex justify-start">
+                                        <Card className="p-3 bg-card border-border">
+                                            <Loader2 className="h-4 w-4 animate-spin" />
+                                        </Card>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Chat Input */}
+                            <div className="flex gap-2 mt-4">
+                                <Textarea
+                                    value={chatInput}
+                                    onChange={(e) => setChatInput(e.target.value)}
+                                    placeholder="Type your question..."
+                                    className="min-h-[60px] resize-none"
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter' && !e.shiftKey) {
+                                            e.preventDefault();
+                                            const answer = answers.find(a => a.questionId === showTutorChat);
+                                            const feedbackItem = feedback.find(f => f.questionId === showTutorChat);
+                                            if (answer && feedbackItem) {
+                                                handleSendChatMessage(answer, feedbackItem);
+                                            }
+                                        }
+                                    }}
+                                />
+                                <Button
+                                    onClick={() => {
+                                        const answer = answers.find(a => a.questionId === showTutorChat);
+                                        const feedbackItem = feedback.find(f => f.questionId === showTutorChat);
+                                        if (answer && feedbackItem) {
+                                            handleSendChatMessage(answer, feedbackItem);
+                                        }
+                                    }}
+                                    disabled={!chatInput.trim() || loadingChat}
+                                    size="icon"
+                                    className="shrink-0"
+                                >
+                                    <Send className="h-4 w-4" />
+                                </Button>
+                            </div>
+                        </DialogContent>
+                    </Dialog>
+                );
+            })()}
         </AttenderLayout>
     );
 };

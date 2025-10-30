@@ -15,6 +15,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const { planId } = req.query;
 
+    console.log(planId)
+
     const client = await pool.connect();
 
     try {

@@ -49,6 +49,11 @@ import {
 import AttenderLayout from './AttenderLayout';
 import { useRouter } from "next/router";
 
+import { useExamReadiness } from '@/hooks/useExamReadiness';
+import { ReadinessBadge } from '@/components/attender/ReadinessBadge';
+import { ExamInsightsCard } from '@/components/attender/ExamInsightsCard';
+import { ExamStrategyModal } from '@/components/attender/ExamStrategyModal';
+
 const fetcher = (url: string) => fetch(url).then(res => res.json());
 
 interface ViewExamsProps {
@@ -89,6 +94,10 @@ interface Exam {
 const ViewExams: React.FC = () => {
     const { data: session } = useSession();
     const router = useRouter();
+    const [selectedExamForStrategy, setSelectedExamForStrategy] = useState<{
+        examId: string;
+        email: string;
+    } | null>(null);
 
     const { data: exams = [], error, isLoading } = useSWR(
         session?.user?.email
@@ -98,6 +107,11 @@ const ViewExams: React.FC = () => {
         {
             revalidateOnFocus: false,
         }
+    );
+
+    const { readinessData, isLoading: readinessLoading } = useExamReadiness(
+        session?.user?.email,
+        exams
     );
 
     // Popup states
@@ -442,161 +456,371 @@ const ViewExams: React.FC = () => {
                             </p>
                         </div>
                     ) : (
-                        <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
-                            {exams.map((exam: Exam) => {
-                                const questions = parseQuestions(exam.questions);
-                                const totalMarks = calculateTotalMarks(questions);
-                                const examStatus = getExamStatus(exam);
-                                const langConfig = getLanguageConfig(exam.language);
-                                const LangIcon = langConfig.icon;
+                        <>
+                            {/* Recommended Exams Section */}
+                            {readinessData?.topRecommendations && readinessData.topRecommendations.length > 0 && (
+                                <div className="mb-8">
+                                    <div className="flex items-center gap-3 mb-4">
+                                        <div className="p-2 bg-gradient-to-r from-purple-500 to-blue-500 rounded-lg">
+                                            <Brain className="h-5 w-5 text-white" />
+                                        </div>
+                                        <div>
+                                            <h2 className="text-xl font-bold text-foreground">AI Recommended For You</h2>
+                                            <p className="text-sm text-muted-foreground">
+                                                Based on your performance history and skill level
+                                            </p>
+                                        </div>
+                                    </div>
 
-                                return (
-                                    <Card key={exam.id} className="group hover:shadow-2xl hover:-translate-y-2 transition-all duration-500 bg-white/80 dark:bg-muted/80 backdrop-blur-sm border-0 shadow-lg overflow-hidden">
-                                        <div className={`h-2 bg-gradient-to-r ${langConfig.color}`} />
+                                    <div className="grid gap-6 md:grid-cols-2">
+                                        {exams
+                                            .filter((exam: Exam) => readinessData.topRecommendations.includes(exam.id))
+                                            .map((exam: Exam) => {
+                                                const questions = parseQuestions(exam.questions);
+                                                const totalMarks = calculateTotalMarks(questions);
+                                                const examStatus = getExamStatus(exam);
+                                                const langConfig = getLanguageConfig(exam.language);
+                                                const LangIcon = langConfig.icon;
+                                                const readiness = readinessData.examReadiness[exam.id];
 
-                                        <CardHeader className="pb-4 relative">
-                                            <div className="flex items-start justify-between mb-4">
-                                                <div className="flex items-center gap-3">
-                                                    <div className={`p-2.5 rounded-xl bg-gradient-to-r ${langConfig.color} shadow-lg`}>
-                                                        <LangIcon className="h-5 w-5 text-white" />
-                                                    </div>
-                                                    <Badge className={`${langConfig.bgColor} ${langConfig.textColor} border-0 font-medium px-3 py-1`}>
-                                                        {exam.language.toUpperCase()}
-                                                    </Badge>
-                                                </div>
-                                                <Badge className={`${examStatus.bgColor} ${examStatus.color} border font-medium px-3 py-1`}>
-                                                    {examStatus.status}
-                                                </Badge>
-                                            </div>
-
-                                            <CardTitle className="text-xl font-bold text-foreground group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors leading-tight">
-                                                {exam.title}
-                                            </CardTitle>
-
-                                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                                                <User className="h-4 w-4" />
-                                                <span>Created by {exam.createdBy}</span>
-                                            </div>
-                                        </CardHeader>
-
-                                        <CardContent className="space-y-6">
-                                            {/* Key Metrics */}
-                                            <div className="grid grid-cols-2 gap-4">
-                                                <div className="flex items-center gap-2 p-3 rounded-xl bg-gray-50 dark:bg-gray-800/50">
-                                                    <Timer className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-                                                    <div>
-                                                        <p className="text-xs text-muted-foreground">Duration</p>
-                                                        <p className="font-bold text-foreground">{formatDuration(exam.duration)}</p>
-                                                    </div>
-                                                </div>
-
-                                                <div className="flex items-center gap-2 p-3 rounded-xl bg-gray-50 dark:bg-gray-800/50">
-                                                    <Star className="h-4 w-4 text-yellow-600 dark:text-yellow-400" />
-                                                    <div>
-                                                        <p className="text-xs text-muted-foreground">Total Marks</p>
-                                                        <p className="font-bold text-foreground">{totalMarks}</p>
-                                                    </div>
-                                                </div>
-
-                                                <div className="flex items-center gap-2 p-3 rounded-xl bg-gray-50 dark:bg-gray-800/50">
-                                                    <FileText className="h-4 w-4 text-green-600 dark:text-green-400" />
-                                                    <div>
-                                                        <p className="text-xs text-muted-foreground">Questions</p>
-                                                        <p className="font-bold text-foreground">{questions.length}</p>
-                                                    </div>
-                                                </div>
-                                            </div>
-
-                                            <div className="space-y-3">
-                                                <p className="text-sm font-semibold text-foreground">Difficulty Distribution</p>
-                                                <div className="flex gap-2 flex-wrap">
-                                                    {Object.entries(
-                                                        questions.reduce((acc, q) => {
-                                                            acc[q.difficulty] = (acc[q.difficulty] || 0) + 1;
-                                                            return acc;
-                                                        }, {} as Record<string, number>)
-                                                    ).map(([difficulty, count]) => {
-                                                        const diffConfig = getDifficultyConfig(difficulty);
-                                                        const DiffIcon = diffConfig.icon;
-                                                        return (
-                                                            <Badge
-                                                                key={difficulty}
-                                                                className={`${diffConfig.bgColor} ${diffConfig.textColor} border-0 px-3 py-1.5 flex items-center gap-1.5`}
-                                                            >
-                                                                <DiffIcon className="h-3 w-3" />
-                                                                {difficulty} ({count})
+                                                return (
+                                                    <Card key={exam.id} className="group hover:shadow-2xl hover:-translate-y-2 transition-all duration-500 bg-white/80 dark:bg-muted/80 backdrop-blur-sm border-2 border-purple-200 dark:border-purple-800 shadow-lg overflow-hidden relative">
+                                                        <div className="absolute top-4 right-4 z-10">
+                                                            <Badge className="bg-gradient-to-r from-purple-600 to-blue-600 text-white border-0 shadow-lg">
+                                                                <Zap className="h-3 w-3 mr-1" />
+                                                                Best Match
                                                             </Badge>
-                                                        );
-                                                    })}
-                                                </div>
-                                            </div>
+                                                        </div>
 
-                                            <div className="flex gap-2 flex-wrap">
-                                                {exam.isExamProctored && (
-                                                    <Badge className="bg-orange-50 dark:bg-orange-950/30 text-orange-700 dark:text-orange-300 border-orange-200 dark:border-orange-800 px-2 py-1">
-                                                        <Shield className="h-3 w-3 mr-1" />
-                                                        Proctored
-                                                    </Badge>
-                                                )}
-                                                {exam.isGeneratedFromExcel && (
-                                                    <Badge className="bg-blue-50 dark:bg-blue-950/30 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800 px-2 py-1">
-                                                        <FileText className="h-3 w-3 mr-1" />
-                                                        Auto-Generated
-                                                    </Badge>
-                                                )}
-                                            </div>
+                                                        <div className={`h-2 bg-gradient-to-r ${langConfig.color}`} />
 
-                                            {(exam.startTime || exam.endTime) && (
-                                                <div className="p-4 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/30 dark:to-indigo-950/30 rounded-xl border border-blue-200 dark:border-blue-800">
-                                                    <div className="space-y-2">
-                                                        {exam.startTime && (
-                                                            <div className="flex items-center gap-2 text-xs">
-                                                                <Calendar className="h-3 w-3 text-blue-600 dark:text-blue-400" />
-                                                                <span className="text-blue-700 dark:text-blue-300 font-medium">
-                                                                    Starts: {new Date(exam.startTime).toLocaleString()}
-                                                                </span>
+                                                        <CardHeader className="pb-4 relative">
+                                                            <div className="flex items-start justify-between mb-4">
+                                                                <div className="flex items-center gap-3">
+                                                                    <div className={`p-2.5 rounded-xl bg-gradient-to-r ${langConfig.color} shadow-lg`}>
+                                                                        <LangIcon className="h-5 w-5 text-white" />
+                                                                    </div>
+                                                                    <Badge className={`${langConfig.bgColor} ${langConfig.textColor} border-0 font-medium px-3 py-1`}>
+                                                                        {exam.language.toUpperCase()}
+                                                                    </Badge>
+                                                                </div>
+                                                                <Badge className={`${examStatus.bgColor} ${examStatus.color} border font-medium px-3 py-1`}>
+                                                                    {examStatus.status}
+                                                                </Badge>
                                                             </div>
+
+                                                            <CardTitle className="text-xl font-bold text-foreground group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors leading-tight">
+                                                                {exam.title}
+                                                            </CardTitle>
+
+                                                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                                                <User className="h-4 w-4" />
+                                                                <span>Created by {exam.createdBy}</span>
+                                                            </div>
+                                                        </CardHeader>
+
+                                                        <CardContent className="space-y-6">
+                                                            {readiness && !readinessLoading && (
+                                                                <div className="p-4 bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-950/20 dark:to-blue-950/20 rounded-xl border border-purple-200 dark:border-purple-800">
+                                                                    <ReadinessBadge
+                                                                        readinessScore={readiness.readinessScore}
+                                                                        readinessLevel={readiness.readinessLevel}
+                                                                        color={readiness.color}
+                                                                    />
+                                                                    <div className="mt-3">
+                                                                        <ExamInsightsCard
+                                                                            recommendation={readiness.recommendation}
+                                                                            estimatedScore={readiness.estimatedScore}
+                                                                            insights={readiness.insights}
+                                                                            readinessScore={readiness.readinessScore}
+                                                                        />
+                                                                    </div>
+                                                                </div>
+                                                            )}
+
+                                                            <div className="grid grid-cols-2 gap-4">
+                                                                <div className="flex items-center gap-2 p-3 rounded-xl bg-gray-50 dark:bg-gray-800/50">
+                                                                    <Timer className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                                                                    <div>
+                                                                        <p className="text-xs text-muted-foreground">Duration</p>
+                                                                        <p className="font-bold text-foreground">{formatDuration(exam.duration)}</p>
+                                                                    </div>
+                                                                </div>
+                                                                <div className="flex items-center gap-2 p-3 rounded-xl bg-gray-50 dark:bg-gray-800/50">
+                                                                    <Star className="h-4 w-4 text-yellow-600 dark:text-yellow-400" />
+                                                                    <div>
+                                                                        <p className="text-xs text-muted-foreground">Total Marks</p>
+                                                                        <p className="font-bold text-foreground">{totalMarks}</p>
+                                                                    </div>
+                                                                </div>
+                                                                <div className="flex items-center gap-2 p-3 rounded-xl bg-gray-50 dark:bg-gray-800/50">
+                                                                    <FileText className="h-4 w-4 text-green-600 dark:text-green-400" />
+                                                                    <div>
+                                                                        <p className="text-xs text-muted-foreground">Questions</p>
+                                                                        <p className="font-bold text-foreground">{questions.length}</p>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+
+                                                            <div className="space-y-3">
+                                                                <p className="text-sm font-semibold text-foreground">Difficulty Distribution</p>
+                                                                <div className="flex gap-2 flex-wrap">
+                                                                    {Object.entries(
+                                                                        questions.reduce((acc, q) => {
+                                                                            acc[q.difficulty] = (acc[q.difficulty] || 0) + 1;
+                                                                            return acc;
+                                                                        }, {} as Record<string, number>)
+                                                                    ).map(([difficulty, count]) => {
+                                                                        const diffConfig = getDifficultyConfig(difficulty);
+                                                                        const DiffIcon = diffConfig.icon;
+                                                                        return (
+                                                                            <Badge
+                                                                                key={difficulty}
+                                                                                className={`${diffConfig.bgColor} ${diffConfig.textColor} border-0 px-3 py-1.5 flex items-center gap-1.5`}
+                                                                            >
+                                                                                <DiffIcon className="h-3 w-3" />
+                                                                                {difficulty} ({count})
+                                                                            </Badge>
+                                                                        );
+                                                                    })}
+                                                                </div>
+                                                            </div>
+
+                                                            <div className="space-y-2">
+                                                                <Button
+                                                                    variant="outline"
+                                                                    className="w-full"
+                                                                    onClick={() => setSelectedExamForStrategy({
+                                                                        examId: exam.title,
+                                                                        email: session?.user?.email || ''
+                                                                    })}
+                                                                >
+                                                                    <Brain className="h-4 w-4 mr-2" />
+                                                                    View AI Strategy
+                                                                </Button>
+
+                                                                <Button
+                                                                    className={`w-full h-12 font-semibold text-white shadow-lg transition-all duration-300 ${isExamActive(exam)
+                                                                        ? `bg-gradient-to-r from-purple-600 to-blue-600 hover:shadow-xl hover:scale-[1.02]`
+                                                                        : 'bg-gray-400 dark:bg-gray-600 cursor-not-allowed opacity-50'
+                                                                        }`}
+                                                                    disabled={!isExamActive(exam)}
+                                                                    onClick={() => handleStartExam(exam.id)}
+                                                                >
+                                                                    <div className="flex items-center gap-2">
+                                                                        {isExamActive(exam) ? (
+                                                                            <>
+                                                                                <Play className="h-5 w-5" />
+                                                                                <span>Start Challenge</span>
+                                                                                <ChevronRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
+                                                                            </>
+                                                                        ) : (
+                                                                            <>
+                                                                                <Lock className="h-4 w-4" />
+                                                                                <span>Exam Unavailable</span>
+                                                                            </>
+                                                                        )}
+                                                                    </div>
+                                                                </Button>
+                                                            </div>
+                                                        </CardContent>
+                                                    </Card>
+                                                );
+                                            })}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* All Exams Section */}
+                            <div>
+                                <h2 className="text-xl font-bold text-foreground mb-4">All Available Exams</h2>
+                                <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
+                                    {exams.map((exam: Exam) => {
+                                        const questions = parseQuestions(exam.questions);
+                                        const totalMarks = calculateTotalMarks(questions);
+                                        const examStatus = getExamStatus(exam);
+                                        const langConfig = getLanguageConfig(exam.language);
+                                        const LangIcon = langConfig.icon;
+                                        const readiness = readinessData?.examReadiness?.[exam.id];
+                                        const isRecommended = readinessData?.topRecommendations?.includes(exam.id);
+
+                                        return (
+                                            <Card key={exam.id} className={`group hover:shadow-2xl hover:-translate-y-2 transition-all duration-500 bg-white/80 dark:bg-muted/80 backdrop-blur-sm shadow-lg overflow-hidden ${isRecommended ? 'opacity-60' : 'border-0'}`}>
+                                                <div className={`h-2 bg-gradient-to-r ${langConfig.color}`} />
+
+                                                <CardHeader className="pb-4 relative">
+                                                    <div className="flex items-start justify-between mb-4">
+                                                        <div className="flex items-center gap-3">
+                                                            <div className={`p-2.5 rounded-xl bg-gradient-to-r ${langConfig.color} shadow-lg`}>
+                                                                <LangIcon className="h-5 w-5 text-white" />
+                                                            </div>
+                                                            <Badge className={`${langConfig.bgColor} ${langConfig.textColor} border-0 font-medium px-3 py-1`}>
+                                                                {exam.language.toUpperCase()}
+                                                            </Badge>
+                                                        </div>
+                                                        <div className="flex flex-col gap-2 items-end">
+                                                            <Badge className={`${examStatus.bgColor} ${examStatus.color} border font-medium px-3 py-1`}>
+                                                                {examStatus.status}
+                                                            </Badge>
+                                                            {readiness && !readinessLoading && (
+                                                                <ReadinessBadge
+                                                                    readinessScore={readiness.readinessScore}
+                                                                    readinessLevel={readiness.readinessLevel}
+                                                                    color={readiness.color}
+                                                                    compact
+                                                                />
+                                                            )}
+                                                        </div>
+                                                    </div>
+
+                                                    <CardTitle className="text-xl font-bold text-foreground group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors leading-tight">
+                                                        {exam.title}
+                                                    </CardTitle>
+
+                                                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                                        <User className="h-4 w-4" />
+                                                        <span>Created by {exam.createdBy}</span>
+                                                    </div>
+                                                </CardHeader>
+
+                                                <CardContent className="space-y-6">
+                                                    {readiness && !readinessLoading && readiness.readinessScore >= 50 && (
+                                                        <ExamInsightsCard
+                                                            recommendation={readiness.recommendation}
+                                                            estimatedScore={readiness.estimatedScore}
+                                                            insights={readiness.insights}
+                                                            readinessScore={readiness.readinessScore}
+                                                        />
+                                                    )}
+
+                                                    <div className="grid grid-cols-2 gap-4">
+                                                        <div className="flex items-center gap-2 p-3 rounded-xl bg-gray-50 dark:bg-gray-800/50">
+                                                            <Timer className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                                                            <div>
+                                                                <p className="text-xs text-muted-foreground">Duration</p>
+                                                                <p className="font-bold text-foreground">{formatDuration(exam.duration)}</p>
+                                                            </div>
+                                                        </div>
+                                                        <div className="flex items-center gap-2 p-3 rounded-xl bg-gray-50 dark:bg-gray-800/50">
+                                                            <Star className="h-4 w-4 text-yellow-600 dark:text-yellow-400" />
+                                                            <div>
+                                                                <p className="text-xs text-muted-foreground">Total Marks</p>
+                                                                <p className="font-bold text-foreground">{totalMarks}</p>
+                                                            </div>
+                                                        </div>
+                                                        <div className="flex items-center gap-2 p-3 rounded-xl bg-gray-50 dark:bg-gray-800/50">
+                                                            <FileText className="h-4 w-4 text-green-600 dark:text-green-400" />
+                                                            <div>
+                                                                <p className="text-xs text-muted-foreground">Questions</p>
+                                                                <p className="font-bold text-foreground">{questions.length}</p>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="space-y-3">
+                                                        <p className="text-sm font-semibold text-foreground">Difficulty Distribution</p>
+                                                        <div className="flex gap-2 flex-wrap">
+                                                            {Object.entries(
+                                                                questions.reduce((acc, q) => {
+                                                                    acc[q.difficulty] = (acc[q.difficulty] || 0) + 1;
+                                                                    return acc;
+                                                                }, {} as Record<string, number>)
+                                                            ).map(([difficulty, count]) => {
+                                                                const diffConfig = getDifficultyConfig(difficulty);
+                                                                const DiffIcon = diffConfig.icon;
+                                                                return (
+                                                                    <Badge
+                                                                        key={difficulty}
+                                                                        className={`${diffConfig.bgColor} ${diffConfig.textColor} border-0 px-3 py-1.5 flex items-center gap-1.5`}
+                                                                    >
+                                                                        <DiffIcon className="h-3 w-3" />
+                                                                        {difficulty} ({count})
+                                                                    </Badge>
+                                                                );
+                                                            })}
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="flex gap-2 flex-wrap">
+                                                        {exam.isExamProctored && (
+                                                            <Badge className="bg-orange-50 dark:bg-orange-950/30 text-orange-700 dark:text-orange-300 border-orange-200 dark:border-orange-800 px-2 py-1">
+                                                                <Shield className="h-3 w-3 mr-1" />
+                                                                Proctored
+                                                            </Badge>
                                                         )}
-                                                        {exam.endTime && (
-                                                            <div className="flex items-center gap-2 text-xs">
-                                                                <Clock className="h-3 w-3 text-blue-600 dark:text-blue-400" />
-                                                                <span className="text-blue-700 dark:text-blue-300 font-medium">
-                                                                    Ends: {new Date(exam.endTime).toLocaleString()}
-                                                                </span>
-                                                            </div>
+                                                        {exam.isGeneratedFromExcel && (
+                                                            <Badge className="bg-blue-50 dark:bg-blue-950/30 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800 px-2 py-1">
+                                                                <FileText className="h-3 w-3 mr-1" />
+                                                                Auto-Generated
+                                                            </Badge>
                                                         )}
                                                     </div>
-                                                </div>
-                                            )}
 
-                                            <Button
-                                                className={`w-full h-12 font-semibold text-white shadow-lg transition-all duration-300 ${isExamActive(exam)
-                                                    ? `bg-gradient-to-r ${langConfig.color} hover:shadow-xl hover:scale-[1.02] group-hover:shadow-2xl`
-                                                    : 'bg-gray-400 dark:bg-gray-600 cursor-not-allowed opacity-50'
-                                                    }`}
-                                                disabled={!isExamActive(exam)}
-                                                onClick={() => handleStartExam(exam.id)}
-                                            >
-                                                <div className="flex items-center gap-2">
-                                                    {isExamActive(exam) ? (
-                                                        <>
-                                                            <Play className="h-5 w-5" />
-                                                            <span>Start Challenge</span>
-                                                            <ChevronRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
-                                                        </>
-                                                    ) : (
-                                                        <>
-                                                            <Lock className="h-4 w-4" />
-                                                            <span>Exam Unavailable</span>
-                                                        </>
+                                                    {(exam.startTime || exam.endTime) && (
+                                                        <div className="p-4 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/30 dark:to-indigo-950/30 rounded-xl border border-blue-200 dark:border-blue-800">
+                                                            <div className="space-y-2">
+                                                                {exam.startTime && (
+                                                                    <div className="flex items-center gap-2 text-xs">
+                                                                        <Calendar className="h-3 w-3 text-blue-600 dark:text-blue-400" />
+                                                                        <span className="text-blue-700 dark:text-blue-300 font-medium">
+                                                                            Starts: {new Date(exam.startTime).toLocaleString()}
+                                                                        </span>
+                                                                    </div>
+                                                                )}
+                                                                {exam.endTime && (
+                                                                    <div className="flex items-center gap-2 text-xs">
+                                                                        <Clock className="h-3 w-3 text-blue-600 dark:text-blue-400" />
+                                                                        <span className="text-blue-700 dark:text-blue-300 font-medium">
+                                                                            Ends: {new Date(exam.endTime).toLocaleString()}
+                                                                        </span>
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        </div>
                                                     )}
-                                                </div>
-                                            </Button>
-                                        </CardContent>
-                                    </Card>
-                                );
-                            })}
-                        </div>
+
+                                                    <div className="flex gap-2">
+                                                        <Button
+                                                            variant="outline"
+                                                            size="sm"
+                                                            className="flex-1"
+                                                            onClick={() => setSelectedExamForStrategy({
+                                                                examId: exam.title,
+                                                                email: session?.user?.email || ''
+                                                            })}
+                                                        >
+                                                            <Brain className="h-3.5 w-3.5 mr-1" />
+                                                            Strategy
+                                                        </Button>
+
+                                                        <Button
+                                                            className={`flex-1 h-10 font-semibold text-white shadow-lg transition-all duration-300 ${isExamActive(exam)
+                                                                ? `bg-gradient-to-r ${langConfig.color} hover:shadow-xl hover:scale-[1.02]`
+                                                                : 'bg-gray-400 dark:bg-gray-600 cursor-not-allowed opacity-50'
+                                                                }`}
+                                                            disabled={!isExamActive(exam)}
+                                                            onClick={() => handleStartExam(exam.id)}
+                                                        >
+                                                            {isExamActive(exam) ? (
+                                                                <>
+                                                                    <Play className="h-4 w-4 mr-1" />
+                                                                    Start
+                                                                </>
+                                                            ) : (
+                                                                <>
+                                                                    <Lock className="h-4 w-4 mr-1" />
+                                                                    Locked
+                                                                </>
+                                                            )}
+                                                        </Button>
+                                                    </div>
+                                                </CardContent>
+                                            </Card>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        </>
                     )}
 
                     {showExamPopup && examData && (
@@ -894,6 +1118,15 @@ const ViewExams: React.FC = () => {
                     )}
                 </div>
             </div>
+
+            {selectedExamForStrategy && (
+                <ExamStrategyModal
+                    isOpen={!!selectedExamForStrategy}
+                    onClose={() => setSelectedExamForStrategy(null)}
+                    examId={selectedExamForStrategy.examId}
+                    email={selectedExamForStrategy.email}
+                />
+            )}
         </AttenderLayout>
 
     );

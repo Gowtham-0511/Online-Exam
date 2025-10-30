@@ -17,10 +17,19 @@ import {
     CheckCircle2,
     AlertCircle,
     Clock,
-    XCircle
+    XCircle,
+    ArrowRight
 } from 'lucide-react'
 import { useSession } from "next-auth/react";
 import { useRouter } from 'next/router'
+import { AIInsightsCard } from '@/components/attender/AIInsightsCard';
+import { ExamReadinessCard } from '@/components/attender/ExamReadinessCard';
+import { PerformancePredictionCard } from '@/components/attender/PerformancePredictionCard';
+import { AchievementPredictionsCard } from '@/components/attender/AchievementPredictionsCard';
+import { PostExamInsightsModal } from '@/components/attender/PostExamInsightsModal';
+import { useState } from 'react';
+import { AdaptiveLearningPath } from '@/components/attender/AdaptiveLearningPath';
+import { ExamStrategyModal } from '@/components/attender/ExamStrategyModal';
 
 const fetcher = (url: string) => fetch(url).then(res => res.json());
 
@@ -53,6 +62,14 @@ type CompletedExam = {
 const index = () => {
     const { data: session, status } = useSession();
     const router = useRouter();
+    const [selectedExamForInsights, setSelectedExamForInsights] = useState<{
+        examId: string;
+        email: string;
+    } | null>(null);
+    const [selectedExamForStrategy, setSelectedExamForStrategy] = useState<{
+        examId: string;
+        email: string;
+    } | null>(null);
     const { data: upcomingExams = [], error: upcomingError, isLoading: upcomingLoading } = useSWR(
         session?.user?.email
             ? `/api/attender/allowed-exam?email=${encodeURIComponent(session.user.email)}`
@@ -77,6 +94,42 @@ const index = () => {
         }
     );
 
+    const { data: aiInsights, error: aiError, isLoading: aiLoading } = useSWR(
+        session?.user?.email && completedExams.length > 0
+            ? `/api/attender/ai-insights?email=${encodeURIComponent(session.user.email)}`
+            : null,
+        fetcher,
+        {
+            revalidateOnFocus: false,
+            revalidateOnReconnect: false,
+            dedupingInterval: 300000, // 5 minutes
+        }
+    );
+
+    const { data: performancePrediction, error: predictionError, isLoading: predictionLoading } = useSWR(
+        session?.user?.email && completedExams.length >= 2
+            ? `/api/attender/predict-performance?email=${encodeURIComponent(session.user.email)}`
+            : null,
+        fetcher,
+        {
+            revalidateOnFocus: false,
+            revalidateOnReconnect: false,
+            dedupingInterval: 300000, // 5 minutes
+        }
+    );
+
+    const { data: achievementPredictions, error: achievementError, isLoading: achievementLoading } = useSWR(
+        session?.user?.email && completedExams.length > 0
+            ? `/api/attender/achievement-predictions?email=${encodeURIComponent(session.user.email)}`
+            : null,
+        fetcher,
+        {
+            revalidateOnFocus: false,
+            revalidateOnReconnect: false,
+            dedupingInterval: 300000,
+        }
+    );
+
     const stats = {
         totalExams: upcomingExams.length || 0,
         averageScore: completedExams.length > 0
@@ -92,7 +145,7 @@ const index = () => {
         completedExams: completedExams.length,
         skillRating: 1200
     };
-    
+
     // Loading state
     const isLoading = upcomingLoading || completedLoading;
     const hasError = upcomingError || completedError;
@@ -295,7 +348,7 @@ const index = () => {
                                         <Card
                                             key={exam.id}
                                             className="p-4 border-border hover:border-primary/50 transition-all duration-200 hover:shadow-sm cursor-pointer group"
-                                            onClick={() => router.push('/dashboard/attender/view-exams')}
+                                        // onClick={() => router.push('/dashboard/attender/view-exams')}
                                         >
                                             <div className="flex items-start justify-between gap-4">
                                                 <div className="flex-1 min-w-0">
@@ -325,6 +378,17 @@ const index = () => {
                                                         </div>
                                                     </div>
                                                 </div>
+                                            </div>
+
+                                            <div className="mt-3 pt-3 border-t border-border flex justify-between items-center">
+                                                <Button
+                                                    size="sm"
+                                                    onClick={() => router.push(`/dashboard/attender/view-exams`)}
+                                                    className="bg-primary hover:bg-primary/90"
+                                                >
+                                                    Start Exam
+                                                    <ArrowRight className="h-3.5 w-3.5 ml-1.5" />
+                                                </Button>
                                             </div>
                                         </Card>
                                     ))}
@@ -366,7 +430,14 @@ const index = () => {
                             ) : completedExams && completedExams.length > 0 ? (
                                 <div className="space-y-3">
                                     {completedExams.slice(0, 5).map((exam: CompletedExam) => (
-                                        <Card key={exam.id} className="p-4 border-border">
+                                        <Card
+                                            key={exam.id}
+                                            className="p-4 border-border hover:border-primary/50 transition-all cursor-pointer"
+                                            onClick={() => setSelectedExamForInsights({
+                                                examId: exam.examId,
+                                                email: session?.user?.email || ''
+                                            })}
+                                        >
                                             <div className="flex items-start justify-between gap-4">
                                                 <div className="flex-1 min-w-0">
                                                     <div className="flex items-start gap-3 mb-3">
@@ -430,6 +501,14 @@ const index = () => {
                                                     </div>
                                                 </div>
                                             </div>
+
+                                            <div className="mt-3 pt-3 border-t border-border">
+                                                <button className="text-xs text-primary hover:text-primary/80 flex items-center gap-1">
+                                                    <Brain className="h-3 w-3" />
+                                                    View Detailed Analysis
+                                                </button>
+                                            </div>
+
                                         </Card>
                                     ))}
                                 </div>
@@ -445,7 +524,50 @@ const index = () => {
                         </CardContent>
                     </Card>
                 </div>
+
+                {completedExams.length > 0 && (
+                    <AIInsightsCard
+                        insights={aiInsights}
+                        isLoading={aiLoading}
+                        error={aiError}
+                    />
+                )}
+
+                {completedExams.length >= 2 && (
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <PerformancePredictionCard
+                            prediction={performancePrediction}
+                            isLoading={predictionLoading}
+                        />
+                        <AchievementPredictionsCard
+                            achievements={achievementPredictions}
+                            isLoading={achievementLoading}
+                        />
+                    </div>
+                )}
+
+                {completedExams.length > 0 && (
+                    <AdaptiveLearningPath email={session?.user?.email || ''} />
+                )}
             </div>
+
+            {selectedExamForInsights && (
+                <PostExamInsightsModal
+                    isOpen={!!selectedExamForInsights}
+                    onClose={() => setSelectedExamForInsights(null)}
+                    examId={selectedExamForInsights.examId}
+                    email={selectedExamForInsights.email}
+                />
+            )}
+
+            {selectedExamForStrategy && (
+                <ExamStrategyModal
+                    isOpen={!!selectedExamForStrategy}
+                    onClose={() => setSelectedExamForStrategy(null)}
+                    examId={selectedExamForStrategy.examId}
+                    email={selectedExamForStrategy.email}
+                />
+            )}
         </AttenderLayout>
     )
 }

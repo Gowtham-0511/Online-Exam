@@ -27,6 +27,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import ExaminerLayout from "./ExaminerLayout";
 import { RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, Legend, ResponsiveContainer } from 'recharts';
+import { useRouter } from "next/router";
 
 const fetcher = (url: string) => fetch(url).then(res => res.json());
 
@@ -59,6 +60,7 @@ interface QuestionAnalytics {
 
 export default function ExamAnalytics() {
     const { data: session } = useSession();
+    const router = useRouter();
     const [selectedExam, setSelectedExam] = useState("all");
     const [sortBy, setSortBy] = useState<'successRate' | 'avgScore' | 'attempts'>('successRate');
     const [expandedQuestion, setExpandedQuestion] = useState<string | null>(null);
@@ -853,6 +855,15 @@ export default function ExamAnalytics() {
                                 </div>
                                 {expandedQuestion === exam.examId && (
                                     <div className="border-t border-border bg-muted/30 p-5 space-y-4">
+                                        <div className="flex justify-end mb-4">
+                                            <Button
+                                                onClick={() => router.push(`/dashboard/examiner/exam-analytics/${exam.examId}`)}
+                                                variant="default"
+                                            >
+                                                <Activity className="w-4 h-4 mr-2" />
+                                                View Live Dashboard
+                                            </Button>
+                                        </div>
                                         {/* Key Metrics Grid */}
                                         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                                             <div className="bg-card border border-border rounded-lg p-4">

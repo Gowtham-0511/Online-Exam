@@ -576,3 +576,223 @@ export async function generateLearningPlanQuestions(
         return [];
     }
 }
+
+export async function explainFeedbackFurther(
+    questionText: string,
+    studentAnswer: string,
+    originalFeedback: string,
+    specificQuery?: string
+): Promise<string> {
+    const isDeterministicModel = /(mini|instruct)/i.test(deploymentName);
+
+    const prompt = `
+        Question: ${questionText.replace(/<[^>]*>/g, "")}
+        
+        Student's Answer: ${studentAnswer}
+        
+        Original Feedback: ${originalFeedback}
+        
+        ${specificQuery ? `Student asks: ${specificQuery}` : 'Provide a more detailed explanation of the feedback, breaking down the concepts and offering concrete examples.'}
+        
+        Be clear, educational, and encouraging. Use examples where helpful.
+    `;
+
+    const params: any = {
+        model: deploymentName,
+        messages: [
+            { role: "system", content: "You are a patient tutor who explains concepts clearly with examples. Be encouraging and constructive." },
+            { role: "user", content: prompt }
+        ],
+        // response_format: { type: "json_object" }
+    };
+
+    if (!isDeterministicModel) {
+        params.temperature = 0.7;
+    }
+
+    try {
+        const result = await client.chat.completions.create(params);
+        return result.choices[0]?.message?.content?.trim() || "Unable to generate explanation";
+    } catch (error) {
+        console.error("Explain feedback error:", error);
+        return "Unable to generate explanation at this time.";
+    }
+}
+
+export async function generateAlternativeSolutions(
+    questionText: string,
+    studentAnswer: string,
+    questionType: string,
+    language?: string
+): Promise<{
+    approaches: Array<{ title: string; description: string; code?: string }>;
+    comparison: string;
+}> {
+    const isDeterministicModel = /(mini|instruct)/i.test(deploymentName);
+
+    const prompt = `
+        Question: ${questionText.replace(/<[^>]*>/g, "")}
+        Type: ${questionType}
+        ${language ? `Language: ${language}` : ''}
+        
+        Student's Answer: ${studentAnswer}
+        
+        Suggest 2-3 alternative approaches to solve this problem. For each approach:
+        1. Title of the approach
+        2. Brief description
+        3. Sample code/pseudocode if applicable
+        4. When to use this approach
+        
+        Then provide a brief comparison of the approaches.
+        
+        Return JSON:
+        {
+            "approaches": [
+                {
+                    "title": "Approach name",
+                    "description": "Detailed explanation",
+                    "code": "Sample code (optional)"
+                }
+            ],
+            "comparison": "Brief comparison of all approaches"
+        }
+    `;
+
+    const params: any = {
+        model: deploymentName,
+        messages: [
+            { role: "system", content: "You are an expert programmer who teaches multiple ways to solve problems. Return only valid JSON." },
+            { role: "user", content: prompt }
+        ],
+        response_format: { type: "json_object" }
+    };
+
+    if (!isDeterministicModel) {
+        params.temperature = 0.8;
+    }
+
+    try {
+        const result = await client.chat.completions.create(params);
+        return JSON.parse(result.choices[0]?.message?.content || "{}");
+    } catch (error) {
+        console.error("Alternative solutions error:", error);
+        return { approaches: [], comparison: "" };
+    }
+}
+
+export async function reviewCode(
+    code: string,
+    language: string,
+    questionContext?: string
+): Promise<{
+    overallQuality: number;
+    strengths: string[];
+    improvements: string[];
+    bugs: Array<{ line: string; issue: string; fix: string }>;
+    bestPractices: string[];
+    optimizations: string[];
+}> {
+    const isDeterministicModel = /(mini|instruct)/i.test(deploymentName);
+
+    const prompt = `
+        Review this ${language} code:
+        
+        ${questionContext ? `Context: ${questionContext}` : ''}
+        
+        \`\`\`${language}
+        ${code}
+        \`\`\`
+        
+        Provide:
+        1. Overall quality score (0-100)
+        2. What the code does well (strengths)
+        3. Areas for improvement
+        4. Potential bugs or errors
+        5. Best practices recommendations
+        6. Performance optimizations
+        
+        Return JSON:
+        {
+            "overallQuality": number,
+            "strengths": ["strength1", "strength2"],
+            "improvements": ["improvement1", "improvement2"],
+            "bugs": [{"line": "line reference", "issue": "description", "fix": "suggested fix"}],
+            "bestPractices": ["practice1", "practice2"],
+            "optimizations": ["optimization1", "optimization2"]
+        }
+    `;
+
+    const params: any = {
+        model: deploymentName,
+        messages: [
+            { role: "system", content: "You are an expert code reviewer. Be constructive and specific. Return only valid JSON." },
+            { role: "user", content: prompt }
+        ],
+        response_format: { type: "json_object" }
+    };
+
+    if (!isDeterministicModel) {
+        params.temperature = 0.4;
+    }
+
+    try {
+        const result = await client.chat.completions.create(params);
+        return JSON.parse(result.choices[0]?.message?.content || "{}");
+    } catch (error) {
+        console.error("Code review error:", error);
+        return {
+            overallQuality: 0,
+            strengths: [],
+            improvements: [],
+            bugs: [],
+            bestPractices: [],
+            optimizations: []
+        };
+    }
+}
+
+export async function conversationalTutor(
+    conversationHistory: Array<{ role: 'user' | 'assistant'; content: string }>,
+    examContext: {
+        questionText: string;
+        studentAnswer: string;
+        feedback: string;
+        marks: number;
+        maxMarks: number;
+    }
+): Promise<string> {
+    const isDeterministicModel = /(mini|instruct)/i.test(deploymentName);
+
+    const systemPrompt = `You are a helpful AI tutor helping a student understand their exam results.
+
+Context:
+Question: ${examContext.questionText.replace(/<[^>]*>/g, "")}
+Student's Answer: ${examContext.studentAnswer}
+Marks: ${examContext.marks}/${examContext.maxMarks}
+Feedback: ${examContext.feedback}
+
+Be encouraging, patient, and explain concepts clearly. Use examples when helpful. Keep responses concise (2-3 paragraphs max).`;
+
+    const messages: any[] = [
+        { role: "system", content: systemPrompt },
+        ...conversationHistory
+    ];
+
+    const params: any = {
+        model: deploymentName,
+        messages,
+        // max_tokens: 400,
+    };
+
+    if (!isDeterministicModel) {
+        params.temperature = 0.7;
+    }
+
+    try {
+        const result = await client.chat.completions.create(params);
+        return result.choices[0]?.message?.content?.trim() || "I'm having trouble responding right now.";
+    } catch (error) {
+        console.error("Conversational tutor error:", error);
+        return "I'm having trouble responding right now. Please try again.";
+    }
+}

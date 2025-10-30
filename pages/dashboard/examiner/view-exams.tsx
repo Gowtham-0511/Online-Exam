@@ -146,95 +146,6 @@ export default function ViewExamsPage() {
         }
     };
 
-    const handleReassign = async (examId: string) => {
-        const exam = exams.find((e: Exam) => e.id === examId);
-        if (!exam) return;
-
-        setReassigningExam(exam);
-        setReassignDialogOpen(true);
-        setAssignmentType('user');
-        setSelectedUsers([]);
-        setSelectedBatches([]);
-
-        await fetchCurrentAssignments(examId);
-        await fetchAvailableUsers();
-        await fetchAvailableBatches();
-    };
-
-    const fetchCurrentAssignments = async (examId: string) => {
-        try {
-            const [userRes, batchRes] = await Promise.all([
-                fetch(`/api/admin/assessments/user-assignments?assessmentId=${examId}`),
-                fetch(`/api/admin/assessments/batch-assignments?assessmentId=${examId}`)
-            ]);
-
-            if (userRes.ok) {
-                const userAssignments = await userRes.json();
-                setSelectedUsers(userAssignments.map((u: any) => u.userEmail));
-            }
-
-            if (batchRes.ok) {
-                const batchAssignments = await batchRes.json();
-                setSelectedBatches(batchAssignments.map((b: any) => b.batchId));
-            }
-        } catch (error) {
-            console.error('Error fetching current assignments:', error);
-        }
-    };
-
-    const fetchAvailableUsers = async () => {
-        setLoadingUsers(true);
-        try {
-            const [employeesRes, externalUsersRes] = await Promise.all([
-                fetch('/api/admin/employee'),
-                fetch('/api/admin/external-users')
-            ]);
-
-            if (employeesRes.ok && externalUsersRes.ok) {
-                const employees = await employeesRes.json();
-                const externalUsers = await externalUsersRes.json();
-
-                const allUsers = [
-                    ...employees.map((emp: any) => ({
-                        id: emp.Id || emp.id,
-                        email: emp.Email || emp.email,
-                        name: emp.Name || emp.name,
-                        type: 'employee' as const
-                    })),
-                    ...externalUsers.map((user: any) => ({
-                        id: user.id,
-                        email: user.email,
-                        name: user.name,
-                        type: 'external' as const
-                    }))
-                ];
-
-                setAvailableUsers(allUsers);
-            }
-        } catch (error) {
-            console.error('Error fetching users:', error);
-            toast.error('Failed to load users');
-        } finally {
-            setLoadingUsers(false);
-        }
-    };
-
-    const fetchAvailableBatches = async () => {
-        setLoadingBatches(true);
-        try {
-            const response = await fetch('/api/admin/batch');
-            if (response.ok) {
-                const batches = await response.json();
-                setAvailableBatches(batches);
-            }
-        } catch (error) {
-            console.error('Error fetching batches:', error);
-            toast.error('Failed to load batches');
-        } finally {
-            setLoadingBatches(false);
-        }
-    };
-
     const handleSaveReassignment = async () => {
         if (!reassigningExam) return;
 
@@ -475,13 +386,6 @@ export default function ViewExamsPage() {
                                                     title="Edit"
                                                 >
                                                     <Edit2 className="h-4 w-4" />
-                                                </button>
-                                                <button
-                                                    onClick={() => handleReassign(exam.id)}
-                                                    className="p-2 text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-colors"
-                                                    title="Reassign"
-                                                >
-                                                    <UserPlus className="h-4 w-4" />
                                                 </button>
                                                 <button
                                                     onClick={() => handleDelete(exam.id)}

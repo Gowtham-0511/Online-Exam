@@ -21,13 +21,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         isExamProctored,
         useExcelQuestions,
         questionConfig,
-        allowedUsers,
-        batchSchedules,
-        assignmentType,
-        selectedUserEmails,
     } = req.body;
-
-    console.log(batchSchedules);
 
     if (!examId || !language || !duration || !createdBy) {
         return res.status(400).json({ error: "Missing required fields" });
@@ -45,7 +39,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             return res.status(409).json({ error: "Exam with this title already exists" });
         }
 
-        // First, create the assessment (this should always happen)
         const insertQuery = `
             INSERT INTO "Assessment" (
                 title,
@@ -57,14 +50,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                 "isGeneratedFromExcel",
                 "questionConfig",
                 questions,
-                "allowedUsers",
-                "sqlCredentialId",
-                "assignmentType"
+                "sqlCredentialId"
             )
             VALUES (
                 $1, $2, $3, $4, $5,
-                $6, $7, $8, $9, $10, 
-                $11, $12
+                $6, $7, $8, $9, $10
             )
             RETURNING id;
         `;
@@ -79,46 +69,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             useExcelQuestions ? true : false,
             JSON.stringify(questionConfig || {}),
             JSON.stringify(questions || []),
-            allowedUsers?.length ? JSON.stringify(allowedUsers) : null,
             req.body.sqlCredentialId || null,
-            assignmentType || 'batch',
         ]);
 
         const assessmentId = result.rows[0].id;
-
-        // Then, handle assignments based on type
-        if (assignmentType === 'users' && selectedUserEmails && selectedUserEmails.length > 0) {
-            const userInsertQuery = `
-                INSERT INTO "AssessmentUserMapping" (
-                    "assessmentId", "userEmail", "createdAt"
-                )
-                VALUES ($1, $2, $3)
-            `;
-
-            for (const email of selectedUserEmails) {
-                await pool.query(userInsertQuery, [
-                    assessmentId,
-                    email,
-                    new Date().toISOString()
-                ]);
-            }
-        } else if (assignmentType === 'batch' && batchSchedules && batchSchedules.length > 0) {
-            const batchInsertQuery = `
-                INSERT INTO "AssessmentBatchMapping" (
-                    "assessmentId", "batchId", "startTime", "endTime"
-                )
-                VALUES ($1, $2, $3, $4)
-            `;
-
-            for (const schedule of batchSchedules) {
-                await pool.query(batchInsertQuery, [
-                    assessmentId,
-                    schedule.batchId,
-                    schedule.startTime ? new Date(schedule.startTime).toISOString() : null,
-                    schedule.endTime ? new Date(schedule.endTime).toISOString() : null,
-                ]);
-            }
-        }
 
         return res.status(200).json({ success: true, assessmentId });
     } catch (error) {

@@ -19,6 +19,7 @@ import {
     ScrollText,
     ClipboardList,
     FilePlus2,
+    Clock,
 } from 'lucide-react';
 import ThemeToggle from '@/components/ThemeToggle';
 import {
@@ -46,6 +47,13 @@ const menuItems: MenuItem[] = [
         label: 'Create Exam',
         icon: FilePlus2,
         description: 'Create a new exam',
+    },
+    {
+        id: 'schedule',
+        navigation: 'schedule',
+        label: 'Schedule Exam',
+        icon: Clock,
+        description: 'Schedule a new exam',
     },
     {
         id: 'ViewExams',

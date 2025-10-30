@@ -182,6 +182,30 @@ export default function ExamPage() {
         }
     }, [exam, session, examId, shuffledQuestions, activeQuestionIndex, questionTimeSpent, codeRunCounts]);
 
+    const trackBehavior = useCallback(async (
+        behaviorType: string,
+        metadata?: any
+    ) => {
+        if (!exam || !session?.user?.email || !examId) return;
+
+        try {
+            await fetch('/api/exam-analytics/track-detailed-behavior', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    examId: examId.toString(),
+                    userEmail: session.user.email,
+                    questionId: shuffledQuestions[activeQuestionIndex]?.id || activeQuestionIndex,
+                    questionIndex: activeQuestionIndex,
+                    behaviorType,
+                    metadata
+                })
+            });
+        } catch (error) {
+            console.error('Failed to track behavior:', error);
+        }
+    }, [exam, session, examId, shuffledQuestions, activeQuestionIndex]);
+
     const saveToLocalStorage = useCallback(() => {
         if (!exam || !examId) return;
 
@@ -373,6 +397,128 @@ export default function ExamPage() {
             document.documentElement.classList.remove("dark");
         }
     }, [theme]);
+
+    // Add paste detection
+    useEffect(() => {
+        const handlePaste = (e: ClipboardEvent) => {
+            if (examStarted && !hasSubmittedRef.current) {
+                const pastedText = e.clipboardData?.getData('text') || '';
+                if (pastedText.length > 50) {
+                    trackBehavior('code_paste', {
+                        textLength: pastedText.length,
+                        questionNumber: activeQuestionIndex + 1
+                    });
+                }
+            }
+        };
+
+        document.addEventListener('paste', handlePaste);
+        return () => document.removeEventListener('paste', handlePaste);
+    }, [examStarted, activeQuestionIndex, trackBehavior]);
+
+    // Add mouse idle detection
+    useEffect(() => {
+        let idleTimer: NodeJS.Timeout;
+        let lastMouseMove = Date.now();
+
+        const handleMouseMove = () => {
+            lastMouseMove = Date.now();
+        };
+
+        const checkIdle = () => {
+            const idleTime = Date.now() - lastMouseMove;
+            if (idleTime > 60000 && examStarted && !hasSubmittedRef.current) { // 60 seconds
+                trackBehavior('mouse_idle', {
+                    idleSeconds: Math.round(idleTime / 1000),
+                    questionNumber: activeQuestionIndex + 1
+                });
+            }
+        };
+
+        document.addEventListener('mousemove', handleMouseMove);
+        idleTimer = setInterval(checkIdle, 30000); // Check every 30 seconds
+
+        return () => {
+            document.removeEventListener('mousemove', handleMouseMove);
+            clearInterval(idleTimer);
+        };
+    }, [examStarted, activeQuestionIndex, trackBehavior]);
+
+    // Add typing pattern detection
+    useEffect(() => {
+        let typingStartTime: number | null = null;
+        let charCount = 0;
+
+        const handleKeyPress = () => {
+            if (!typingStartTime) {
+                typingStartTime = Date.now();
+                charCount = 0;
+            }
+
+            charCount++;
+
+            const elapsed = Date.now() - typingStartTime;
+            if (elapsed > 0) {
+                const charsPerSecond = (charCount / elapsed) * 1000;
+
+                // Flag if typing faster than 10 chars/second (very fast)
+                if (charsPerSecond > 10 && charCount > 50) {
+                    trackBehavior('rapid_typing', {
+                        charsPerSecond: Math.round(charsPerSecond * 10) / 10,
+                        totalChars: charCount,
+                        questionNumber: activeQuestionIndex + 1
+                    });
+
+                    // Reset
+                    typingStartTime = null;
+                    charCount = 0;
+                }
+            }
+        };
+
+        document.addEventListener('keypress', handleKeyPress);
+        return () => document.removeEventListener('keypress', handleKeyPress);
+    }, [examStarted, activeQuestionIndex, trackBehavior]);
+
+    // Track tab focus loss
+    useEffect(() => {
+        const handleFocusLoss = () => {
+            if (examStarted && !hasSubmittedRef.current) {
+                trackBehavior('tab_focus_loss', {
+                    questionNumber: activeQuestionIndex + 1,
+                    timestamp: new Date().toISOString()
+                });
+            }
+        };
+
+        window.addEventListener('blur', handleFocusLoss);
+        return () => window.removeEventListener('blur', handleFocusLoss);
+    }, [examStarted, activeQuestionIndex, trackBehavior]);
+
+    // Track screen changes
+    useEffect(() => {
+        const handleScreenChange = () => {
+            if (examStarted && !hasSubmittedRef.current) {
+                trackBehavior('screen_change', {
+                    screenWidth: window.screen.width,
+                    screenHeight: window.screen.height,
+                    questionNumber: activeQuestionIndex + 1
+                });
+            }
+        };
+
+        window.addEventListener('resize', handleScreenChange);
+        if (screen.orientation) {
+            screen.orientation.addEventListener('change', handleScreenChange);
+        }
+
+        return () => {
+            window.removeEventListener('resize', handleScreenChange);
+            if (screen.orientation) {
+                screen.orientation.removeEventListener('change', handleScreenChange);
+            }
+        };
+    }, [examStarted, activeQuestionIndex, trackBehavior]);
 
     const { data: examData, error: examError, isLoading: examLoading } = useSWR(
         examId ? `/api/assessment/${examId}` : null,
@@ -933,6 +1079,8 @@ export default function ExamPage() {
         setIsTabVisible(true);
     };
 
+
+
     const handleSubmit = async () => {
         if (hasSubmittedRef.current) return;
 
@@ -969,6 +1117,40 @@ export default function ExamPage() {
                 selectedOptionText: isMcq ? mcqAnswer : undefined
             };
         });
+
+        const checkCodeSimilarity = async () => {
+            const codingQuestions = answersWithQuestionIds.filter(
+                (a: any) => a.type !== 'mcq' && a.answer && a.answer.length > 50
+            );
+
+            for (const question of codingQuestions) {
+                try {
+                    await fetch('/api/exam-analytics/code-similarity', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            examId: examIdStr,
+                            userEmail: email,
+                            questionId: question.questionId,
+                            code: question.answer
+                        })
+                    });
+                } catch (error) {
+                    console.error('Similarity check failed:', error);
+                }
+            }
+        };
+
+        checkCodeSimilarity();
+
+        fetch('/api/exam-analytics/cheating-detection', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                examId: examIdStr,
+                userEmail: email
+            })
+        }).catch(err => console.error('Cheating detection failed:', err));
 
         try {
             const result = await fetch("/api/submissions", {
