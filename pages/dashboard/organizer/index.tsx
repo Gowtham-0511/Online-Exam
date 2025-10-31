@@ -3,7 +3,7 @@ import { useSession } from "next-auth/react";
 import { useRouter } from "next/router";
 import Head from "next/head";
 import toast from "react-hot-toast";
-import ExaminerLayout from "./ExaminerLayout";
+import ExaminerLayout from "../examiner/ExaminerLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -233,15 +233,15 @@ export default function CreateExam() {
             q.question.trim() && !validationResults[idx]
         );
 
-        if (hasUnvalidatedQuestions) {
-            const confirm = window.confirm(
-                'Some questions have not been validated. Do you want to validate them before creating the exam?'
-            );
-            if (confirm) {
-                toast.error('Please validate all questions first');
-                return;
-            }
-        }
+        // if (hasUnvalidatedQuestions) {
+        //     const confirm = window.confirm(
+        //         'Some questions have not been validated. Do you want to validate them before creating the exam?'
+        //     );
+        //     if (confirm) {
+        //         toast.error('Please validate all questions first');
+        //         return;
+        //     }
+        // }
 
         const hasCriticalIssues = Object.values(validationResults).some(
             (result: any) => result && !result.isValid

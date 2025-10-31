@@ -796,3 +796,236 @@ Be encouraging, patient, and explain concepts clearly. Use examples when helpful
         return "I'm having trouble responding right now. Please try again.";
     }
 }
+
+export async function generateQuestionsForExam(
+    config: {
+        language: string;
+        questionType: 'coding' | 'mcq' | 'both';
+        difficulty: 'easy' | 'medium' | 'hard';
+        count: number;
+        topics?: string[];
+        marks?: number; // marks per question or total
+    }
+): Promise<Array<{
+    questionText: string;
+    difficulty: string;
+    marks: number;
+    type: 'coding' | 'mcq';
+    expectedOutput?: string;
+    testCases?: Array<{ input: string; expectedOutput: string; isHidden: boolean }>;
+    starterCode?: string;
+    solution: string;
+    hints?: string[];
+    options?: Array<{ id: number; text: string; isCorrect: boolean }>;
+    tags: string[];
+}>> {
+    const isDeterministicModel = /(mini|instruct)/i.test(deploymentName);
+
+    const topicsText = config.topics && config.topics.length > 0
+        ? `Focus on these topics: ${config.topics.join(', ')}`
+        : '';
+
+    const prompt = `Generate ${config.count} ${config.difficulty} ${config.questionType === 'both' ? 'coding and MCQ' : config.questionType} questions for ${config.language}.
+
+${topicsText}
+
+Requirements:
+- Each question should be ${config.difficulty} difficulty
+- ${config.questionType === 'coding' ? 'Include test cases, starter code, and solution' : ''}
+- ${config.questionType === 'mcq' ? 'Include 4 options with one correct answer' : ''}
+- Assign appropriate marks (${config.marks ? config.marks + ' marks each' : '5-20 based on complexity'})
+- Add 1-3 relevant tags
+- ${config.questionType === 'coding' ? 'Include 3-4 test cases (mix visible and hidden)' : ''}
+- Make questions practical and realistic
+
+${config.questionType === 'coding' ? `
+For CODING questions return:
+{
+  "questions": [
+    {
+      "questionText": "Clear problem with examples in HTML format",
+      "difficulty": "${config.difficulty}",
+      "marks": number,
+      "type": "coding",
+      "expectedOutput": "sample output description",
+      "testCases": [
+        {"input": "test input", "expectedOutput": "expected result", "isHidden": false},
+        {"input": "edge case", "expectedOutput": "result", "isHidden": true}
+      ],
+      "starterCode": "function template for ${config.language}",
+      "solution": "complete working solution with comments",
+      "hints": ["hint 1", "hint 2"],
+      "tags": ["tag1", "tag2"]
+    }
+  ]
+}
+` : ''}
+
+${config.questionType === 'mcq' ? `
+For MCQ questions return:
+{
+  "questions": [
+    {
+      "questionText": "Question text in HTML format",
+      "difficulty": "${config.difficulty}",
+      "marks": number,
+      "type": "mcq",
+      "options": [
+        {"id": 1, "text": "Option A", "isCorrect": false},
+        {"id": 2, "text": "Option B", "isCorrect": true},
+        {"id": 3, "text": "Option C", "isCorrect": false},
+        {"id": 4, "text": "Option D", "isCorrect": false}
+      ],
+      "solution": "Explanation why correct answer is right",
+      "tags": ["tag1", "tag2"]
+    }
+  ]
+}
+` : ''}
+
+${config.questionType === 'both' ? 'Generate a mix of coding and MCQ questions.' : ''}
+
+Return ONLY valid JSON, no markdown or extra text.`;
+
+    const params: any = {
+        model: deploymentName,
+        messages: [
+            {
+                role: "system",
+                content: `You are an expert ${config.language} instructor creating exam questions. Generate realistic, practical problems that test real understanding. Return only valid JSON.`
+            },
+            { role: "user", content: prompt }
+        ],
+        response_format: { type: "json_object" }
+    };
+
+    if (!isDeterministicModel) {
+        params.temperature = 0.8;
+        params.top_p = 0.95;
+    }
+
+    try {
+        const result = await client.chat.completions.create(params);
+        const content = result.choices[0]?.message?.content?.trim() || "{}";
+        const data = JSON.parse(content);
+
+        console.log(data);
+
+        return data.questions || [];
+    } catch (error: any) {
+        console.error("AI Question Generation Error:", error.message);
+        throw new Error("Failed to generate questions with AI");
+    }
+}
+
+export async function validateQuestion(
+    questionText: string,
+    questionType: 'coding' | 'mcq',
+    language?: string,
+    expectedOutput?: string,
+    options?: Array<{ text: string; isCorrect: boolean }>,
+    testCases?: Array<{ input: string; expectedOutput: string }>,
+    marks?: number
+): Promise<{
+    isValid: boolean;
+    overallScore: number; // 0-100
+    issues: Array<{
+        severity: 'critical' | 'warning' | 'suggestion';
+        category: 'clarity' | 'grammar' | 'completeness' | 'difficulty' | 'technical';
+        message: string;
+        suggestion?: string;
+    }>;
+    suggestions: string[];
+    estimatedDifficulty?: 'easy' | 'medium' | 'hard';
+}> {
+    const isDeterministicModel = /(mini|instruct)/i.test(deploymentName);
+
+    const prompt = `Analyze this ${questionType} question and provide detailed validation feedback.
+
+Question Text: ${questionText}
+Type: ${questionType}
+Language: ${language || 'N/A'}
+${expectedOutput ? `Expected Output: ${expectedOutput}` : ''}
+${marks ? `Marks: ${marks}` : ''}
+
+${questionType === 'mcq' && options ? `
+Options:
+${options.map((opt, i) => `${i + 1}. ${opt.text} ${opt.isCorrect ? '(Correct)' : ''}`).join('\n')}
+Correct answers count: ${options.filter(o => o.isCorrect).length}
+` : ''}
+
+${questionType === 'coding' && testCases ? `
+Test Cases: ${testCases.length} provided
+` : ''}
+
+Validate the question for:
+1. **Clarity**: Is it clear, unambiguous, and easy to understand?
+2. **Grammar**: Any spelling or grammar issues?
+3. **Completeness**: Missing information, test cases, or details?
+4. **Technical Accuracy**: Any technical errors or impossibilities?
+5. **Difficulty Alignment**: Does it match typical ${marks ? marks + '-mark' : ''} questions?
+${questionType === 'mcq' ? '6. **MCQ Quality**: Are options distinct, is there exactly one correct answer?' : ''}
+${questionType === 'coding' ? '6. **Coding Quality**: Are requirements clear, is expected output reasonable?' : ''}
+
+Return JSON:
+{
+    "isValid": boolean,
+    "overallScore": number (0-100),
+    "issues": [
+        {
+            "severity": "critical|warning|suggestion",
+            "category": "clarity|grammar|completeness|difficulty|technical",
+            "message": "specific issue description",
+            "suggestion": "how to fix it"
+        }
+    ],
+    "suggestions": ["general improvement suggestions"],
+    "estimatedDifficulty": "easy|medium|hard"
+}
+
+Critical issues: Must fix before exam creation
+Warnings: Should fix but not blocking
+Suggestions: Nice to have improvements`;
+
+    const params: any = {
+        model: deploymentName,
+        messages: [
+            {
+                role: "system",
+                content: "You are an expert educational content validator. Be thorough but constructive. Return only valid JSON."
+            },
+            { role: "user", content: prompt }
+        ],
+        response_format: { type: "json_object" }
+    };
+
+    if (!isDeterministicModel) {
+        params.temperature = 0.3;
+    }
+
+    try {
+        const result = await client.chat.completions.create(params);
+        const validation = JSON.parse(result.choices[0]?.message?.content || "{}");
+
+        return {
+            isValid: validation.isValid ?? true,
+            overallScore: validation.overallScore ?? 100,
+            issues: validation.issues ?? [],
+            suggestions: validation.suggestions ?? [],
+            estimatedDifficulty: validation.estimatedDifficulty
+        };
+    } catch (error) {
+        console.error("Question validation error:", error);
+        return {
+            isValid: true,
+            overallScore: 0,
+            issues: [{
+                severity: 'warning',
+                category: 'technical',
+                message: 'Unable to validate question automatically',
+                suggestion: 'Please review manually'
+            }],
+            suggestions: []
+        };
+    }
+}

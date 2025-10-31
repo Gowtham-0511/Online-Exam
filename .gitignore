@@ -48,3 +48,5 @@ next-env.d.ts
 
 # Keep data directory but ignore database files
 !/data/.gitkeep
+
+/backup

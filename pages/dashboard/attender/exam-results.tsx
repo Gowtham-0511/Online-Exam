@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useRouter } from 'next/router';
 import { useSession } from 'next-auth/react';
 import useSWR from 'swr';
-import AttenderLayout from './AttenderLayout';
+import UnifiedDashboardLayout from '@/components/layouts/UnifiedDashboardLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -274,7 +274,7 @@ const ExamResultsPage = () => {
     // Loading State
     if (isLoading) {
         return (
-            <AttenderLayout>
+            <UnifiedDashboardLayout role='attender'>
                 <div className="space-y-6">
                     {/* Header Skeleton */}
                     <div className="flex items-center gap-4">
@@ -330,14 +330,14 @@ const ExamResultsPage = () => {
                         </div>
                     </div>
                 </div>
-            </AttenderLayout>
+            </UnifiedDashboardLayout>
         );
     }
 
     // Error State
     if (error) {
         return (
-            <AttenderLayout>
+            <UnifiedDashboardLayout role='attender'>
                 <div className="flex items-center justify-center min-h-[60vh]">
                     <div className="text-center">
                         <div className="p-4 bg-red-50 dark:bg-red-950/30 rounded-full w-20 h-20 mx-auto mb-4 flex items-center justify-center">
@@ -350,14 +350,14 @@ const ExamResultsPage = () => {
                         </Button>
                     </div>
                 </div>
-            </AttenderLayout>
+            </UnifiedDashboardLayout>
         );
     }
 
     // Empty State
     if (completedExams.length === 0) {
         return (
-            <AttenderLayout>
+            <UnifiedDashboardLayout role='attender'>
                 <div className="flex items-center justify-center min-h-[60vh]">
                     <div className="text-center">
                         <div className="p-4 bg-muted/50 rounded-full w-20 h-20 mx-auto mb-4 flex items-center justify-center">
@@ -370,12 +370,12 @@ const ExamResultsPage = () => {
                         </Button>
                     </div>
                 </div>
-            </AttenderLayout>
+            </UnifiedDashboardLayout>
         );
     }
 
     return (
-        <AttenderLayout>
+        <UnifiedDashboardLayout role='attender'>
             <div className="space-y-6">
                 {/* Header */}
                 <div className="flex items-center gap-4">
@@ -1000,7 +1000,7 @@ const ExamResultsPage = () => {
                     </Dialog>
                 );
             })()}
-        </AttenderLayout>
+        </UnifiedDashboardLayout>
     );
 };
 

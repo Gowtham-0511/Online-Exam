@@ -1,25 +1,10 @@
 import React from 'react'
 import useSWR from 'swr'
-import AttenderLayout from './AttenderLayout'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
-import {
-    BookOpen,
-    TrendingUp,
-    Target,
-    ChevronRight,
-    Activity,
-    Code,
-    Brain,
-    Timer,
-    CheckCircle2,
-    AlertCircle,
-    Clock,
-    XCircle,
-    ArrowRight
-} from 'lucide-react'
+import * as Icons from 'lucide-react';
 import { useSession } from "next-auth/react";
 import { useRouter } from 'next/router'
 import { AIInsightsCard } from '@/components/attender/AIInsightsCard';
@@ -30,6 +15,7 @@ import { PostExamInsightsModal } from '@/components/attender/PostExamInsightsMod
 import { useState } from 'react';
 import { AdaptiveLearningPath } from '@/components/attender/AdaptiveLearningPath';
 import { ExamStrategyModal } from '@/components/attender/ExamStrategyModal';
+import UnifiedDashboardLayout from '@/components/layouts/UnifiedDashboardLayout'
 
 const fetcher = (url: string) => fetch(url).then(res => res.json());
 
@@ -152,7 +138,7 @@ const index = () => {
 
     if (status === 'loading' || (isLoading && !upcomingExams.length && !completedExams.length)) {
         return (
-            <AttenderLayout>
+            <UnifiedDashboardLayout role="attender">
                 <div className="space-y-8">
                     {/* Header Skeleton */}
                     <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
@@ -200,17 +186,17 @@ const index = () => {
                         ))}
                     </div>
                 </div>
-            </AttenderLayout>
+            </UnifiedDashboardLayout>
         );
     }
 
     if (hasError) {
         return (
-            <AttenderLayout>
+            <UnifiedDashboardLayout role="attender">
                 <div className="space-y-8">
                     <div className="flex flex-col items-center justify-center py-20">
                         <div className="p-4 bg-red-50 dark:bg-red-950/30 rounded-full w-16 h-16 mx-auto mb-4 flex items-center justify-center">
-                            <AlertCircle className="h-8 w-8 text-red-600 dark:text-red-400" />
+                            <Icons.AlertCircle className="h-8 w-8 text-red-600 dark:text-red-400" />
                         </div>
                         <h3 className="text-lg font-medium text-foreground mb-2">Failed to load data</h3>
                         <p className="text-muted-foreground text-sm mb-4">There was an error fetching your exams. Please try again.</p>
@@ -224,12 +210,12 @@ const index = () => {
                         </Button>
                     </div>
                 </div>
-            </AttenderLayout>
+            </UnifiedDashboardLayout>
         );
     }
 
     return (
-        <AttenderLayout>
+        <UnifiedDashboardLayout role="attender">
             <div className="space-y-8">
                 {/* Header Section */}
                 <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
@@ -245,7 +231,7 @@ const index = () => {
                         onClick={() => window.location.href = '/dashboard/attender/view-exams'}
                         className="bg-primary hover:bg-primary/90"
                     >
-                        <Code className="h-4 w-4 mr-2" />
+                        <Icons.Code className="h-4 w-4 mr-2" />
                         Browse All Exams
                     </Button>
                 </div>
@@ -260,11 +246,11 @@ const index = () => {
                                     <p className="text-2xl font-bold text-foreground mt-1">{stats.totalExams}</p>
                                 </div>
                                 <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center">
-                                    <BookOpen className="h-6 w-6 text-primary" />
+                                    <Icons.BookOpen className="h-6 w-6 text-primary" />
                                 </div>
                             </div>
                             <div className="mt-4 flex items-center text-sm text-muted-foreground">
-                                <TrendingUp className="h-4 w-4 mr-1" />
+                                <Icons.TrendingUp className="h-4 w-4 mr-1" />
                                 Ready to start
                             </div>
                         </CardContent>
@@ -278,11 +264,11 @@ const index = () => {
                                     <p className="text-2xl font-bold text-foreground mt-1">{stats.completedExams}</p>
                                 </div>
                                 <div className="h-12 w-12 rounded-lg bg-emerald-500/10 flex items-center justify-center">
-                                    <CheckCircle2 className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
+                                    <Icons.CheckCircle2 className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
                                 </div>
                             </div>
                             <div className="mt-4 flex items-center text-sm text-muted-foreground">
-                                <Activity className="h-4 w-4 mr-1" />
+                                <Icons.Activity className="h-4 w-4 mr-1" />
                                 Keep improving
                             </div>
                         </CardContent>
@@ -301,11 +287,11 @@ const index = () => {
                                     </p>
                                 </div>
                                 <div className="h-12 w-12 rounded-lg bg-purple-500/10 flex items-center justify-center">
-                                    <Target className="h-6 w-6 text-purple-600 dark:text-purple-400" />
+                                    <Icons.Target className="h-6 w-6 text-purple-600 dark:text-purple-400" />
                                 </div>
                             </div>
                             <div className="mt-4 flex items-center text-sm text-muted-foreground">
-                                <TrendingUp className="h-4 w-4 mr-1" />
+                                <Icons.TrendingUp className="h-4 w-4 mr-1" />
                                 {completedExams.length > 0 ? 'Keep improving' : 'Start taking exams'}
                             </div>
                         </CardContent>
@@ -331,7 +317,7 @@ const index = () => {
                                     className="text-primary hover:text-primary hover:bg-primary/10"
                                 >
                                     View All
-                                    <ChevronRight className="h-4 w-4 ml-1" />
+                                    <Icons.ChevronRight className="h-4 w-4 ml-1" />
                                 </Button>
                             </div>
                         </CardHeader>
@@ -354,7 +340,7 @@ const index = () => {
                                                 <div className="flex-1 min-w-0">
                                                     <div className="flex items-start gap-3 mb-3">
                                                         <div className="p-2 bg-primary/10 rounded-lg group-hover:bg-primary/20 transition-colors shrink-0">
-                                                            <Brain className="h-4 w-4 text-primary" />
+                                                            <Icons.Brain className="h-4 w-4 text-primary" />
                                                         </div>
                                                         <div className="flex-1 min-w-0">
                                                             <h3 className="font-semibold text-foreground group-hover:text-primary transition-colors truncate">
@@ -362,7 +348,7 @@ const index = () => {
                                                             </h3>
                                                             <div className="flex items-center gap-2 mt-1 flex-wrap">
                                                                 <Badge variant="outline" className="text-xs border-border">
-                                                                    <Code className="h-3 w-3 mr-1" />
+                                                                    <Icons.Code className="h-3 w-3 mr-1" />
                                                                     {exam.language}
                                                                 </Badge>
                                                             </div>
@@ -372,7 +358,7 @@ const index = () => {
                                                     <div className="space-y-1.5 text-sm text-muted-foreground ml-11">
                                                         <div className="flex items-center gap-4 flex-wrap">
                                                             <div className="flex items-center gap-2">
-                                                                <Timer className="h-3.5 w-3.5" />
+                                                                <Icons.Timer className="h-3.5 w-3.5" />
                                                                 <span>{exam.duration} min</span>
                                                             </div>
                                                         </div>
@@ -387,7 +373,7 @@ const index = () => {
                                                     className="bg-primary hover:bg-primary/90"
                                                 >
                                                     Start Exam
-                                                    <ArrowRight className="h-3.5 w-3.5 ml-1.5" />
+                                                    <Icons.ArrowRight className="h-3.5 w-3.5 ml-1.5" />
                                                 </Button>
                                             </div>
                                         </Card>
@@ -396,7 +382,7 @@ const index = () => {
                             ) : (
                                 <div className="text-center py-12">
                                     <div className="p-4 bg-muted/50 rounded-full w-16 h-16 mx-auto mb-4 flex items-center justify-center">
-                                        <AlertCircle className="h-8 w-8 text-muted-foreground" />
+                                        <Icons.AlertCircle className="h-8 w-8 text-muted-foreground" />
                                     </div>
                                     <h3 className="text-lg font-medium text-foreground mb-2">No upcoming exams</h3>
                                     <p className="text-muted-foreground text-sm mb-4">Check back later or browse available exams</p>
@@ -443,9 +429,9 @@ const index = () => {
                                                     <div className="flex items-start gap-3 mb-3">
                                                         <div className={`p-2 rounded-lg shrink-0 ${exam.disqualified ? 'bg-rose-500/10' : 'bg-emerald-500/10'}`}>
                                                             {exam.disqualified ? (
-                                                                <XCircle className="h-4 w-4 text-rose-600 dark:text-rose-400" />
+                                                                <Icons.XCircle className="h-4 w-4 text-rose-600 dark:text-rose-400" />
                                                             ) : (
-                                                                <CheckCircle2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                                                                <Icons.CheckCircle2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
                                                             )}
                                                         </div>
                                                         <div className="flex-1 min-w-0">
@@ -454,7 +440,7 @@ const index = () => {
                                                             </h3>
                                                             <div className="flex items-center gap-2 mt-1 flex-wrap">
                                                                 <Badge variant="outline" className="text-xs border-border">
-                                                                    <Code className="h-3 w-3 mr-1" />
+                                                                    <Icons.Code className="h-3 w-3 mr-1" />
                                                                     {exam.language}
                                                                 </Badge>
                                                                 {exam.percentage !== null && exam.percentage !== undefined && (
@@ -482,19 +468,19 @@ const index = () => {
                                                     <div className="space-y-1.5 text-sm text-muted-foreground ml-11">
                                                         <div className="flex items-center gap-4 flex-wrap">
                                                             <div className="flex items-center gap-2">
-                                                                <Clock className="h-3.5 w-3.5" />
+                                                                <Icons.Clock className="h-3.5 w-3.5" />
                                                                 <span>
                                                                     {new Date(exam.submittedAt).toLocaleDateString()}
                                                                 </span>
                                                             </div>
                                                             {exam.totalMarksObtained !== null && exam.totalPossibleMarks !== null && (
                                                                 <div className="flex items-center gap-2">
-                                                                    <Target className="h-3.5 w-3.5" />
+                                                                    <Icons.Target className="h-3.5 w-3.5" />
                                                                     <span>{exam.totalMarksObtained}/{exam.totalPossibleMarks} marks</span>
                                                                 </div>
                                                             )}
                                                             <div className="flex items-center gap-2">
-                                                                <Timer className="h-3.5 w-3.5" />
+                                                                <Icons.Timer className="h-3.5 w-3.5" />
                                                                 <span>{exam.duration} min</span>
                                                             </div>
                                                         </div>
@@ -504,7 +490,7 @@ const index = () => {
 
                                             <div className="mt-3 pt-3 border-t border-border">
                                                 <button className="text-xs text-primary hover:text-primary/80 flex items-center gap-1">
-                                                    <Brain className="h-3 w-3" />
+                                                    <Icons.Brain className="h-3 w-3" />
                                                     View Detailed Analysis
                                                 </button>
                                             </div>
@@ -515,7 +501,7 @@ const index = () => {
                             ) : (
                                 <div className="text-center py-12">
                                     <div className="p-4 bg-muted/50 rounded-full w-16 h-16 mx-auto mb-4 flex items-center justify-center">
-                                        <BookOpen className="h-8 w-8 text-muted-foreground" />
+                                        <Icons.BookOpen className="h-8 w-8 text-muted-foreground" />
                                     </div>
                                     <h3 className="text-lg font-medium text-foreground mb-2">No completed exams yet</h3>
                                     <p className="text-muted-foreground text-sm">Start taking exams to see your results here</p>
@@ -568,7 +554,7 @@ const index = () => {
                     email={selectedExamForStrategy.email}
                 />
             )}
-        </AttenderLayout>
+        </UnifiedDashboardLayout>
     )
 }
 
