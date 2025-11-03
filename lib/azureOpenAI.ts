@@ -1029,3 +1029,216 @@ Suggestions: Nice to have improvements`;
         };
     }
 }
+
+export async function generatePracticeQuestionsFromWeakAreas(
+    userEmail: string,
+    weakAreas: Array<{
+        topic: string;
+        language: string;
+        score: number;
+        description: string;
+    }>,
+    count: number = 5
+): Promise<Array<{
+    questionTitle: string;
+    questionDescription: string;
+    language: string;
+    difficulty: 'Easy' | 'Medium' | 'Hard';
+    topic: string;
+    starterCode: string;
+    testCases: Array<{ input: string; expectedOutput: string; isHidden: boolean }>;
+    solutionCode: string;
+    solutionExplanation: string;
+    hints: string[];
+    weakArea: string;
+}>> {
+    const isDeterministicModel = /(mini|instruct)/i.test(deploymentName);
+
+    // Determine difficulty based on average score
+    const avgScore = weakAreas.reduce((sum, area) => sum + area.score, 0) / weakAreas.length;
+    const baseDifficulty = avgScore < 40 ? 'Easy' : avgScore < 70 ? 'Medium' : 'Hard';
+
+const prompt = `You are generating personalized coding practice questions to help a student improve their weak areas.
+
+Weak Areas Analysis:
+${weakAreas.map((area, i) => `
+${i + 1}. Topic: ${area.topic}
+   Language: ${area.language}
+   Current Score: ${area.score}%
+   Issue: ${area.description}
+`).join('\n')}
+
+Generate ${count} practice coding questions that specifically target these weaknesses.
+
+CRITICAL TEST CASE FORMAT RULES:
+1. The "input" field should be the EXACT argument(s) to pass to the function
+2. For a function like: def sum_numbers(nums):
+   - Correct input: "[1, 2, 3, 4]"  (a list to pass as the single argument)
+3. For a function like: def categorize_scores(scores):
+   - Correct input: "[85, 92, 45, 78, 55]"  (a list of numbers)
+4. The function receives the ENTIRE input as a SINGLE argument
+5. DO NOT use dictionary format with key names unless the function actually expects a dictionary
+
+Requirements for each question:
+1. Focus on one of the weak areas listed above
+2. Base difficulty: ${baseDifficulty} (but adjust per topic as needed)
+3. Include a clear problem statement with examples
+4. Provide starter code template
+5. Include 3-5 test cases (mix of visible and hidden)
+6. Provide complete solution with explanation
+7. Add 2-3 progressive hints
+8. Make it practical and realistic
+
+EXAMPLE QUESTION FORMAT:
+
+For a function: def sum_even_numbers(nums):
+
+CORRECT test cases:
+{
+  "input": "[2, 4, 6, 8, 10]",
+  "expectedOutput": "30",
+  "isHidden": false
+}
+
+For a function: def categorize_scores(scores):
+
+CORRECT test cases:
+{
+  "input": "[85, 92, 45, 78, 55, 90]",
+  "expectedOutput": "{'pass': 4, 'fail': 2}",
+  "isHidden": false
+}
+
+CRITICAL TEST CASE FORMAT RULES FOR PYTHON:
+
+1. **Single primitive argument** (int, str, float, bool):
+   Function: def fizz_buzz(n):
+   Input format: "15"  (just the value, not in a list)
+   ❌ WRONG: "[15]"
+   ✅ CORRECT: "15"
+
+2. **Single list argument**:
+   Function: def sum_numbers(nums):
+   Input format: "[1, 2, 3, 4]"  (the list itself)
+   ✅ CORRECT: "[1, 2, 3, 4]"
+
+3. **Multiple arguments**:
+   Function: def add(a, b):
+   Input format: "[5, 3]"  (list that will be unpacked)
+   ✅ CORRECT: "[5, 3]"
+
+4. **Dictionary argument**:
+   Function: def process_data(data):
+   Input format: "{\"key\": \"value\"}"
+   ✅ CORRECT: "{\"key\": \"value\"}"
+
+5. **String argument**:
+   Function: def reverse_string(text):
+   Input format: "\"hello\""  (string in quotes)
+   ✅ CORRECT: "\"hello\""
+
+EXAMPLES:
+
+Example 1 - Single integer:
+{
+  "starterCode": "def factorial(n):\\n    pass",
+  "testCases": [
+    {"input": "5", "expectedOutput": "120", "isHidden": false},
+    {"input": "0", "expectedOutput": "1", "isHidden": false}
+  ]
+}
+
+Example 2 - List argument:
+{
+  "starterCode": "def sum_list(numbers):\\n    pass",
+  "testCases": [
+    {"input": "[1, 2, 3, 4]", "expectedOutput": "10", "isHidden": false},
+    {"input": "[]", "expectedOutput": "0", "isHidden": true}
+  ]
+}
+
+Example 3 - String argument:
+{
+  "starterCode": "def count_vowels(text):\\n    pass",
+  "testCases": [
+    {"input": "\"hello\"", "expectedOutput": "2", "isHidden": false},
+    {"input": "\"world\"", "expectedOutput": "1", "isHidden": true}
+  ]
+}
+
+Example 4 - Two arguments:
+{
+  "starterCode": "def power(base, exp):\\n    pass",
+  "testCases": [
+    {"input": "[2, 3]", "expectedOutput": "8", "isHidden": false},
+    {"input": "[5, 2]", "expectedOutput": "25", "isHidden": true}
+  ]
+}
+
+Return JSON in this EXACT format:
+{
+  "questions": [
+    {
+      "questionTitle": "Count Even Numbers in List",
+      "questionDescription": "<p>Write a function that takes a list of integers and returns the count of even numbers.</p><p><strong>Example:</strong></p><pre>Input: [1, 2, 3, 4, 5, 6]\nOutput: 3</pre>",
+      "language": "Python",
+      "difficulty": "Easy",
+      "topic": "Arrays",
+      "starterCode": "def count_even(nums):\\n    # Write your code here\\n    pass",
+      "testCases": [
+        {
+          "input": "[2, 4, 6, 8]",
+          "expectedOutput": "4",
+          "isHidden": false
+        },
+        {
+          "input": "[1, 3, 5, 7]",
+          "expectedOutput": "0",
+          "isHidden": false
+        },
+        {
+          "input": "[1, 2, 3, 4, 5]",
+          "expectedOutput": "2",
+          "isHidden": true
+        }
+      ],
+      "solutionCode": "def count_even(nums):\\n    count = 0\\n    for num in nums:\\n        if num % 2 == 0:\\n            count += 1\\n    return count",
+      "solutionExplanation": "Iterate through the list and count numbers divisible by 2",
+      "hints": ["Check if a number is divisible by 2", "Use a counter variable"],
+      "weakArea": "Loop iteration and conditionals"
+    }
+  ]
+}
+
+IMPORTANT: The input field must be valid JSON that represents the SINGLE argument to the function.
+
+Return ONLY valid JSON, no markdown formatting or extra text.`;
+
+    const params: any = {
+        model: deploymentName,
+        messages: [
+            {
+                role: "system",
+                content: "You are an expert programming instructor creating personalized practice questions. Focus on helping students overcome specific weaknesses. Return only valid JSON."
+            },
+            { role: "user", content: prompt }
+        ],
+        response_format: { type: "json_object" }
+    };
+
+    if (!isDeterministicModel) {
+        params.temperature = 0.8;
+        params.top_p = 0.95;
+    }
+
+    try {
+        const result = await client.chat.completions.create(params);
+        const content = result.choices[0]?.message?.content?.trim() || "{}";
+        const data = JSON.parse(content);
+
+        return data.questions || [];
+    } catch (error: any) {
+        console.error("Practice Question Generation Error:", error.message);
+        throw new Error("Failed to generate practice questions");
+    }
+}

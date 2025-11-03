@@ -29,6 +29,7 @@ import {
     Clock,
     ScrollText,
     LineChart,
+    Target,
 } from 'lucide-react';
 import ThemeToggle from '@/components/ThemeToggle';
 import {
@@ -175,6 +176,13 @@ const ROLE_MENUS: Record<UserRole, MenuItem[]> = {
             label: 'Exam Results',
             icon: Trophy,
             description: 'View all results',
+        },
+        {
+            id: 'practice',
+            navigation: 'practice',
+            label: 'Practice',
+            icon: Target,
+            description: 'Practice your personalized questions',
         },
     ]
 };

@@ -10,7 +10,7 @@ import { useState, useEffect, useRef, useMemo } from 'react';
  */
 
 interface ExamReadinessData {
-    exams: Record<string, {
+    examReadiness: Record<string, {
         readinessScore: number;
         readinessLevel: string;
         color: string;
@@ -18,6 +18,7 @@ interface ExamReadinessData {
         estimatedScore: number;
         insights: string[];
     }>;
+    topRecommendations: string[];
 }
 
 interface UseExamReadinessReturn {

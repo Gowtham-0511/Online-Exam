@@ -1,0 +1,59 @@
+# version: '3.8'
+
+services:
+  redis:
+    image: redis:7-alpine
+    container_name: exam-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    restart: unless-stopped
+    networks:
+      - exam-network
+
+  web:
+    build: .
+    container_name: exam-web
+    ports:
+      - "3000:3000"
+    env_file:
+      - .env.local
+    environment:
+      - REDIS_URL=redis://redis:6379
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    depends_on:
+      - redis
+    networks:
+      - exam-network
+    restart: unless-stopped
+
+  python-executor:
+    image: exam-python-executor:latest
+    container_name: python-executor
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 1G
+        reservations:
+          cpus: '0.5'
+          memory: 256M
+    volumes:
+      - ./temp/python_exec:/app/workspace
+      - ./public/exam-files:/app/files:ro
+    environment:
+      - EXECUTION_TIMEOUT=20
+      - MAX_OUTPUT_SIZE=2097152
+    networks:
+      - exam-network
+    restart: unless-stopped
+
+networks:
+  exam-network:
+    driver: bridge
+
+volumes:
+  redis-data:

@@ -11,6 +11,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         return res.status(400).json({ error: "Missing examId or email" });
     }
 
+    console.log(examId)
+
     try {
         // Get exam details
         const examQuery = `

@@ -284,8 +284,8 @@ const ViewExams: React.FC = () => {
         }
     };
 
-    const handleStartExam = (examId: any) => {
-        const exam = exams.find((e: { id: any; }) => e.id === examId);
+    const handleStartExam = (examId: number) => {
+        const exam = exams.find((e: Exam) => e.id === examId);
         if (exam) {
             setExamData(exam);
             setShowExamPopup(true);
@@ -474,7 +474,7 @@ const ViewExams: React.FC = () => {
 
                                     <div className="grid gap-6 md:grid-cols-2">
                                         {exams
-                                            .filter((exam: Exam) => readinessData.topRecommendations.includes(exam.id))
+                                            .filter((exam: Exam) => readinessData.topRecommendations.includes(exam.title))
                                             .map((exam: Exam) => {
                                                 const questions = parseQuestions(exam.questions);
                                                 const totalMarks = calculateTotalMarks(questions);
@@ -642,7 +642,7 @@ const ViewExams: React.FC = () => {
                                         const langConfig = getLanguageConfig(exam.language);
                                         const LangIcon = langConfig.icon;
                                         const readiness = readinessData?.examReadiness?.[exam.id];
-                                        const isRecommended = readinessData?.topRecommendations?.includes(exam.id);
+                                        const isRecommended = readinessData?.topRecommendations?.includes(exam.title);
 
                                         return (
                                             <Card key={exam.id} className={`group hover:shadow-2xl hover:-translate-y-2 transition-all duration-500 bg-white/80 dark:bg-muted/80 backdrop-blur-sm shadow-lg overflow-hidden ${isRecommended ? 'opacity-60' : 'border-0'}`}>

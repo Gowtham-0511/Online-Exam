@@ -1,6 +1,5 @@
 import { NextApiRequest, NextApiResponse } from "next";
 import pool from "@/lib/db";
-import { predictFuturePerformance } from "@/lib/azureOpenAI";
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
     if (req.method !== "GET") return res.status(405).end();
@@ -9,51 +8,47 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (!email) return res.status(400).json({ error: "Email is required" });
 
     try {
-        const query = `
-            SELECT 
-                s."examId",
-                s."submittedAt",
-                COALESCE(
-                    (SELECT SUM((feedback->>'marks')::numeric)
-                     FROM jsonb_array_elements(s."ai_feedback"::jsonb) AS feedback),
-                    0
-                ) as score,
-                COALESCE(
-                    (SELECT SUM((ans->>'marks')::numeric)
-                     FROM jsonb_array_elements(s."answersWithQuestionIds"::jsonb) AS ans),
-                    0
-                ) as "totalPossible"
-            FROM submissions s
-            WHERE s.email = $1
-            AND s.disqualified = false
-            ORDER BY s."submittedAt" ASC
+        // Check cache first
+        const cacheQuery = `
+            SELECT "performancePrediction", "predictionGeneratedAt", "totalExamsCount"
+            FROM "UserInsightsCache"
+            WHERE email = $1
         `;
+        const cacheResult = await pool.query(cacheQuery, [email as string]);
 
-        const result = await pool.query(query, [email as string]);
+        if (cacheResult.rows.length > 0 && cacheResult.rows[0].performancePrediction) {
+            return res.status(200).json({
+                hasData: true,
+                fromCache: true,
+                ...cacheResult.rows[0].performancePrediction,
+                generatedAt: cacheResult.rows[0].predictionGeneratedAt
+            });
+        }
 
-        if (result.rows.length < 2) {
+        // Check if user has enough exams
+        const examCountQuery = `
+            SELECT COUNT(*) as count
+            FROM submissions
+            WHERE email = $1 AND disqualified = false
+        `;
+        const countResult = await pool.query(examCountQuery, [email as string]);
+        const examCount = parseInt(countResult.rows[0].count);
+
+        if (examCount < 2) {
             return res.status(200).json({
                 hasData: false,
                 message: "Need at least 2 exams for prediction"
             });
         }
 
-        const studentHistory = result.rows.map(row => ({
-            examId: row.examId,
-            score: parseFloat(row.score) || 0,
-            totalPossible: parseFloat(row.totalPossible) || 1,
-            date: row.submittedAt
-        }));
-
-        const prediction = await predictFuturePerformance(studentHistory);
-
+        // No cache but has exams - will be generated on next submission
         return res.status(200).json({
-            hasData: true,
-            ...prediction
+            hasData: false,
+            message: "Predictions will be generated after your next exam submission"
         });
 
     } catch (error: any) {
         console.error("Prediction Error:", error);
-        return res.status(500).json({ error: "Failed to generate prediction" });
+        return res.status(500).json({ error: "Failed to fetch prediction" });
     }
 }
