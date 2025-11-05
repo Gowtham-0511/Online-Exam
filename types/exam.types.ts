@@ -29,7 +29,7 @@ export interface Exam {
     language: 'python' | 'javascript' | 'java' | 'cpp' | 'sql' | string;
     totalMarks?: number;
     passingMarks?: number;
-    isProctored?: boolean;
+    isExamProctored?: boolean;
     allowCodeExecution?: boolean;
     shuffleQuestions?: boolean;
     createdAt?: string;

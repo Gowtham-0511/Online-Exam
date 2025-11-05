@@ -59,6 +59,7 @@ import { shuffleArrayWithSeed, fetcher } from "@/utils/examHelpers";
 
 // Types
 import type { Question, AnswerWithQuestionId } from "@/types/exam.types";
+import ExamsPage from "../dashboard/admin/exams";
 // import ERDiagramModal from "@/components/exam/ERDiagramModal";
 
 const ERDiagramModal = dynamic(() => import("@/components/exam/ERDiagramModal"));
@@ -217,6 +218,8 @@ export default function ExamPage() {
             }
         }
     );
+
+    console.log(exam)
 
     // Fetch exam files for Python
     const { data: filesData } = useSWR(
@@ -1642,7 +1645,7 @@ export default function ExamPage() {
 
                 {/* Right Section */}
                 <div className="flex items-center gap-3">
-                    {exam?.isProctored && (
+                    {exam?.isExamProctored && (
                         <Badge
                             variant={violations >= 2 ? "destructive" : "outline"}
                             className="gap-2"
@@ -1710,7 +1713,7 @@ export default function ExamPage() {
                         setTutorialCompleted(true);
                     }}
                     examLanguage={exam?.language || ""}
-                    isProctored={exam?.isProctored || false}
+                    isProctored={exam?.isExamProctored || false}
                 />
             )}
 
@@ -2045,9 +2048,9 @@ export default function ExamPage() {
                 </div>
             </footer>
 
-            {exam?.isProctored && (
+            {exam?.isExamProctored && (
                 <ProctoringMonitor
-                    isExamProctored={exam?.isProctored || false}
+                    isExamProctored={exam?.isExamProctored || false}
                     examStarted={examStarted}
                     examId={examId?.toString() || ""}
                     userEmail={session?.user?.email || ""}
