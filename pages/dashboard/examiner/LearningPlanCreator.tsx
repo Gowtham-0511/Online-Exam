@@ -20,6 +20,7 @@ import {
 import useSWR from 'swr';
 import ExaminerLayout from './ExaminerLayout';
 import CodePlayground from '@/components/CodePlayground';
+import UnifiedDashboardLayout from '@/components/layouts/UnifiedDashboardLayout';
 
 const fetcher = (url: string) => fetch(url).then(res => res.json());
 
@@ -438,7 +439,7 @@ export default function LearningPlanCreator() {
     ];
 
     return (
-        <ExaminerLayout>
+        <UnifiedDashboardLayout role="examiner">
             <Head>
                 <title>Create Learning Plan - SysRank</title>
                 <link rel="icon" href="/logo.png" />
@@ -1409,6 +1410,6 @@ export default function LearningPlanCreator() {
                     </Card>
                 </div>
             )}
-        </ExaminerLayout>
+        </UnifiedDashboardLayout>
     );
 }

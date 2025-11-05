@@ -54,7 +54,7 @@ export default function QueueMonitor() {
     // Fetch queue statistics
     const fetchStats = async () => {
         try {
-            const response = await fetch('/api/admin/queue-stats');
+            const response = await fetch(`${process.env.NEXT_PUBLIC_PYTHON_SERVICE_URL || 'http://localhost:5000'}/queue-stats`);
             const data = await response.json();
             setStats(data);
             setLastUpdate(new Date());
@@ -68,7 +68,7 @@ export default function QueueMonitor() {
     // Fetch recent jobs
     const fetchRecentJobs = async () => {
         try {
-            const response = await fetch('/api/admin/recent-jobs');
+            const response = await fetch(`${process.env.NEXT_PUBLIC_PYTHON_SERVICE_URL || 'http://localhost:5000'}/recent-jobs`);
             const data = await response.json();
             setRecentJobs(data.jobs || []);
         } catch (error) {
@@ -118,7 +118,7 @@ export default function QueueMonitor() {
     const handleClearQueue = async (queueType: 'python' | 'sql' | 'all') => {
         setIsClearing(true);
         try {
-            const response = await fetch('/api/admin/clear-queue', {
+            const response = await fetch(`${process.env.NEXT_PUBLIC_PYTHON_SERVICE_URL || 'http://localhost:5000'}/clear-queue`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ queueType }),
@@ -146,7 +146,7 @@ export default function QueueMonitor() {
     const handleClearHistory = async (historyType: 'python' | 'sql' | 'all') => {
         setIsClearing(true);
         try {
-            const response = await fetch('/api/admin/clear-history', {
+            const response = await fetch(`${process.env.NEXT_PUBLIC_PYTHON_SERVICE_URL || 'http://localhost:5000'}/clear-history`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ historyType }),
@@ -174,7 +174,7 @@ export default function QueueMonitor() {
     const handleResetStats = async () => {
         setIsClearing(true);
         try {
-            const response = await fetch('/api/admin/reset-stats', {
+            const response = await fetch(`${process.env.NEXT_PUBLIC_PYTHON_SERVICE_URL || 'http://localhost:5000'}/reset-stats`, {
                 method: 'POST',
             });
 

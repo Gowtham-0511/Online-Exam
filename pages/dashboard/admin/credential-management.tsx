@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Database, Trash2, Edit, Plus, Search, Server, Eye, EyeOff } from 'lucide-react';
 import { useSession } from 'next-auth/react';
-import AdminLayout from './layout';
+import UnifiedDashboardLayout from '@/components/layouts/UnifiedDashboardLayout';
 
 interface Credential {
     id: string;
@@ -208,7 +208,7 @@ const CredentialManagement = () => {
     };
 
     return (
-        <AdminLayout>
+        <UnifiedDashboardLayout role="admin">
             <div className="min-h-screen bg-background">
                 <div className="max-w-7xl mx-auto p-6">
                     {/* Header */}
@@ -648,7 +648,7 @@ const CredentialManagement = () => {
                     </div>
                 )}
             </div>
-        </AdminLayout>
+        </UnifiedDashboardLayout>
     );
 };
 

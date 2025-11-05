@@ -57,3 +57,5 @@ Dockerfile
 .gitignore
 README.md
 .next/cache
+
+/backup

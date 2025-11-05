@@ -39,7 +39,7 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
             <div>
                 <h1 className="text-4xl font-bold bg-gradient-to-r from-primary via-primary/80 to-primary/60 bg-clip-text text-transparent">
-                    Welcome back, {userName?.split(' ')[0] || 'Student'}! 👋
+                    Welcome, {userName?.split(' ')[0] || 'Student'}!
                 </h1>
                 <p className="text-muted-foreground text-lg mt-1">
                     Track your progress and prepare for upcoming assessments

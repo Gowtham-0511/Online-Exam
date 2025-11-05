@@ -53,6 +53,7 @@ import { useExamReadiness } from '@/hooks/useExamReadiness';
 import { ReadinessBadge } from '@/components/attender/ReadinessBadge';
 import { ExamInsightsCard } from '@/components/attender/ExamInsightsCard';
 import { ExamStrategyModal } from '@/components/attender/ExamStrategyModal';
+import UnifiedDashboardLayout from '@/components/layouts/UnifiedDashboardLayout';
 
 const fetcher = (url: string) => fetch(url).then(res => res.json());
 
@@ -362,7 +363,7 @@ const ViewExams: React.FC = () => {
 
     if (error) {
         return (
-            <AttenderLayout>
+            <UnifiedDashboardLayout role="attender">
                 <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 flex items-center justify-center">
                     <Alert className="max-w-md border-red-200 dark:border-red-800">
                         <AlertCircle className="h-4 w-4" />
@@ -371,7 +372,7 @@ const ViewExams: React.FC = () => {
                         </AlertDescription>
                     </Alert>
                 </div>
-            </AttenderLayout>
+            </UnifiedDashboardLayout>
         );
     }
 
@@ -380,7 +381,7 @@ const ViewExams: React.FC = () => {
     const totalLanguages = new Set(exams?.map((exam: { language: any; }) => exam.language)).size || 0;
 
     return (
-        <AttenderLayout>
+        <UnifiedDashboardLayout role="attender">
             <div className="min-h-screen bg-gradient-to-br from-background">
                 <div className="container mx-auto px-4 py-8 max-w-7xl">
                     <div className="mb-12">
@@ -1127,7 +1128,7 @@ const ViewExams: React.FC = () => {
                     email={selectedExamForStrategy.email}
                 />
             )}
-        </AttenderLayout>
+        </UnifiedDashboardLayout>
 
     );
 };

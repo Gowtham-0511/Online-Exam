@@ -1,4 +1,3 @@
-import AdminLayout from "./layout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -12,6 +11,7 @@ import {
     ArrowDownRight,
     MoreHorizontal,
 } from "lucide-react";
+import UnifiedDashboardLayout from "@/components/layouts/UnifiedDashboardLayout";
 
 // Mock data - replace with real API calls
 const stats = [
@@ -74,7 +74,7 @@ const recentExams = [
 
 export default function AdminDashboard() {
     return (
-        <AdminLayout>
+        <UnifiedDashboardLayout role="admin">
             <div className="space-y-6">
                 {/* Welcome Section */}
                 <div>
@@ -201,6 +201,6 @@ export default function AdminDashboard() {
                     </div>
                 </div>
             </div>
-        </AdminLayout>
+        </UnifiedDashboardLayout>
     );
 }

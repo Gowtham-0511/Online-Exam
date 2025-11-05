@@ -25,9 +25,9 @@ import {
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
-import ExaminerLayout from "./ExaminerLayout";
 import { RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, Legend, ResponsiveContainer } from 'recharts';
 import { useRouter } from "next/router";
+import UnifiedDashboardLayout from "@/components/layouts/UnifiedDashboardLayout";
 
 const fetcher = (url: string) => fetch(url).then(res => res.json());
 
@@ -597,7 +597,7 @@ export default function ExamAnalytics() {
 
     if (isLoading) {
         return (
-            <ExaminerLayout>
+            <UnifiedDashboardLayout role="examiner">
                 <div className="min-h-screen bg-background p-6">
                     <div className="max-w-7xl mx-auto space-y-6">
                         <Skeleton className="h-10 w-64" />
@@ -609,13 +609,13 @@ export default function ExamAnalytics() {
                         <Skeleton className="h-96" />
                     </div>
                 </div>
-            </ExaminerLayout>
+            </UnifiedDashboardLayout>
         );
     }
 
     if (error) {
         return (
-            <ExaminerLayout>
+            <UnifiedDashboardLayout role="examiner">
                 <div className="min-h-screen bg-background p-6 flex items-center justify-center">
                     <div className="text-center">
                         <AlertCircle className="w-12 h-12 text-rose-600 dark:text-rose-400 mx-auto mb-4" />
@@ -626,12 +626,12 @@ export default function ExamAnalytics() {
                         </Button>
                     </div>
                 </div>
-            </ExaminerLayout>
+            </UnifiedDashboardLayout>
         );
     }
 
     return (
-        <ExaminerLayout>
+        <UnifiedDashboardLayout role="examiner">
             <div className="min-h-screen bg-background">
                 <div className="max-w-7xl mx-auto p-6 space-y-6">
                     {/* Header */}
@@ -1781,6 +1781,6 @@ export default function ExamAnalytics() {
                     )}
                 </div>
             </div>
-        </ExaminerLayout>
+        </UnifiedDashboardLayout>
     );
 }

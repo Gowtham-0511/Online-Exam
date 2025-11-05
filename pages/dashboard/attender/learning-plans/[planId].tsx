@@ -15,6 +15,7 @@ import useSWR from 'swr';
 import AttenderLayout from '../AttenderLayout';
 import CodePlayground from '@/components/CodePlayground';
 import toast from 'react-hot-toast';
+import UnifiedDashboardLayout from '@/components/layouts/UnifiedDashboardLayout';
 
 const fetcher = (url: string) => fetch(url).then(res => res.json());
 
@@ -110,23 +111,23 @@ export default function LearningPlanDetail() {
 
     if (isLoading) {
         return (
-            <AttenderLayout>
+            <UnifiedDashboardLayout role="attender">
                 <div className="min-h-screen flex items-center justify-center bg-background">
                     <Loader2 className="w-8 h-8 animate-spin text-primary" />
                 </div>
-            </AttenderLayout>
+            </UnifiedDashboardLayout>
         );
     }
 
     if (!data?.plan) {
         return (
-            <AttenderLayout>
+            <UnifiedDashboardLayout role="attender">
                 <div className="min-h-screen flex items-center justify-center bg-background">
                     <Card className="p-6">
                         <p className="text-foreground">Learning plan not found</p>
                     </Card>
                 </div>
-            </AttenderLayout>
+            </UnifiedDashboardLayout>
         );
     }
 
@@ -164,7 +165,7 @@ export default function LearningPlanDetail() {
     };
 
     return (
-        <AttenderLayout>
+        <UnifiedDashboardLayout role="attender">
             <Head>
                 <title>{plan.name} - SysRank</title>
                 <link rel="icon" href="/logo.png" />
@@ -580,6 +581,6 @@ export default function LearningPlanDetail() {
                     </Card>
                 </div>
             )}
-        </AttenderLayout>
+        </UnifiedDashboardLayout>
     );
 }

@@ -245,7 +245,7 @@ const PracticeQuestionPage = () => {
                                                     </Badge>
                                                 </div>
                                                 <div
-                                                    className="prose prose-sm dark:prose-invert max-w-none overflow-x-auto"
+                                                    className="prose prose-sm dark:prose-invert max-w-none break-words [&_*]:break-words [&_pre]:whitespace-pre-wrap [&_pre]:break-all [&_code]:break-words [&_code]:whitespace-pre-wrap"
                                                     dangerouslySetInnerHTML={{ __html: question.questionDescription }}
                                                 />
                                             </div>

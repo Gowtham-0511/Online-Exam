@@ -3,7 +3,6 @@ import { useRouter } from "next/router";
 import { useSession } from "next-auth/react";
 import Head from "next/head";
 import toast from "react-hot-toast";
-import ExaminerLayout from './ExaminerLayout'
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -22,6 +21,7 @@ import {
     FileText
 } from "lucide-react";
 import useSWR from 'swr';
+import UnifiedDashboardLayout from "@/components/layouts/UnifiedDashboardLayout";
 
 const fetcher = async (url: string): Promise<any> => {
     const res = await fetch(url);
@@ -225,7 +225,7 @@ export default function ScheduleExam() {
     // Update the entire return statement in schedule.tsx
 
     return (
-        <ExaminerLayout>
+        <UnifiedDashboardLayout role="examiner">
             <Head>
                 <title>Schedule Exam - SysRank</title>
                 <link rel="icon" href="/logo.png" />
@@ -812,6 +812,6 @@ export default function ScheduleExam() {
                     </div>
                 )}
             </div>
-        </ExaminerLayout>
+        </UnifiedDashboardLayout>
     );
 }

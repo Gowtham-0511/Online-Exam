@@ -3,8 +3,8 @@ import { useSession } from "next-auth/react";
 import useSWR, { mutate } from 'swr';
 import toast from "react-hot-toast";
 import { useRouter } from "next/router";
-import ExaminerLayout from "./ExaminerLayout";
 import { X, Edit2, Trash2, UserPlus, Clock, Shield, Users, Calendar, Search, Filter, MoreVertical, Check } from "lucide-react";
+import UnifiedDashboardLayout from "@/components/layouts/UnifiedDashboardLayout";
 
 const fetcher = (url: string) => fetch(url).then(res => res.json());
 
@@ -237,20 +237,20 @@ export default function ViewExamsPage() {
 
     if (isLoading && !exams?.length) {
         return (
-            <ExaminerLayout>
+            <UnifiedDashboardLayout role="examiner">
                 <div className="flex items-center justify-center min-h-screen">
                     <div className="text-center">
                         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
                         <p className="mt-4 text-muted-foreground">Loading exams...</p>
                     </div>
                 </div>
-            </ExaminerLayout>
+            </UnifiedDashboardLayout>
         );
     }
 
     if (error) {
         return (
-            <ExaminerLayout>
+            <UnifiedDashboardLayout role="examiner">
                 <div className="flex items-center justify-center min-h-screen">
                     <div className="text-center">
                         <div className="text-destructive mb-4">Failed to load exams</div>
@@ -262,12 +262,12 @@ export default function ViewExamsPage() {
                         </button>
                     </div>
                 </div>
-            </ExaminerLayout>
+            </UnifiedDashboardLayout>
         );
     }
 
     return (
-        <ExaminerLayout>
+        <UnifiedDashboardLayout role="examiner">
             <div className="min-h-screen bg-background">
                 {/* Header */}
                 <div className="border-b border-border bg-card">
@@ -660,6 +660,6 @@ export default function ViewExamsPage() {
                     </div>
                 )}
             </div>
-        </ExaminerLayout>
+        </UnifiedDashboardLayout>
     );
 }

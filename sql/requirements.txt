@@ -1,0 +1,6 @@
+flask==3.0.0
+redis==5.0.1
+rq==1.15.1
+psycopg2-binary==2.9.9
+pymssql==2.2.11
+python-dotenv==1.0.0

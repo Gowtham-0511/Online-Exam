@@ -2,7 +2,6 @@ import { useEffect, useState, useRef } from "react";
 import Papa from "papaparse";
 import toast from "react-hot-toast";
 import { useSession } from "next-auth/react";
-import AdminLayout from "./layout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -36,6 +35,7 @@ import {
     X,
     Check
 } from 'lucide-react';
+import UnifiedDashboardLayout from "@/components/layouts/UnifiedDashboardLayout";
 
 interface MCQOption {
     id: string;
@@ -59,6 +59,8 @@ interface QuestionInput {
     correctAnswer?: string;
     explanation?: string;
     tags?: string[];
+    autoGenerate?: boolean;
+    testCases?: Array<{ input: string; expectedOutput: string; isHidden: boolean }>; // Add this
 }
 
 interface RichTextEditorProps {
@@ -66,6 +68,110 @@ interface RichTextEditorProps {
     onChange: (content: string) => void;
     placeholder?: string;
 }
+
+interface TestCase {
+    input: string;
+    expectedOutput: string;
+    isHidden: boolean;
+}
+
+const TestCasesEditor = ({
+    testCases,
+    onChange
+}: {
+    testCases: TestCase[];
+    onChange: (testCases: TestCase[]) => void
+}) => {
+    const addTestCase = () => {
+        onChange([...testCases, { input: '', expectedOutput: '', isHidden: false }]);
+    };
+
+    const removeTestCase = (index: number) => {
+        onChange(testCases.filter((_, i) => i !== index));
+    };
+
+    const updateTestCase = (index: number, field: keyof TestCase, value: string | boolean) => {
+        const updated = testCases.map((tc, i) =>
+            i === index ? { ...tc, [field]: value } : tc
+        );
+        onChange(updated);
+    };
+
+    return (
+        <div className="space-y-3">
+            <div className="flex items-center justify-between">
+                <Label className="text-sm font-semibold">Test Cases</Label>
+                <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={addTestCase}
+                    className="gap-2"
+                >
+                    <Plus className="h-3 w-3" />
+                    Add Test Case
+                </Button>
+            </div>
+
+            {testCases.map((tc, index) => (
+                <Card key={index} className="border-2">
+                    <CardContent className="p-4 space-y-3">
+                        <div className="flex items-center justify-between">
+                            <span className="text-sm font-medium">Test Case {index + 1}</span>
+                            <div className="flex items-center gap-2">
+                                <label className="flex items-center gap-2 text-xs">
+                                    <input
+                                        type="checkbox"
+                                        checked={tc.isHidden}
+                                        onChange={(e) => updateTestCase(index, 'isHidden', e.target.checked)}
+                                        className="rounded"
+                                    />
+                                    Hidden
+                                </label>
+                                <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => removeTestCase(index)}
+                                    className="h-8 w-8 p-0 hover:bg-red-100 hover:text-red-600"
+                                >
+                                    <X className="h-3 w-3" />
+                                </Button>
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-3">
+                            <div className="space-y-1">
+                                <Label className="text-xs">Input</Label>
+                                <Textarea
+                                    placeholder="Enter input..."
+                                    value={tc.input}
+                                    onChange={(e) => updateTestCase(index, 'input', e.target.value)}
+                                    className="min-h-[80px] font-mono text-xs"
+                                />
+                            </div>
+                            <div className="space-y-1">
+                                <Label className="text-xs">Expected Output</Label>
+                                <Textarea
+                                    placeholder="Enter expected output..."
+                                    value={tc.expectedOutput}
+                                    onChange={(e) => updateTestCase(index, 'expectedOutput', e.target.value)}
+                                    className="min-h-[80px] font-mono text-xs"
+                                />
+                            </div>
+                        </div>
+                    </CardContent>
+                </Card>
+            ))}
+
+            {testCases.length === 0 && (
+                <p className="text-sm text-muted-foreground text-center py-4">
+                    No test cases added yet. Click "Add Test Case" to create one.
+                </p>
+            )}
+        </div>
+    );
+};
 
 const RichTextEditor = ({ value, onChange, placeholder = "Write your question here..." }: RichTextEditorProps) => {
     const editorRef = useRef<HTMLDivElement>(null);
@@ -187,7 +293,6 @@ const RichTextEditor = ({ value, onChange, placeholder = "Write your question he
     );
 };
 
-
 const MCQOptionsEditor = ({ options, onChange }: { options: MCQOption[]; onChange: (options: MCQOption[]) => void }) => {
     const addOption = () => {
         const newOption: MCQOption = {
@@ -305,12 +410,13 @@ export default function QuestionBankPage() {
         jobId: 1,
         skillId: 1,
         questionType: 'coding',
+        autoGenerate: false,
+        testCases: [],
         options: [
             { id: 'option_1', text: '', isCorrect: false },
             { id: 'option_2', text: '', isCorrect: false }
         ]
     });
-
     const [filters, setFilters] = useState({
         keyword: "",
         language: "",
@@ -485,12 +591,6 @@ export default function QuestionBankPage() {
             }
         }
 
-        // Validate coding question specific fields
-        if (question.questionType === 'coding' && !question.expectedOutput) {
-            toast.error("Please enter the expected output for coding questions!");
-            return;
-        }
-
         const questionData = {
             ...question,
             questionText: content,
@@ -599,6 +699,8 @@ export default function QuestionBankPage() {
             jobId: q.jobId,
             skillId: q.skillId,
             questionType: q.questionType,
+            autoGenerate: q.autoGenerate || false, // Add this
+            testCases: q.testCases || [], // Add this
             options: q.options || [
                 { id: 'option_1', text: '', isCorrect: false },
                 { id: 'option_2', text: '', isCorrect: false }
@@ -638,6 +740,8 @@ export default function QuestionBankPage() {
             jobId: 1,
             skillId: 1,
             questionType: 'coding',
+            autoGenerate: false,
+            testCases: [], // Add this
             options: [
                 { id: 'option_1', text: '', isCorrect: false },
                 { id: 'option_2', text: '', isCorrect: false }
@@ -684,8 +788,51 @@ export default function QuestionBankPage() {
         toast.success(`Downloaded ${filteredQuestions.length} questions`);
     };
 
+    const handleGenerateTestCases = async () => {
+        if (!question.questionText.trim()) {
+            toast.error("Please enter a question first!");
+            return;
+        }
+
+        const loadingToast = toast.loading("Generating test cases with AI...");
+
+        try {
+            const res = await fetch("/api/ai/generate-testcases", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    questionText: question.questionText,
+                    language: question.language,
+                }),
+            });
+
+            const data = await res.json();
+
+            if (res.ok && data.testCases) {
+                setQuestion({
+                    ...question,
+                    testCases: data.testCases,
+                    autoGenerate: false // Switch to manual mode to show test cases
+                });
+                toast.success(`Generated ${data.testCases.length} test cases!`, {
+                    id: loadingToast
+                });
+            } else {
+                toast.error(data.error || "Failed to generate test cases", {
+                    id: loadingToast
+                });
+            }
+        } catch (err) {
+            console.error("Error generating test cases:", err);
+            toast.error("Error generating test cases", {
+                id: loadingToast
+            });
+        }
+    };
+
+
     return (
-        <AdminLayout>
+        <UnifiedDashboardLayout role="admin">
             <div className="min-h-screen p-6 space-y-6">
                 <div className="text-center space-y-4">
                     <div className="flex items-center justify-center gap-3">
@@ -796,18 +943,51 @@ export default function QuestionBankPage() {
 
                             {/* Conditional Fields Based on Question Type */}
                             {question.questionType.toLocaleLowerCase() === 'coding' ? (
-                                <div className="space-y-2">
+                                <div className="space-y-4">
                                     <Label className="text-sm font-semibold flex items-center gap-2">
                                         <Code className="h-4 w-4" />
-                                        Expected Output / Solution
+                                        Expected Output / Test Cases
                                     </Label>
-                                    <Textarea
-                                        required
-                                        placeholder="Enter the expected output or solution for this coding question..."
-                                        className="min-h-[100px] font-mono text-sm border-2 border-dashed resize-none"
-                                        value={question.expectedOutput}
-                                        onChange={(e) => setQuestion({ ...question, expectedOutput: e.target.value })}
-                                    />
+
+                                    {/* Toggle Buttons */}
+                                    <div className="flex items-center gap-2">
+                                        <Button
+                                            type="button"
+                                            size="sm"
+                                            variant={!question.autoGenerate ? "default" : "outline"}
+                                            onClick={() => setQuestion({ ...question, autoGenerate: false })}
+                                        >
+                                            Manual Test Cases
+                                        </Button>
+                                        <Button
+                                            type="button"
+                                            size="sm"
+                                            variant={question.autoGenerate ? "default" : "outline"}
+                                            onClick={handleGenerateTestCases}
+                                        >
+                                            <Sparkles className="h-3 w-3 mr-1" />
+                                            AI Generate
+                                        </Button>
+                                    </div>
+
+                                    {/* Conditional Rendering */}
+                                    {question.autoGenerate ? (
+                                        <div className="space-y-2">
+                                            <Label className="text-sm font-medium">Generated Expected Output</Label>
+                                            <Textarea
+                                                required
+                                                placeholder="AI generated test cases will appear here..."
+                                                className="min-h-[150px] font-mono text-sm border-2 border-dashed"
+                                                value={question.expectedOutput}
+                                                onChange={(e) => setQuestion({ ...question, expectedOutput: e.target.value })}
+                                            />
+                                        </div>
+                                    ) : (
+                                        <TestCasesEditor
+                                            testCases={question.testCases || []}
+                                            onChange={(testCases) => setQuestion({ ...question, testCases })}
+                                        />
+                                    )}
                                 </div>
                             ) : (
                                 <MCQOptionsEditor
@@ -910,7 +1090,7 @@ export default function QuestionBankPage() {
                     </CardContent>
                 </Card>
 
-                <Card className="border-2 border-dashed border-muted-foreground/20 hover:border-primary/50 transition-colors">
+                {/* <Card className="border-2 border-dashed border-muted-foreground/20 hover:border-primary/50 transition-colors">
                     <CardHeader className="pb-4">
                         <CardTitle className="flex items-center gap-2 text-xl">
                             <div className="p-2 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg shadow-lg">
@@ -1001,7 +1181,7 @@ export default function QuestionBankPage() {
                             </Card>
                         )}
                     </CardContent>
-                </Card>
+                </Card> */}
 
                 {showQuestions && (
                     <Card className="border-2 border-dashed border-muted-foreground/20">
@@ -1244,6 +1424,46 @@ export default function QuestionBankPage() {
                                                         </div>
                                                     )}
 
+                                                    {/* Test Cases for Coding Questions */}
+                                                    {q.questionType === 'coding' && q.testCases && q.testCases.length > 0 && (
+                                                        <div className="mt-3">
+                                                            <Label className="text-sm font-semibold mb-2 flex items-center gap-2">
+                                                                <Layers className="h-4 w-4 text-blue-600" />
+                                                                Test Cases ({q.testCases.length})
+                                                            </Label>
+                                                            <div className="space-y-2">
+                                                                {q.testCases.map((tc: TestCase, index: number) => (
+                                                                    <Card key={index} className="border-2">
+                                                                        <CardContent className="p-3">
+                                                                            <div className="flex items-center justify-between mb-2">
+                                                                                <span className="text-xs font-medium">Test Case {index + 1}</span>
+                                                                                {tc.isHidden && (
+                                                                                    <span className="px-2 py-0.5 bg-yellow-100 dark:bg-yellow-900 text-yellow-700 dark:text-yellow-300 rounded text-xs">
+                                                                                        Hidden
+                                                                                    </span>
+                                                                                )}
+                                                                            </div>
+                                                                            <div className="grid grid-cols-2 gap-3 text-xs">
+                                                                                <div>
+                                                                                    <span className="font-medium text-muted-foreground">Input:</span>
+                                                                                    <pre className="mt-1 p-2 bg-muted rounded font-mono whitespace-pre-wrap">
+                                                                                        {tc.input}
+                                                                                    </pre>
+                                                                                </div>
+                                                                                <div>
+                                                                                    <span className="font-medium text-muted-foreground">Expected Output:</span>
+                                                                                    <pre className="mt-1 p-2 bg-muted rounded font-mono whitespace-pre-wrap">
+                                                                                        {tc.expectedOutput}
+                                                                                    </pre>
+                                                                                </div>
+                                                                            </div>
+                                                                        </CardContent>
+                                                                    </Card>
+                                                                ))}
+                                                            </div>
+                                                        </div>
+                                                    )}
+
                                                     {/* MCQ Options */}
                                                     {q.questionType === 'mcq' && q.options && (
                                                         <div className="space-y-2 mt-3">
@@ -1328,6 +1548,6 @@ export default function QuestionBankPage() {
                     )}
                 </Card>
             </div>
-        </AdminLayout>
+        </UnifiedDashboardLayout>
     );
 }

@@ -103,9 +103,7 @@ const ExamTutorial: React.FC<ExamTutorialProps> = ({ onComplete, examLanguage, i
     };
 
     const handleSkip = () => {
-        if (window.confirm('Are you sure you want to skip the tutorial? Understanding the rules is important to avoid disqualification.')) {
-            handleComplete();
-        }
+        handleComplete();
     };
 
     if (!isVisible) return null;

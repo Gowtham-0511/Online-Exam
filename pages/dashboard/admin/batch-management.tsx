@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react'
-import AdminLayout from './layout'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -13,6 +12,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Plus, Users, Search, Filter, Check, X, UserPlus, Building2, Mail, Calendar } from 'lucide-react'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { AlertCircle, CheckCircle2 } from 'lucide-react'
+import UnifiedDashboardLayout from '@/components/layouts/UnifiedDashboardLayout'
 
 interface Employee {
     Id: string
@@ -409,7 +409,7 @@ const BatchManagementPage: React.FC = () => {
     }
 
     return (
-        <AdminLayout>
+        <UnifiedDashboardLayout role="admin">
             <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20">
                 {/* Notification Alert */}
                 {notification && (
@@ -1000,7 +1000,7 @@ const BatchManagementPage: React.FC = () => {
                     </div>
                 </div>
             </div>
-        </AdminLayout>
+        </UnifiedDashboardLayout>
     )
 }
 

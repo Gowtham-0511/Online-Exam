@@ -8,11 +8,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Switch } from '@/components/ui/switch';
-import AdminLayout from './layout';
 import { useRouter } from 'next/router';
+import UnifiedDashboardLayout from '@/components/layouts/UnifiedDashboardLayout';
 
 
 interface QuestionConfig {
@@ -128,6 +125,7 @@ const AssessmentManagement = () => {
     };
 
     const filteredAssessments = assessments.filter(assessment => {
+        console.log(assessment);
         const matchesSearch = assessment.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
             assessment.createdBy.toLowerCase().includes(searchTerm.toLowerCase());
         const matchesLanguage = filterLanguage === 'all' || assessment.language === filterLanguage;
@@ -138,7 +136,7 @@ const AssessmentManagement = () => {
 
     if (loading) {
         return (
-            <AdminLayout>
+            <UnifiedDashboardLayout role="admin">
                 <div className="space-y-6">
                     <div className="flex justify-between items-center">
                         <div>
@@ -174,12 +172,12 @@ const AssessmentManagement = () => {
                         ))}
                     </div>
                 </div>
-            </AdminLayout>
+            </UnifiedDashboardLayout>
         );
     }
 
     return (
-        <AdminLayout>
+        <UnifiedDashboardLayout role="admin">
             <div className="space-y-6">
                 {/* Header Section */}
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -469,8 +467,8 @@ const AssessmentManagement = () => {
                                                                 <div
                                                                     key={option.id}
                                                                     className={`p-2 rounded border ${option.isCorrect
-                                                                            ? 'bg-green-50 border-green-200'
-                                                                            : 'bg-background'
+                                                                        ? 'bg-green-50 border-green-200'
+                                                                        : 'bg-background'
                                                                         }`}
                                                                 >
                                                                     <span className="font-medium">{optIdx + 1}. </span>
@@ -503,7 +501,7 @@ const AssessmentManagement = () => {
                     )}
                 </DialogContent>
             </Dialog>
-        </AdminLayout>
+        </UnifiedDashboardLayout>
     );
 };
 

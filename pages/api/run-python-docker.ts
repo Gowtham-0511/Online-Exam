@@ -1,6 +1,6 @@
 import { NextApiRequest, NextApiResponse } from "next";
 import { QueueManager } from "@/lib/queueManager";
-import dockerPythonExecutor from "@/lib/dockerPythonExecutor";
+import { runPythonCode } from "@/lib/dockerPythonExecutor";
 import pool from "@/lib/db";
 
 const pythonQueue = new QueueManager('python');
@@ -87,14 +87,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 }
 
-// Background job processor (now with userEmail parameter)
 async function processJob(jobId: string, code: string, examId: string | undefined, userEmail: string) {
     const startTime = Date.now();
 
     try {
         console.log(`⚙️ Processing job ${jobId}`);
 
-        // Get exam files if examId provided
+        // ✅ Step 1: Fetch exam files if available
         let files: Array<{ fileName: string; content: Buffer }> = [];
 
         if (examId && pool) {
@@ -117,7 +116,7 @@ async function processJob(jobId: string, code: string, examId: string | undefine
                                 fileName: row.file_name,
                                 content,
                             });
-                        } catch (err) {
+                        } catch {
                             console.warn(`⚠️ File not found: ${row.file_name}`);
                         }
                     }
@@ -129,25 +128,20 @@ async function processJob(jobId: string, code: string, examId: string | undefine
             }
         }
 
-        // Execute in Docker
-        const result = await dockerPythonExecutor.execute({
-            code,
-            examId,
-            files,
-            timeout: 20000,
-            memoryLimit: 512 * 1024 * 1024,
-        });
+        // ✅ Step 2: Run Python code through HTTP microservice
+        const { runPythonCode } = await import('@/lib/dockerPythonExecutor');
+        const result = await runPythonCode(code); // ← No Docker socket needed
 
-        // Store result in queue
+        // ✅ Step 3: Store result in Redis queue
+        const executionTime = Date.now() - startTime;
         await pythonQueue.storeResult(jobId, result, result.success);
 
-        // Store in recent jobs history (Redis sorted set)
         const redis = (await import('@/lib/queueManager')).default;
         const jobData = {
             id: jobId,
-            userEmail: userEmail,
+            userEmail,
             success: result.success,
-            executionTime: result.executionTime,
+            executionTime, // ← Use measured duration
             error: result.error,
         };
 
@@ -160,27 +154,27 @@ async function processJob(jobId: string, code: string, examId: string | undefine
         // Keep only last 100 jobs
         await redis.zremrangebyrank('exam:recent:python', 0, -101);
 
-        console.log(`✅ Job ${jobId} completed successfully`);
+        console.log(`✅ Job ${jobId} completed in ${executionTime}ms`);
 
     } catch (error: any) {
         console.error(`❌ Job ${jobId} failed:`, error.message);
 
+        const executionTime = Date.now() - startTime;
         const result = {
             output: '',
             error: error.message,
-            executionTime: Date.now() - startTime,
             success: false,
         };
 
         await pythonQueue.storeResult(jobId, result, false);
 
-        // Store failed job in history
+        // Store failed job in Redis
         const redis = (await import('@/lib/queueManager')).default;
         const jobData = {
             id: jobId,
-            userEmail: userEmail,
+            userEmail,
             success: false,
-            executionTime: Date.now() - startTime,
+            executionTime,
             error: error.message,
         };
 

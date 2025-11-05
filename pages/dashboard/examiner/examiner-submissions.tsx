@@ -18,11 +18,11 @@ import {
     BarChart3,
     Loader2
 } from "lucide-react";
-import ExaminerLayout from "./ExaminerLayout";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import jsPDF from "jspdf";
 import toast from "react-hot-toast";
+import UnifiedDashboardLayout from "@/components/layouts/UnifiedDashboardLayout";
 
 const fetcher = (url: string) => fetch(url).then(res => res.json());
 
@@ -537,7 +537,7 @@ export default function ExaminerSubmissions() {
 
     if (loading && !submissions.length) {
         return (
-            <ExaminerLayout>
+            <UnifiedDashboardLayout role="examiner">
                 <div className="space-y-6">
                     <div className="space-y-2">
                         <Skeleton className="h-8 w-64" />
@@ -568,13 +568,13 @@ export default function ExaminerSubmissions() {
                         ))}
                     </div>
                 </div>
-            </ExaminerLayout>
+            </UnifiedDashboardLayout>
         );
     }
 
     if (submissionsError) {
         return (
-            <ExaminerLayout>
+            <UnifiedDashboardLayout role="examiner">
                 <div className="flex flex-col items-center justify-center py-20">
                     <div className="p-4 bg-rose-50 dark:bg-rose-950/30 rounded-full w-16 h-16 mx-auto mb-4 flex items-center justify-center">
                         <XCircle className="h-8 w-8 text-rose-600 dark:text-rose-400" />
@@ -585,12 +585,12 @@ export default function ExaminerSubmissions() {
                         Retry
                     </Button>
                 </div>
-            </ExaminerLayout>
+            </UnifiedDashboardLayout>
         );
     }
 
     return (
-        <ExaminerLayout>
+        <UnifiedDashboardLayout role="examiner">
             <div className="space-y-6">
                 {/* Header */}
                 <div>
@@ -976,6 +976,6 @@ export default function ExaminerSubmissions() {
                     </div>
                 </div>
             )}
-        </ExaminerLayout>
+        </UnifiedDashboardLayout>
     );
 }

@@ -1,5 +1,5 @@
 import { NextApiRequest, NextApiResponse } from "next";
-import dockerPythonExecutor from "@/lib/dockerPythonExecutor";
+import { runPythonCode } from "@/lib/dockerPythonExecutor";
 import dockerSqlExecutor from "@/lib/dockerSqlExecutor";
 
 interface TestCase {
@@ -96,8 +96,17 @@ try:
     
     # Determine how to call the function based on input type and parameter count
     if isinstance(test_input, dict):
-        # Dictionary input - use keyword arguments
-        result = func(**test_input)
+        # Check if dict should be unpacked or passed as single argument
+        if param_count == 1:
+            # Single parameter - pass entire dict as one argument
+            result = func(test_input)
+        else:
+            # Multiple parameters - try unpacking as keyword arguments
+            try:
+                result = func(**test_input)
+            except TypeError:
+                # If unpacking fails, pass as single argument
+                result = func(test_input)
     elif isinstance(test_input, list):
         if param_count == 1:
             # Single parameter function - pass the entire list as one argument
@@ -127,7 +136,13 @@ except json.JSONDecodeError:
         param_count = len(sig.parameters)
         
         if isinstance(test_input, dict):
-            result = func(**test_input)
+            if param_count == 1:
+                result = func(test_input)
+            else:
+                try:
+                    result = func(**test_input)
+                except TypeError:
+                    result = func(test_input)
         elif isinstance(test_input, list):
             if param_count == 1:
                 result = func(test_input)
@@ -152,11 +167,7 @@ except Exception as e:
     sys.exit(1)
 `;
 
-            const executionResult = await dockerPythonExecutor.execute({
-                code: wrappedCode,
-                timeout: 10000,
-                memoryLimit: 256 * 1024 * 1024,
-            });
+            const executionResult = await runPythonCode(wrappedCode);
 
             const actualOutput = executionResult.output.trim();
             const expectedOutput = testCase.expectedOutput.trim();

@@ -25,14 +25,20 @@ import {
     Shield,
     Terminal,
     Database,
-    Play,
-    Sun,
-    Moon,
     X,
-    ChevronLeft,
-    ChevronRight,
 } from "lucide-react";
 import { formatDistanceToNow } from 'date-fns';
+
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 // UI Components
 import { Card, CardContent } from "@/components/ui/card";
@@ -41,8 +47,6 @@ import { Button } from "@/components/ui/button";
 // Dynamic imports for performance
 const ProctoringMonitor = dynamic(() => import("@/components/exam/ProctoringMonitor"));
 const ExamTutorial = dynamic(() => import("@/components/exam/ExamTutorial"));
-const ExamHeader = dynamic(() => import("@/components/exam/ExamHeader"));
-const QuestionNavigation = dynamic(() => import("@/components/exam/QuestionNavigation"));
 const CodeEditor = dynamic(() => import("@/components/exam/CodeEditor"));
 const SubmitSummary = dynamic(() => import("@/components/exam/SubmitSummary"));
 
@@ -63,6 +67,9 @@ export default function ExamPage() {
     const router = useRouter();
     const { examId } = router.query;
     const { data: session } = useSession();
+
+    const [showRestoreDialog, setShowRestoreDialog] = useState(false);
+    const [pendingProgress, setPendingProgress] = useState<any>(null);
 
     // State management hooks
     const examState = useExamState();
@@ -1423,24 +1430,13 @@ export default function ExamPage() {
 
                 if (response.ok) {
                     const { progress } = await response.json();
-
-                    const shouldRestore = window.confirm(
-                        `We found saved progress from ${new Date(progress.lastSaved).toLocaleString()}. Do you want to continue from where you left off?`
-                    );
-
-                    if (shouldRestore) {
-                        setAnswers(progress.answers || []);
-                        setMcqAnswers(progress.mcqAnswers || {});
-                        setActiveQuestionIndex(progress.activeQuestionIndex || 0);
-                        setTimeLeft(progress.timeLeft || exam.duration * 60);
-                        setFlaggedQuestions(new Set(progress.flaggedQuestions || []));
-                        setQuestionTimeSpent(progress.questionTimeSpent || {});
-                        setCodeRunCounts(progress.codeRunCounts || {});
-                        setLastSaved(new Date(progress.lastSaved));
-
-                        toast.success('Progress restored from server!');
-                        return;
-                    }
+                    setPendingProgress({
+                        ...progress,
+                        source: 'server',
+                        timestamp: new Date(progress.lastSaved)
+                    });
+                    setShowRestoreDialog(true);
+                    return;
                 }
             } catch (error) {
                 console.log('No server progress found, checking localStorage...');
@@ -1451,23 +1447,12 @@ export default function ExamPage() {
             if (savedData) {
                 try {
                     const progress = JSON.parse(savedData);
-
-                    const shouldRestore = window.confirm(
-                        'We found locally saved progress. Do you want to continue?'
-                    );
-
-                    if (shouldRestore) {
-                        setAnswers(progress.answers || []);
-                        setMcqAnswers(progress.mcqAnswers || {});
-                        setActiveQuestionIndex(progress.activeQuestionIndex || 0);
-                        setTimeLeft(progress.timeLeft || exam.duration * 60);
-                        setFlaggedQuestions(new Set(progress.flaggedQuestions || []));
-                        setQuestionTimeSpent(progress.questionTimeSpent || {});
-                        setCodeRunCounts(progress.codeRunCounts || {});
-                        setLastSaved(new Date(progress.lastSaved));
-
-                        toast.success('Progress restored from local backup!');
-                    }
+                    setPendingProgress({
+                        ...progress,
+                        source: 'local',
+                        timestamp: new Date(progress.lastSaved)
+                    });
+                    setShowRestoreDialog(true);
                 } catch (error) {
                     console.error('Failed to restore progress:', error);
                 }
@@ -1476,6 +1461,23 @@ export default function ExamPage() {
 
         loadProgress();
     }, [exam, session?.user.email]);
+
+    const handleRestoreProgress = () => {
+        if (!pendingProgress) return;
+
+        setAnswers(pendingProgress.answers || []);
+        setMcqAnswers(pendingProgress.mcqAnswers || {});
+        setActiveQuestionIndex(pendingProgress.activeQuestionIndex || 0);
+        setTimeLeft(pendingProgress.timeLeft || (exam?.duration ? exam.duration * 60 : 0));
+        setFlaggedQuestions(new Set(pendingProgress.flaggedQuestions || []));
+        setQuestionTimeSpent(pendingProgress.questionTimeSpent || {});
+        setCodeRunCounts(pendingProgress.codeRunCounts || {});
+        setLastSaved(pendingProgress.timestamp);
+
+        toast.success(`Progress restored from ${pendingProgress.source === 'server' ? 'server' : 'local backup'}!`);
+        setShowRestoreDialog(false);
+        setPendingProgress(null);
+    };
 
     // Track time since last save
     useEffect(() => {
@@ -2124,226 +2126,62 @@ export default function ExamPage() {
                     </div>
                 </div>
             )}
+
+            {/* Restore Progress Dialog */}
+            <AlertDialog open={showRestoreDialog} onOpenChange={setShowRestoreDialog}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle className="flex items-center gap-2">
+                            <Clock className="w-5 h-5 text-primary" />
+                            Restore Previous Session?
+                        </AlertDialogTitle>
+                        <AlertDialogDescription className="space-y-3">
+                            <p>
+                                We found saved progress from{' '}
+                                <span className="font-semibold text-foreground">
+                                    {pendingProgress?.timestamp.toLocaleString()}
+                                </span>
+                            </p>
+                            {pendingProgress && (
+                                <div className="bg-muted p-3 rounded-lg space-y-2 text-sm">
+                                    <div className="flex justify-between">
+                                        <span className="text-muted-foreground">Questions answered:</span>
+                                        <span className="font-medium text-foreground">
+                                            {pendingProgress.answers?.filter((a: string) => a?.trim()).length || 0}
+                                        </span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                        <span className="text-muted-foreground">Time remaining:</span>
+                                        <span className="font-medium text-foreground">
+                                            {Math.floor((pendingProgress.timeLeft || 0) / 60)} minutes
+                                        </span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                        <span className="text-muted-foreground">Source:</span>
+                                        <Badge variant="outline">
+                                            {pendingProgress.source === 'server' ? 'Server' : 'Local Backup'}
+                                        </Badge>
+                                    </div>
+                                </div>
+                            )}
+                            <p className="text-xs">
+                                Choose "Continue" to resume, or "Start Fresh" to begin a new attempt.
+                            </p>
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel onClick={() => {
+                            setShowRestoreDialog(false);
+                            setPendingProgress(null);
+                        }}>
+                            Start Fresh
+                        </AlertDialogCancel>
+                        <AlertDialogAction onClick={handleRestoreProgress}>
+                            Continue Session
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </div >
     );
-
-    // return (
-    //     <>
-    //         {showTutorial && !tutorialCompleted && (
-    //             <ExamTutorial
-    //                 onComplete={handleTutorialComplete}
-    //                 examLanguage={exam?.language || 'python'}
-    //                 isProctored={exam?.isProctored || false}
-    //             />
-    //         )}
-    //         <div className="h-screen flex flex-col bg-background">
-    //             {/* Header */}
-    //             <ExamHeader
-    //                 exam={exam}
-    //                 timeLeft={timeLeft}
-    //                 theme={theme}
-    //                 setTheme={setTheme}
-    //                 sidebarOpen={sidebarOpen}
-    //                 setSidebarOpen={setSidebarOpen}
-    //                 lastSaved={lastSaved}
-    //                 isSaving={isSaving}
-    //                 timeSinceLastSave={timeSinceLastSave}
-    //                 isOnline={isOnline}
-    //                 onSubmit={() => setShowSubmitSummary(true)}
-    //                 onShowTutorial={() => setShowTutorial(true)}
-    //                 isSubmitting={isSubmitting}
-    //             />
-
-    //             <div className="flex-1 flex overflow-hidden">
-    //                 {/* Sidebar - Question Navigation */}
-    //                 <QuestionNavigation
-    //                     questions={exam.questions}
-    //                     activeQuestionIndex={activeQuestionIndex}
-    //                     setActiveQuestionIndex={setActiveQuestionIndex}
-    //                     questionFilter={questionFilter}
-    //                     setQuestionFilter={setQuestionFilter}
-    //                     answers={answers}
-    //                     mcqAnswers={mcqAnswers}
-    //                     flaggedQuestions={flaggedQuestions}
-    //                     toggleFlag={toggleFlag}
-    //                     answeredCount={answeredCount}
-    //                     exam={exam}
-    //                     sidebarOpen={sidebarOpen}
-    //                     isOnline={isOnline}
-    //                     searchTerm={searchTerm}
-    //                     setSearchTerm={setSearchTerm}
-    //                 />
-
-    //                 {/* Main Content */}
-    //                 <main className="flex-1 flex flex-col overflow-hidden">
-    //                     {/* Question Display */}
-    //                     <div className="bg-card border-b border-border max-h-80 overflow-y-auto">
-    //                         <div className="p-6">
-    //                             <div className="flex items-center justify-between mb-4">
-    //                                 <div className="flex items-center gap-3">
-    //                                     <span className="text-sm font-medium text-muted-foreground">
-    //                                         Question {activeQuestionIndex + 1} of {exam.questions.length}
-    //                                     </span>
-    //                                     <span className="px-2 py-1 bg-primary/10 text-primary text-xs font-medium rounded">
-    //                                         {exam.questions[activeQuestionIndex].marks} points
-    //                                     </span>
-    //                                     {flaggedQuestions.has(activeQuestionIndex) && (
-    //                                         <span className="px-2 py-1 bg-amber-500/10 text-amber-600 dark:text-amber-400 text-xs font-medium rounded flex items-center gap-1">
-    //                                             <span>🚩</span> Flagged
-    //                                         </span>
-    //                                     )}
-    //                                 </div>
-
-    //                                 <div className="flex items-center gap-2">
-    //                                     <button
-    //                                         onClick={() => toggleFlag(activeQuestionIndex)}
-    //                                         className={`p-2 rounded-lg transition-all ${flaggedQuestions.has(activeQuestionIndex)
-    //                                             ? 'bg-amber-500/20 text-amber-600 dark:text-amber-400 hover:bg-amber-500/30'
-    //                                             : 'bg-muted hover:bg-muted/80 text-muted-foreground'
-    //                                             }`}
-    //                                         title={flaggedQuestions.has(activeQuestionIndex) ? 'Remove flag' : 'Flag for review'}
-    //                                     >
-    //                                         <span className="text-lg">🚩</span>
-    //                                     </button>
-    //                                     <button
-    //                                         onClick={() => setActiveQuestionIndex(Math.max(0, activeQuestionIndex - 1))}
-    //                                         disabled={activeQuestionIndex === 0}
-    //                                         className="p-2 hover:bg-muted rounded-lg transition-colors disabled:opacity-40"
-    //                                     >
-    //                                         <ChevronLeft className="w-5 h-5" />
-    //                                     </button>
-    //                                     <button
-    //                                         onClick={() => setActiveQuestionIndex(Math.min(exam.questions.length - 1, activeQuestionIndex + 1))}
-    //                                         disabled={activeQuestionIndex === exam.questions.length - 1}
-    //                                         className="p-2 hover:bg-muted rounded-lg transition-colors disabled:opacity-40"
-    //                                     >
-    //                                         <ChevronRight className="w-5 h-5" />
-    //                                     </button>
-    //                                 </div>
-    //                             </div>
-
-    //                             <div
-    //                                 className="prose prose-sm dark:prose-invert max-w-none text-foreground"
-    //                                 dangerouslySetInnerHTML={{ __html: exam.questions[activeQuestionIndex].question }}
-    //                             />
-    //                         </div>
-    //                     </div>
-
-    //                     {/* Code Editor & Output OR MCQ Options */}
-    //                     <div className="flex-1 flex flex-col overflow-hidden">
-    //                         {exam.questions[activeQuestionIndex]?.type === 'mcq' ? (
-    //                             // MCQ Options View
-    //                             <div className="flex-1 overflow-y-auto bg-card p-6">
-    //                                 <div className="max-w-3xl mx-auto space-y-4">
-    //                                     <div className="mb-6">
-    //                                         <h3 className="text-lg font-semibold text-foreground mb-2">Select your answer:</h3>
-    //                                         <p className="text-sm text-muted-foreground">Choose one option from the following</p>
-    //                                     </div>
-
-    //                                     <div className="space-y-3">
-    //                                         {exam.questions[activeQuestionIndex]?.options?.map((option: any, optionIndex: number) => {
-    //                                             const isSelected = mcqAnswers[activeQuestionIndex] === optionIndex;
-
-    //                                             return (
-    //                                                 <button
-    //                                                     key={option.id || optionIndex}
-    //                                                     onClick={() => handleMcqAnswer(activeQuestionIndex, optionIndex)}
-    //                                                     className={`w-full p-4 rounded-lg border-2 text-left transition-all ${isSelected
-    //                                                         ? 'border-primary bg-primary/10 shadow-md'
-    //                                                         : 'border-border hover:border-primary/50 hover:bg-muted/50'
-    //                                                         }`}
-    //                                                 >
-    //                                                     <div className="flex items-start gap-4">
-    //                                                         <div className={`w-8 h-8 rounded-full flex items-center justify-center font-semibold flex-shrink-0 ${isSelected
-    //                                                             ? 'bg-primary text-primary-foreground'
-    //                                                             : 'bg-muted text-muted-foreground'
-    //                                                             }`}>
-    //                                                             {String.fromCharCode(65 + optionIndex)}
-    //                                                         </div>
-    //                                                         <div className="flex-1 pt-1">
-    //                                                             <p className="text-sm text-foreground leading-relaxed">{option.text}</p>
-    //                                                         </div>
-    //                                                         {isSelected && (
-    //                                                             <CheckCircle2 className="w-5 h-5 text-primary flex-shrink-0 mt-1" />
-    //                                                         )}
-    //                                                     </div>
-    //                                                 </button>
-    //                                             );
-    //                                         })}
-    //                                     </div>
-
-    //                                     {mcqAnswers[activeQuestionIndex] !== undefined && (
-    //                                         <div className="mt-6 p-4 bg-primary/10 rounded-lg border border-primary/20">
-    //                                             <div className="flex items-center gap-2 text-sm text-primary">
-    //                                                 <CheckCircle2 className="w-4 h-4" />
-    //                                                 <span className="font-medium">
-    //                                                     Answer selected: Option {String.fromCharCode(65 + mcqAnswers[activeQuestionIndex])}
-    //                                                 </span>
-    //                                             </div>
-    //                                         </div>
-    //                                     )}
-    //                                 </div>
-    //                             </div>
-    //                         ) : (
-    //                             // Coding Questions - Editor & Console
-    //                             exam && (
-    //                                 <CodeEditor
-    //                                     code={code}
-    //                                     setCode={setCode}
-    //                                     language={exam.language}
-    //                                     editorTheme={editorTheme}
-    //                                     onRun={handleRun}
-    //                                     running={running}
-    //                                     output={output}
-    //                                     theme={theme}
-    //                                     setTheme={setTheme}
-    //                                     setEditorTheme={setEditorTheme}
-    //                                     sqlResult={sqlResult}
-    //                                     examLanguage={exam.language}
-    //                                     onCodeChange={(newCode) => updateAnswer(activeQuestionIndex, newCode)}
-    //                                     schemaData={schemaData}
-    //                                     onShowErDiagram={() => setShowErDiagram(true)}
-    //                                 />
-    //                             )
-    //                         )}
-    //                     </div>
-    //                 </main>
-    //             </div>
-
-    //             {exam?.isProctored && (
-    //                 <ProctoringMonitor
-    //                     isExamProctored={exam?.isProctored || false}
-    //                     examStarted={examStarted}
-    //                     examId={examId?.toString() || ""}
-    //                     userEmail={session?.user?.email || ""}
-    //                     onDisqualification={handleDisqualification}
-    //                 />
-    //             )}
-
-    //             {/* Submit Summary Modal */}
-    //             {showSubmitSummary && (
-    //                 <SubmitSummary
-    //                     exam={exam}
-    //                     answers={answers}
-    //                     mcqAnswers={mcqAnswers}
-    //                     flaggedQuestions={flaggedQuestions}
-    //                     isSubmitting={isSubmitting}
-    //                     onClose={() => setShowSubmitSummary(false)}
-    //                     onSubmit={handleSubmit}
-    //                     setActiveQuestionIndex={setActiveQuestionIndex}
-    //                     isQuestionAnswered={isQuestionAnswered}
-    //                     timeLeft={timeLeft}
-    //                 />
-    //             )}
-
-    //             {/* ER Diagram Modal - ADD THIS */}
-    //             {showErDiagram && schemaData && (
-    //                 <ERDiagramModal
-    //                     schemaData={schemaData}
-    //                     onClose={() => setShowErDiagram(false)}
-    //                 />
-    //             )}
-    //         </div>
-    //     </>
-    // );
 }

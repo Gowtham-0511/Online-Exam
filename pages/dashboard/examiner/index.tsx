@@ -3,7 +3,6 @@ import { useSession } from "next-auth/react";
 import { useRouter } from "next/router";
 import Head from "next/head";
 import toast from "react-hot-toast";
-import ExaminerLayout from "./ExaminerLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -31,6 +30,7 @@ import {
 } from "lucide-react";
 import useSWR from 'swr';
 import QuestionValidation from '@/components/QuestionValidation';
+import UnifiedDashboardLayout from "@/components/layouts/UnifiedDashboardLayout";
 
 const fetcher = async (url: string): Promise<any> => {
     const res = await fetch(url);
@@ -416,7 +416,10 @@ export default function CreateExam() {
                 type: 'coding',
                 options: [],
                 correctAnswer: undefined,
-                tags: q.tags || []
+                tags: q.tags || [],
+                testCases: q.testCases || [], // ADD THIS LINE
+                starterCode: q.starterCode, // ADD THIS LINE
+                hints: q.hints // ADD THIS LINE
             }));
 
             const mappedMcq = [...selectedMcqEasy, ...selectedMcqMedium, ...selectedMcqHard].map((q, index) => ({
@@ -485,7 +488,10 @@ export default function CreateExam() {
                     type: 'coding',
                     options: [],
                     correctAnswer: undefined,
-                    tags: q.tags || []
+                    tags: q.tags || [],
+                    testCases: q.testCases || [], // ADD THIS LINE
+                    starterCode: q.starterCode, // ADD THIS LINE
+                    hints: q.hints // ADD THIS LINE
                 }));
 
                 allFetchedQuestions = [...allFetchedQuestions, ...mappedCoding];
@@ -606,9 +612,9 @@ export default function CreateExam() {
                 options: q.options || [],
                 correctAnswer: q.options?.findIndex((opt: any) => opt.isCorrect === true),
                 tags: q.tags || [],
-                testCases: q.testCases, // Store test cases if needed
-                starterCode: q.starterCode, // Store starter code if needed
-                hints: q.hints // Store hints if needed
+                testCases: q.testCases,
+                starterCode: q.starterCode,
+                hints: q.hints
             }));
 
             setQuestions(prev => [...prev, ...mappedQuestions]);
@@ -681,7 +687,7 @@ export default function CreateExam() {
     ];
 
     return (
-        <ExaminerLayout>
+        <UnifiedDashboardLayout role="examiner">
             <Head>
                 <title>Create Exam - SysRank</title>
                 <link rel="icon" href="/logo.png" />
@@ -1779,6 +1785,44 @@ export default function CreateExam() {
                                                                 </code>
                                                             </div>
                                                         )}
+
+                                                        {/* Test Cases Display */}
+                                                        {q.testCases && q.testCases.length > 0 && (
+                                                            <div>
+                                                                <Label className="text-xs text-muted-foreground mb-2 flex items-center gap-2">
+                                                                    <Code className="w-3 h-3" />
+                                                                    Test Cases ({q.testCases.length})
+                                                                </Label>
+                                                                <div className="space-y-2">
+                                                                    {q.testCases.map((tc, tcIndex) => (
+                                                                        <div key={tcIndex} className="p-2 bg-background rounded-md border border-border">
+                                                                            <div className="flex items-center justify-between mb-1">
+                                                                                <span className="text-xs font-medium">Test Case {tcIndex + 1}</span>
+                                                                                {tc.isHidden && (
+                                                                                    <Badge variant="outline" className="text-xs bg-yellow-50 text-yellow-700 border-yellow-200">
+                                                                                        Hidden
+                                                                                    </Badge>
+                                                                                )}
+                                                                            </div>
+                                                                            <div className="grid grid-cols-2 gap-2 text-xs">
+                                                                                <div>
+                                                                                    <span className="text-muted-foreground">Input:</span>
+                                                                                    <pre className="mt-1 p-1.5 bg-muted rounded font-mono text-xs whitespace-pre-wrap">
+                                                                                        {tc.input}
+                                                                                    </pre>
+                                                                                </div>
+                                                                                <div>
+                                                                                    <span className="text-muted-foreground">Expected:</span>
+                                                                                    <pre className="mt-1 p-1.5 bg-muted rounded font-mono text-xs whitespace-pre-wrap">
+                                                                                        {tc.expectedOutput}
+                                                                                    </pre>
+                                                                                </div>
+                                                                            </div>
+                                                                        </div>
+                                                                    ))}
+                                                                </div>
+                                                            </div>
+                                                        )}
                                                     </CardContent>
                                                 </Card>
                                             ))}
@@ -1917,6 +1961,6 @@ export default function CreateExam() {
                     </Card>
                 </div>
             )}
-        </ExaminerLayout>
+        </UnifiedDashboardLayout>
     );
 }

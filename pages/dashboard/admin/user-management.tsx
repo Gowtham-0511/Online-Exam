@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from 'react';
-import AdminLayout from './layout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -49,6 +48,7 @@ import {
     CheckCircle,
     Loader2
 } from 'lucide-react';
+import UnifiedDashboardLayout from '@/components/layouts/UnifiedDashboardLayout';
 
 interface User {
     name?: string;
@@ -229,7 +229,7 @@ const UsersPage: React.FC = () => {
     };
 
     return (
-        <AdminLayout>
+        <UnifiedDashboardLayout role="admin">
             <div className="space-y-6">
                 {/* Header Section */}
                 <div className="flex flex-col space-y-4 md:flex-row md:items-center md:justify-between md:space-y-0">
@@ -510,7 +510,7 @@ const UsersPage: React.FC = () => {
                     </DialogContent>
                 </Dialog>
             </div>
-        </AdminLayout>
+        </UnifiedDashboardLayout>
     );
 };
 

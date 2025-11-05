@@ -13,7 +13,7 @@ export const config = {
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   try {
     if (req.method === "GET") {
-      const { keyword = "", language, difficulty, jobId, skillId, questionType, tags  } = req.query;
+      const { keyword = "", language, difficulty, jobId, skillId, questionType, tags } = req.query;
 
       let query = `
         SELECT q.*, 
@@ -77,6 +77,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             solution: row.solution,
             createdAt: row.createdAt,
             tags: row.tags || [],
+            testCases: row.testCases || [],
             options: [],
           };
         }
@@ -110,6 +111,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         createdBy,
         questionType,
         options,
+        testCases,
       } = req.body;
 
       // Generate tags using AI
@@ -124,9 +126,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const insertQuestionQuery = `
         INSERT INTO "Questions" (
           "questionText", "expectedOutput", difficulty, marks, language,
-          "jobId", "skillId", "imageUrl", "imageAltText", "createdBy", "questionType", tags
+          "jobId", "skillId", "imageUrl", "imageAltText", "createdBy", "questionType", tags, "testCases"
         ) VALUES (
-          $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12
+          $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13
         )
         RETURNING id, tags;
       `;
@@ -144,6 +146,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         createdBy,
         questionType,
         tags,
+        JSON.stringify(testCases || []),
       ]);
 
       const questionId = questionResult.rows[0].id;
@@ -181,6 +184,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         skillId,
         questionType,
         options,
+        testCases,
       } = req.body;
 
       let tags: string[] = [];
@@ -201,8 +205,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           "jobId" = $6,
           "skillId" = $7,
           "questionType" = $8,
-          tags = $9
-        WHERE id = $10
+          tags = $9,
+          "testCases" = $10
+        WHERE id = $11
         RETURNING tags
       `;
 
@@ -216,6 +221,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         skillId,
         questionType,
         tags,
+        JSON.stringify(testCases || []),
         id,
       ]);
 
