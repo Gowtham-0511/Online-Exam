@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Database, Trash2, Edit, Plus, Search, Server, Eye, EyeOff } from 'lucide-react';
 import { useSession } from 'next-auth/react';
 import UnifiedDashboardLayout from '@/components/layouts/UnifiedDashboardLayout';
+import Head from 'next/head';
 
 interface Credential {
     id: string;
@@ -209,6 +210,10 @@ const CredentialManagement = () => {
 
     return (
         <UnifiedDashboardLayout role="admin">
+            <Head>
+                <title>SysRank - Online Assessment Platform</title>
+                <link rel="icon" href="/logo3.png" />
+            </Head>
             <div className="min-h-screen bg-background">
                 <div className="max-w-7xl mx-auto p-6">
                     {/* Header */}

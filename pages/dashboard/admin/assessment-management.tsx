@@ -10,6 +10,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Skeleton } from '@/components/ui/skeleton';
 import { useRouter } from 'next/router';
 import UnifiedDashboardLayout from '@/components/layouts/UnifiedDashboardLayout';
+import Head from 'next/head';
 
 
 interface QuestionConfig {
@@ -178,6 +179,10 @@ const AssessmentManagement = () => {
 
     return (
         <UnifiedDashboardLayout role="admin">
+            <Head>
+                <title>SysRank - Online Assessment Platform</title>
+                <link rel="icon" href="/logo3.png" />
+            </Head>
             <div className="space-y-6">
                 {/* Header Section */}
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">

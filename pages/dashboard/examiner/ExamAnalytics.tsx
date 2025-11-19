@@ -28,6 +28,7 @@ import { Button } from "@/components/ui/button";
 import { RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, Legend, ResponsiveContainer } from 'recharts';
 import { useRouter } from "next/router";
 import UnifiedDashboardLayout from "@/components/layouts/UnifiedDashboardLayout";
+import Head from "next/head";
 
 const fetcher = (url: string) => fetch(url).then(res => res.json());
 
@@ -632,6 +633,10 @@ export default function ExamAnalytics() {
 
     return (
         <UnifiedDashboardLayout role="examiner">
+            <Head>
+                <title>SysRank - Online Assessment Platform</title>
+                <link rel="icon" href="/logo3.png" />
+            </Head>
             <div className="min-h-screen bg-background">
                 <div className="max-w-7xl mx-auto p-6 space-y-6">
                     {/* Header */}

@@ -79,24 +79,46 @@ export class DockerSqlExecutor {
                 user: options.credentials.username,
                 password: options.credentials.password,
                 database: options.credentials.database,
-                max: 5, // Limit connections per query
+                max: 5,
                 connectionTimeoutMillis: 5000,
                 idleTimeoutMillis: 10000,
                 statement_timeout: options.timeout || this.DEFAULT_TIMEOUT,
             });
 
-            console.log(`🐘 Executing PostgreSQL query...`);
+            console.log(`🟢 Executing PostgreSQL query...`);
+            console.log(`Query: ${options.query.substring(0, 200)}...`); // Log first 200 chars
 
-            // Execute query with row limit
-            const limitedQuery = this.addRowLimit(options.query, this.MAX_ROWS);
-            const result = await pool.query(limitedQuery);
+            // Split queries by semicolon
+            const queries = options.query.split(';').map(q => q.trim()).filter(q => q.length > 0);
+
+            let result: any = null;
+            let columns: string[] = [];
+            let rows: any[] = [];
+
+            // Execute each query
+            for (let i = 0; i < queries.length; i++) {
+                const query = queries[i];
+                const isLast = i === queries.length - 1;
+
+                console.log(`  Executing statement ${i + 1}/${queries.length}: ${query.substring(0, 50)}...`);
+
+                // Add row limit only to last SELECT query
+                const finalQuery = (isLast && query.toLowerCase().startsWith('select'))
+                    ? this.addRowLimit(query, this.MAX_ROWS)
+                    : query;
+
+                result = await pool.query(finalQuery);
+
+                // Only get results from the last SELECT query
+                if (isLast && query.toLowerCase().startsWith('select')) {
+                    columns = result.fields.map((field: { name: any; }) => field.name);
+                    rows = result.rows;
+                }
+            }
 
             await pool.end();
 
             const executionTime = Date.now() - startTime;
-            const columns = result.fields.map((field) => field.name);
-            const rows = result.rows;
-
             console.log(`✅ PostgreSQL query completed in ${executionTime}ms, ${rows.length} rows`);
 
             return {
@@ -108,6 +130,14 @@ export class DockerSqlExecutor {
             };
 
         } catch (error: any) {
+            console.error('PostgreSQL Error Details:', {
+                message: error.message,
+                code: error.code,
+                detail: error.detail,
+                hint: error.hint,
+                position: error.position
+            });
+
             if (pool) await pool.end();
             throw error;
         }
@@ -197,14 +227,15 @@ export class DockerSqlExecutor {
     validateQuery(query: string): { valid: boolean; error?: string } {
         const normalizedQuery = query.trim().toLowerCase();
 
-        // Blacklist dangerous operations
+        const statements = normalizedQuery.split(';').map(s => s.trim()).filter(s => s);
+
+        if (statements.length === 0) {
+            return { valid: false, error: 'Empty query' };
+        }
+
         const dangerousKeywords = [
-            'drop',
             'truncate',
             'delete',
-            'insert',
-            'update',
-            'create',
             'alter',
             'grant',
             'revoke',
@@ -212,21 +243,41 @@ export class DockerSqlExecutor {
             'execute',
         ];
 
-        for (const keyword of dangerousKeywords) {
-            if (normalizedQuery.includes(keyword)) {
+        for (let i = 0; i < statements.length; i++) {
+            const statement = statements[i];
+            const isLastStatement = i === statements.length - 1;
+
+            // Check for dangerous keywords
+            for (const keyword of dangerousKeywords) {
+                if (statement.includes(keyword)) {
+                    return {
+                        valid: false,
+                        error: `Forbidden operation: ${keyword.toUpperCase()} is not allowed`,
+                    };
+                }
+            }
+
+            // Last statement must be SELECT
+            if (isLastStatement && !statement.startsWith('select')) {
                 return {
                     valid: false,
-                    error: `Forbidden operation: ${keyword.toUpperCase()} is not allowed in exam queries`,
+                    error: 'Main query must be a SELECT statement',
                 };
             }
-        }
 
-        // Must be a SELECT query
-        if (!normalizedQuery.startsWith('select')) {
-            return {
-                valid: false,
-                error: 'Only SELECT queries are allowed',
-            };
+            // Non-last statements can be DROP (with IF EXISTS), CREATE or INSERT
+            if (!isLastStatement) {
+                const allowedSetup = statement.startsWith('create') ||
+                    statement.startsWith('insert') ||
+                    statement.startsWith('drop table if exists');
+
+                if (!allowedSetup) {
+                    return {
+                        valid: false,
+                        error: 'Setup statements must be DROP TABLE IF EXISTS, CREATE or INSERT only',
+                    };
+                }
+            }
         }
 
         return { valid: true };

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { RefreshCw, Activity, Clock, CheckCircle, XCircle, Users, Database, Code } from 'lucide-react';
 import UnifiedDashboardLayout from '@/components/layouts/UnifiedDashboardLayout';
+import Head from 'next/head';
 
 interface QueueStats {
     python: {
@@ -215,6 +216,10 @@ export default function QueueMonitor() {
 
     return (
         <UnifiedDashboardLayout role='admin'>
+            <Head>
+                <title>SysRank - Online Assessment Platform</title>
+                <link rel="icon" href="/logo3.png" />
+            </Head>
             <div className="min-h-screen bg-background p-6">
                 <div className="max-w-7xl mx-auto">
                     {/* Header */}

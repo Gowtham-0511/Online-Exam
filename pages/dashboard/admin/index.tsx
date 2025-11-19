@@ -12,6 +12,7 @@ import {
     MoreHorizontal,
 } from "lucide-react";
 import UnifiedDashboardLayout from "@/components/layouts/UnifiedDashboardLayout";
+import Head from "next/head";
 
 // Mock data - replace with real API calls
 const stats = [
@@ -75,6 +76,10 @@ const recentExams = [
 export default function AdminDashboard() {
     return (
         <UnifiedDashboardLayout role="admin">
+            <Head>
+                <title>SysRank - Online Assessment Platform</title>
+                <link rel="icon" href="/logo3.png" />
+            </Head>
             <div className="space-y-6">
                 {/* Welcome Section */}
                 <div>
@@ -106,8 +111,8 @@ export default function AdminDashboard() {
                                     </div>
                                     <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1">
                                         <div className={`flex items-center ${stat.trend === 'up'
-                                                ? 'text-emerald-600 dark:text-emerald-400'
-                                                : 'text-rose-600 dark:text-rose-400'
+                                            ? 'text-emerald-600 dark:text-emerald-400'
+                                            : 'text-rose-600 dark:text-rose-400'
                                             }`}>
                                             {stat.trend === 'up' ? (
                                                 <ArrowUpRight className="w-3 h-3 mr-1" />

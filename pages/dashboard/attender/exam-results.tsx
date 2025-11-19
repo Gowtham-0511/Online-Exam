@@ -34,6 +34,7 @@ import {
     DialogTitle,
 } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
+import Head from 'next/head';
 
 const fetcher = (url: string) => fetch(url).then(res => res.json());
 
@@ -376,6 +377,10 @@ const ExamResultsPage = () => {
 
     return (
         <UnifiedDashboardLayout role='attender'>
+            <Head>
+                <title>SysRank - Online Assessment Platform</title>
+                <link rel="icon" href="/logo3.png" />
+            </Head>
             <div className="space-y-6">
                 {/* Header */}
                 <div className="flex items-center gap-4">
@@ -946,8 +951,8 @@ const ExamResultsPage = () => {
                                             className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
                                         >
                                             <Card className={`p-3 max-w-[80%] ${msg.role === 'user'
-                                                    ? 'bg-primary text-primary-foreground'
-                                                    : 'bg-card border-border'
+                                                ? 'bg-primary text-primary-foreground'
+                                                : 'bg-card border-border'
                                                 }`}>
                                                 <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
                                             </Card>

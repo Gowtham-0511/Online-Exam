@@ -23,6 +23,7 @@ import { Button } from "@/components/ui/button";
 import jsPDF from "jspdf";
 import toast from "react-hot-toast";
 import UnifiedDashboardLayout from "@/components/layouts/UnifiedDashboardLayout";
+import Head from "next/head";
 
 const fetcher = (url: string) => fetch(url).then(res => res.json());
 
@@ -591,6 +592,10 @@ export default function ExaminerSubmissions() {
 
     return (
         <UnifiedDashboardLayout role="examiner">
+            <Head>
+                <title>SysRank - Online Assessment Platform</title>
+                <link rel="icon" href="/logo3.png" />
+            </Head>
             <div className="space-y-6">
                 {/* Header */}
                 <div>

@@ -48,6 +48,7 @@ import {
 } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import UnifiedDashboardLayout from "@/components/layouts/UnifiedDashboardLayout";
+import Head from "next/head";
 
 interface ExamSession {
     examId: string;
@@ -277,6 +278,10 @@ export default function ExamMonitoring() {
 
     return (
         <UnifiedDashboardLayout role="admin">
+            <Head>
+                <title>SysRank - Online Assessment Platform</title>
+                <link rel="icon" href="/logo3.png" />
+            </Head>
             <div className="space-y-6">
                 {/* Header */}
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">

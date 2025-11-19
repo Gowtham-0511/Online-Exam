@@ -49,6 +49,7 @@ import {
     Loader2
 } from 'lucide-react';
 import UnifiedDashboardLayout from '@/components/layouts/UnifiedDashboardLayout';
+import Head from 'next/head';
 
 interface User {
     name?: string;
@@ -230,6 +231,10 @@ const UsersPage: React.FC = () => {
 
     return (
         <UnifiedDashboardLayout role="admin">
+            <Head>
+                <title>SysRank - Online Assessment Platform</title>
+                <link rel="icon" href="/logo3.png" />
+            </Head>
             <div className="space-y-6">
                 {/* Header Section */}
                 <div className="flex flex-col space-y-4 md:flex-row md:items-center md:justify-between md:space-y-0">

@@ -36,6 +36,7 @@ import {
     Check
 } from 'lucide-react';
 import UnifiedDashboardLayout from "@/components/layouts/UnifiedDashboardLayout";
+import Head from "next/head";
 
 interface MCQOption {
     id: string;
@@ -833,6 +834,10 @@ export default function QuestionBankPage() {
 
     return (
         <UnifiedDashboardLayout role="admin">
+            <Head>
+                <title>SysRank - Online Assessment Platform</title>
+                <link rel="icon" href="/logo3.png" />
+            </Head>
             <div className="min-h-screen p-6 space-y-6">
                 <div className="text-center space-y-4">
                     <div className="flex items-center justify-center gap-3">

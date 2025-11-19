@@ -13,6 +13,7 @@ import { Plus, Users, Search, Filter, Check, X, UserPlus, Building2, Mail, Calen
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { AlertCircle, CheckCircle2 } from 'lucide-react'
 import UnifiedDashboardLayout from '@/components/layouts/UnifiedDashboardLayout'
+import Head from 'next/head'
 
 interface Employee {
     Id: string
@@ -410,6 +411,10 @@ const BatchManagementPage: React.FC = () => {
 
     return (
         <UnifiedDashboardLayout role="admin">
+            <Head>
+                <title>SysRank - Online Assessment Platform</title>
+                <link rel="icon" href="/logo3.png" />
+            </Head>
             <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20">
                 {/* Notification Alert */}
                 {notification && (

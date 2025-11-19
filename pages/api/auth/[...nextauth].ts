@@ -13,6 +13,7 @@ declare module "next-auth" {
             email?: string | null;
             name?: string | null;
             image?: string | null;
+            role?: string | null;
         };
     }
     interface User {
@@ -20,6 +21,7 @@ declare module "next-auth" {
         email?: string | null;
         name?: string | null;
         image?: string | null;
+        role?: string | null;
     }
 }
 
@@ -75,6 +77,7 @@ export const authOptions: NextAuthOptions = {
                         id: user.id.toString(),
                         email: user.email,
                         name: user.name,
+                        role: user.role,
                     };
                 } catch (error) {
                     console.error("Auth error:", error);
@@ -111,6 +114,20 @@ export const authOptions: NextAuthOptions = {
                 token.id = user.id;
                 token.email = user.email;
                 token.name = user.name;
+                token.role = (user as any).role || null;
+            }
+            if (!token.role && token.email) {
+                try {
+                    const result = await pool.query(
+                        `SELECT role FROM users WHERE email = $1`,
+                        [token.email]
+                    );
+                    if (result.rows.length > 0) {
+                        token.role = result.rows[0].role;
+                    }
+                } catch (err) {
+                    console.error("Error fetching role:", err);
+                }
             }
             return token;
         },
@@ -119,6 +136,7 @@ export const authOptions: NextAuthOptions = {
                 session.user.id = token.id as string;
                 session.user.email = token.email as string;
                 session.user.name = token.name as string;
+                session.user.role = token.role as string;
             }
             return session;
         },

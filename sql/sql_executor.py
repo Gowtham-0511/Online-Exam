@@ -9,14 +9,13 @@ class SQLExecutor:
     DEFAULT_TIMEOUT = 25000  # ms
 
     def __init__(self):
+        # Only block truly dangerous operations
         self.dangerous_keywords = [
-            'drop', 'truncate', 'delete', 'insert', 'update',
-            'create', 'alter', 'grant', 'revoke', 'exec', 'execute'
+            'drop', 'truncate', 'delete', 'grant', 'revoke', 'exec', 'execute'
         ]
 
-    # ------------------ Utility helpers ------------------
     def _sanitize_row(self, row: Dict[str, Any]) -> Dict[str, Any]:
-        """Convert unsupported types (like memoryview/bytes) for JSON serialization"""
+        """Convert unsupported types for JSON serialization"""
         clean_row = {}
         for k, v in row.items() if isinstance(row, dict) else enumerate(row):
             if isinstance(v, memoryview):
@@ -34,29 +33,34 @@ class SQLExecutor:
         return clean_row
 
     def validate_query(self, query: str) -> Tuple[bool, str]:
-        """Validate SQL query for safety"""
+        """Validate SQL query - allow CREATE/INSERT for setup, block dangerous ops"""
         normalized = query.strip().lower()
+        
+        # Block dangerous operations
         for keyword in self.dangerous_keywords:
             if keyword in normalized:
                 return False, f"Forbidden operation: {keyword.upper()} is not allowed"
-        if not normalized.startswith('select'):
-            return False, "Only SELECT queries are allowed"
+        
+        # Main query (last statement) must be SELECT
+        queries = [q.strip() for q in normalized.split(';') if q.strip()]
+        if queries:
+            main_query = queries[-1]
+            if main_query and not main_query.startswith('select'):
+                return False, "Main query must be a SELECT statement"
+        
         return True, ""
 
     def add_row_limit(self, query: str, limit: int) -> str:
-        """Add row limit to query"""
+        """Add row limit to SELECT queries"""
         normalized = query.strip().lower()
         if 'limit' in normalized or 'top' in normalized:
             return query
         if normalized.startswith('select'):
-            if 'pg_' in query or 'top' not in normalized:
-                return f"{query.strip()} LIMIT {limit}"
-            return re.sub(r'^select\s+', f'SELECT TOP {limit} ', query, flags=re.IGNORECASE)
+            return f"{query.strip()} LIMIT {limit}"
         return query
 
-    # ------------------ PostgreSQL Executor ------------------
     def execute_postgres(self, credentials: Dict, query: str) -> Dict[str, Any]:
-        """Execute PostgreSQL query"""
+        """Execute PostgreSQL query with multi-statement support"""
         conn = None
         cursor = None
         start_time = time.time()
@@ -71,37 +75,56 @@ class SQLExecutor:
                 connect_timeout=5,
                 options=f'-c statement_timeout={self.DEFAULT_TIMEOUT}'
             )
-
+            conn.autocommit = True  # Important for CREATE/INSERT
             cursor = conn.cursor()
-            limited_query = self.add_row_limit(query, self.MAX_ROWS)
 
-            cursor.execute(limited_query)
-            rows = cursor.fetchall()
+            # Split queries by semicolon
+            queries = [q.strip() for q in query.split(';') if q.strip()]
+            
+            result_rows = []
+            result_columns = []
+            
+            for i, q in enumerate(queries):
+                is_last = (i == len(queries) - 1)
+                
+                print(f"  Executing statement {i+1}/{len(queries)}: {q[:50]}...")
+                
+                # Add limit only to the last SELECT query
+                if is_last and q.lower().startswith('select'):
+                    q = self.add_row_limit(q, self.MAX_ROWS)
+                
+                cursor.execute(q)
+                
+                # Only fetch results from the last SELECT query
+                if is_last and q.lower().startswith('select'):
+                    result_rows = cursor.fetchall()
+                    result_columns = [desc[0] for desc in cursor.description] if cursor.description else []
 
-            columns = [desc[0] for desc in cursor.description] if cursor.description else []
-
-            # 🧩 Convert any memoryview or bytes values
-            sanitized_rows = [self._sanitize_row(dict(zip(columns, r))) for r in rows]
-
+            # Sanitize rows
+            sanitized_rows = [self._sanitize_row(dict(zip(result_columns, r))) for r in result_rows]
             execution_time = int((time.time() - start_time) * 1000)
 
             return {
                 'success': True,
-                'columns': columns,
+                'columns': result_columns,
                 'rows': sanitized_rows,
-                'rowCount': len(rows),
+                'rowCount': len(result_rows),
                 'executionTime': execution_time
             }
 
         except psycopg2.Error as e:
             execution_time = int((time.time() - start_time) * 1000)
-            error_msg = str(e)
+            error_msg = str(e).strip()
+            
+            # User-friendly error messages
             if 'timeout' in error_msg.lower():
-                error_msg = '⏱️ Query timeout: Your query is taking too long'
+                error_msg = 'Query timeout: Your query is taking too long'
             elif 'syntax' in error_msg.lower():
-                error_msg = f'❌ SQL Syntax Error: {error_msg}'
+                error_msg = f'SQL Syntax Error: {error_msg}'
             elif 'permission' in error_msg.lower():
-                error_msg = '🚫 Permission denied: Cannot perform this operation'
+                error_msg = 'Permission denied: Cannot perform this operation'
+
+            print(f"  ❌ PostgreSQL error: {error_msg}")
 
             return {
                 'success': False,
@@ -118,9 +141,8 @@ class SQLExecutor:
             if conn:
                 conn.close()
 
-    # ------------------ SQL Server Executor ------------------
     def execute_sqlserver(self, credentials: Dict, query: str) -> Dict[str, Any]:
-        """Execute SQL Server query"""
+        """Execute SQL Server query with multi-statement support"""
         conn = None
         cursor = None
         start_time = time.time()
@@ -133,24 +155,41 @@ class SQLExecutor:
                 password=credentials['password'],
                 database=credentials['database'],
                 timeout=5,
-                login_timeout=5
+                login_timeout=5,
+                autocommit=True
             )
 
             cursor = conn.cursor(as_dict=True)
-            limited_query = self.add_row_limit(query, self.MAX_ROWS)
+            
+            # Split queries by semicolon
+            queries = [q.strip() for q in query.split(';') if q.strip()]
+            
+            result_rows = []
+            result_columns = []
+            
+            for i, q in enumerate(queries):
+                is_last = (i == len(queries) - 1)
+                
+                print(f"  Executing statement {i+1}/{len(queries)}: {q[:50]}...")
+                
+                # Add limit only to the last SELECT query
+                if is_last and q.lower().startswith('select'):
+                    q = self.add_row_limit(q, self.MAX_ROWS)
+                
+                cursor.execute(q)
+                
+                # Only fetch results from the last SELECT query
+                if is_last and q.lower().startswith('select'):
+                    result_rows = cursor.fetchall()
+                    result_columns = [desc[0] for desc in cursor.description] if cursor.description else []
 
-            cursor.execute(limited_query)
-            rows = cursor.fetchall()
-
-            # 🧩 Sanitize all rows
-            sanitized_rows = [self._sanitize_row(r) for r in rows]
-
-            columns = [desc[0] for desc in cursor.description] if cursor.description else []
+            # Sanitize rows
+            sanitized_rows = [self._sanitize_row(r) for r in result_rows]
             execution_time = int((time.time() - start_time) * 1000)
 
             return {
                 'success': True,
-                'columns': columns,
+                'columns': result_columns,
                 'rows': sanitized_rows,
                 'rowCount': len(sanitized_rows),
                 'executionTime': execution_time
@@ -158,11 +197,14 @@ class SQLExecutor:
 
         except pymssql.Error as e:
             execution_time = int((time.time() - start_time) * 1000)
-            error_msg = str(e)
+            error_msg = str(e).strip()
+            
             if 'timeout' in error_msg.lower():
-                error_msg = '⏱️ Query timeout: Your query is taking too long'
+                error_msg = 'Query timeout: Your query is taking too long'
             elif 'syntax' in error_msg.lower():
-                error_msg = f'❌ SQL Syntax Error: {error_msg}'
+                error_msg = f'SQL Syntax Error: {error_msg}'
+
+            print(f"  ❌ SQL Server error: {error_msg}")
 
             return {
                 'success': False,
@@ -180,11 +222,11 @@ class SQLExecutor:
                 conn.close()
                 
     def execute(self, server_type: str, credentials: Dict, query: str) -> Dict[str, Any]:
-        """Execute SQL query based on server type with unified error handling and logging"""
+        """Main execution method with unified error handling"""
         start_time = time.time()
 
         try:
-            # Validate query first
+            # Validate query
             valid, error = self.validate_query(query)
             if not valid:
                 return {
@@ -196,10 +238,10 @@ class SQLExecutor:
                     'rowCount': 0
                 }
 
-            # Log the incoming request
-            print(f"🟢 Executing query on {server_type.upper()} | Query snippet: {query[:60]}...")
+            print(f"🟢 Executing on {server_type.upper()}")
+            print(f"  Query preview: {query[:100]}...")
 
-            # Dispatch based on server type
+            # Dispatch to appropriate executor
             if server_type == 'postgres':
                 result = self.execute_postgres(credentials, query)
             elif server_type in ('ssms', 'sqlserver', 'mssql'):
@@ -207,34 +249,31 @@ class SQLExecutor:
             else:
                 return {
                     'success': False,
-                    'error': f"❌ Unknown server type: {server_type}",
+                    'error': f"Unknown server type: {server_type}",
                     'executionTime': 0,
                     'columns': [],
                     'rows': [],
                     'rowCount': 0
                 }
 
-            # Ensure all returned rows are JSON-safe
+            # Final sanitization
             if result.get('rows'):
-                safe_rows = []
-                for row in result['rows']:
-                    safe_rows.append(self._sanitize_row(row))
-                result['rows'] = safe_rows
+                result['rows'] = [self._sanitize_row(r) for r in result['rows']]
 
-            # Add total execution time if not already included
+            # Ensure execution time is set
             result['executionTime'] = result.get('executionTime', int((time.time() - start_time) * 1000))
 
-            # Log final status
+            # Log result
             if result.get('success'):
-                print(f"✅ Query executed successfully in {result['executionTime']} ms | {result['rowCount']} rows")
+                print(f"✅ Success in {result['executionTime']}ms | {result['rowCount']} rows")
             else:
-                print(f"⚠️ Query failed: {result.get('error')}")
+                print(f"⚠️ Failed: {result.get('error')}")
 
             return result
 
         except Exception as e:
             execution_time = int((time.time() - start_time) * 1000)
-            print(f"❌ Unexpected error while executing SQL: {str(e)}")
+            print(f"❌ Unexpected error: {str(e)}")
 
             return {
                 'success': False,

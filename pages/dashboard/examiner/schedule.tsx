@@ -227,8 +227,8 @@ export default function ScheduleExam() {
     return (
         <UnifiedDashboardLayout role="examiner">
             <Head>
-                <title>Schedule Exam - SysRank</title>
-                <link rel="icon" href="/logo.png" />
+                <title>SysRank - Online Assessment Platform</title>
+                <link rel="icon" href="/logo3.png" />
             </Head>
 
             <div className="min-h-screen bg-background">
@@ -275,16 +275,16 @@ export default function ScheduleExam() {
                                                 <div
                                                     key={exam.id}
                                                     className={`p-4 cursor-pointer transition-all hover:bg-accent/50 ${selectedExamId === exam.id
-                                                            ? 'bg-primary/10 border-l-4 border-l-primary'
-                                                            : ''
+                                                        ? 'bg-primary/10 border-l-4 border-l-primary'
+                                                        : ''
                                                         }`}
                                                     onClick={() => setSelectedExamId(exam.id)}
                                                 >
                                                     <div className="flex items-start gap-3">
                                                         <div
                                                             className={`w-5 h-5 rounded-full border-2 flex items-center justify-center mt-0.5 flex-shrink-0 ${selectedExamId === exam.id
-                                                                    ? 'bg-primary border-primary'
-                                                                    : 'border-muted-foreground/50'
+                                                                ? 'bg-primary border-primary'
+                                                                : 'border-muted-foreground/50'
                                                                 }`}
                                                         >
                                                             {selectedExamId === exam.id && (
@@ -393,16 +393,16 @@ export default function ScheduleExam() {
                                                         <Card
                                                             key={batch.Id}
                                                             className={`transition-all border ${selectedBatches.includes(batch.Id)
-                                                                    ? 'border-primary bg-primary/5'
-                                                                    : 'border-border hover:border-primary/50'
+                                                                ? 'border-primary bg-primary/5'
+                                                                : 'border-border hover:border-primary/50'
                                                                 }`}
                                                         >
                                                             <CardContent className="p-4">
                                                                 <div className="flex items-center gap-3 mb-4">
                                                                     <div
                                                                         className={`w-5 h-5 rounded border-2 flex items-center justify-center cursor-pointer flex-shrink-0 ${selectedBatches.includes(batch.Id)
-                                                                                ? 'bg-primary border-primary'
-                                                                                : 'border-muted-foreground/50'
+                                                                            ? 'bg-primary border-primary'
+                                                                            : 'border-muted-foreground/50'
                                                                             }`}
                                                                         onClick={() => {
                                                                             setSelectedBatches(prev =>
@@ -640,15 +640,15 @@ export default function ScheduleExam() {
                                                                 <div
                                                                     key={user.email}
                                                                     className={`p-4 transition-all ${selectedUsers.includes(user.email)
-                                                                            ? 'bg-primary/5 border-l-4 border-l-primary'
-                                                                            : 'hover:bg-accent/50'
+                                                                        ? 'bg-primary/5 border-l-4 border-l-primary'
+                                                                        : 'hover:bg-accent/50'
                                                                         }`}
                                                                 >
                                                                     <div className="flex items-center gap-3 mb-3">
                                                                         <div
                                                                             className={`w-5 h-5 rounded border-2 flex items-center justify-center cursor-pointer flex-shrink-0 ${selectedUsers.includes(user.email)
-                                                                                    ? 'bg-primary border-primary'
-                                                                                    : 'border-muted-foreground/50'
+                                                                                ? 'bg-primary border-primary'
+                                                                                : 'border-muted-foreground/50'
                                                                                 }`}
                                                                             onClick={() => {
                                                                                 setSelectedUsers(prev =>

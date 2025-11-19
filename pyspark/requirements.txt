@@ -1,0 +1,7 @@
+flask
+flask-cors
+redis
+pyspark==3.5.0
+py4j
+numpy
+pandas

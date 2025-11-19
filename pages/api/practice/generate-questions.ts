@@ -13,7 +13,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     try {
-        // 1. Get user's weak areas from cache
         const weakAreasQuery = `
             SELECT "aiInsights"
             FROM "UserInsightsCache"
@@ -21,28 +20,37 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         `;
         const weakAreasResult = await pool.query(weakAreasQuery, [email]);
 
-        if (!weakAreasResult.rows[0]?.aiInsights?.weaknesses) {
-            return res.status(400).json({
-                error: "No weak areas found. Complete at least one exam first."
-            });
+        let weakAreas = [];
+        let isGeneralQuestions = false;
+
+        if (!weakAreasResult.rows[0]?.aiInsights?.weaknesses ||
+            weakAreasResult.rows[0].aiInsights.weaknesses.length === 0) {
+            // Generate general questions if no weak areas found
+            isGeneralQuestions = true;
+            weakAreas = [
+                // { topic: 'Data Structures', language: 'JavaScript', description: 'General practice' },
+                { topic: 'Algorithms', language: 'Python', description: 'General practice' },
+                { topic: 'Problem Solving', language: 'General', description: 'General practice' }
+            ];
+        } else {
+            const weaknesses = weakAreasResult.rows[0].aiInsights.weaknesses;
+            weakAreas = weaknesses.map((w: any) => ({
+                topic: w.topic,
+                language: w.language || 'General',
+                score: w.score,
+                description: w.description
+            }));
         }
 
-        const weaknesses = weakAreasResult.rows[0].aiInsights.weaknesses;
+        // const weaknesses = weakAreasResult.rows[0].aiInsights.weaknesses;
 
-        if (weaknesses.length === 0) {
-            return res.status(200).json({
-                message: "No weaknesses detected. Great job!",
-                questions: []
-            });
-        }
-
-        // 2. Format weak areas for AI
-        const weakAreas = weaknesses.map((w: any) => ({
-            topic: w.topic,
-            language: w.language || 'General',
-            score: w.score,
-            description: w.description
-        }));
+        // // 2. Format weak areas for AI
+        // const weakAreas = weaknesses.map((w: any) => ({
+        //     topic: w.topic,
+        //     language: w.language || 'General',
+        //     score: w.score,
+        //     description: w.description
+        // }));
 
         // 3. Generate practice questions using AI
         const questions = await generatePracticeQuestionsFromWeakAreas(
@@ -93,7 +101,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             success: true,
             questionsGenerated: questions.length,
             questionIds: insertedQuestions.map(r => r.rows[0].id),
-            message: `Generated ${questions.length} personalized practice questions!`
+            message: isGeneralQuestions
+                ? `Generated ${questions.length} general practice questions!`
+                : `Generated ${questions.length} personalized practice questions!`
         });
 
     } catch (error: any) {

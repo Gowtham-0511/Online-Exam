@@ -11,6 +11,7 @@ import { PracticeStatsCards } from '@/components/attender/practice/PracticeStats
 import { PracticeProgressChart } from '@/components/attender/practice/PracticeProgressChart';
 import { PracticeQuestionList } from '@/components/attender/practice/PracticeQuestionList';
 import { PracticeFilterBar } from '@/components/attender/practice/PracticeFilterBar';
+import Head from 'next/head';
 
 const fetcher = (url: string) => fetch(url).then(res => res.json());
 
@@ -108,6 +109,10 @@ const PracticePage = () => {
 
     return (
         <UnifiedDashboardLayout role="attender">
+            <Head>
+                <title>SysRank - Online Assessment Platform</title>
+                <link rel="icon" href="/logo3.png" />
+            </Head>
             <div className="space-y-6">
                 {/* Header */}
                 <div className="flex items-center justify-between">

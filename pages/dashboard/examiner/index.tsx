@@ -689,8 +689,8 @@ export default function CreateExam() {
     return (
         <UnifiedDashboardLayout role="examiner">
             <Head>
-                <title>Create Exam - SysRank</title>
-                <link rel="icon" href="/logo.png" />
+                <title>SysRank - Online Assessment Platform</title>
+                <link rel="icon" href="/logo3.png" />
             </Head>
 
             <div className="space-y-6">

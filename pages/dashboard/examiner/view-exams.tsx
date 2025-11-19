@@ -5,6 +5,7 @@ import toast from "react-hot-toast";
 import { useRouter } from "next/router";
 import { X, Edit2, Trash2, UserPlus, Clock, Shield, Users, Calendar, Search, Filter, MoreVertical, Check } from "lucide-react";
 import UnifiedDashboardLayout from "@/components/layouts/UnifiedDashboardLayout";
+import Head from "next/head";
 
 const fetcher = (url: string) => fetch(url).then(res => res.json());
 
@@ -268,6 +269,10 @@ export default function ViewExamsPage() {
 
     return (
         <UnifiedDashboardLayout role="examiner">
+            <Head>
+                <title>SysRank - Online Assessment Platform</title>
+                <link rel="icon" href="/logo3.png" />
+            </Head>
             <div className="min-h-screen bg-background">
                 {/* Header */}
                 <div className="border-b border-border bg-card">

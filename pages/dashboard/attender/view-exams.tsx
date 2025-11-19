@@ -54,6 +54,7 @@ import { ReadinessBadge } from '@/components/attender/ReadinessBadge';
 import { ExamInsightsCard } from '@/components/attender/ExamInsightsCard';
 import { ExamStrategyModal } from '@/components/attender/ExamStrategyModal';
 import UnifiedDashboardLayout from '@/components/layouts/UnifiedDashboardLayout';
+import Head from 'next/head';
 
 const fetcher = (url: string) => fetch(url).then(res => res.json());
 
@@ -382,6 +383,10 @@ const ViewExams: React.FC = () => {
 
     return (
         <UnifiedDashboardLayout role="attender">
+            <Head>
+                <title>SysRank - Online Assessment Platform</title>
+                <link rel="icon" href="/logo3.png" />
+            </Head>
             <div className="min-h-screen bg-gradient-to-br from-background">
                 <div className="container mx-auto px-4 py-8 max-w-7xl">
                     <div className="mb-12">

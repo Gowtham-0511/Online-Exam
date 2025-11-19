@@ -40,6 +40,8 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { Badge } from '../ui/badge';
+import Image from 'next/image';
 
 // Types
 interface MenuItem {
@@ -115,6 +117,13 @@ const ROLE_MENUS: Record<UserRole, MenuItem[]> = {
             navigation: 'exam-monitoring',
             label: 'Exam Monitoring',
             icon: MonitorPlay,
+            description: 'Real-time exam monitoring',
+        },
+        {
+            id: 'view-results',
+            navigation: 'view-results',
+            label: 'View Results',
+            icon: ScrollText,
             description: 'Real-time exam monitoring',
         },
     ],
@@ -277,8 +286,8 @@ export default function UnifiedDashboardLayout({ children, role }: UnifiedDashbo
                     "flex items-center gap-3",
                     isCollapsed && "gap-0"
                 )}>
-                    <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-primary">
-                        <BarChart3 className="w-5 h-5 text-primary-foreground" />
+                    <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-primary-foreground/20">
+                        <Image src='/logo3.png' alt='logo' width={30} height={30} />
                     </div>
                     {!isCollapsed && (
                         <span className="text-lg font-semibold text-foreground">
@@ -474,6 +483,9 @@ export default function UnifiedDashboardLayout({ children, role }: UnifiedDashbo
                     </div>
 
                     <div className="flex items-center gap-2">
+                        <Badge>
+                            {session?.user.role?.toLocaleUpperCase()}
+                        </Badge>
                         <ThemeToggle />
                     </div>
                 </header>

@@ -14,8 +14,18 @@ import {
     Camera,
     Scan,
     ChevronDown,
-    ChevronUp
+    ChevronUp,
+    Brain,
+    Sparkles
 } from "lucide-react";
+
+// Import Gemini utilities
+import {
+    analyzeWithGemini,
+    storeViolationWithAI,
+    captureVideoFrame,
+    GeminiAnalysis
+} from "@/utils/geminiAnalysisUtils";
 
 interface ProctoringMonitorProps {
     isExamProctored: boolean;
@@ -35,6 +45,11 @@ const ProctoringMonitor = memo(({
     const videoRef = useRef<HTMLVideoElement | null>(null);
     const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
+    // Feature flags
+    const USE_GEMINI_VALIDATION = true; // Toggle this to enable/disable Gemini
+    const GEMINI_VALIDATION_THRESHOLD = 0.65; // Confidence threshold for Gemini violations
+
+    // MediaPipe state
     const [cameraError, setCameraError] = useState("");
     const [faceDetector, setFaceDetector] = useState<FaceDetector | null>(null);
     const [objectDetector, setObjectDetector] = useState<ObjectDetector | null>(null);
@@ -47,6 +62,7 @@ const ProctoringMonitor = memo(({
     const [detectedObjects, setDetectedObjects] = useState<string[]>([]);
     const [lastSuspiciousActivity, setLastSuspiciousActivity] = useState<string>("");
 
+    // Audio state
     const [audioContext, setAudioContext] = useState<AudioContext | null>(null);
     const [microphone, setMicrophone] = useState<MediaStreamAudioSourceNode | null>(null);
     const [analyser, setAnalyser] = useState<AnalyserNode | null>(null);
@@ -55,17 +71,116 @@ const ProctoringMonitor = memo(({
     const [audioViolations, setAudioViolations] = useState(0);
     const [voiceConfidence, setVoiceConfidence] = useState(0);
 
+    // UI state
     const [isMinimized, setIsMinimized] = useState(false);
 
+    // Gemini state
+    const [geminiAnalyzing, setGeminiAnalyzing] = useState(false);
+    const [lastGeminiAnalysis, setLastGeminiAnalysis] = useState<GeminiAnalysis | null>(null);
+    const [geminiValidationCount, setGeminiValidationCount] = useState(0);
+    const [lastGeminiCallTime, setLastGeminiCallTime] = useState(0);
+
+    // Debug state
     const [detectionDebug, setDetectionDebug] = useState({
         lastFaceCount: 0,
         lastObjectDetected: '',
-        lastDetectionTime: ''
+        lastDetectionTime: '',
+        geminiLastCall: '',
+        geminiStatus: 'idle'
     });
 
     const audioViolationsRef = useRef(0);
+    const geminiThrottleRef = useRef<NodeJS.Timeout | null>(null);
 
-    // Initialize camera
+    // ============================================
+    // GEMINI VALIDATION FUNCTION
+    // ============================================
+    const validateWithGemini = async (
+        detectionType: "multiple_faces" | "no_face" | "suspicious_object",
+        context?: { objectName?: string }
+    ) => {
+        // Throttle: Don't call Gemini more than once every 5 seconds
+        const now = Date.now();
+        if (now - lastGeminiCallTime < 5000) {
+            console.log("⏸️ Gemini throttled - waiting...");
+            return null;
+        }
+
+        if (!videoRef.current || geminiAnalyzing) {
+            return null;
+        }
+
+        setGeminiAnalyzing(true);
+        setLastGeminiCallTime(now);
+
+        try {
+            // Capture frame from video
+            const frameBase64 = captureVideoFrame(videoRef.current);
+            if (!frameBase64) {
+                console.error("Failed to capture video frame");
+                return null;
+            }
+
+            console.log(`🧠 Gemini analyzing: ${detectionType}`, context);
+            setDetectionDebug(prev => ({
+                ...prev,
+                geminiLastCall: new Date().toLocaleTimeString(),
+                geminiStatus: 'analyzing'
+            }));
+
+            // Call Gemini API
+            const result = await analyzeWithGemini(frameBase64, detectionType, context);
+
+            if (result.success && result.analysis) {
+                setLastGeminiAnalysis(result.analysis);
+                setGeminiValidationCount(prev => prev + 1);
+
+                console.log("✅ Gemini analysis result:", result.analysis);
+                setDetectionDebug(prev => ({
+                    ...prev,
+                    geminiStatus: 'completed'
+                }));
+
+                // If Gemini confirms violation with high confidence
+                if (result.analysis.isViolation &&
+                    result.analysis.confidence >= GEMINI_VALIDATION_THRESHOLD * 100) {
+
+                    // Store violation with AI analysis
+                    await storeViolationWithAI(
+                        frameBase64,
+                        userEmail,
+                        examId,
+                        result.analysis.reason,
+                        result.analysis
+                    );
+
+                    // Take action based on severity
+                    if (result.analysis.recommendation === "disqualify" ||
+                        result.analysis.severity === "critical") {
+                        onDisqualification(result.analysis.reason);
+                    }
+                }
+
+                return result.analysis;
+            }
+
+            return null;
+
+        } catch (error) {
+            console.error("❌ Gemini validation error:", error);
+            setDetectionDebug(prev => ({
+                ...prev,
+                geminiStatus: 'error'
+            }));
+            return null;
+        } finally {
+            setGeminiAnalyzing(false);
+        }
+    };
+
+    // ============================================
+    // CAMERA INITIALIZATION
+    // ============================================
     useEffect(() => {
         if (!isExamProctored) return;
 
@@ -93,7 +208,9 @@ const ProctoringMonitor = memo(({
         };
     }, [isExamProctored]);
 
-    // Initialize MediaPipe detectors
+    // ============================================
+    // MEDIAPIPE INITIALIZATION
+    // ============================================
     useEffect(() => {
         if (!isExamProctored || !videoReady) return;
 
@@ -107,8 +224,6 @@ const ProctoringMonitor = memo(({
                         "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm"
                     );
 
-                    console.log("✅ Vision tasks loaded, creating detectors...");
-
                     const faceDetector = await FaceDetector.createFromOptions(vision, {
                         baseOptions: {
                             modelAssetPath: "https://storage.googleapis.com/mediapipe-models/face_detector/blaze_face_short_range/float16/1/blaze_face_short_range.tflite",
@@ -118,8 +233,6 @@ const ProctoringMonitor = memo(({
                         minDetectionConfidence: 0.5,
                         minSuppressionThreshold: 0.3
                     });
-
-                    console.log("✅ Face detector created");
 
                     const objectDetector = await ObjectDetector.createFromOptions(vision, {
                         baseOptions: {
@@ -131,21 +244,19 @@ const ProctoringMonitor = memo(({
                         maxResults: 10
                     });
 
-                    console.log("✅ Object detector created");
-
                     setFaceDetector(faceDetector);
                     setObjectDetector(objectDetector);
                     setFaceDetectionActive(true);
 
-                    console.log("✅ All detectors initialized successfully");
-                    return; // Success, exit retry loop
+                    console.log("✅ MediaPipe initialized successfully");
+                    return;
 
                 } catch (error) {
                     retries--;
                     console.error(`❌ Detection initialization failed. Retries left: ${retries}`, error);
 
                     if (retries === 0) {
-                        setCameraError("AI detection failed to initialize - exam cannot proceed");
+                        setCameraError("AI detection failed to initialize");
                         onDisqualification("Proctoring system initialization failed");
                     } else {
                         await new Promise(resolve => setTimeout(resolve, 2000));
@@ -154,7 +265,7 @@ const ProctoringMonitor = memo(({
             }
         };
 
-        setTimeout(initializeDetection, 1000);  // was 2000
+        setTimeout(initializeDetection, 1000);
 
         return () => {
             faceDetector?.close?.();
@@ -162,7 +273,9 @@ const ProctoringMonitor = memo(({
         };
     }, [isExamProctored, videoReady]);
 
-    // Initialize audio monitoring
+    // ============================================
+    // AUDIO INITIALIZATION
+    // ============================================
     useEffect(() => {
         if (!isExamProctored) return;
 
@@ -204,7 +317,9 @@ const ProctoringMonitor = memo(({
         };
     }, [isExamProctored]);
 
-    // Face detection loop
+    // ============================================
+    // FACE DETECTION LOOP (WITH GEMINI VALIDATION)
+    // ============================================
     useEffect(() => {
         if (!faceDetectionActive || !faceDetector || !examStarted || !videoReady) return;
 
@@ -217,27 +332,42 @@ const ProctoringMonitor = memo(({
             try {
                 const detections = faceDetector.detectForVideo(video, performance.now());
 
-                // CHANGE: Make the thresholds more strict and immediate
+                // NO FACE DETECTED
                 if (detections.detections.length === 0) {
                     setNoFaceDetectedCount(prev => {
                         const newCount = prev + 1;
-                        // CHANGE: Reduce from 10 to 3 consecutive detections (3 seconds)
-                        if (newCount >= 3) {
+
+                        // After 5 consecutive detections, validate with Gemini
+                        if (newCount === 5 && USE_GEMINI_VALIDATION) {
+                            validateWithGemini("no_face");
+                        }
+
+                        // Disqualify after 10 (give Gemini time to validate)
+                        if (newCount >= 10) {
                             onDisqualification("No face detected for extended period");
                         }
                         return newCount;
                     });
-                } else if (detections.detections.length > 1) {
+                }
+                // MULTIPLE FACES DETECTED
+                else if (detections.detections.length > 1) {
                     setMultipleFacesCount(prev => {
                         const newCount = prev + 1;
-                        // CHANGE: Make immediate - was 5, now 2
-                        if (newCount >= 2) {
+
+                        // Immediately validate with Gemini on first detection
+                        if (newCount === 1 && USE_GEMINI_VALIDATION) {
+                            validateWithGemini("multiple_faces");
+                        }
+
+                        // Disqualify after 3 consecutive (or if Gemini confirms)
+                        if (newCount >= 3) {
                             onDisqualification("Multiple faces detected");
                         }
                         return newCount;
                     });
-                } else {
-                    // IMPORTANT: Reset counters only when exactly 1 face
+                }
+                // EXACTLY ONE FACE (GOOD)
+                else {
                     setNoFaceDetectedCount(0);
                     setMultipleFacesCount(0);
                 }
@@ -258,7 +388,9 @@ const ProctoringMonitor = memo(({
         return () => clearInterval(interval);
     }, [faceDetectionActive, faceDetector, examStarted, videoReady, onDisqualification]);
 
-    // Object detection loop
+    // ============================================
+    // OBJECT DETECTION LOOP (WITH GEMINI VALIDATION)
+    // ============================================
     useEffect(() => {
         if (!faceDetectionActive || !objectDetector || !examStarted || !videoReady) return;
 
@@ -271,7 +403,6 @@ const ProctoringMonitor = memo(({
             try {
                 const detections = objectDetector.detectForVideo(video, performance.now());
 
-                // CHANGE: Expanded and more specific object list
                 const suspiciousObjects = [
                     'cell phone', 'mobile phone', 'phone', 'smartphone', 'telephone',
                     'book', 'laptop', 'computer', 'tablet', 'keyboard', 'mouse',
@@ -285,12 +416,10 @@ const ProctoringMonitor = memo(({
 
                 detections.detections.forEach(detection => {
                     detection.categories.forEach(category => {
-                        // CHANGE: Lower confidence threshold
-                        if (category.score > 0.3) {  // was 0.6
+                        if (category.score > 0.3) {
                             const objectName = category.categoryName.toLowerCase();
                             detectedItems.push(`${objectName} (${(category.score * 100).toFixed(0)}%)`);
 
-                            // Check for suspicious objects
                             const isSuspicious = suspiciousObjects.some(s =>
                                 objectName.includes(s) || s.includes(objectName)
                             );
@@ -298,33 +427,37 @@ const ProctoringMonitor = memo(({
                             if (isSuspicious) {
                                 foundSuspicious = true;
                                 suspiciousItem = objectName;
-                                console.log(`⚠️ Suspicious object detected: ${objectName} with confidence ${(category.score * 100).toFixed(1)}%`);
+                                console.log(`⚠️ Suspicious object: ${objectName} - ${(category.score * 100).toFixed(1)}%`);
                             }
                         }
                     });
                 });
 
-                // Update detected objects list
                 setDetectedObjects(detectedItems);
-
                 setDetectionDebug(prev => ({
                     ...prev,
                     lastObjectDetected: suspiciousItem || 'none',
-                    lastDetectionTime: new Date().toLocaleTimeString()
                 }));
 
                 if (foundSuspicious) {
                     setLastSuspiciousActivity(suspiciousItem);
                     setSuspiciousObjectCount(prev => {
                         const newCount = prev + 1;
-                        // CHANGE: Immediate disqualification on first detection
-                        if (newCount >= 1) {  // was 3
+
+                        // Validate with Gemini on first detection
+                        if (newCount === 1 && USE_GEMINI_VALIDATION) {
+                            validateWithGemini("suspicious_object", {
+                                objectName: suspiciousItem
+                            });
+                        }
+
+                        // Disqualify after 3 consecutive (unless Gemini says it's safe)
+                        if (newCount >= 3) {
                             onDisqualification(`Suspicious object detected: ${suspiciousItem}`);
                         }
                         return newCount;
                     });
                 } else {
-                    // CHANGE: Only reset if nothing suspicious for 2 consecutive checks
                     setSuspiciousObjectCount(prev => Math.max(0, prev - 1));
                 }
             } catch (error) {
@@ -336,7 +469,9 @@ const ProctoringMonitor = memo(({
         return () => clearInterval(interval);
     }, [faceDetectionActive, objectDetector, examStarted, videoReady, onDisqualification]);
 
-    // Audio monitoring loop
+    // ============================================
+    // AUDIO MONITORING LOOP
+    // ============================================
     useEffect(() => {
         if (!analyser || !examStarted || !audioContext) return;
 
@@ -380,7 +515,9 @@ const ProctoringMonitor = memo(({
         return () => cancelAnimationFrame(animationFrame);
     }, [analyser, examStarted, speakingDetected, audioContext, onDisqualification]);
 
-    // Video ready handler
+    // ============================================
+    // VIDEO READY HANDLER
+    // ============================================
     useEffect(() => {
         const video = videoRef.current;
         if (!video) return;
@@ -402,6 +539,9 @@ const ProctoringMonitor = memo(({
         };
     }, []);
 
+    // ============================================
+    // HELPER FUNCTIONS
+    // ============================================
     const drawDetections = (detections: any[]) => {
         const canvas = canvasRef.current;
         const video = videoRef.current;
@@ -475,10 +615,12 @@ const ProctoringMonitor = memo(({
         if (noFaceDetectedCount > 5 || multipleFacesCount > 0 || suspiciousObjectCount > 0 || audioViolations > 0) {
             return 'destructive';
         }
+        if (geminiAnalyzing) return 'default';
         return 'default';
     };
 
     const getStatusText = () => {
+        if (geminiAnalyzing) return 'AI Analyzing...';
         if (noFaceDetectedCount > 5) return 'Face Not Detected';
         if (multipleFacesCount > 0) return 'Multiple Faces';
         if (suspiciousObjectCount > 0) return 'Suspicious Object';
@@ -486,6 +628,9 @@ const ProctoringMonitor = memo(({
         return 'Monitoring Active';
     };
 
+    // ============================================
+    // RENDER
+    // ============================================
     return (
         <Card className={`fixed bottom-6 right-6 z-50 transition-all duration-300 ${isMinimized ? 'w-80' : 'w-96'
             } max-w-[calc(100vw-3rem)] border-border/50 shadow-2xl`}>
@@ -498,13 +643,23 @@ const ProctoringMonitor = memo(({
                             <div className="absolute -top-1 -right-1 w-2 h-2 bg-green-500 rounded-full animate-pulse" />
                         </div>
                         <div>
-                            <h3 className="text-sm font-semibold text-foreground">Proctoring Monitor</h3>
-                            <p className="text-xs text-muted-foreground">AI-Powered Supervision</p>
+                            <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
+                                AI Proctoring
+                                {USE_GEMINI_VALIDATION && (
+                                    <Badge variant="secondary" className="text-xs gap-1">
+                                        <Sparkles className="w-3 h-3" />
+                                        Gemini
+                                    </Badge>
+                                )}
+                            </h3>
+                            <p className="text-xs text-muted-foreground">
+                                {geminiAnalyzing ? "AI analyzing..." : "Real-time monitoring"}
+                            </p>
                         </div>
                     </div>
                     <button
                         onClick={() => setIsMinimized(!isMinimized)}
-                        className="p-1.5 hover:bg-muted rounded-lg transition-colors"
+                        className="p-1.5 hover:bg-muted rounded-md transition-colors"
                     >
                         {isMinimized ? (
                             <ChevronUp className="w-4 h-4 text-muted-foreground" />
@@ -514,144 +669,189 @@ const ProctoringMonitor = memo(({
                     </button>
                 </div>
 
-                <>
-                    {/* Video Feed */}
-                    <div className={`p-4 space-y-4 ${isMinimized ? 'hidden' : ''}`}>
-                        <div className="relative overflow-hidden rounded-lg border border-border bg-muted/10">
-                            <div className="relative aspect-[4/3] bg-slate-900">
-                                <video
-                                    ref={videoRef}
-                                    autoPlay
-                                    playsInline
-                                    muted
-                                    className="w-full h-full object-cover"
-                                />
-                                <canvas
-                                    ref={canvasRef}
-                                    className="absolute top-0 left-0 w-full h-full pointer-events-none"
-                                />
+                {!isMinimized && (
+                    <>
+                        {/* Video Feed */}
+                        <div className="p-4 space-y-4">
+                            <div className="relative overflow-hidden rounded-lg border border-border bg-muted/10">
+                                <div className="relative aspect-[4/3] bg-slate-900">
+                                    <video
+                                        ref={videoRef}
+                                        autoPlay
+                                        playsInline
+                                        muted
+                                        className="w-full h-full object-cover"
+                                    />
+                                    <canvas
+                                        ref={canvasRef}
+                                        className="absolute top-0 left-0 w-full h-full pointer-events-none"
+                                    />
 
-                                {/* Recording Badge */}
-                                <div className="absolute top-3 left-3">
-                                    <Badge variant="destructive" className="flex items-center gap-1.5 px-2 py-1">
-                                        <div className="w-2 h-2 bg-white rounded-full animate-pulse" />
-                                        <span className="text-xs font-semibold">LIVE</span>
-                                    </Badge>
-                                </div>
+                                    {/* Recording Badge */}
+                                    <div className="absolute top-3 left-3">
+                                        <Badge variant="destructive" className="flex items-center gap-1.5 px-2 py-1">
+                                            <div className="w-2 h-2 bg-white rounded-full animate-pulse" />
+                                            <span className="text-xs font-semibold">LIVE</span>
+                                        </Badge>
+                                    </div>
 
-                                {/* Status Badge */}
-                                <div className="absolute top-3 right-3">
-                                    <Badge variant={getStatusColor()} className="text-xs">
-                                        {getStatusText()}
-                                    </Badge>
+                                    {/* Status Badge */}
+                                    <div className="absolute top-3 right-3">
+                                        <Badge variant={getStatusColor()} className="text-xs">
+                                            {getStatusText()}
+                                        </Badge>
+                                    </div>
+
+                                    {/* Gemini Analyzing Indicator */}
+                                    {geminiAnalyzing && (
+                                        <div className="absolute bottom-3 left-3">
+                                            <Badge variant="secondary" className="flex items-center gap-1.5 px-2 py-1">
+                                                <Brain className="w-3 h-3 animate-pulse" />
+                                                <span className="text-xs">AI Analyzing...</span>
+                                            </Badge>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
-                        </div>
 
-                        {/* Status Grid */}
-                        <div className="grid grid-cols-3 gap-2">
-                            {/* Face Detection */}
-                            <div className={`p-3 rounded-lg border transition-all ${noFaceDetectedCount > 5
-                                ? 'border-destructive/50 bg-destructive/5'
-                                : 'border-green-500/50 bg-green-500/5'
-                                }`}>
-                                <div className="flex items-center gap-2 mb-1.5">
-                                    <Eye className={`w-3.5 h-3.5 ${noFaceDetectedCount > 5 ? 'text-destructive' : 'text-green-500'
-                                        }`} />
-                                    <span className="text-xs font-medium">Face</span>
-                                </div>
-                                <p className={`text-xs font-semibold ${noFaceDetectedCount > 5 ? 'text-destructive' : 'text-green-600'
+                            {/* Status Grid */}
+                            <div className="grid grid-cols-3 gap-2">
+                                {/* Face Detection */}
+                                <div className={`p-3 rounded-lg border transition-all ${noFaceDetectedCount > 5
+                                    ? 'border-destructive/50 bg-destructive/5'
+                                    : 'border-green-500/50 bg-green-500/5'
                                     }`}>
-                                    {noFaceDetectedCount > 5 ? 'Alert' : 'Detected'}
-                                </p>
-                            </div>
-
-                            {/* Object Detection */}
-                            <div className={`p-3 rounded-lg border transition-all ${suspiciousObjectCount > 0
-                                ? 'border-amber-500/50 bg-amber-500/5'
-                                : 'border-blue-500/50 bg-blue-500/5'
-                                }`}>
-                                <div className="flex items-center gap-2 mb-1.5">
-                                    <Scan className={`w-3.5 h-3.5 ${suspiciousObjectCount > 0 ? 'text-amber-500' : 'text-blue-500'
-                                        }`} />
-                                    <span className="text-xs font-medium">Objects</span>
+                                    <div className="flex items-center gap-2 mb-1.5">
+                                        <Eye className={`w-3.5 h-3.5 ${noFaceDetectedCount > 5 ? 'text-destructive' : 'text-green-500'
+                                            }`} />
+                                        <span className="text-xs font-medium">Face</span>
+                                    </div>
+                                    <p className={`text-xs font-semibold ${noFaceDetectedCount > 5 ? 'text-destructive' : 'text-green-600'
+                                        }`}>
+                                        {noFaceDetectedCount > 5 ? 'Alert' : 'Detected'}
+                                    </p>
                                 </div>
-                                <p className={`text-xs font-semibold ${suspiciousObjectCount > 0 ? 'text-amber-600' : 'text-blue-600'
-                                    }`}>
-                                    {suspiciousObjectCount > 0 ? 'Warning' : 'Clear'}
-                                </p>
-                            </div>
 
-                            {/* Audio Detection */}
-                            <div className={`p-3 rounded-lg border transition-all ${audioViolations > 0
-                                ? 'border-destructive/50 bg-destructive/5'
-                                : 'border-primary/50 bg-primary/5'
-                                }`}>
-                                <div className="flex items-center gap-2 mb-1.5">
-                                    <Mic className={`w-3.5 h-3.5 ${audioViolations > 0 ? 'text-destructive' : 'text-primary'
-                                        }`} />
-                                    <span className="text-xs font-medium">Audio</span>
+                                {/* Object Detection */}
+                                <div className={`p-3 rounded-lg border transition-all ${suspiciousObjectCount > 0
+                                    ? 'border-amber-500/50 bg-amber-500/5'
+                                    : 'border-blue-500/50 bg-blue-500/5'
+                                    }`}>
+                                    <div className="flex items-center gap-2 mb-1.5">
+                                        <Scan className={`w-3.5 h-3.5 ${suspiciousObjectCount > 0 ? 'text-amber-500' : 'text-blue-500'
+                                            }`} />
+                                        <span className="text-xs font-medium">Objects</span>
+                                    </div>
+                                    <p className={`text-xs font-semibold ${suspiciousObjectCount > 0 ? 'text-amber-600' : 'text-blue-600'
+                                        }`}>
+                                        {suspiciousObjectCount > 0 ? 'Warning' : 'Clear'}
+                                    </p>
                                 </div>
-                                <p className={`text-xs font-semibold ${audioViolations > 0 ? 'text-destructive' : 'text-primary'
+
+                                {/* Audio Detection */}
+                                <div className={`p-3 rounded-lg border transition-all ${audioViolations > 0
+                                    ? 'border-destructive/50 bg-destructive/5'
+                                    : 'border-primary/50 bg-primary/5'
                                     }`}>
-                                    {audioViolations > 0 ? `${audioViolations}/3` : 'Silent'}
-                                </p>
+                                    <div className="flex items-center gap-2 mb-1.5">
+                                        <Mic className={`w-3.5 h-3.5 ${audioViolations > 0 ? 'text-destructive' : 'text-primary'
+                                            }`} />
+                                        <span className="text-xs font-medium">Audio</span>
+                                    </div>
+                                    <p className={`text-xs font-semibold ${audioViolations > 0 ? 'text-destructive' : 'text-primary'
+                                        }`}>
+                                        {audioViolations > 0 ? `${audioViolations}/3` : 'Silent'}
+                                    </p>
+                                </div>
                             </div>
+
+                            <Separator />
+
+                            {/* AI Analysis Status */}
+                            {USE_GEMINI_VALIDATION && (
+                                <div className="space-y-2">
+                                    <div className="flex items-center justify-between">
+                                        <span className="text-xs font-medium text-muted-foreground flex items-center gap-2">
+                                            <Brain className="w-3.5 h-3.5" />
+                                            Gemini Validations
+                                        </span>
+                                        <span className="text-xs font-mono font-semibold text-foreground">
+                                            {geminiValidationCount}
+                                        </span>
+                                    </div>
+                                    {lastGeminiAnalysis && (
+                                        <div className="text-xs text-muted-foreground bg-muted/50 p-2 rounded">
+                                            <p className="font-medium mb-1">Last AI Analysis:</p>
+                                            <p className="truncate">{lastGeminiAnalysis.reason}</p>
+                                            <div className="flex items-center gap-2 mt-1">
+                                                <Badge variant={
+                                                    lastGeminiAnalysis.severity === 'critical' ? 'destructive' :
+                                                        lastGeminiAnalysis.severity === 'high' ? 'destructive' :
+                                                            lastGeminiAnalysis.severity === 'medium' ? 'default' : 'secondary'
+                                                } className="text-xs">
+                                                    {lastGeminiAnalysis.severity}
+                                                </Badge>
+                                                <span className="text-xs">
+                                                    {lastGeminiAnalysis.confidence}% confident
+                                                </span>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+
+                            {/* Audio Level Indicator */}
+                            <div className="space-y-2">
+                                <div className="flex items-center justify-between">
+                                    <span className="text-xs font-medium text-muted-foreground flex items-center gap-2">
+                                        <Activity className="w-3.5 h-3.5" />
+                                        Audio Activity
+                                    </span>
+                                    <span className="text-xs font-mono font-semibold text-foreground">
+                                        {Math.round(audioLevel)}%
+                                    </span>
+                                </div>
+                                <div className="h-2 bg-muted rounded-full overflow-hidden">
+                                    <div
+                                        className={`h-full transition-all duration-150 ${audioLevel > 30
+                                            ? 'bg-gradient-to-r from-amber-500 to-red-500'
+                                            : 'bg-gradient-to-r from-green-500 to-emerald-500'
+                                            }`}
+                                        style={{ width: `${Math.min(audioLevel * 2, 100)}%` }}
+                                    />
+                                </div>
+                            </div>
+
+                            {/* Warnings */}
+                            {multipleFacesCount > 0 && (
+                                <Alert className="border-destructive/50 bg-destructive/10">
+                                    <AlertTriangle className="w-4 h-4 text-destructive" />
+                                    <AlertDescription className="text-xs font-medium text-destructive">
+                                        Multiple faces detected in frame
+                                    </AlertDescription>
+                                </Alert>
+                            )}
+
+                            {audioViolations > 0 && (
+                                <Alert className="border-amber-500/50 bg-amber-500/10">
+                                    <Mic className="w-4 h-4 text-amber-600" />
+                                    <AlertDescription className="text-xs font-medium text-amber-700 dark:text-amber-500">
+                                        Voice detected: {audioViolations}/3 warnings
+                                    </AlertDescription>
+                                </Alert>
+                            )}
+
+                            {cameraError && (
+                                <Alert className="border-destructive/50 bg-destructive/10">
+                                    <AlertTriangle className="w-4 h-4 text-destructive" />
+                                    <AlertDescription className="text-xs font-medium text-destructive">
+                                        {cameraError}
+                                    </AlertDescription>
+                                </Alert>
+                            )}
                         </div>
-
-                        <Separator />
-
-                        {/* Audio Level Indicator */}
-                        <div className="space-y-2">
-                            <div className="flex items-center justify-between">
-                                <span className="text-xs font-medium text-muted-foreground flex items-center gap-2">
-                                    <Activity className="w-3.5 h-3.5" />
-                                    Audio Activity
-                                </span>
-                                <span className="text-xs font-mono font-semibold text-foreground">
-                                    {Math.round(audioLevel)}%
-                                </span>
-                            </div>
-                            <div className="h-2 bg-muted rounded-full overflow-hidden">
-                                <div
-                                    className={`h-full transition-all duration-150 ${audioLevel > 30
-                                        ? 'bg-gradient-to-r from-amber-500 to-red-500'
-                                        : 'bg-gradient-to-r from-green-500 to-emerald-500'
-                                        }`}
-                                    style={{ width: `${Math.min(audioLevel * 2, 100)}%` }}
-                                />
-                            </div>
-                        </div>
-
-                        {/* Warnings */}
-                        {multipleFacesCount > 0 && (
-                            <Alert className="border-destructive/50 bg-destructive/10">
-                                <AlertTriangle className="w-4 h-4 text-destructive" />
-                                <AlertDescription className="text-xs font-medium text-destructive">
-                                    Multiple faces detected in frame
-                                </AlertDescription>
-                            </Alert>
-                        )}
-
-                        {audioViolations > 0 && (
-                            <Alert className="border-amber-500/50 bg-amber-500/10">
-                                <Mic className="w-4 h-4 text-amber-600" />
-                                <AlertDescription className="text-xs font-medium text-amber-700 dark:text-amber-500">
-                                    Voice detected: {audioViolations}/3 warnings
-                                </AlertDescription>
-                            </Alert>
-                        )}
-
-                        {cameraError && (
-                            <Alert className="border-destructive/50 bg-destructive/10">
-                                <AlertTriangle className="w-4 h-4 text-destructive" />
-                                <AlertDescription className="text-xs font-medium text-destructive">
-                                    {cameraError}
-                                </AlertDescription>
-                            </Alert>
-                        )}
-                    </div>
-                </>
+                    </>
+                )}
 
                 {/* Minimized View */}
                 {isMinimized && (
@@ -660,9 +860,12 @@ const ProctoringMonitor = memo(({
                             <Badge variant={getStatusColor()} className="text-xs">
                                 {getStatusText()}
                             </Badge>
-                            <span className="text-xs text-muted-foreground">
-                                {audioViolations > 0 && `${audioViolations}/3 violations`}
-                            </span>
+                            {USE_GEMINI_VALIDATION && (
+                                <span className="text-xs text-muted-foreground flex items-center gap-1">
+                                    <Brain className="w-3 h-3" />
+                                    {geminiValidationCount}
+                                </span>
+                            )}
                         </div>
                         <div className="flex items-center gap-2">
                             <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />

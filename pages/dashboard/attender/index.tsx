@@ -14,7 +14,10 @@ import { AchievementPredictionsCard } from '@/components/attender/AchievementPre
 import { PostExamInsightsModal } from '@/components/attender/PostExamInsightsModal';
 import { AdaptiveLearningPath } from '@/components/attender/AdaptiveLearningPath';
 import { ExamStrategyModal } from '@/components/attender/ExamStrategyModal';
-import { Exam, CompletedExam } from '@/types/attender'; 
+import { Exam, CompletedExam } from '@/types/attender';
+import Head from 'next/head';
+import { ChevronRight, Ghost } from 'lucide-react';
+import GhostModeCard from '@/components/attender/dashboard/GhostModeCard';
 
 const fetcher = (url: string) => fetch(url).then(res => res.json());
 
@@ -199,6 +202,10 @@ const AttenderDashboard = () => {
 
     return (
         <UnifiedDashboardLayout role="attender">
+            <Head>
+                <title>SysRank - Online Assessment Platform</title>
+                <link rel="icon" href="/logo3.png" />
+            </Head>
             <div className="space-y-8">
                 {/* Header */}
                 <DashboardHeader
@@ -209,6 +216,9 @@ const AttenderDashboard = () => {
                     refreshMessage={refreshMessage}
                     onRefresh={handleRefreshInsights}
                 />
+
+                {/* Ghost Mode Card - Add this after DashboardHeader */}
+                <GhostModeCard />
 
                 {/* Stats Grid */}
                 <StatsGrid stats={stats} />
