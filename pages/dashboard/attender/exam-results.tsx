@@ -9,6 +9,8 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Progress } from '@/components/ui/progress';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Input } from '@/components/ui/input';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import {
     CheckCircle2,
     XCircle,
@@ -24,7 +26,12 @@ import {
     Lightbulb,
     ThumbsUp,
     ThumbsDown,
-    MessageSquare, Loader2, Sparkles, BookOpen, Send
+    MessageSquare, Loader2, Sparkles, BookOpen, Send,
+    Search,
+    Filter,
+    ChevronRight,
+    BarChart3,
+    Zap
 } from 'lucide-react';
 import {
     Dialog,
@@ -78,6 +85,7 @@ const ExamResultsPage = () => {
     const router = useRouter();
     const { data: session } = useSession();
     const [selectedExam, setSelectedExam] = useState<ExamResult | null>(null);
+    const [searchQuery, setSearchQuery] = useState("");
 
     const [expandedFeedback, setExpandedFeedback] = useState<string | null>(null);
     const [loadingExplanation, setLoadingExplanation] = useState(false);
@@ -115,6 +123,11 @@ const ExamResultsPage = () => {
         }
     );
 
+    const filteredExams = completedExams.filter(exam =>
+        exam.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        exam.language.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+
     const parseAnswers = (answersData: string | Answer[]): Answer[] => {
         if (Array.isArray(answersData)) return answersData;
         try {
@@ -150,12 +163,6 @@ const ExamResultsPage = () => {
         if (percentage >= 80) return 'text-emerald-600 dark:text-emerald-400';
         if (percentage >= 50) return 'text-amber-600 dark:text-amber-400';
         return 'text-rose-600 dark:text-rose-400';
-    };
-
-    const stripHtmlTags = (html: string) => {
-        const tmp = document.createElement('div');
-        tmp.innerHTML = html;
-        return tmp.textContent || tmp.innerText || '';
     };
 
     const handleExplainFurther = async (answer: Answer, feedback: Feedback, query?: string) => {
@@ -277,17 +284,14 @@ const ExamResultsPage = () => {
         return (
             <UnifiedDashboardLayout role='attender'>
                 <div className="space-y-6">
-                    {/* Header Skeleton */}
                     <div className="flex items-center gap-4">
                         <div>
                             <Skeleton className="h-9 w-80 mb-2" />
                             <Skeleton className="h-5 w-64" />
                         </div>
                     </div>
-
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                        {/* Sidebar Skeleton */}
-                        <div className="lg:col-span-1">
+                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                        <div className="lg:col-span-3">
                             <Card className="border-border">
                                 <CardHeader>
                                     <Skeleton className="h-6 w-32 mb-2" />
@@ -300,9 +304,7 @@ const ExamResultsPage = () => {
                                 </CardContent>
                             </Card>
                         </div>
-
-                        {/* Main Content Skeleton */}
-                        <div className="lg:col-span-2 space-y-6">
+                        <div className="lg:col-span-9 space-y-6">
                             <Card className="border-border">
                                 <CardHeader>
                                     <Skeleton className="h-8 w-3/4 mb-2" />
@@ -314,18 +316,6 @@ const ExamResultsPage = () => {
                                             <Skeleton key={i} className="h-32 w-full" />
                                         ))}
                                     </div>
-                                </CardContent>
-                            </Card>
-
-                            <Card className="border-border">
-                                <CardHeader>
-                                    <Skeleton className="h-6 w-64 mb-2" />
-                                    <Skeleton className="h-4 w-48" />
-                                </CardHeader>
-                                <CardContent className="space-y-4">
-                                    {[1, 2].map((i) => (
-                                        <Skeleton key={i} className="h-64 w-full" />
-                                    ))}
                                 </CardContent>
                             </Card>
                         </div>
@@ -378,80 +368,89 @@ const ExamResultsPage = () => {
     return (
         <UnifiedDashboardLayout role='attender'>
             <Head>
-                <title>SysRank - Online Assessment Platform</title>
+                <title>Exam Results | SysRank</title>
                 <link rel="icon" href="/logo3.png" />
             </Head>
-            <div className="space-y-6">
+            <div className="space-y-6 max-w-[1600px] mx-auto">
                 {/* Header */}
-                <div className="flex items-center gap-4">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                     <div>
-                        <h1 className="text-3xl font-bold text-foreground">Exam Results & Feedback</h1>
-                        <p className="text-muted-foreground mt-1">Review your performance and AI feedback</p>
+                        <h1 className="text-2xl font-bold text-foreground tracking-tight">Performance Report</h1>
+                        <p className="text-muted-foreground">Detailed analysis of your past assessments</p>
                     </div>
+                    <Button variant="outline" onClick={() => router.push('/dashboard/attender/view-exams')} className="gap-2">
+                        <ChevronLeft className="h-4 w-4" />
+                        Back to Exams
+                    </Button>
                 </div>
 
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    {/* Exam List Sidebar */}
-                    <div className="lg:col-span-1">
-                        <Card className="border-border sticky top-6">
-                            <CardHeader>
-                                <CardTitle className="text-lg">Your Exams</CardTitle>
-                                <CardDescription>{completedExams.length} completed</CardDescription>
-                            </CardHeader>
-                            <CardContent className="space-y-2 max-h-[calc(100vh-200px)] overflow-y-auto">
-                                {completedExams.map((exam) => {
-                                    const percentage = typeof exam.percentage === 'string'
-                                        ? parseFloat(exam.percentage)
-                                        : exam.percentage;
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                    {/* Left Sidebar: Exam List */}
+                    <div className="lg:col-span-3 space-y-4">
+                        <Card className="border-border h-[calc(100vh-200px)] flex flex-col">
+                            <div className="p-4 border-b border-border space-y-4">
+                                <div className="relative">
+                                    <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                                    <Input
+                                        placeholder="Search exams..."
+                                        className="pl-9"
+                                        value={searchQuery}
+                                        onChange={(e) => setSearchQuery(e.target.value)}
+                                    />
+                                </div>
+                            </div>
+                            <ScrollArea className="flex-1">
+                                <div className="p-2 space-y-1">
+                                    {filteredExams.map((exam) => {
+                                        const percentage = typeof exam.percentage === 'string'
+                                            ? parseFloat(exam.percentage)
+                                            : exam.percentage;
+                                        const isSelected = selectedExam?.id === exam.id;
 
-                                    return (
-                                        <Card
-                                            key={exam.id}
-                                            className={`p-4 cursor-pointer transition-all border ${selectedExam?.id === exam.id
-                                                ? 'border-primary bg-primary/5'
-                                                : 'border-border hover:border-primary/50'
-                                                }`}
-                                            onClick={() => setSelectedExam(exam)}
-                                        >
-                                            <div className="space-y-2">
+                                        return (
+                                            <div
+                                                key={exam.id}
+                                                onClick={() => setSelectedExam(exam)}
+                                                className={`group flex flex-col gap-2 p-3 rounded-lg cursor-pointer transition-all ${isSelected
+                                                    ? 'bg-primary/10 hover:bg-primary/15'
+                                                    : 'hover:bg-muted'
+                                                    }`}
+                                            >
                                                 <div className="flex items-start justify-between gap-2">
-                                                    <h3 className="font-semibold text-sm text-foreground line-clamp-2">
+                                                    <h3 className={`font-medium text-sm line-clamp-2 ${isSelected ? 'text-primary' : 'text-foreground'}`}>
                                                         {exam.title}
                                                     </h3>
                                                     {exam.disqualified ? (
-                                                        <XCircle className="h-4 w-4 text-rose-600 dark:text-rose-400 shrink-0" />
+                                                        <XCircle className="h-4 w-4 text-rose-500 shrink-0" />
                                                     ) : (
-                                                        <CheckCircle2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                                                        <span className={`text-xs font-bold ${getScoreColor(percentage)}`}>
+                                                            {percentage.toFixed(0)}%
+                                                        </span>
                                                     )}
                                                 </div>
-                                                <div className="flex items-center gap-2">
-                                                    <Badge variant="outline" className="text-xs">
-                                                        <Code className="h-3 w-3 mr-1" />
+                                                <div className="flex items-center justify-between text-xs text-muted-foreground">
+                                                    <span className="flex items-center gap-1">
+                                                        <Code className="h-3 w-3" />
                                                         {exam.language}
-                                                    </Badge>
-                                                    <Badge
-                                                        variant="outline"
-                                                        className={`text-xs ${getScoreBgColor(percentage)}`}
-                                                    >
-                                                        {percentage.toFixed(0)}%
-                                                    </Badge>
+                                                    </span>
+                                                    <span>
+                                                        {new Date(exam.submittedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                                                    </span>
                                                 </div>
-                                                <p className="text-xs text-muted-foreground">
-                                                    {new Date(exam.submittedAt).toLocaleDateString('en-US', {
-                                                        month: 'short',
-                                                        day: 'numeric',
-                                                        year: 'numeric'
-                                                    })}
-                                                </p>
                                             </div>
-                                        </Card>
-                                    );
-                                })}
-                            </CardContent>
+                                        );
+                                    })}
+                                    {filteredExams.length === 0 && (
+                                        <div className="p-4 text-center text-sm text-muted-foreground">
+                                            No exams found
+                                        </div>
+                                    )}
+                                </div>
+                            </ScrollArea>
                         </Card>
                     </div>
 
-                    {/* Main Content */}
+                    {/* Main Content: Report */}
                     {selectedExam && (() => {
                         const answers = parseAnswers(selectedExam.answersWithQuestionIds);
                         const feedback = parseFeedback(selectedExam.ai_feedback);
@@ -466,274 +465,215 @@ const ExamResultsPage = () => {
                             : selectedExam.totalPossibleMarks;
 
                         return (
-                            <div className="lg:col-span-2 space-y-6">
-                                {/* Exam Overview Card */}
-                                <Card className="border-border">
-                                    <CardHeader>
+                            <div className="lg:col-span-9 space-y-6 animate-fade-in-up">
+                                {/* Overview Card */}
+                                <Card className="border-border overflow-hidden">
+                                    <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-primary to-purple-500" />
+                                    <CardHeader className="pb-2">
                                         <div className="flex items-start justify-between">
-                                            <div className="space-y-1">
-                                                <CardTitle className="text-2xl">{selectedExam.title}</CardTitle>
-                                                <CardDescription className="flex items-center gap-2 mt-2">
+                                            <div>
+                                                <CardTitle className="text-2xl font-bold">{selectedExam.title}</CardTitle>
+                                                <CardDescription className="flex items-center gap-2 mt-1">
                                                     <Calendar className="h-4 w-4" />
                                                     Submitted on {new Date(selectedExam.submittedAt).toLocaleDateString('en-US', {
+                                                        weekday: 'long',
+                                                        year: 'numeric',
                                                         month: 'long',
                                                         day: 'numeric',
-                                                        year: 'numeric',
                                                         hour: '2-digit',
                                                         minute: '2-digit'
                                                     })}
                                                 </CardDescription>
                                             </div>
                                             {selectedExam.disqualified && (
-                                                <Badge variant="outline" className="bg-rose-100 text-rose-700 dark:bg-rose-950/50 dark:text-rose-400 border-rose-200">
+                                                <Badge variant="destructive" className="text-sm px-3 py-1">
                                                     Disqualified
                                                 </Badge>
                                             )}
                                         </div>
                                     </CardHeader>
-                                    <CardContent className="space-y-6">
-                                        {/* Score Overview */}
-                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                            <Card className="p-4 border-border bg-card">
-                                                <div className="flex items-center justify-between mb-2">
-                                                    <span className="text-sm font-medium text-muted-foreground">Score</span>
-                                                    <Award className={`h-5 w-5 ${getScoreColor(percentage)}`} />
-                                                </div>
+                                    <CardContent>
+                                        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mt-4">
+                                            <div className="p-4 rounded-xl bg-muted/30 border border-border flex flex-col items-center justify-center text-center">
+                                                <div className="text-sm font-medium text-muted-foreground mb-1">Score</div>
                                                 <div className={`text-3xl font-bold ${getScoreColor(percentage)}`}>
                                                     {percentage.toFixed(1)}%
                                                 </div>
-                                                <Progress value={percentage} className="mt-2 h-2" />
-                                            </Card>
-
-                                            <Card className="p-4 border-border bg-card">
-                                                <div className="flex items-center justify-between mb-2">
-                                                    <span className="text-sm font-medium text-muted-foreground">Marks</span>
-                                                    <Target className="h-5 w-5 text-primary" />
-                                                </div>
+                                                <Progress value={percentage} className="h-1.5 w-24 mt-2" />
+                                            </div>
+                                            <div className="p-4 rounded-xl bg-muted/30 border border-border flex flex-col items-center justify-center text-center">
+                                                <div className="text-sm font-medium text-muted-foreground mb-1">Marks</div>
                                                 <div className="text-3xl font-bold text-foreground">
-                                                    {totalMarksObtained}
-                                                    <span className="text-lg text-muted-foreground">
-                                                        /{totalPossibleMarks}
-                                                    </span>
+                                                    {totalMarksObtained}<span className="text-lg text-muted-foreground">/{totalPossibleMarks}</span>
                                                 </div>
-                                                <p className="text-xs text-muted-foreground mt-2">Total marks obtained</p>
-                                            </Card>
-
-                                            <Card className="p-4 border-border bg-card">
-                                                <div className="flex items-center justify-between mb-2">
-                                                    <span className="text-sm font-medium text-muted-foreground">Duration</span>
-                                                    <Clock className="h-5 w-5 text-primary" />
-                                                </div>
+                                                <Target className="h-4 w-4 text-primary mt-2" />
+                                            </div>
+                                            <div className="p-4 rounded-xl bg-muted/30 border border-border flex flex-col items-center justify-center text-center">
+                                                <div className="text-sm font-medium text-muted-foreground mb-1">Duration</div>
                                                 <div className="text-3xl font-bold text-foreground">
                                                     {selectedExam.duration}
                                                 </div>
-                                                <p className="text-xs text-muted-foreground mt-2">minutes</p>
-                                            </Card>
+                                                <div className="text-xs text-muted-foreground mt-1">minutes</div>
+                                            </div>
+                                            <div className="p-4 rounded-xl bg-muted/30 border border-border flex flex-col items-center justify-center text-center">
+                                                <div className="text-sm font-medium text-muted-foreground mb-1">Language</div>
+                                                <div className="text-2xl font-bold text-foreground uppercase">
+                                                    {selectedExam.language}
+                                                </div>
+                                                <Code className="h-4 w-4 text-primary mt-2" />
+                                            </div>
                                         </div>
 
-                                        {/* Quick Info */}
-                                        <div className="flex flex-wrap gap-3">
-                                            <Badge variant="outline" className="text-sm py-1.5">
-                                                <Code className="h-4 w-4 mr-2" />
-                                                {selectedExam.language}
-                                            </Badge>
-                                            <Badge variant="outline" className="text-sm py-1.5">
-                                                <FileText className="h-4 w-4 mr-2" />
-                                                {answers.length} Questions
-                                            </Badge>
-                                        </div>
-
-                                        {/* Code Review Button */}
                                         {selectedExam.code && (
-                                            <Button
-                                                onClick={handleCodeReview}
-                                                className="w-full sm:w-auto gap-2"
-                                                variant="outline"
-                                            >
-                                                <Code className="h-4 w-4" />
-                                                AI Code Review
-                                            </Button>
+                                            <div className="mt-6 flex justify-end">
+                                                <Button
+                                                    onClick={handleCodeReview}
+                                                    variant="default"
+                                                    className="gap-2 bg-primary hover:bg-primary/90"
+                                                >
+                                                    <Sparkles className="h-4 w-4" />
+                                                    Get AI Code Review
+                                                </Button>
+                                            </div>
                                         )}
                                     </CardContent>
                                 </Card>
 
-                                {/* Questions and Feedback */}
-                                <Card className="border-border">
-                                    <CardHeader>
-                                        <CardTitle className="flex items-center gap-2">
-                                            <MessageSquare className="h-5 w-5" />
-                                            Questions & AI Feedback
-                                        </CardTitle>
-                                        <CardDescription>
-                                            Detailed feedback on your answers
-                                        </CardDescription>
-                                    </CardHeader>
-                                    <CardContent className="space-y-6">
-                                        {selectedExam.disqualified ? (
-                                            <div className="text-center py-12">
-                                                <XCircle className="h-12 w-12 text-rose-600 dark:text-rose-400 mx-auto mb-4" />
-                                                <h3 className="text-lg font-medium text-foreground mb-2">Exam Disqualified</h3>
-                                                <p className="text-muted-foreground">No feedback available for disqualified exams</p>
-                                            </div>
-                                        ) : feedback.length === 0 || !selectedExam.ai_feedback ? (
-                                            <div className="text-center py-12">
-                                                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-                                                <h3 className="text-lg font-medium text-foreground mb-2">AI is Evaluating Your Answers</h3>
-                                                <p className="text-muted-foreground">Please wait while we generate feedback for your submission</p>
-                                            </div>
-                                        ) : (
-                                            <>
-                                                {answers.map((answer, index) => {
-                                                    const questionFeedback = feedback.find(
-                                                        f => f.questionId === answer.questionId
-                                                    );
-                                                    const marksPercentage = questionFeedback
-                                                        ? (questionFeedback.marks / answer.marks * 100)
-                                                        : 0;
+                                {/* Questions List */}
+                                <div className="space-y-4">
+                                    <div className="flex items-center justify-between">
+                                        <h2 className="text-lg font-semibold flex items-center gap-2">
+                                            <MessageSquare className="h-5 w-5 text-primary" />
+                                            Question Analysis
+                                        </h2>
+                                        <Badge variant="outline">{answers.length} Questions</Badge>
+                                    </div>
 
-                                                    return (
-                                                        <Card key={answer.questionId} className="border-border bg-muted/30">
-                                                            <CardHeader className="pb-4">
-                                                                <div className="flex items-start justify-between gap-4">
-                                                                    <div className="flex-1">
-                                                                        <div className="flex items-center gap-2 mb-2">
-                                                                            <Badge variant="outline" className="text-xs">
-                                                                                Question {index + 1}
-                                                                            </Badge>
-                                                                            <Badge
-                                                                                variant="outline"
-                                                                                className={`text-xs ${marksPercentage >= 80
-                                                                                    ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-400 border-emerald-200'
-                                                                                    : marksPercentage >= 50
-                                                                                        ? 'bg-amber-100 text-amber-700 dark:bg-amber-950/50 dark:text-amber-400 border-amber-200'
-                                                                                        : 'bg-rose-100 text-rose-700 dark:bg-rose-950/50 dark:text-rose-400 border-rose-200'
-                                                                                    }`}
-                                                                            >
-                                                                                {questionFeedback?.marks || 0}/{answer.marks} marks
-                                                                            </Badge>
-                                                                            {answer.type && (
-                                                                                <Badge variant="outline" className="text-xs capitalize">
-                                                                                    {answer.type}
-                                                                                </Badge>
-                                                                            )}
-                                                                        </div>
-                                                                        <div className="text-base text-foreground prose prose-sm max-w-none dark:prose-invert">
-                                                                            <div dangerouslySetInnerHTML={{ __html: answer.question }} />
-                                                                        </div>
-                                                                    </div>
-                                                                    {marksPercentage >= 80 ? (
-                                                                        <ThumbsUp className="h-5 w-5 text-emerald-600 dark:text-emerald-400 shrink-0" />
-                                                                    ) : marksPercentage >= 50 ? (
-                                                                        <Info className="h-5 w-5 text-amber-600 dark:text-amber-400 shrink-0" />
-                                                                    ) : (
-                                                                        <ThumbsDown className="h-5 w-5 text-rose-600 dark:text-rose-400 shrink-0" />
-                                                                    )}
-                                                                </div>
-                                                            </CardHeader>
-                                                            <CardContent className="space-y-4">
-                                                                {/* Your Answer */}
-                                                                <div className="space-y-2">
+                                    {selectedExam.disqualified ? (
+                                        <Card className="border-dashed border-2 border-rose-200 dark:border-rose-900 bg-rose-50/50 dark:bg-rose-950/20">
+                                            <CardContent className="flex flex-col items-center justify-center py-12 text-center">
+                                                <XCircle className="h-12 w-12 text-rose-500 mb-4" />
+                                                <h3 className="text-lg font-semibold text-rose-700 dark:text-rose-400">Exam Disqualified</h3>
+                                                <p className="text-muted-foreground max-w-md mt-2">
+                                                    Detailed feedback is not available for disqualified exams due to violation of proctoring rules.
+                                                </p>
+                                            </CardContent>
+                                        </Card>
+                                    ) : feedback.length === 0 || !selectedExam.ai_feedback ? (
+                                        <Card className="border-dashed border-2">
+                                            <CardContent className="flex flex-col items-center justify-center py-12 text-center">
+                                                <Loader2 className="h-10 w-10 text-primary animate-spin mb-4" />
+                                                <h3 className="text-lg font-semibold">Generating Feedback</h3>
+                                                <p className="text-muted-foreground mt-2">
+                                                    Our AI is currently analyzing your answers. This may take a moment.
+                                                </p>
+                                            </CardContent>
+                                        </Card>
+                                    ) : (
+                                        <div className="space-y-4">
+                                            {answers.map((answer, index) => {
+                                                const questionFeedback = feedback.find(f => f.questionId === answer.questionId);
+                                                const marksPercentage = questionFeedback
+                                                    ? (questionFeedback.marks / answer.marks * 100)
+                                                    : 0;
+
+                                                return (
+                                                    <Card key={answer.questionId} className="border-border overflow-hidden transition-all hover:shadow-md">
+                                                        <div className={`h-1 w-full ${marksPercentage >= 80 ? 'bg-emerald-500' : marksPercentage >= 50 ? 'bg-amber-500' : 'bg-rose-500'}`} />
+                                                        <CardHeader className="pb-2">
+                                                            <div className="flex items-start justify-between gap-4">
+                                                                <div className="space-y-1 flex-1">
                                                                     <div className="flex items-center gap-2">
-                                                                        <div className="h-1 w-1 rounded-full bg-primary"></div>
-                                                                        <h4 className="text-sm font-semibold text-foreground">Your Answer</h4>
+                                                                        <Badge variant="secondary" className="text-xs font-normal">
+                                                                            Q{index + 1}
+                                                                        </Badge>
+                                                                        <Badge variant="outline" className="text-xs font-normal capitalize">
+                                                                            {answer.type || 'General'}
+                                                                        </Badge>
                                                                     </div>
-                                                                    <Card className="p-4 bg-card border-border">
-                                                                        <p className="text-sm text-foreground whitespace-pre-wrap">
-                                                                            {answer.selectedOptionText || answer.answer || 'No answer provided'}
-                                                                        </p>
-                                                                    </Card>
+                                                                    <div className="text-base font-medium text-foreground prose prose-sm max-w-none dark:prose-invert line-clamp-2 hover:line-clamp-none transition-all">
+                                                                        <div dangerouslySetInnerHTML={{ __html: answer.question }} />
+                                                                    </div>
                                                                 </div>
-
-                                                                {/* AI Feedback */}
+                                                                <div className="flex flex-col items-end gap-1 shrink-0">
+                                                                    <div className={`text-lg font-bold ${getMarksColor(questionFeedback?.marks || 0, answer.marks)}`}>
+                                                                        {questionFeedback?.marks || 0}<span className="text-sm text-muted-foreground font-normal">/{answer.marks}</span>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        </CardHeader>
+                                                        <CardContent className="pt-2 space-y-4">
+                                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                                <div className="space-y-2">
+                                                                    <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Your Answer</span>
+                                                                    <div className="p-3 bg-muted/30 rounded-lg border border-border text-sm font-mono whitespace-pre-wrap max-h-40 overflow-y-auto">
+                                                                        {answer.selectedOptionText || answer.answer || 'No answer provided'}
+                                                                    </div>
+                                                                </div>
                                                                 {questionFeedback && (
-                                                                    <div className="space-y-3">
-                                                                        <Separator />
-                                                                        <div className="flex items-center gap-2">
-                                                                            <Lightbulb className="h-4 w-4 text-primary" />
-                                                                            <h4 className="text-sm font-semibold text-foreground">AI Feedback</h4>
-                                                                        </div>
-                                                                        <Card className="p-4 bg-primary/5 border-primary/20">
-                                                                            <p className="text-sm text-foreground leading-relaxed whitespace-pre-wrap">
-                                                                                {questionFeedback.feedback}
-                                                                            </p>
-                                                                        </Card>
-
-                                                                        {/* Progress bar for marks */}
-                                                                        <div className="space-y-2">
-                                                                            <div className="flex items-center justify-between text-xs">
-                                                                                <span className="text-muted-foreground">Score</span>
-                                                                                <span className={`font-medium ${getMarksColor(questionFeedback.marks, answer.marks)}`}>
-                                                                                    {marksPercentage.toFixed(0)}%
-                                                                                </span>
-                                                                            </div>
-                                                                            <Progress value={marksPercentage} className="h-2" />
+                                                                    <div className="space-y-2">
+                                                                        <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1">
+                                                                            <Zap className="h-3 w-3 text-yellow-500" /> AI Feedback
+                                                                        </span>
+                                                                        <div className="p-3 bg-primary/5 rounded-lg border border-primary/10 text-sm leading-relaxed">
+                                                                            {questionFeedback.feedback}
                                                                         </div>
                                                                     </div>
-
                                                                 )}
+                                                            </div>
 
-                                                                {/* AI Enhancement Buttons */}
-                                                                <div className="flex flex-wrap gap-2 mt-4">
-                                                                    <Button
-                                                                        variant="outline"
-                                                                        size="sm"
-                                                                        onClick={() => handleExplainFurther(answer, questionFeedback!)}
-                                                                        className="gap-2"
-                                                                    >
-                                                                        <Sparkles className="h-4 w-4" />
-                                                                        Explain Further
-                                                                    </Button>
-
-                                                                    <Button
-                                                                        variant="outline"
-                                                                        size="sm"
-                                                                        onClick={() => handleShowAlternatives(answer)}
-                                                                        className="gap-2"
-                                                                    >
-                                                                        <BookOpen className="h-4 w-4" />
-                                                                        Show Alternatives
-                                                                    </Button>
-
-                                                                    <Button
-                                                                        variant="outline"
-                                                                        size="sm"
-                                                                        onClick={() => {
-                                                                            setShowTutorChat(answer.questionId);
-                                                                            setChatHistory([]);
-                                                                        }}
-                                                                        className="gap-2"
-                                                                    >
-                                                                        <MessageSquare className="h-4 w-4" />
-                                                                        Ask AI Tutor
-                                                                    </Button>
-                                                                </div>
-                                                            </CardContent>
-                                                        </Card>
-                                                    );
-                                                })}
-
-                                                {answers.length === 0 && (
-                                                    <div className="text-center py-12">
-                                                        <AlertCircle className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                                                        <p className="text-muted-foreground">No questions found for this exam</p>
-                                                    </div>
-                                                )}
-                                            </>
-                                        )}
-                                    </CardContent>
-                                </Card>
+                                                            <div className="flex items-center gap-2 pt-2 border-t border-border">
+                                                                <Button
+                                                                    variant="ghost"
+                                                                    size="sm"
+                                                                    className="text-xs gap-1.5 h-8"
+                                                                    onClick={() => handleExplainFurther(answer, questionFeedback!)}
+                                                                >
+                                                                    <Sparkles className="h-3.5 w-3.5 text-purple-500" />
+                                                                    Explain
+                                                                </Button>
+                                                                <Button
+                                                                    variant="ghost"
+                                                                    size="sm"
+                                                                    className="text-xs gap-1.5 h-8"
+                                                                    onClick={() => handleShowAlternatives(answer)}
+                                                                >
+                                                                    <BookOpen className="h-3.5 w-3.5 text-blue-500" />
+                                                                    Alternatives
+                                                                </Button>
+                                                                <Button
+                                                                    variant="ghost"
+                                                                    size="sm"
+                                                                    className="text-xs gap-1.5 h-8 ml-auto"
+                                                                    onClick={() => {
+                                                                        setShowTutorChat(answer.questionId);
+                                                                        setChatHistory([]);
+                                                                    }}
+                                                                >
+                                                                    <MessageSquare className="h-3.5 w-3.5 text-emerald-500" />
+                                                                    Ask Tutor
+                                                                </Button>
+                                                            </div>
+                                                        </CardContent>
+                                                    </Card>
+                                                );
+                                            })}
+                                        </div>
+                                    )}
+                                </div>
                             </div>
                         );
                     })()}
                 </div>
             </div>
 
+            {/* Dialogs (Explain, Alternatives, Code Review, Tutor) */}
             {/* Explain Further Dialog */}
             <Dialog open={expandedFeedback !== null} onOpenChange={() => setExpandedFeedback(null)}>
                 <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
                     <DialogHeader>
                         <DialogTitle className="flex items-center gap-2">
-                            <Sparkles className="h-5 w-5 text-primary" />
+                            <Sparkles className="h-5 w-5 text-purple-500" />
                             Detailed Explanation
                         </DialogTitle>
                         <DialogDescription>
@@ -757,7 +697,7 @@ const ExamResultsPage = () => {
                 <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
                     <DialogHeader>
                         <DialogTitle className="flex items-center gap-2">
-                            <BookOpen className="h-5 w-5 text-primary" />
+                            <BookOpen className="h-5 w-5 text-blue-500" />
                             Alternative Approaches
                         </DialogTitle>
                         <DialogDescription>
@@ -923,7 +863,7 @@ const ExamResultsPage = () => {
                         <DialogContent className="max-w-2xl h-[600px] flex flex-col">
                             <DialogHeader>
                                 <DialogTitle className="flex items-center gap-2">
-                                    <MessageSquare className="h-5 w-5 text-primary" />
+                                    <MessageSquare className="h-5 w-5 text-emerald-500" />
                                     AI Tutor
                                 </DialogTitle>
                                 <DialogDescription>
