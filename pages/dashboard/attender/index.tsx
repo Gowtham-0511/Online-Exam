@@ -3,7 +3,6 @@ import useSWR from 'swr';
 import { useSession } from "next-auth/react";
 import { useRouter } from 'next/router';
 import UnifiedDashboardLayout from '@/components/layouts/UnifiedDashboardLayout';
-import { DashboardHeader } from '@/components/attender/dashboard/DashboardHeader';
 import { UpcomingExamsSection } from '@/components/attender/dashboard/UpcomingExamsSection';
 import { CompletedExamsSection } from '@/components/attender/dashboard/CompletedExamsSection';
 import { AIInsightsCard } from '@/components/attender/AIInsightsCard';
@@ -92,6 +91,8 @@ const AttenderDashboard = () => {
             dedupingInterval: 300000,
         }
     );
+
+    console.log("aiInsights", aiInsights);
 
     const { data: performancePrediction, error: predictionError, isLoading: predictionLoading } = useSWR(
         session?.user?.email && completedExams.length >= 2
@@ -305,11 +306,11 @@ const AttenderDashboard = () => {
                                 </div>
                             ) : (
                                 <UpcomingExamsSection
-                                    exams={upcomingExams.slice(0, 3)} // Show limited on dashboard
+                                    exams={upcomingExams.slice(0, 3)}
                                     isLoading={upcomingLoading}
                                     onStartExam={handleStartExam}
                                     onViewStrategy={handleViewStrategy}
-                                    onViewAll={() => { }} // Handled by header button
+                                    onViewAll={() => { }}
                                 />
                             )}
                         </section>
@@ -432,7 +433,6 @@ const AttenderDashboard = () => {
                                 />
                             </div>
                         )}
-
                     </div>
                 </div>
             </div>

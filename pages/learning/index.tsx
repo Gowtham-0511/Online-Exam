@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/router";
 import Head from "next/head";
 import { Button } from "@/components/ui/button";
@@ -34,8 +34,13 @@ import {
     Code,
     Database,
     FileCode,
+    Terminal,
+    LayoutDashboard,
+    LogOut
 } from "lucide-react";
 import Image from "next/image";
+import gsap from "gsap";
+import { useGSAP } from "@gsap/react";
 
 export default function LearningPage() {
     const router = useRouter();
@@ -44,6 +49,12 @@ export default function LearningPage() {
     const [error, setError] = useState("");
     const [sessionId, setSessionId] = useState("");
     const [searchQuery, setSearchQuery] = useState("");
+
+    // GSAP Refs
+    const containerRef = useRef(null);
+    const heroRef = useRef(null);
+    const tracksRef = useRef(null);
+    const sidebarRef = useRef(null);
 
     // Stats from database
     const [stats, setStats] = useState({
@@ -66,7 +77,9 @@ export default function LearningPage() {
     // Initialize theme
     useEffect(() => {
         const savedTheme = localStorage.getItem("theme");
-        if (savedTheme === "dark") {
+        const systemPrefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+
+        if (savedTheme === "dark" || (!savedTheme && systemPrefersDark)) {
             setIsDarkMode(true);
             document.documentElement.classList.add("dark");
         }
@@ -82,6 +95,44 @@ export default function LearningPage() {
         setSessionId(guestSessionId);
         fetchStats(guestSessionId);
     }, []);
+
+    // GSAP Animations
+    useGSAP(() => {
+        const tl = gsap.timeline();
+
+        // Hero Animations
+        tl.from(heroRef.current, {
+            y: -20,
+            opacity: 0,
+            duration: 0.8,
+            ease: "power3.out"
+        })
+            .from(".hero-stat", {
+                y: 20,
+                opacity: 0,
+                duration: 0.6,
+                stagger: 0.1,
+                ease: "back.out(1.7)"
+            }, "-=0.4");
+
+        // Tracks Animation
+        tl.from(".track-card", {
+            y: 30,
+            opacity: 0,
+            duration: 0.6,
+            stagger: 0.1,
+            ease: "power2.out"
+        }, "-=0.2");
+
+        // Sidebar Animation
+        tl.from(sidebarRef.current, {
+            x: 20,
+            opacity: 0,
+            duration: 0.8,
+            ease: "power3.out"
+        }, "-=0.6");
+
+    }, { scope: containerRef });
 
     const fetchStats = async (sid: string) => {
         try {
@@ -219,200 +270,186 @@ export default function LearningPage() {
     return (
         <>
             <Head>
-                <title>Practice | SysRank - Coding Practice Platform</title>
+                <title>Practice | SysRank</title>
                 <link rel="icon" href="/logo3.png" />
             </Head>
 
-            <div className="min-h-screen bg-background">
-                {/* Header - HackerRank Style */}
-                <header className="sticky top-0 z-50 border-b border-border bg-card">
+            <div ref={containerRef} className="min-h-screen bg-background flex flex-col">
+                {/* Header */}
+                <header className="sticky top-0 z-50 border-b border-border bg-card/80 backdrop-blur-md">
                     <div className="container mx-auto px-4 sm:px-6">
                         <div className="flex h-16 items-center justify-between">
-                            {/* Logo & Nav */}
                             <div className="flex items-center gap-8">
                                 <div className="flex items-center gap-3 cursor-pointer" onClick={() => router.push("/")}>
-                                    <div className="w-9 h-9 bg-primary-foreground/20 rounded-lg flex items-center justify-center">
-                                        <Image src='/logo3.png' alt='logo' width={30} height={30} />
+                                    <div className="w-9 h-9 bg-primary/10 rounded-lg flex items-center justify-center border border-primary/20">
+                                        <Image src='/logo3.png' alt='logo' width={24} height={24} />
                                     </div>
-                                    <span className="text-lg font-bold text-foreground hidden sm:block">SysRank</span>
+                                    <span className="text-lg font-bold text-foreground hidden sm:block tracking-tight">SysRank</span>
                                 </div>
 
-                                {/* Main Nav */}
-                                <nav className="hidden md:flex items-center gap-6">
-                                    <Button variant="ghost" size="sm" className="font-semibold text-primary">
+                                <nav className="hidden md:flex items-center gap-1">
+                                    <Button variant="ghost" size="sm" className="font-medium text-primary bg-primary/10">
+                                        <Terminal className="w-4 h-4 mr-2" />
                                         Practice
                                     </Button>
-                                    {/* <Button variant="ghost" size="sm" className="font-medium text-muted-foreground">
+                                    {/* <Button variant="ghost" size="sm" className="font-medium text-muted-foreground hover:text-foreground">
+                                        <Trophy className="w-4 h-4 mr-2" />
                                         Compete
-                                    </Button>
-                                    <Button variant="ghost" size="sm" className="font-medium text-muted-foreground">
-                                        Learn
                                     </Button> */}
                                 </nav>
                             </div>
 
-                            {/* Actions */}
                             <div className="flex items-center gap-2">
-                                <Button variant="ghost" size="icon" onClick={toggleDarkMode}>
+                                <Button variant="ghost" size="icon" onClick={toggleDarkMode} className="rounded-full">
                                     {isDarkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
                                 </Button>
-                                <Button variant="outline" size="sm" onClick={() => router.push("/")}>
-                                    Sign In
+                                <Separator orientation="vertical" className="h-6" />
+                                <Button variant="ghost" size="sm" onClick={() => router.push("/")} className="text-muted-foreground hover:text-foreground">
+                                    <LogOut className="w-4 h-4 mr-2" />
+                                    Exit Guest Mode
                                 </Button>
                             </div>
                         </div>
                     </div>
                 </header>
 
-                {/* Hero Section - Compact HackerRank Style */}
-                <section className="border-b border-border bg-gradient-to-r from-primary/5 via-accent/5 to-primary/5">
-                    <div className="container mx-auto px-4 sm:px-6 py-8">
-                        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
-                            <div className="flex-1">
-                                <div className="flex items-center gap-2 mb-3">
-                                    <Badge variant="secondary" className="h-6">
-                                        <Flame className="w-3 h-3 mr-1 text-orange-500" />
-                                        Guest Mode
-                                    </Badge>
-                                    <Badge variant="outline" className="h-6">
-                                        <Sparkles className="w-3 h-3 mr-1" />
-                                        AI-Powered
-                                    </Badge>
+                {/* Hero Section */}
+                <div ref={heroRef} className="relative border-b border-border bg-muted/30 overflow-hidden">
+                    <div className="absolute inset-0 bg-grid-white/10 [mask-image:linear-gradient(0deg,white,rgba(255,255,255,0.6))] dark:bg-grid-black/10" />
+                    <div className="container mx-auto px-4 sm:px-6 py-12 relative">
+                        <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-8">
+                            <div className="space-y-4 max-w-2xl">
+                                <div className="inline-flex items-center rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-sm font-medium text-primary">
+                                    <Sparkles className="mr-2 h-3.5 w-3.5" />
+                                    AI-Powered Practice Environment
                                 </div>
-                                <h1 className="text-3xl md:text-4xl font-bold text-foreground mb-2">
-                                    Practice Coding Challenges
+                                <h1 className="text-4xl md:text-5xl font-bold tracking-tight text-foreground">
+                                    Master your craft with <span className="text-primary">SysRank</span>
                                 </h1>
-                                <p className="text-muted-foreground">
-                                    Solve problems, improve your skills, and prepare for interviews
+                                <p className="text-lg text-muted-foreground max-w-xl">
+                                    Join millions of developers solving challenges, preparing for interviews, and leveling up their skills.
                                 </p>
                             </div>
 
-                            {/* Quick Stats */}
-                            <div className="flex gap-4">
-                                <div className="text-center">
-                                    <div className="text-2xl font-bold text-foreground">{stats.totalAttempts || 0}</div>
-                                    <div className="text-xs text-muted-foreground">Attempts</div>
-                                </div>
-                                <Separator orientation="vertical" className="h-12" />
-                                <div className="text-center">
-                                    <div className="text-2xl font-bold text-primary">{stats.averageScore || 0}%</div>
-                                    <div className="text-xs text-muted-foreground">Avg Score</div>
-                                </div>
-                                <Separator orientation="vertical" className="h-12" />
-                                <div className="text-center">
-                                    <div className="text-2xl font-bold text-foreground">{stats.totalQuestions || 0}</div>
-                                    <div className="text-xs text-muted-foreground">Solved</div>
-                                </div>
+                            {/* Stats Cards */}
+                            <div className="flex gap-4 w-full lg:w-auto overflow-x-auto pb-2 lg:pb-0">
+                                <Card className="hero-stat min-w-[140px] bg-card/50 backdrop-blur-sm border-primary/10">
+                                    <CardContent className="p-4 text-center">
+                                        <div className="text-3xl font-bold text-foreground">{stats.totalAttempts || 0}</div>
+                                        <div className="text-xs font-medium text-muted-foreground uppercase tracking-wider mt-1">Attempts</div>
+                                    </CardContent>
+                                </Card>
+                                <Card className="hero-stat min-w-[140px] bg-card/50 backdrop-blur-sm border-primary/10">
+                                    <CardContent className="p-4 text-center">
+                                        <div className="text-3xl font-bold text-primary">{stats.averageScore || 0}%</div>
+                                        <div className="text-xs font-medium text-muted-foreground uppercase tracking-wider mt-1">Avg Score</div>
+                                    </CardContent>
+                                </Card>
+                                <Card className="hero-stat min-w-[140px] bg-card/50 backdrop-blur-sm border-primary/10">
+                                    <CardContent className="p-4 text-center">
+                                        <div className="text-3xl font-bold text-foreground">{stats.totalQuestions || 0}</div>
+                                        <div className="text-xs font-medium text-muted-foreground uppercase tracking-wider mt-1">Solved</div>
+                                    </CardContent>
+                                </Card>
                             </div>
                         </div>
                     </div>
-                </section>
+                </div>
 
                 {/* Main Content */}
-                <div className="container mx-auto px-4 sm:px-6 py-8">
-                    <div className="grid lg:grid-cols-3 gap-6">
-                        {/* Left Column - Practice Tracks */}
-                        <div className="lg:col-span-2 space-y-6">
-                            {/* Search & Filter */}
-                            <div className="flex gap-3">
-                                <div className="flex-1 relative">
+                <div className="flex-1 container mx-auto px-4 sm:px-6 py-8">
+                    <div className="grid lg:grid-cols-12 gap-8">
+                        {/* Left Column - Tracks & Custom Practice */}
+                        <div className="lg:col-span-8 space-y-8">
+                            {/* <div className="flex gap-4 items-center">
+                                <div className="relative flex-1">
                                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                                     <Input
-                                        placeholder="Search practice problems..."
-                                        className="pl-10"
+                                        placeholder="Search topics, skills, or challenges..."
+                                        className="pl-10 h-11 bg-card"
                                         value={searchQuery}
                                         onChange={(e) => setSearchQuery(e.target.value)}
                                     />
                                 </div>
-                                <Button variant="outline" size="icon">
+                                <Button variant="outline" size="icon" className="h-11 w-11 shrink-0">
                                     <Filter className="w-4 h-4" />
                                 </Button>
-                            </div>
+                            </div> */}
 
                             {/* Practice Tracks */}
-                            <div>
-                                <div className="flex items-center justify-between mb-4">
-                                    <h2 className="text-xl font-bold text-foreground">Practice by Topic</h2>
-                                    <Button variant="ghost" size="sm">
-                                        View All
-                                        <ChevronRight className="w-4 h-4 ml-1" />
+                            {/* <div ref={tracksRef} className="space-y-4">
+                                <div className="flex items-center justify-between">
+                                    <h2 className="text-2xl font-bold tracking-tight">Practice Tracks</h2>
+                                    <Button variant="link" className="text-primary p-0 h-auto font-semibold">
+                                        View All <ChevronRight className="w-4 h-4 ml-1" />
                                     </Button>
                                 </div>
 
-                                <div className="grid gap-4">
+                                <div className="grid md:grid-cols-2 gap-4">
                                     {practiceTracks.map((track, index) => {
                                         const Icon = track.icon;
                                         return (
-                                            <Card
+                                            <div
                                                 key={index}
-                                                className="group hover:border-primary/50 transition-all cursor-pointer hover:shadow-lg"
+                                                className="track-card group relative overflow-hidden rounded-xl border border-border bg-card p-6 hover:border-primary/50 hover:shadow-lg transition-all duration-300 cursor-pointer"
                                                 onClick={() => {
                                                     setCustomExam({ ...customExam, topic: track.title });
                                                     window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
                                                 }}
                                             >
-                                                <CardContent className="p-6">
-                                                    <div className="flex items-start gap-4">
-                                                        <div className={`w-12 h-12 ${track.color} rounded-lg flex items-center justify-center flex-shrink-0`}>
-                                                            <Icon className="w-6 h-6 text-white" />
-                                                        </div>
-                                                        <div className="flex-1 min-w-0">
-                                                            <div className="flex items-center gap-2 mb-1">
-                                                                <h3 className="text-lg font-semibold text-foreground group-hover:text-primary transition-colors">
-                                                                    {track.title}
-                                                                </h3>
-                                                                {track.badge && (
-                                                                    <Badge variant="secondary" className="text-xs">
-                                                                        {track.badge}
-                                                                    </Badge>
-                                                                )}
-                                                            </div>
-                                                            <p className="text-sm text-muted-foreground mb-3">
-                                                                {track.description}
-                                                            </p>
-                                                            <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                                                                <div className="flex items-center gap-1">
-                                                                    <Target className="w-3 h-3" />
-                                                                    {track.problems} problems
-                                                                </div>
-                                                                <div className="flex items-center gap-1">
-                                                                    <BarChart3 className="w-3 h-3" />
-                                                                    {track.difficulty}
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                        <Button size="sm" className="mt-2">
-                                                            Start
-                                                            <Play className="w-3 h-3 ml-1" />
-                                                        </Button>
+                                                <div className="flex items-start justify-between mb-4">
+                                                    <div className={`w-12 h-12 ${track.color} rounded-lg flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform duration-300`}>
+                                                        <Icon className="w-6 h-6 text-white" />
                                                     </div>
-                                                </CardContent>
-                                            </Card>
+                                                    {track.badge && (
+                                                        <Badge variant="secondary" className="font-medium">
+                                                            {track.badge}
+                                                        </Badge>
+                                                    )}
+                                                </div>
+
+                                                <h3 className="text-lg font-bold mb-1 group-hover:text-primary transition-colors">{track.title}</h3>
+                                                <p className="text-sm text-muted-foreground mb-4 line-clamp-2">{track.description}</p>
+
+                                                <div className="flex items-center gap-4 text-xs font-medium text-muted-foreground">
+                                                    <div className="flex items-center gap-1.5">
+                                                        <Target className="w-3.5 h-3.5" />
+                                                        {track.problems} Problems
+                                                    </div>
+                                                    <div className="flex items-center gap-1.5">
+                                                        <BarChart3 className="w-3.5 h-3.5" />
+                                                        {track.difficulty}
+                                                    </div>
+                                                </div>
+
+                                                <div className="absolute bottom-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-primary/20 to-transparent scale-x-0 group-hover:scale-x-100 transition-transform duration-500" />
+                                            </div>
                                         );
                                     })}
                                 </div>
-                            </div>
+                            </div> */}
 
-                            {/* Custom Practice Section */}
-                            <Card className="border-primary/20 bg-primary/5">
+                            {/* Custom Practice Generator */}
+                            <Card className="border-primary/20 bg-gradient-to-br from-primary/5 via-transparent to-transparent overflow-hidden">
+                                <div className="absolute top-0 right-0 -mt-10 -mr-10 w-40 h-40 bg-primary/10 rounded-full blur-3xl" />
+
                                 <CardHeader>
-                                    <CardTitle className="flex items-center gap-2">
-                                        <Sparkles className="w-5 h-5 text-primary" />
-                                        Create Custom Practice
+                                    <CardTitle className="flex items-center gap-2 text-xl">
+                                        <Rocket className="w-5 h-5 text-primary" />
+                                        Custom Practice Generator
                                     </CardTitle>
                                     <CardDescription>
-                                        Generate AI-powered questions tailored to your needs
+                                        Create a personalized practice session tailored to your specific needs using AI.
                                     </CardDescription>
                                 </CardHeader>
-                                <CardContent className="space-y-4">
+                                <CardContent className="space-y-6 relative">
                                     {error && (
-                                        <Alert variant="destructive">
+                                        <Alert variant="destructive" className="animate-in fade-in slide-in-from-top-2">
                                             <AlertDescription>{error}</AlertDescription>
                                         </Alert>
                                     )}
 
-                                    <div className="grid md:grid-cols-2 gap-4">
-                                        {/* Topic */}
+                                    <div className="grid md:grid-cols-2 gap-6">
                                         <div className="space-y-2">
                                             <Label>Topic</Label>
                                             <Select
@@ -424,8 +461,8 @@ export default function LearningPage() {
                                                     setCustomExam({ ...customExam, topic: value, questionType: newQuestionType });
                                                 }}
                                             >
-                                                <SelectTrigger>
-                                                    <SelectValue placeholder="Select topic..." />
+                                                <SelectTrigger className="bg-background">
+                                                    <SelectValue placeholder="Select a topic..." />
                                                 </SelectTrigger>
                                                 <SelectContent>
                                                     <SelectItem value="SQL">SQL</SelectItem>
@@ -438,14 +475,13 @@ export default function LearningPage() {
                                             </Select>
                                         </div>
 
-                                        {/* Difficulty */}
                                         <div className="space-y-2">
                                             <Label>Difficulty</Label>
                                             <Select
                                                 value={customExam.difficulty}
                                                 onValueChange={(value) => setCustomExam({ ...customExam, difficulty: value })}
                                             >
-                                                <SelectTrigger>
+                                                <SelectTrigger className="bg-background">
                                                     <SelectValue />
                                                 </SelectTrigger>
                                                 <SelectContent>
@@ -456,14 +492,13 @@ export default function LearningPage() {
                                             </Select>
                                         </div>
 
-                                        {/* Question Count */}
                                         <div className="space-y-2">
-                                            <Label>Number of Questions</Label>
+                                            <Label>Questions</Label>
                                             <Select
                                                 value={customExam.questionCount}
                                                 onValueChange={(value) => setCustomExam({ ...customExam, questionCount: value })}
                                             >
-                                                <SelectTrigger>
+                                                <SelectTrigger className="bg-background">
                                                     <SelectValue />
                                                 </SelectTrigger>
                                                 <SelectContent>
@@ -475,14 +510,13 @@ export default function LearningPage() {
                                             </Select>
                                         </div>
 
-                                        {/* Duration */}
                                         <div className="space-y-2">
                                             <Label>Duration</Label>
                                             <Select
                                                 value={customExam.duration}
                                                 onValueChange={(value) => setCustomExam({ ...customExam, duration: value })}
                                             >
-                                                <SelectTrigger>
+                                                <SelectTrigger className="bg-background">
                                                     <SelectValue />
                                                 </SelectTrigger>
                                                 <SelectContent>
@@ -495,7 +529,6 @@ export default function LearningPage() {
                                         </div>
                                     </div>
 
-                                    {/* Question Type */}
                                     {(customExam.topic === "SQL" || customExam.topic === "Python" || customExam.topic === "JavaScript" || customExam.topic === "Java" || customExam.topic === "PySpark" || customExam.topic === "PowerBI") && (
                                         <div className="space-y-2">
                                             <Label>Question Type</Label>
@@ -503,7 +536,7 @@ export default function LearningPage() {
                                                 value={customExam.questionType}
                                                 onValueChange={(value) => setCustomExam({ ...customExam, questionType: value })}
                                             >
-                                                <SelectTrigger>
+                                                <SelectTrigger className="bg-background">
                                                     <SelectValue />
                                                 </SelectTrigger>
                                                 <SelectContent>
@@ -518,17 +551,17 @@ export default function LearningPage() {
                                     <Button
                                         onClick={handleGenerateQuestions}
                                         disabled={isGenerating || !customExam.topic}
-                                        className="w-full"
+                                        className="w-full h-12 text-base font-semibold shadow-lg hover:shadow-primary/25 transition-all"
                                         size="lg"
                                     >
                                         {isGenerating ? (
                                             <>
-                                                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                                                Generating Questions...
+                                                <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                                                Generating Your Practice Session...
                                             </>
                                         ) : (
                                             <>
-                                                <Rocket className="w-4 h-4 mr-2" />
+                                                <Sparkles className="w-5 h-5 mr-2" />
                                                 Generate & Start Practice
                                             </>
                                         )}
@@ -537,86 +570,78 @@ export default function LearningPage() {
                             </Card>
                         </div>
 
-                        {/* Right Sidebar - Stats & Progress */}
-                        <div className="space-y-6">
-                            {/* Your Progress */}
-                            <Card>
-                                <CardHeader>
-                                    <CardTitle className="text-lg">Your Progress</CardTitle>
+                        {/* Right Column - Sidebar */}
+                        <div ref={sidebarRef} className="lg:col-span-4 space-y-6">
+                            {/* Progress Card */}
+                            <Card className="border-border shadow-sm">
+                                <CardHeader className="pb-3">
+                                    <CardTitle className="text-lg flex items-center gap-2">
+                                        <LayoutDashboard className="w-5 h-5 text-primary" />
+                                        Your Progress
+                                    </CardTitle>
                                 </CardHeader>
-                                <CardContent className="space-y-4">
+                                <CardContent className="space-y-6">
                                     <div className="space-y-2">
-                                        <div className="flex items-center justify-between text-sm">
-                                            <span className="text-muted-foreground">Overall Score</span>
-                                            <span className="font-bold text-primary">{stats.averageScore || 0}%</span>
+                                        <div className="flex items-center justify-between text-sm font-medium">
+                                            <span className="text-muted-foreground">Overall Proficiency</span>
+                                            <span className="text-primary">{stats.averageScore || 0}%</span>
                                         </div>
                                         <Progress value={parseFloat(stats.averageScore || "0")} className="h-2" />
                                     </div>
 
-                                    <Separator />
-
-                                    <div className="space-y-3">
-                                        <div className="flex items-center justify-between">
-                                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                                                <CheckCircle2 className="w-4 h-4 text-green-500" />
-                                                Problems Solved
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div className="p-3 rounded-lg bg-muted/50 space-y-1">
+                                            <div className="text-xs text-muted-foreground flex items-center gap-1">
+                                                <CheckCircle2 className="w-3 h-3" />
+                                                Solved
                                             </div>
-                                            <span className="font-semibold text-foreground">{stats.totalQuestions || 0}</span>
+                                            <div className="text-xl font-bold">{stats.totalQuestions || 0}</div>
                                         </div>
-                                        <div className="flex items-center justify-between">
-                                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                                                <Target className="w-4 h-4 text-blue-500" />
-                                                Attempts
+                                        <div className="p-3 rounded-lg bg-muted/50 space-y-1">
+                                            <div className="text-xs text-muted-foreground flex items-center gap-1">
+                                                <Clock className="w-3 h-3" />
+                                                Time
                                             </div>
-                                            <span className="font-semibold text-foreground">{stats.totalAttempts || 0}</span>
-                                        </div>
-                                        <div className="flex items-center justify-between">
-                                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                                                <Clock className="w-4 h-4 text-orange-500" />
-                                                Time Spent
-                                            </div>
-                                            <span className="font-semibold text-foreground">
-                                                {Math.floor((stats.totalTimeSpent || 0) / 60)}m
-                                            </span>
+                                            <div className="text-xl font-bold">{Math.floor((stats.totalTimeSpent || 0) / 60)}m</div>
                                         </div>
                                     </div>
                                 </CardContent>
                             </Card>
 
                             {/* Achievements */}
-                            <Card>
-                                <CardHeader>
+                            <Card className="border-border shadow-sm">
+                                <CardHeader className="pb-3">
                                     <CardTitle className="text-lg flex items-center gap-2">
                                         <Trophy className="w-5 h-5 text-yellow-500" />
                                         Achievements
                                     </CardTitle>
                                 </CardHeader>
                                 <CardContent>
-                                    <div className="space-y-3">
-                                        <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
-                                            <div className="w-10 h-10 bg-yellow-500 rounded-lg flex items-center justify-center">
-                                                <Star className="w-5 h-5 text-white" />
+                                    <div className="space-y-4">
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-10 h-10 rounded-full bg-yellow-500/10 flex items-center justify-center border border-yellow-500/20">
+                                                <Star className="w-5 h-5 text-yellow-500" />
                                             </div>
-                                            <div className="flex-1">
-                                                <div className="font-semibold text-sm">First Steps</div>
+                                            <div>
+                                                <div className="text-sm font-semibold">First Steps</div>
                                                 <div className="text-xs text-muted-foreground">Complete your first practice</div>
                                             </div>
                                         </div>
-                                        <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50 opacity-50">
-                                            <div className="w-10 h-10 bg-blue-500 rounded-lg flex items-center justify-center">
-                                                <Zap className="w-5 h-5 text-white" />
+                                        <div className="flex items-center gap-3 opacity-50">
+                                            <div className="w-10 h-10 rounded-full bg-blue-500/10 flex items-center justify-center border border-blue-500/20">
+                                                <Zap className="w-5 h-5 text-blue-500" />
                                             </div>
-                                            <div className="flex-1">
-                                                <div className="font-semibold text-sm">Speed Demon</div>
+                                            <div>
+                                                <div className="text-sm font-semibold">Speed Demon</div>
                                                 <div className="text-xs text-muted-foreground">Complete 10 problems</div>
                                             </div>
                                         </div>
-                                        <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50 opacity-50">
-                                            <div className="w-10 h-10 bg-purple-500 rounded-lg flex items-center justify-center">
-                                                <Award className="w-5 h-5 text-white" />
+                                        <div className="flex items-center gap-3 opacity-50">
+                                            <div className="w-10 h-10 rounded-full bg-purple-500/10 flex items-center justify-center border border-purple-500/20">
+                                                <Award className="w-5 h-5 text-purple-500" />
                                             </div>
-                                            <div className="flex-1">
-                                                <div className="font-semibold text-sm">Master Coder</div>
+                                            <div>
+                                                <div className="text-sm font-semibold">Master Coder</div>
                                                 <div className="text-xs text-muted-foreground">Achieve 90% average</div>
                                             </div>
                                         </div>
@@ -624,20 +649,16 @@ export default function LearningPage() {
                                 </CardContent>
                             </Card>
 
-                            {/* Learning Tips */}
-                            <Card className="bg-gradient-to-br from-primary/10 to-accent/10 border-primary/20">
-                                <CardHeader>
-                                    <CardTitle className="text-lg flex items-center gap-2">
-                                        <Brain className="w-5 h-5 text-primary" />
-                                        Pro Tip
-                                    </CardTitle>
-                                </CardHeader>
-                                <CardContent>
-                                    <p className="text-sm text-muted-foreground">
-                                        Practice consistently! Solving just 2-3 problems daily will significantly improve your coding skills.
-                                    </p>
-                                </CardContent>
-                            </Card>
+                            {/* Pro Tip */}
+                            <div className="rounded-xl bg-gradient-to-br from-primary/10 to-accent/5 border border-primary/10 p-4">
+                                <div className="flex items-center gap-2 mb-2">
+                                    <Brain className="w-4 h-4 text-primary" />
+                                    <span className="text-sm font-semibold text-primary">Pro Tip</span>
+                                </div>
+                                <p className="text-sm text-muted-foreground leading-relaxed">
+                                    Consistency is key! Solving just 2-3 problems daily will significantly improve your coding skills over time.
+                                </p>
+                            </div>
                         </div>
                     </div>
                 </div>

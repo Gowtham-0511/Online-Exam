@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -9,11 +9,30 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { Separator } from '@/components/ui/separator'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
-import { Plus, Users, Search, Filter, Check, X, UserPlus, Building2, Mail, Calendar } from 'lucide-react'
+import {
+    Plus,
+    Users,
+    Search,
+    Filter,
+    Check,
+    X,
+    UserPlus,
+    Building2,
+    Mail,
+    Calendar,
+    MoreHorizontal,
+    Edit2,
+    Trash2,
+    Briefcase,
+    UserCircle,
+    Globe
+} from 'lucide-react'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { AlertCircle, CheckCircle2 } from 'lucide-react'
 import UnifiedDashboardLayout from '@/components/layouts/UnifiedDashboardLayout'
 import Head from 'next/head'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
 interface Employee {
     Id: string
@@ -78,7 +97,6 @@ const BatchManagementPage: React.FC = () => {
             .replace(/[_-]/g, '');
     };
 
-    // Helper function to convert object keys to camelCase
     const convertKeysToCamelCase = (obj: any[] | null): any => {
         if (Array.isArray(obj)) {
             return obj.map(convertKeysToCamelCase);
@@ -109,7 +127,6 @@ const BatchManagementPage: React.FC = () => {
                 }
 
                 const data = await res.json();
-                console.log('Employee data:', data);
                 setEmployees(data || []);
             } catch (error) {
                 console.error('Error fetching employees:', error);
@@ -133,7 +150,6 @@ const BatchManagementPage: React.FC = () => {
                 }
 
                 const data = await res.json();
-                console.log('External users data:', data);
                 setExternalUsers(data.recordset || data || []);
             } catch (error) {
                 console.error('Error fetching external users:', error);
@@ -237,7 +253,6 @@ const BatchManagementPage: React.FC = () => {
         try {
             await new Promise(resolve => setTimeout(resolve, 1500))
 
-            // Get selected users from the appropriate list
             const selectedUsersList = showExternalUsers
                 ? externalUsers
                     .filter(user => selectedEmployees.has(user.id))
@@ -283,7 +298,6 @@ const BatchManagementPage: React.FC = () => {
             }
 
             setBatches(prev => [convertedBatch, ...prev])
-            console.log(batches);
             setBatchName('')
             setSelectedEmployees(new Set())
             setIsCreateDialogOpen(false)
@@ -353,7 +367,6 @@ const BatchManagementPage: React.FC = () => {
         try {
             await new Promise(resolve => setTimeout(resolve, 1500))
 
-            // Get selected users from the appropriate list
             const selectedUsersList = showExternalUsers
                 ? externalUsers
                     .filter(user => editSelectedEmployees.has(user.id))
@@ -412,25 +425,25 @@ const BatchManagementPage: React.FC = () => {
     return (
         <UnifiedDashboardLayout role="admin">
             <Head>
-                <title>SysRank - Online Assessment Platform</title>
-                <link rel="icon" href="/logo3.png" />
+                <title>Batch Management - SysRank</title>
             </Head>
-            <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20">
+
+            <div className="space-y-6 animate-in fade-in duration-500">
                 {/* Notification Alert */}
                 {notification && (
-                    <div className="fixed top-4 right-4 z-50 w-96">
-                        <Alert className={`border-0 shadow-lg ${notification.type === 'success'
-                            ? 'bg-green-50 dark:bg-green-950/50 border-green-200 dark:border-green-800'
-                            : 'bg-red-50 dark:bg-red-950/50 border-red-200 dark:border-red-800'
+                    <div className="fixed top-6 right-6 z-50 w-96 animate-in slide-in-from-right-10 duration-300">
+                        <Alert className={`border shadow-lg ${notification.type === 'success'
+                            ? 'bg-emerald-50 dark:bg-emerald-950/50 border-emerald-200 dark:border-emerald-800'
+                            : 'bg-rose-50 dark:bg-rose-950/50 border-rose-200 dark:border-rose-800'
                             }`}>
                             {notification.type === 'success' ? (
-                                <CheckCircle2 className="h-4 w-4 text-green-600 dark:text-green-400" />
+                                <CheckCircle2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
                             ) : (
-                                <AlertCircle className="h-4 w-4 text-red-600 dark:text-red-400" />
+                                <AlertCircle className="h-4 w-4 text-rose-600 dark:text-rose-400" />
                             )}
                             <AlertDescription className={`${notification.type === 'success'
-                                ? 'text-green-800 dark:text-green-200'
-                                : 'text-red-800 dark:text-red-200'
+                                ? 'text-emerald-800 dark:text-emerald-200'
+                                : 'text-rose-800 dark:text-rose-200'
                                 }`}>
                                 {notification.message}
                             </AlertDescription>
@@ -438,572 +451,556 @@ const BatchManagementPage: React.FC = () => {
                     </div>
                 )}
 
-                <div className="container mx-auto p-6 space-y-8">
-                    {/* Header */}
-                    <div className="flex flex-col space-y-4 md:flex-row md:items-center md:justify-between md:space-y-0">
-                        <div className="space-y-2">
-                            <h1 className="text-4xl font-bold tracking-tight bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
-                                Batch Management
-                            </h1>
-                            <p className="text-muted-foreground text-lg">
-                                Create and manage employee batches for SysRank operations
-                            </p>
-                        </div>
-
-                        <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-                            <DialogTrigger asChild>
-                                <Button size="lg" className="shadow-lg hover:shadow-xl transition-all duration-300">
-                                    <Plus className="mr-2 h-5 w-5" />
-                                    Create New Batch
-                                </Button>
-                            </DialogTrigger>
-                            <DialogContent className="max-w-4xl max-h-[80vh]">
-                                <DialogHeader>
-                                    <DialogTitle className="flex items-center text-2xl">
-                                        <UserPlus className="mr-3 h-6 w-6 text-primary" />
-                                        Create New Batch
-                                    </DialogTitle>
-                                    <DialogDescription>
-                                        Create a new batch and assign employees from your Azure AD directory
-                                    </DialogDescription>
-                                </DialogHeader>
-
-                                {/* User Type Toggle */}
-                                <div className="flex items-center space-x-2 p-3 rounded-lg border bg-muted/30">
-                                    <Button
-                                        type="button"
-                                        variant={!showExternalUsers ? "default" : "outline"}
-                                        size="sm"
-                                        onClick={() => setShowExternalUsers(false)}
-                                        className="flex-1"
-                                    >
-                                        Internal Users
-                                    </Button>
-                                    <Button
-                                        type="button"
-                                        variant={showExternalUsers ? "default" : "outline"}
-                                        size="sm"
-                                        onClick={() => setShowExternalUsers(true)}
-                                        className="flex-1"
-                                    >
-                                        External Users
-                                    </Button>
-                                </div>
-
-                                <div className="space-y-6">
-                                    {/* Batch Name Input */}
-                                    <div className="space-y-2">
-                                        <Label htmlFor="batchName" className="text-base font-medium">
-                                            Batch Name
-                                        </Label>
-                                        <Input
-                                            id="batchName"
-                                            placeholder="Enter batch name (e.g., Q4 2024 Training Batch)"
-                                            value={batchName}
-                                            onChange={(e) => setBatchName(e.target.value)}
-                                            className="text-base"
-                                        />
-                                    </div>
-
-                                    <Separator />
-
-                                    {/* Employee Selection */}
-                                    <div className="space-y-4">
-                                        <div className="flex items-center justify-between">
-                                            <h3 className="text-lg font-semibold flex items-center">
-                                                <Users className="mr-2 h-5 w-5 text-primary" />
-                                                Select Employees
-                                            </h3>
-                                            <Badge variant="secondary" className="text-sm">
-                                                {selectedEmployees.size} selected
-                                            </Badge>
-                                        </div>
-
-                                        {/* Search and Filter */}
-                                        <div className="flex flex-col space-y-3 md:flex-row md:space-y-0 md:space-x-3">
-                                            <div className="relative flex-1">
-                                                <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                                                <Input
-                                                    placeholder="Search employees..."
-                                                    value={searchTerm}
-                                                    onChange={(e) => setSearchTerm(e.target.value)}
-                                                    className="pl-10"
-                                                />
-                                            </div>
-                                            <div className="flex items-center space-x-2">
-                                                <Filter className="h-4 w-4 text-muted-foreground" />
-                                                <select
-                                                    value={departmentFilter}
-                                                    onChange={(e) => setDepartmentFilter(e.target.value)}
-                                                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 md:w-[180px]"
-                                                >
-                                                    <option value="all">All Departments</option>
-                                                    {departments.map(dept => (
-                                                        <option key={dept} value={dept}>{dept}</option>
-                                                    ))}
-                                                </select>
-                                            </div>
-                                        </div>
-
-                                        {/* Select All */}
-                                        <div className="flex items-center space-x-2 p-3 rounded-lg border bg-muted/30">
-                                            <Checkbox
-                                                id="selectAll"
-                                                checked={selectedEmployees.size === filteredEmployees.length && filteredEmployees.length > 0}
-                                                onCheckedChange={handleSelectAll}
-                                            />
-                                            <Label htmlFor="selectAll" className="font-medium cursor-pointer">
-                                                Select All ({filteredEmployees.length} employees)
-                                            </Label>
-                                        </div>
-
-                                        {/* Employee List */}
-                                        <ScrollArea className="h-[300px] rounded-lg border">
-                                            <div className="space-y-2 p-4">
-                                                {filteredEmployees.map((employee) => (
-                                                    <div
-                                                        key={employee.Id}
-                                                        className={`flex items-center space-x-4 p-4 rounded-lg border transition-all duration-200 hover:shadow-md cursor-pointer ${selectedEmployees.has(employee.Id)
-                                                            ? 'bg-primary/5 border-primary/20 shadow-sm'
-                                                            : 'bg-card hover:bg-muted/50'
-                                                            }`}
-                                                        onClick={() => handleEmployeeToggle(employee.Id)}
-                                                    >
-                                                        <Checkbox
-                                                            checked={selectedEmployees.has(employee.Id)}
-                                                            onCheckedChange={() => handleEmployeeToggle(employee.Id)}
-                                                        />
-                                                        <Avatar className="h-12 w-12">
-                                                            {/* <AvatarImage src={employee.Avatar} alt={employee.Name} /> */}
-                                                            <AvatarFallback className="bg-primary/10 text-primary font-semibold">
-                                                                {getInitials(employee.Name)}
-                                                            </AvatarFallback>
-                                                        </Avatar>
-                                                        <div className="flex-1 space-y-1">
-                                                            <div className="flex items-center space-x-2">
-                                                                <p className="font-medium text-foreground">{employee.Name}</p>
-                                                                {/* <Badge variant="outline" className="text-xs">
-                                                                    {employee.Department}
-                                                                </Badge> */}
-                                                            </div>
-                                                            <div className="flex items-center space-x-4 text-sm text-muted-foreground">
-                                                                <div className="flex items-center space-x-1">
-                                                                    <Mail className="h-3 w-3" />
-                                                                    <span>{employee.Email}</span>
-                                                                </div>
-                                                            </div>
-                                                            <div className="flex items-center space-x-4 text-sm text-muted-foreground">
-                                                                <div className="flex items-center space-x-1">
-                                                                    <Building2 className="h-3 w-3" />
-                                                                    <span>{employee.Position}</span>
-                                                                </div>
-                                                            </div>
-                                                            <div className="flex items-center space-x-4 text-sm text-muted-foreground">
-                                                                <Badge variant="outline" className="flex items-center space-x-1">
-                                                                    <span>{employee.Department}</span>
-                                                                </Badge>
-                                                            </div>
-                                                        </div>
-                                                        {selectedEmployees.has(employee.Id) && (
-                                                            <div className="text-primary">
-                                                                <Check className="h-5 w-5" />
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                ))}
-                                                {filteredEmployees.length === 0 && (
-                                                    <div className="text-center py-8 text-muted-foreground">
-                                                        <Users className="mx-auto h-12 w-12 mb-4 opacity-50" />
-                                                        <p>No employees found matching your criteria</p>
-                                                    </div>
-                                                )}
-                                            </div>
-                                        </ScrollArea>
-                                    </div>
-                                </div>
-
-                                <DialogFooter className="flex-col space-y-2 md:flex-row md:space-y-0">
-                                    <Button
-                                        variant="outline"
-                                        onClick={() => setIsCreateDialogOpen(false)}
-                                        className="w-full md:w-auto"
-                                    >
-                                        Cancel
-                                    </Button>
-                                    <Button
-                                        onClick={handleCreateBatch}
-                                        disabled={!batchName.trim() || selectedEmployees.size === 0 || isLoading}
-                                        className="w-full md:w-auto"
-                                    >
-                                        {isLoading ? (
-                                            <>
-                                                <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-background border-t-transparent" />
-                                                Creating...
-                                            </>
-                                        ) : (
-                                            <>
-                                                <Plus className="mr-2 h-4 w-4" />
-                                                Create Batch ({selectedEmployees.size} employees)
-                                            </>
-                                        )}
-                                    </Button>
-                                </DialogFooter>
-                            </DialogContent>
-                        </Dialog>
-
-                        <Dialog open={isViewDetailsDialogOpen} onOpenChange={setIsViewDetailsDialogOpen}>
-                            <DialogContent className="max-w-4xl max-h-[80vh]">
-                                <DialogHeader>
-                                    <DialogTitle className="flex items-center text-2xl">
-                                        <Users className="mr-3 h-6 w-6 text-primary" />
-                                        {selectedBatchForView?.name}
-                                    </DialogTitle>
-                                    <DialogDescription>
-                                        View all employees in this batch
-                                    </DialogDescription>
-                                </DialogHeader>
-
-                                {selectedBatchForView && (
-                                    <div className="space-y-6">
-                                        {/* Batch Info */}
-                                        <div className="flex items-center justify-between p-4 rounded-lg bg-muted/30">
-                                            <div className="space-y-1">
-                                                <p className="text-sm text-muted-foreground">Created</p>
-                                                <p className="font-medium">{new Date(selectedBatchForView.createdAt).toLocaleDateString()}</p>
-                                            </div>
-                                            <div className="space-y-1 text-right">
-                                                <p className="text-sm text-muted-foreground">Total Members</p>
-                                                <p className="font-medium">{selectedBatchForView.employeeCount} employees</p>
-                                            </div>
-                                        </div>
-
-                                        <Separator />
-
-                                        {/* Employee List */}
-                                        <div className="space-y-4">
-                                            <h3 className="text-lg font-semibold flex items-center">
-                                                <Users className="mr-2 h-5 w-5 text-primary" />
-                                                Batch Members
-                                            </h3>
-
-                                            <ScrollArea className="h-[400px] rounded-lg border">
-                                                <div className="space-y-2 p-4">
-                                                    {selectedBatchForView.employees.map((employee) => (
-                                                        <div
-                                                            key={employee.Id}
-                                                            className="flex items-center space-x-4 p-4 rounded-lg border bg-card hover:bg-muted/50 transition-all duration-200"
-                                                        >
-                                                            <Avatar className="h-12 w-12">
-                                                                <AvatarFallback className="bg-primary/10 text-primary font-semibold">
-                                                                    {getInitials(employee.Name)}
-                                                                </AvatarFallback>
-                                                            </Avatar>
-                                                            <div className="flex-1 space-y-1">
-                                                                <p className="font-medium text-foreground">{employee.Name}</p>
-                                                                <div className="flex items-center space-x-4 text-sm text-muted-foreground">
-                                                                    <div className="flex items-center space-x-1">
-                                                                        <Mail className="h-3 w-3" />
-                                                                        <span>{employee.Email}</span>
-                                                                    </div>
-                                                                </div>
-                                                                <div className="flex items-center space-x-4 text-sm text-muted-foreground">
-                                                                    <div className="flex items-center space-x-1">
-                                                                        <Building2 className="h-3 w-3" />
-                                                                        <span>{employee.Position}</span>
-                                                                    </div>
-                                                                </div>
-                                                                <div className="flex items-center space-x-4 text-sm text-muted-foreground">
-                                                                    <Badge variant="outline" className="flex items-center space-x-1">
-                                                                        <span>{employee.Department}</span>
-                                                                    </Badge>
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                    ))}
-                                                    {selectedBatchForView.employees.length === 0 && (
-                                                        <div className="text-center py-8 text-muted-foreground">
-                                                            <Users className="mx-auto h-12 w-12 mb-4 opacity-50" />
-                                                            <p>No employees in this batch</p>
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            </ScrollArea>
-                                        </div>
-                                    </div>
-                                )}
-
-                                <DialogFooter>
-                                    <Button
-                                        variant="outline"
-                                        onClick={() => setIsViewDetailsDialogOpen(false)}
-                                        className="w-full md:w-auto"
-                                    >
-                                        Close
-                                    </Button>
-                                </DialogFooter>
-                            </DialogContent>
-                        </Dialog>
-
-                        <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-                            <DialogContent className="max-w-4xl max-h-[80vh]">
-                                <DialogHeader>
-                                    <DialogTitle className="flex items-center text-2xl">
-                                        <UserPlus className="mr-3 h-6 w-6 text-primary" />
-                                        Edit Batch
-                                    </DialogTitle>
-                                    <DialogDescription>
-                                        Update batch name and modify employee assignments
-                                    </DialogDescription>
-                                </DialogHeader>
-
-                                <div className="space-y-6">
-                                    {/* Batch Name Input */}
-                                    <div className="space-y-2">
-                                        <Label htmlFor="editBatchName" className="text-base font-medium">
-                                            Batch Name
-                                        </Label>
-                                        <Input
-                                            id="editBatchName"
-                                            placeholder="Enter batch name"
-                                            value={editBatchName}
-                                            onChange={(e) => setEditBatchName(e.target.value)}
-                                            className="text-base"
-                                        />
-                                    </div>
-
-                                    <Separator />
-
-                                    {/* Employee Selection */}
-                                    <div className="space-y-4">
-                                        <div className="flex items-center justify-between">
-                                            <h3 className="text-lg font-semibold flex items-center">
-                                                <Users className="mr-2 h-5 w-5 text-primary" />
-                                                Select Employees
-                                            </h3>
-                                            <Badge variant="secondary" className="text-sm">
-                                                {editSelectedEmployees.size} selected
-                                            </Badge>
-                                        </div>
-
-                                        {/* Search and Filter */}
-                                        <div className="flex flex-col space-y-3 md:flex-row md:space-y-0 md:space-x-3">
-                                            <div className="relative flex-1">
-                                                <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                                                <Input
-                                                    placeholder="Search employees..."
-                                                    value={searchTerm}
-                                                    onChange={(e) => setSearchTerm(e.target.value)}
-                                                    className="pl-10"
-                                                />
-                                            </div>
-                                            <div className="flex items-center space-x-2">
-                                                <Filter className="h-4 w-4 text-muted-foreground" />
-                                                <select
-                                                    value={departmentFilter}
-                                                    onChange={(e) => setDepartmentFilter(e.target.value)}
-                                                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 md:w-[180px]"
-                                                >
-                                                    <option value="all">All Departments</option>
-                                                    {departments.map(dept => (
-                                                        <option key={dept} value={dept}>{dept}</option>
-                                                    ))}
-                                                </select>
-                                            </div>
-                                        </div>
-
-                                        {/* Select All */}
-                                        <div className="flex items-center space-x-2 p-3 rounded-lg border bg-muted/30">
-                                            <Checkbox
-                                                id="editSelectAll"
-                                                checked={editSelectedEmployees.size === filteredEmployees.length && filteredEmployees.length > 0}
-                                                onCheckedChange={handleEditSelectAll}
-                                            />
-                                            <Label htmlFor="editSelectAll" className="font-medium cursor-pointer">
-                                                Select All ({filteredEmployees.length} employees)
-                                            </Label>
-                                        </div>
-
-                                        {/* Employee List */}
-                                        <ScrollArea className="h-[300px] rounded-lg border">
-                                            <div className="space-y-2 p-4">
-                                                {filteredEmployees.map((employee) => (
-                                                    <div
-                                                        key={employee.Id}
-                                                        className={`flex items-center space-x-4 p-4 rounded-lg border transition-all duration-200 hover:shadow-md cursor-pointer ${editSelectedEmployees.has(employee.Id)
-                                                            ? 'bg-primary/5 border-primary/20 shadow-sm'
-                                                            : 'bg-card hover:bg-muted/50'
-                                                            }`}
-                                                        onClick={() => handleEditEmployeeToggle(employee.Id)}
-                                                    >
-                                                        <Checkbox
-                                                            checked={editSelectedEmployees.has(employee.Id)}
-                                                            onCheckedChange={() => handleEditEmployeeToggle(employee.Id)}
-                                                        />
-                                                        <Avatar className="h-12 w-12">
-                                                            <AvatarFallback className="bg-primary/10 text-primary font-semibold">
-                                                                {getInitials(employee.Name)}
-                                                            </AvatarFallback>
-                                                        </Avatar>
-                                                        <div className="flex-1 space-y-1">
-                                                            <div className="flex items-center space-x-2">
-                                                                <p className="font-medium text-foreground">{employee.Name}</p>
-                                                            </div>
-                                                            <div className="flex items-center space-x-4 text-sm text-muted-foreground">
-                                                                <div className="flex items-center space-x-1">
-                                                                    <Mail className="h-3 w-3" />
-                                                                    <span>{employee.Email}</span>
-                                                                </div>
-                                                            </div>
-                                                            <div className="flex items-center space-x-4 text-sm text-muted-foreground">
-                                                                <div className="flex items-center space-x-1">
-                                                                    <Building2 className="h-3 w-3" />
-                                                                    <span>{employee.Position}</span>
-                                                                </div>
-                                                            </div>
-                                                            <div className="flex items-center space-x-4 text-sm text-muted-foreground">
-                                                                <Badge variant="outline" className="flex items-center space-x-1">
-                                                                    <span>{employee.Department}</span>
-                                                                </Badge>
-                                                            </div>
-                                                        </div>
-                                                        {editSelectedEmployees.has(employee.Id) && (
-                                                            <div className="text-primary">
-                                                                <Check className="h-5 w-5" />
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                ))}
-                                                {filteredEmployees.length === 0 && (
-                                                    <div className="text-center py-8 text-muted-foreground">
-                                                        <Users className="mx-auto h-12 w-12 mb-4 opacity-50" />
-                                                        <p>No employees found matching your criteria</p>
-                                                    </div>
-                                                )}
-                                            </div>
-                                        </ScrollArea>
-                                    </div>
-                                </div>
-
-                                <DialogFooter className="flex-col space-y-2 md:flex-row md:space-y-0">
-                                    <Button
-                                        variant="outline"
-                                        onClick={() => setIsEditDialogOpen(false)}
-                                        className="w-full md:w-auto"
-                                    >
-                                        Cancel
-                                    </Button>
-                                    <Button
-                                        onClick={handleUpdateBatch}
-                                        disabled={!editBatchName.trim() || editSelectedEmployees.size === 0 || isLoading}
-                                        className="w-full md:w-auto"
-                                    >
-                                        {isLoading ? (
-                                            <>
-                                                <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-background border-t-transparent" />
-                                                Updating...
-                                            </>
-                                        ) : (
-                                            <>
-                                                <Check className="mr-2 h-4 w-4" />
-                                                Update Batch ({editSelectedEmployees.size} employees)
-                                            </>
-                                        )}
-                                    </Button>
-                                </DialogFooter>
-                            </DialogContent>
-                        </Dialog>
+                {/* Header Section */}
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div>
+                        <h1 className="text-3xl font-bold tracking-tight bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
+                            Batch Management
+                        </h1>
+                        <p className="text-muted-foreground mt-1">
+                            Organize and manage employee groups for assessments
+                        </p>
                     </div>
 
-                    {/* Existing Batches */}
-                    <div className="space-y-6">
-                        <div className="flex items-center space-x-3">
-                            <div className="h-8 w-1 bg-primary rounded-full" />
-                            <h2 className="text-2xl font-semibold text-foreground">Active Batches</h2>
-                            <Badge variant="secondary" className="text-sm">
-                                {batches.length} total
-                            </Badge>
-                        </div>
+                    <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+                        <DialogTrigger asChild>
+                            <Button size="lg" className="shadow-lg hover:shadow-primary/20 transition-all duration-300 bg-primary hover:bg-primary/90">
+                                <Plus className="mr-2 h-5 w-5" />
+                                Create New Batch
+                            </Button>
+                        </DialogTrigger>
+                        <DialogContent className="max-w-4xl max-h-[85vh] flex flex-col p-0 gap-0 overflow-hidden">
+                            <DialogHeader className="p-6 pb-2 border-b bg-muted/30">
+                                <DialogTitle className="flex items-center text-xl">
+                                    <div className="p-2 bg-primary/10 rounded-lg mr-3">
+                                        <UserPlus className="h-5 w-5 text-primary" />
+                                    </div>
+                                    Create New Batch
+                                </DialogTitle>
+                                <DialogDescription>
+                                    Create a new batch and assign employees from your directory
+                                </DialogDescription>
+                            </DialogHeader>
 
-                        {batches.length === 0 ? (
-                            <Card className="border-dashed border-2 border-muted-foreground/25">
-                                <CardContent className="flex flex-col items-center justify-center py-16 space-y-4">
-                                    <div className="rounded-full bg-muted p-6">
-                                        <Users className="h-12 w-12 text-muted-foreground" />
+                            <div className="flex-1 overflow-y-auto p-6 space-y-6">
+                                {/* User Type Toggle */}
+                                <div className="flex justify-center">
+                                    <div className="inline-flex items-center p-1 rounded-lg border bg-muted/50">
+                                        <Button
+                                            type="button"
+                                            variant={!showExternalUsers ? "default" : "ghost"}
+                                            size="sm"
+                                            onClick={() => setShowExternalUsers(false)}
+                                            className="w-32"
+                                        >
+                                            <Building2 className="w-4 h-4 mr-2" />
+                                            Internal
+                                        </Button>
+                                        <Button
+                                            type="button"
+                                            variant={showExternalUsers ? "default" : "ghost"}
+                                            size="sm"
+                                            onClick={() => setShowExternalUsers(true)}
+                                            className="w-32"
+                                        >
+                                            <Globe className="w-4 h-4 mr-2" />
+                                            External
+                                        </Button>
                                     </div>
-                                    <div className="text-center space-y-2">
-                                        <h3 className="text-xl font-semibold text-foreground">No batches created yet</h3>
-                                        <p className="text-muted-foreground max-w-md">
-                                            Create your first batch to start organizing employees for training, projects, or other activities in SysRank.
-                                        </p>
+                                </div>
+
+                                {/* Batch Name Input */}
+                                <div className="space-y-2">
+                                    <Label htmlFor="batchName">Batch Name</Label>
+                                    <Input
+                                        id="batchName"
+                                        placeholder="e.g., Q4 2024 Engineering Batch"
+                                        value={batchName}
+                                        onChange={(e) => setBatchName(e.target.value)}
+                                        className="h-11"
+                                    />
+                                </div>
+
+                                <Separator />
+
+                                {/* Employee Selection */}
+                                <div className="space-y-4">
+                                    <div className="flex items-center justify-between">
+                                        <h3 className="text-sm font-semibold flex items-center text-muted-foreground uppercase tracking-wider">
+                                            Select Members
+                                        </h3>
+                                        <Badge variant="secondary" className="px-3 py-1">
+                                            {selectedEmployees.size} selected
+                                        </Badge>
                                     </div>
-                                    <Button
-                                        onClick={() => setIsCreateDialogOpen(true)}
-                                        size="lg"
-                                        className="mt-4"
-                                    >
-                                        <Plus className="mr-2 h-5 w-5" />
-                                        Create Your First Batch
-                                    </Button>
+
+                                    {/* Search and Filter */}
+                                    <div className="flex flex-col sm:flex-row gap-3">
+                                        <div className="relative flex-1">
+                                            <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                                            <Input
+                                                placeholder="Search by name or email..."
+                                                value={searchTerm}
+                                                onChange={(e) => setSearchTerm(e.target.value)}
+                                                className="pl-9"
+                                            />
+                                        </div>
+                                        <Select
+                                            value={departmentFilter}
+                                            onValueChange={setDepartmentFilter}
+                                        >
+                                            <SelectTrigger className="w-full sm:w-[180px]">
+                                                <SelectValue placeholder="Department" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="all">All Departments</SelectItem>
+                                                {departments.map(dept => (
+                                                    <SelectItem key={dept} value={dept}>{dept}</SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+
+                                    {/* Select All */}
+                                    <div className="flex items-center space-x-2 p-3 rounded-lg border border-dashed bg-muted/20 hover:bg-muted/40 transition-colors">
+                                        <Checkbox
+                                            id="selectAll"
+                                            checked={selectedEmployees.size === filteredEmployees.length && filteredEmployees.length > 0}
+                                            onCheckedChange={handleSelectAll}
+                                        />
+                                        <Label htmlFor="selectAll" className="font-medium cursor-pointer flex-1">
+                                            Select All ({filteredEmployees.length} available)
+                                        </Label>
+                                    </div>
+
+                                    {/* Employee List */}
+                                    <ScrollArea className="h-[300px] rounded-lg border bg-background">
+                                        <div className="p-2 space-y-1">
+                                            {filteredEmployees.map((employee) => (
+                                                <div
+                                                    key={employee.Id}
+                                                    className={`group flex items-center space-x-4 p-3 rounded-md border transition-all duration-200 cursor-pointer ${selectedEmployees.has(employee.Id)
+                                                        ? 'bg-primary/5 border-primary/20'
+                                                        : 'border-transparent hover:bg-muted/50'
+                                                        }`}
+                                                    onClick={() => handleEmployeeToggle(employee.Id)}
+                                                >
+                                                    <Checkbox
+                                                        checked={selectedEmployees.has(employee.Id)}
+                                                        onCheckedChange={() => handleEmployeeToggle(employee.Id)}
+                                                        className="data-[state=checked]:bg-primary data-[state=checked]:border-primary"
+                                                    />
+                                                    <Avatar className="h-10 w-10 border">
+                                                        <AvatarFallback className="bg-primary/5 text-primary text-xs font-bold">
+                                                            {getInitials(employee.Name)}
+                                                        </AvatarFallback>
+                                                    </Avatar>
+                                                    <div className="flex-1 min-w-0">
+                                                        <div className="flex items-center justify-between">
+                                                            <p className="font-medium text-sm truncate">{employee.Name}</p>
+                                                            <Badge variant="outline" className="text-[10px] h-5 px-1.5 font-normal text-muted-foreground">
+                                                                {employee.Department}
+                                                            </Badge>
+                                                        </div>
+                                                        <div className="flex items-center text-xs text-muted-foreground mt-0.5">
+                                                            <Mail className="h-3 w-3 mr-1" />
+                                                            <span className="truncate">{employee.Email}</span>
+                                                        </div>
+                                                    </div>
+                                                    {selectedEmployees.has(employee.Id) && (
+                                                        <Check className="h-4 w-4 text-primary animate-in zoom-in duration-200" />
+                                                    )}
+                                                </div>
+                                            ))}
+                                            {filteredEmployees.length === 0 && (
+                                                <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
+                                                    <Users className="h-10 w-10 mb-3 opacity-20" />
+                                                    <p className="text-sm">No users found</p>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </ScrollArea>
+                                </div>
+                            </div>
+
+                            <DialogFooter className="p-6 border-t bg-muted/30">
+                                <Button
+                                    variant="outline"
+                                    onClick={() => setIsCreateDialogOpen(false)}
+                                >
+                                    Cancel
+                                </Button>
+                                <Button
+                                    onClick={handleCreateBatch}
+                                    disabled={!batchName.trim() || selectedEmployees.size === 0 || isLoading}
+                                    className="min-w-[140px]"
+                                >
+                                    {isLoading ? (
+                                        <>
+                                            <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-background border-t-transparent" />
+                                            Creating...
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Plus className="mr-2 h-4 w-4" />
+                                            Create Batch
+                                        </>
+                                    )}
+                                </Button>
+                            </DialogFooter>
+                        </DialogContent>
+                    </Dialog>
+                </div>
+
+                {/* Stats Summary */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <Card className="border-border/50 bg-gradient-to-br from-blue-500/5 to-transparent">
+                        <CardContent className="p-6 flex items-center justify-between">
+                            <div>
+                                <p className="text-sm font-medium text-muted-foreground">Total Batches</p>
+                                <h3 className="text-3xl font-bold text-blue-600 dark:text-blue-400 mt-1">{batches.length}</h3>
+                            </div>
+                            <div className="h-12 w-12 rounded-xl bg-blue-500/10 flex items-center justify-center">
+                                <Briefcase className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+                            </div>
+                        </CardContent>
+                    </Card>
+                    <Card className="border-border/50 bg-gradient-to-br from-purple-500/5 to-transparent">
+                        <CardContent className="p-6 flex items-center justify-between">
+                            <div>
+                                <p className="text-sm font-medium text-muted-foreground">Total Members</p>
+                                <h3 className="text-3xl font-bold text-purple-600 dark:text-purple-400 mt-1">
+                                    {batches.reduce((acc, curr) => acc + (curr.employeeCount || 0), 0)}
+                                </h3>
+                            </div>
+                            <div className="h-12 w-12 rounded-xl bg-purple-500/10 flex items-center justify-center">
+                                <Users className="h-6 w-6 text-purple-600 dark:text-purple-400" />
+                            </div>
+                        </CardContent>
+                    </Card>
+                    <Card className="border-border/50 bg-gradient-to-br from-emerald-500/5 to-transparent">
+                        <CardContent className="p-6 flex items-center justify-between">
+                            <div>
+                                <p className="text-sm font-medium text-muted-foreground">Avg. Batch Size</p>
+                                <h3 className="text-3xl font-bold text-emerald-600 dark:text-emerald-400 mt-1">
+                                    {batches.length > 0 ? Math.round(batches.reduce((acc, curr) => acc + (curr.employeeCount || 0), 0) / batches.length) : 0}
+                                </h3>
+                            </div>
+                            <div className="h-12 w-12 rounded-xl bg-emerald-500/10 flex items-center justify-center">
+                                <UserCircle className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
+                            </div>
+                        </CardContent>
+                    </Card>
+                </div>
+
+                {/* Batches Grid */}
+                {batches.length === 0 ? (
+                    <Card className="border-dashed border-2 bg-muted/10">
+                        <CardContent className="flex flex-col items-center justify-center py-16 space-y-4">
+                            <div className="rounded-full bg-muted p-6 animate-in zoom-in duration-500">
+                                <Users className="h-12 w-12 text-muted-foreground" />
+                            </div>
+                            <div className="text-center space-y-2 max-w-md">
+                                <h3 className="text-xl font-semibold">No batches created yet</h3>
+                                <p className="text-muted-foreground">
+                                    Create your first batch to start organizing employees for training, projects, or other activities.
+                                </p>
+                            </div>
+                            <Button
+                                onClick={() => setIsCreateDialogOpen(true)}
+                                size="lg"
+                                className="mt-4"
+                            >
+                                <Plus className="mr-2 h-5 w-5" />
+                                Create Your First Batch
+                            </Button>
+                        </CardContent>
+                    </Card>
+                ) : (
+                    <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                        {batches.map((batch, index) => (
+                            <Card
+                                key={batch.id}
+                                className="group hover:border-primary/40 transition-all duration-300 hover:shadow-lg hover:-translate-y-1 overflow-hidden animate-in fade-in slide-in-from-bottom-4"
+                                style={{ animationDelay: `${index * 100}ms` }}
+                            >
+                                <CardHeader className="pb-3 border-b bg-muted/20">
+                                    <div className="flex items-start justify-between">
+                                        <div className="space-y-1">
+                                            <CardTitle className="text-lg font-bold group-hover:text-primary transition-colors line-clamp-1">
+                                                {batch.name}
+                                            </CardTitle>
+                                            <div className="flex items-center space-x-2 text-xs text-muted-foreground">
+                                                <Calendar className="h-3 w-3" />
+                                                <span>Created {new Date(batch.createdAt).toLocaleDateString()}</span>
+                                            </div>
+                                        </div>
+                                        <Badge variant="outline" className="bg-background">
+                                            {batch.employeeCount} members
+                                        </Badge>
+                                    </div>
+                                </CardHeader>
+                                <CardContent className="pt-4 space-y-4">
+                                    <div className="space-y-3">
+                                        <div className="flex items-center justify-between text-xs text-muted-foreground">
+                                            <span>Team Preview</span>
+                                            <span>View All</span>
+                                        </div>
+                                        <div className="flex -space-x-2 overflow-hidden py-1">
+                                            {(batch.employees || []).slice(0, 5).map((employee) => (
+                                                <Avatar key={employee.Id} className="h-8 w-8 border-2 border-background ring-1 ring-muted transition-transform hover:scale-110 hover:z-10">
+                                                    <AvatarFallback className="bg-primary/10 text-primary text-[10px] font-bold">
+                                                        {getInitials(employee.Name)}
+                                                    </AvatarFallback>
+                                                </Avatar>
+                                            ))}
+                                            {(batch.employees?.length || 0) > 5 && (
+                                                <div className="flex h-8 w-8 items-center justify-center rounded-full border-2 border-background bg-muted text-[10px] font-medium text-muted-foreground ring-1 ring-muted">
+                                                    +{(batch.employees?.length || 0) - 5}
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    <div className="grid grid-cols-2 gap-2 pt-2">
+                                        <Button variant="outline" size="sm" onClick={() => handleViewDetails(batch)} className="w-full">
+                                            View Details
+                                        </Button>
+                                        <Button variant="ghost" size="sm" onClick={() => handleEditBatch(batch)} className="w-full hover:bg-primary/5 hover:text-primary">
+                                            <Edit2 className="w-3 h-3 mr-2" />
+                                            Edit
+                                        </Button>
+                                    </div>
                                 </CardContent>
                             </Card>
-                        ) : (
-                            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-                                {batches.map((batch) => (
-                                    <Card key={batch.id} className="group hover:shadow-xl transition-all duration-300 hover:-translate-y-1 border-0 shadow-md bg-card/50 backdrop-blur-sm">
-                                        <CardHeader className="space-y-3">
-                                            <div className="flex items-start justify-between">
-                                                <div className="space-y-1 flex-1">
-                                                    <CardTitle className="text-xl font-bold text-foreground group-hover:text-primary transition-colors">
-                                                        {batch.name}
-                                                    </CardTitle>
-                                                    <div className="flex items-center space-x-2 text-sm text-muted-foreground">
-                                                        <Calendar className="h-4 w-4" />
-                                                        <span>Created {new Date(batch.createdAt).toLocaleDateString()}</span>
+                        ))}
+                    </div>
+                )}
+
+                {/* View Details Dialog */}
+                <Dialog open={isViewDetailsDialogOpen} onOpenChange={setIsViewDetailsDialogOpen}>
+                    <DialogContent className="max-w-3xl max-h-[80vh] flex flex-col p-0">
+                        <DialogHeader className="p-6 pb-2 border-b">
+                            <DialogTitle className="flex items-center text-xl">
+                                <Users className="mr-3 h-5 w-5 text-primary" />
+                                {selectedBatchForView?.name}
+                            </DialogTitle>
+                            <DialogDescription>
+                                Batch Details & Members List
+                            </DialogDescription>
+                        </DialogHeader>
+
+                        {selectedBatchForView && (
+                            <div className="flex-1 overflow-hidden flex flex-col">
+                                <div className="grid grid-cols-2 gap-4 p-6 bg-muted/20">
+                                    <div className="space-y-1">
+                                        <p className="text-xs text-muted-foreground uppercase tracking-wider">Created Date</p>
+                                        <p className="font-medium flex items-center">
+                                            <Calendar className="w-4 h-4 mr-2 text-muted-foreground" />
+                                            {new Date(selectedBatchForView.createdAt).toLocaleDateString()}
+                                        </p>
+                                    </div>
+                                    <div className="space-y-1">
+                                        <p className="text-xs text-muted-foreground uppercase tracking-wider">Total Members</p>
+                                        <p className="font-medium flex items-center">
+                                            <Users className="w-4 h-4 mr-2 text-muted-foreground" />
+                                            {selectedBatchForView.employeeCount} employees
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <div className="flex-1 overflow-y-auto p-6">
+                                    <h3 className="text-sm font-semibold mb-4 text-muted-foreground uppercase tracking-wider">
+                                        Members List
+                                    </h3>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                        {selectedBatchForView.employees.map((employee) => (
+                                            <div
+                                                key={employee.Id}
+                                                className="flex items-center space-x-3 p-3 rounded-lg border bg-card hover:bg-muted/50 transition-colors"
+                                            >
+                                                <Avatar className="h-10 w-10 border">
+                                                    <AvatarFallback className="bg-primary/5 text-primary text-xs font-bold">
+                                                        {getInitials(employee.Name)}
+                                                    </AvatarFallback>
+                                                </Avatar>
+                                                <div className="flex-1 min-w-0">
+                                                    <p className="font-medium text-sm truncate">{employee.Name}</p>
+                                                    <p className="text-xs text-muted-foreground truncate">{employee.Email}</p>
+                                                    <div className="flex items-center gap-2 mt-1">
+                                                        <Badge variant="secondary" className="text-[10px] h-4 px-1 font-normal">
+                                                            {employee.Department}
+                                                        </Badge>
                                                     </div>
                                                 </div>
-                                                <Badge className="bg-primary/10 text-primary border-primary/20">
-                                                    {batch.employeeCount} members
-                                                </Badge>
                                             </div>
-                                        </CardHeader>
-                                        <CardContent className="space-y-4">
-                                            <div className="space-y-3">
-                                                <div className="flex items-center justify-between">
-                                                    <span className="text-sm font-medium text-muted-foreground">Team Members</span>
-                                                    <span className="text-sm text-muted-foreground">{batch.employees?.length || 0} employees</span>
-                                                </div>
-                                                <div className="flex -space-x-2">
-                                                    {(batch.employees || []).slice(0, 4).map((employee) => (
-                                                        <Avatar key={employee.Id} className="h-8 w-8 border-2 border-background">
-                                                            {/* <AvatarImage src={employee.Avatar} alt={employee.Name} /> */}
-                                                            <AvatarFallback className="bg-primary/10 text-primary text-xs font-semibold">
-                                                                {getInitials(employee.Name)}
-                                                            </AvatarFallback>
-                                                        </Avatar>
-                                                    ))}
-                                                    {(batch.employees?.length || 0) > 4 && (
-                                                        <div className="flex h-8 w-8 items-center justify-center rounded-full border-2 border-background bg-muted text-xs font-medium text-muted-foreground">
-                                                            +{(batch.employees?.length || 0) - 4}
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            </div>
-
-                                            <div className="flex space-x-2 pt-2">
-                                                <Button variant="outline" size="sm" className="flex-1" onClick={() => handleViewDetails(batch)}>
-                                                    View Details
-                                                </Button>
-                                                <Button variant="outline" size="sm" className="flex-1" onClick={() => handleEditBatch(batch)}>
-                                                    Edit Batch
-                                                </Button>
-                                            </div>
-                                        </CardContent>
-                                    </Card>
-                                ))}
+                                        ))}
+                                    </div>
+                                </div>
                             </div>
                         )}
-                    </div>
-                </div>
+
+                        <DialogFooter className="p-4 border-t bg-muted/10">
+                            <Button
+                                variant="outline"
+                                onClick={() => setIsViewDetailsDialogOpen(false)}
+                            >
+                                Close
+                            </Button>
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
+
+                {/* Edit Batch Dialog */}
+                <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+                    <DialogContent className="max-w-4xl max-h-[85vh] flex flex-col p-0 gap-0 overflow-hidden">
+                        <DialogHeader className="p-6 pb-2 border-b bg-muted/30">
+                            <DialogTitle className="flex items-center text-xl">
+                                <div className="p-2 bg-primary/10 rounded-lg mr-3">
+                                    <Edit2 className="h-5 w-5 text-primary" />
+                                </div>
+                                Edit Batch
+                            </DialogTitle>
+                            <DialogDescription>
+                                Update batch name and modify employee assignments
+                            </DialogDescription>
+                        </DialogHeader>
+
+                        <div className="flex-1 overflow-y-auto p-6 space-y-6">
+                            {/* Batch Name Input */}
+                            <div className="space-y-2">
+                                <Label htmlFor="editBatchName">Batch Name</Label>
+                                <Input
+                                    id="editBatchName"
+                                    value={editBatchName}
+                                    onChange={(e) => setEditBatchName(e.target.value)}
+                                    className="h-11"
+                                />
+                            </div>
+
+                            <Separator />
+
+                            {/* Employee Selection */}
+                            <div className="space-y-4">
+                                <div className="flex items-center justify-between">
+                                    <h3 className="text-sm font-semibold flex items-center text-muted-foreground uppercase tracking-wider">
+                                        Manage Members
+                                    </h3>
+                                    <Badge variant="secondary" className="px-3 py-1">
+                                        {editSelectedEmployees.size} selected
+                                    </Badge>
+                                </div>
+
+                                {/* Search and Filter */}
+                                <div className="flex flex-col sm:flex-row gap-3">
+                                    <div className="relative flex-1">
+                                        <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                                        <Input
+                                            placeholder="Search employees..."
+                                            value={searchTerm}
+                                            onChange={(e) => setSearchTerm(e.target.value)}
+                                            className="pl-9"
+                                        />
+                                    </div>
+                                    <Select
+                                        value={departmentFilter}
+                                        onValueChange={setDepartmentFilter}
+                                    >
+                                        <SelectTrigger className="w-full sm:w-[180px]">
+                                            <SelectValue placeholder="Department" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="all">All Departments</SelectItem>
+                                            {departments.map(dept => (
+                                                <SelectItem key={dept} value={dept}>{dept}</SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+
+                                {/* Select All */}
+                                <div className="flex items-center space-x-2 p-3 rounded-lg border border-dashed bg-muted/20 hover:bg-muted/40 transition-colors">
+                                    <Checkbox
+                                        id="editSelectAll"
+                                        checked={editSelectedEmployees.size === filteredEmployees.length && filteredEmployees.length > 0}
+                                        onCheckedChange={handleEditSelectAll}
+                                    />
+                                    <Label htmlFor="editSelectAll" className="font-medium cursor-pointer flex-1">
+                                        Select All ({filteredEmployees.length} available)
+                                    </Label>
+                                </div>
+
+                                {/* Employee List */}
+                                <ScrollArea className="h-[300px] rounded-lg border bg-background">
+                                    <div className="p-2 space-y-1">
+                                        {filteredEmployees.map((employee) => (
+                                            <div
+                                                key={employee.Id}
+                                                className={`group flex items-center space-x-4 p-3 rounded-md border transition-all duration-200 cursor-pointer ${editSelectedEmployees.has(employee.Id)
+                                                    ? 'bg-primary/5 border-primary/20'
+                                                    : 'border-transparent hover:bg-muted/50'
+                                                    }`}
+                                                onClick={() => handleEditEmployeeToggle(employee.Id)}
+                                            >
+                                                <Checkbox
+                                                    checked={editSelectedEmployees.has(employee.Id)}
+                                                    onCheckedChange={() => handleEditEmployeeToggle(employee.Id)}
+                                                    className="data-[state=checked]:bg-primary data-[state=checked]:border-primary"
+                                                />
+                                                <Avatar className="h-10 w-10 border">
+                                                    <AvatarFallback className="bg-primary/5 text-primary text-xs font-bold">
+                                                        {getInitials(employee.Name)}
+                                                    </AvatarFallback>
+                                                </Avatar>
+                                                <div className="flex-1 min-w-0">
+                                                    <div className="flex items-center justify-between">
+                                                        <p className="font-medium text-sm truncate">{employee.Name}</p>
+                                                        <Badge variant="outline" className="text-[10px] h-5 px-1.5 font-normal text-muted-foreground">
+                                                            {employee.Department}
+                                                        </Badge>
+                                                    </div>
+                                                    <div className="flex items-center text-xs text-muted-foreground mt-0.5">
+                                                        <Mail className="h-3 w-3 mr-1" />
+                                                        <span className="truncate">{employee.Email}</span>
+                                                    </div>
+                                                </div>
+                                                {editSelectedEmployees.has(employee.Id) && (
+                                                    <Check className="h-4 w-4 text-primary animate-in zoom-in duration-200" />
+                                                )}
+                                            </div>
+                                        ))}
+                                    </div>
+                                </ScrollArea>
+                            </div>
+                        </div>
+
+                        <DialogFooter className="p-6 border-t bg-muted/30">
+                            <Button
+                                variant="outline"
+                                onClick={() => setIsEditDialogOpen(false)}
+                            >
+                                Cancel
+                            </Button>
+                            <Button
+                                onClick={handleUpdateBatch}
+                                disabled={!editBatchName.trim() || editSelectedEmployees.size === 0 || isLoading}
+                                className="min-w-[140px]"
+                            >
+                                {isLoading ? (
+                                    <>
+                                        <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-background border-t-transparent" />
+                                        Updating...
+                                    </>
+                                ) : (
+                                    <>
+                                        <Check className="mr-2 h-4 w-4" />
+                                        Update Batch
+                                    </>
+                                )}
+                            </Button>
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
             </div>
         </UnifiedDashboardLayout>
     )

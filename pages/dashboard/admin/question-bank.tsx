@@ -2,7 +2,7 @@ import { useEffect, useState, useRef } from "react";
 import Papa from "papaparse";
 import toast from "react-hot-toast";
 import { useSession } from "next-auth/react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -12,6 +12,8 @@ import { Separator } from '@/components/ui/separator';
 import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Badge } from '@/components/ui/badge';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import {
     BookOpen,
     Code,
@@ -33,7 +35,14 @@ import {
     Download,
     List,
     X,
-    Check
+    Check,
+    Search,
+    Filter,
+    MoreHorizontal,
+    Trash2,
+    Edit2,
+    CornerDownRight,
+    Terminal
 } from 'lucide-react';
 import UnifiedDashboardLayout from "@/components/layouts/UnifiedDashboardLayout";
 import Head from "next/head";
@@ -61,7 +70,7 @@ interface QuestionInput {
     explanation?: string;
     tags?: string[];
     autoGenerate?: boolean;
-    testCases?: Array<{ input: string; expectedOutput: string; isHidden: boolean }>; // Add this
+    testCases?: Array<{ input: string; expectedOutput: string; isHidden: boolean }>;
 }
 
 interface RichTextEditorProps {
@@ -99,77 +108,84 @@ const TestCasesEditor = ({
     };
 
     return (
-        <div className="space-y-3">
+        <div className="space-y-4">
             <div className="flex items-center justify-between">
-                <Label className="text-sm font-semibold">Test Cases</Label>
+                <Label className="text-sm font-semibold flex items-center gap-2">
+                    <Terminal className="w-4 h-4 text-primary" />
+                    Test Cases
+                </Label>
                 <Button
                     type="button"
                     variant="outline"
                     size="sm"
                     onClick={addTestCase}
-                    className="gap-2"
+                    className="gap-2 border-dashed border-primary/20 hover:border-primary/50 hover:bg-primary/5"
                 >
                     <Plus className="h-3 w-3" />
                     Add Test Case
                 </Button>
             </div>
 
-            {testCases.map((tc, index) => (
-                <Card key={index} className="border-2">
-                    <CardContent className="p-4 space-y-3">
-                        <div className="flex items-center justify-between">
-                            <span className="text-sm font-medium">Test Case {index + 1}</span>
-                            <div className="flex items-center gap-2">
-                                <label className="flex items-center gap-2 text-xs">
-                                    <input
-                                        type="checkbox"
-                                        checked={tc.isHidden}
-                                        onChange={(e) => updateTestCase(index, 'isHidden', e.target.checked)}
-                                        className="rounded"
+            <div className="grid gap-4">
+                {testCases.map((tc, index) => (
+                    <Card key={index} className="relative overflow-hidden border border-border/50 bg-muted/20 group hover:border-primary/30 transition-all">
+                        <div className="absolute top-0 left-0 w-1 h-full bg-primary/20 group-hover:bg-primary transition-colors" />
+                        <CardContent className="p-4 space-y-4">
+                            <div className="flex items-center justify-between">
+                                <span className="text-sm font-medium font-mono text-muted-foreground">Case #{index + 1}</span>
+                                <div className="flex items-center gap-3">
+                                    <label className="flex items-center gap-2 text-xs cursor-pointer select-none">
+                                        <input
+                                            type="checkbox"
+                                            checked={tc.isHidden}
+                                            onChange={(e) => updateTestCase(index, 'isHidden', e.target.checked)}
+                                            className="rounded border-primary/50 text-primary focus:ring-primary/20"
+                                        />
+                                        Hidden Case
+                                    </label>
+                                    <Button
+                                        type="button"
+                                        variant="ghost"
+                                        size="icon"
+                                        onClick={() => removeTestCase(index)}
+                                        className="h-6 w-6 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                                    >
+                                        <X className="h-3 w-3" />
+                                    </Button>
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="space-y-1.5">
+                                    <Label className="text-xs text-muted-foreground">Input</Label>
+                                    <Textarea
+                                        placeholder="Input data..."
+                                        value={tc.input}
+                                        onChange={(e) => updateTestCase(index, 'input', e.target.value)}
+                                        className="min-h-[80px] font-mono text-xs bg-background/50 resize-none focus-visible:ring-1"
                                     />
-                                    Hidden
-                                </label>
-                                <Button
-                                    type="button"
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => removeTestCase(index)}
-                                    className="h-8 w-8 p-0 hover:bg-red-100 hover:text-red-600"
-                                >
-                                    <X className="h-3 w-3" />
-                                </Button>
+                                </div>
+                                <div className="space-y-1.5">
+                                    <Label className="text-xs text-muted-foreground">Expected Output</Label>
+                                    <Textarea
+                                        placeholder="Expected output..."
+                                        value={tc.expectedOutput}
+                                        onChange={(e) => updateTestCase(index, 'expectedOutput', e.target.value)}
+                                        className="min-h-[80px] font-mono text-xs bg-background/50 resize-none focus-visible:ring-1"
+                                    />
+                                </div>
                             </div>
-                        </div>
+                        </CardContent>
+                    </Card>
+                ))}
 
-                        <div className="grid grid-cols-2 gap-3">
-                            <div className="space-y-1">
-                                <Label className="text-xs">Input</Label>
-                                <Textarea
-                                    placeholder="Enter input..."
-                                    value={tc.input}
-                                    onChange={(e) => updateTestCase(index, 'input', e.target.value)}
-                                    className="min-h-[80px] font-mono text-xs"
-                                />
-                            </div>
-                            <div className="space-y-1">
-                                <Label className="text-xs">Expected Output</Label>
-                                <Textarea
-                                    placeholder="Enter expected output..."
-                                    value={tc.expectedOutput}
-                                    onChange={(e) => updateTestCase(index, 'expectedOutput', e.target.value)}
-                                    className="min-h-[80px] font-mono text-xs"
-                                />
-                            </div>
-                        </div>
-                    </CardContent>
-                </Card>
-            ))}
-
-            {testCases.length === 0 && (
-                <p className="text-sm text-muted-foreground text-center py-4">
-                    No test cases added yet. Click "Add Test Case" to create one.
-                </p>
-            )}
+                {testCases.length === 0 && (
+                    <div className="text-center py-8 border-2 border-dashed border-muted-foreground/10 rounded-lg bg-muted/5">
+                        <Terminal className="w-8 h-8 mx-auto text-muted-foreground/30 mb-2" />
+                        <p className="text-sm text-muted-foreground">No test cases added yet</p>
+                    </div>
+                )}
+            </div>
         </div>
     );
 };
@@ -203,7 +219,7 @@ const RichTextEditor = ({ value, onChange, placeholder = "Write your question he
             reader.onload = (e) => {
                 const img = document.createElement('img');
                 img.src = e.target?.result as string;
-                img.className = 'max-w-full h-auto block my-4 rounded-lg shadow-sm';
+                img.className = 'max-w-full h-auto block my-4 rounded-lg shadow-sm border border-border';
 
                 if (editorRef.current) {
                     editorRef.current.appendChild(img);
@@ -215,82 +231,72 @@ const RichTextEditor = ({ value, onChange, placeholder = "Write your question he
     };
 
     return (
-        <Card className="overflow-hidden border-2 border-dashed border-muted-foreground/20 hover:border-primary/50 transition-colors">
-            <CardContent className="p-0">
-                {/* Toolbar */}
-                <div className="flex flex-wrap items-center gap-1 p-3 bg-muted/30 border-b">
-                    <div className="flex items-center gap-1">
-                        <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => execCommand('bold')}
-                            className="h-8 w-8 p-0 hover:bg-primary/10"
-                        >
-                            <Bold className="h-3 w-3" />
-                        </Button>
-                        <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => execCommand('italic')}
-                            className="h-8 w-8 p-0 hover:bg-primary/10"
-                        >
-                            <Italic className="h-3 w-3" />
-                        </Button>
-                        <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => execCommand('underline')}
-                            className="h-8 w-8 p-0 hover:bg-primary/10"
-                        >
-                            <Underline className="h-3 w-3" />
-                        </Button>
-                    </div>
-
-                    <Separator orientation="vertical" className="h-6" />
-
+        <div className="group border rounded-lg overflow-hidden bg-background focus-within:ring-2 focus-within:ring-primary/20 transition-all">
+            {/* Toolbar */}
+            <div className="flex flex-wrap items-center gap-1 p-2 bg-muted/30 border-b">
+                <div className="flex items-center gap-0.5 bg-background rounded-md border shadow-sm p-0.5">
                     <Button
                         type="button"
                         variant="ghost"
                         size="sm"
-                        onClick={() => fileInputRef.current?.click()}
-                        className="h-8 px-3 text-xs hover:bg-green-500/10 hover:text-green-700"
+                        onClick={() => execCommand('bold')}
+                        className="h-7 w-7 p-0 hover:bg-muted"
                     >
-                        <ImageIcon className="h-3 w-3 mr-1" />
-                        Image
+                        <Bold className="h-3.5 w-3.5" />
                     </Button>
-
-                    <input
-                        ref={fileInputRef}
-                        type="file"
-                        accept="image/*"
-                        onChange={handleImageUpload}
-                        className="hidden"
-                    />
+                    <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => execCommand('italic')}
+                        className="h-7 w-7 p-0 hover:bg-muted"
+                    >
+                        <Italic className="h-3.5 w-3.5" />
+                    </Button>
+                    <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => execCommand('underline')}
+                        className="h-7 w-7 p-0 hover:bg-muted"
+                    >
+                        <Underline className="h-3.5 w-3.5" />
+                    </Button>
                 </div>
 
-                {/* Editor Area */}
-                <div
-                    ref={editorRef}
-                    contentEditable
-                    onInput={handleContentChange}
-                    onBlur={handleContentChange}
-                    className="min-h-[200px] p-4 outline-none text-sm leading-relaxed bg-background prose prose-sm max-w-none focus:bg-muted/5 transition-colors"
-                    suppressContentEditableWarning={true}
-                    data-placeholder={placeholder}
-                />
+                <Separator orientation="vertical" className="h-6 mx-1" />
 
-                <style jsx>{`
-                    div[contenteditable]:empty:before {
-                        content: attr(data-placeholder);
-                        color: hsl(var(--muted-foreground));
-                        pointer-events: none;
-                    }
-                `}</style>
-            </CardContent>
-        </Card>
+                <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="h-7 px-2 text-xs gap-1.5 hover:bg-muted"
+                >
+                    <ImageIcon className="h-3.5 w-3.5" />
+                    Add Image
+                </Button>
+
+                <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={handleImageUpload}
+                    className="hidden"
+                />
+            </div>
+
+            {/* Editor Area */}
+            <div
+                ref={editorRef}
+                contentEditable
+                onInput={handleContentChange}
+                onBlur={handleContentChange}
+                className="min-h-[150px] p-4 outline-none text-sm leading-relaxed prose prose-sm max-w-none dark:prose-invert empty:before:content-[attr(data-placeholder)] empty:before:text-muted-foreground"
+                suppressContentEditableWarning={true}
+                data-placeholder={placeholder}
+            />
+        </div>
     );
 };
 
@@ -329,7 +335,7 @@ const MCQOptionsEditor = ({ options, onChange }: { options: MCQOption[]; onChang
         <div className="space-y-4">
             <div className="flex items-center justify-between">
                 <Label className="text-sm font-semibold flex items-center gap-2">
-                    <List className="h-4 w-4" />
+                    <List className="h-4 w-4 text-primary" />
                     Answer Options
                 </Label>
                 <Button
@@ -337,7 +343,7 @@ const MCQOptionsEditor = ({ options, onChange }: { options: MCQOption[]; onChang
                     variant="outline"
                     size="sm"
                     onClick={addOption}
-                    className="gap-2"
+                    className="gap-2 border-dashed border-primary/20 hover:border-primary/50 hover:bg-primary/5"
                     disabled={options.length >= 6}
                 >
                     <Plus className="h-3 w-3" />
@@ -345,56 +351,55 @@ const MCQOptionsEditor = ({ options, onChange }: { options: MCQOption[]; onChang
                 </Button>
             </div>
 
-            <RadioGroup value={options.find(o => o.isCorrect)?.id || ""}>
+            <div className="grid gap-3">
                 {options.map((option, index) => (
-                    <Card key={option.id} className="border-2 border-dashed border-muted-foreground/20">
-                        <CardContent className="p-4">
-                            <div className="flex items-center gap-3">
-                                <div className="flex items-center gap-2">
-                                    <span className="text-sm font-medium text-muted-foreground w-8">
-                                        {String.fromCharCode(65 + index)}.
-                                    </span>
-                                    <RadioGroupItem
-                                        value={option.id}
-                                        onClick={() => setCorrectAnswer(option.id)}
-                                        className="cursor-pointer"
-                                        title="Mark as correct answer"
-                                    />
-                                </div>
+                    <div
+                        key={option.id}
+                        className={`group flex items-center gap-3 p-3 rounded-lg border transition-all ${option.isCorrect
+                            ? 'bg-green-500/5 border-green-500/30'
+                            : 'bg-background border-border hover:border-primary/30'
+                            }`}
+                    >
+                        <div className="flex items-center justify-center w-8 h-8 rounded-full bg-muted text-xs font-bold text-muted-foreground shrink-0">
+                            {String.fromCharCode(65 + index)}
+                        </div>
 
-                                <Input
-                                    placeholder={`Option ${String.fromCharCode(65 + index)}`}
-                                    value={option.text}
-                                    onChange={(e) => updateOption(option.id, 'text', e.target.value)}
-                                    className="flex-1"
-                                />
+                        <div className="flex-1">
+                            <Input
+                                placeholder={`Option ${String.fromCharCode(65 + index)} text...`}
+                                value={option.text}
+                                onChange={(e) => updateOption(option.id, 'text', e.target.value)}
+                                className="border-0 bg-transparent focus-visible:ring-0 px-0 h-auto py-1 font-medium placeholder:font-normal"
+                            />
+                        </div>
 
-                                {option.isCorrect && (
-                                    <div className="flex items-center gap-1 px-2 py-1 bg-green-100 dark:bg-green-900 rounded-md">
-                                        <Check className="h-3 w-3 text-green-600" />
-                                        <span className="text-xs text-green-700 dark:text-green-300">Correct</span>
-                                    </div>
-                                )}
+                        <div className="flex items-center gap-2">
+                            <button
+                                type="button"
+                                onClick={() => setCorrectAnswer(option.id)}
+                                className={`flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium transition-colors ${option.isCorrect
+                                    ? 'bg-green-500 text-white shadow-sm'
+                                    : 'bg-muted text-muted-foreground hover:bg-muted/80'
+                                    }`}
+                            >
+                                {option.isCorrect ? <Check className="w-3 h-3" /> : null}
+                                {option.isCorrect ? 'Correct' : 'Mark Correct'}
+                            </button>
 
-                                <Button
-                                    type="button"
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => removeOption(option.id)}
-                                    className="h-8 w-8 p-0 hover:bg-red-100 hover:text-red-600"
-                                    disabled={options.length <= 2}
-                                >
-                                    <X className="h-3 w-3" />
-                                </Button>
-                            </div>
-                        </CardContent>
-                    </Card>
+                            <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => removeOption(option.id)}
+                                className="h-7 w-7 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                                disabled={options.length <= 2}
+                            >
+                                <X className="h-3.5 w-3.5" />
+                            </Button>
+                        </div>
+                    </div>
                 ))}
-            </RadioGroup>
-
-            <p className="text-xs text-muted-foreground">
-                Click the radio button next to an option to mark it as the correct answer.
-            </p>
+            </div>
         </div>
     );
 };
@@ -418,6 +423,7 @@ export default function QuestionBankPage() {
             { id: 'option_2', text: '', isCorrect: false }
         ]
     });
+
     const [filters, setFilters] = useState({
         keyword: "",
         language: "",
@@ -443,20 +449,18 @@ export default function QuestionBankPage() {
 
     const [selectedQuestion, setSelectedQuestion] = useState<QuestionInput | null>(null);
     const [isEditing, setIsEditing] = useState(false);
-    const [showQuestions, setShowQuestions] = useState(false);
+    const [showForm, setShowForm] = useState(false);
 
     const fetchFilteredQuestions = async () => {
         const params = new URLSearchParams(filters as any).toString();
         const res = await fetch(`/api/questions?${params}`);
         const data = await res.json();
-        console.log(data);
         setQuestions(data);
     };
 
     const [currentPage, setCurrentPage] = useState(1);
     const [itemsPerPage] = useState(10);
     const [filteredQuestions, setFilteredQuestions] = useState<QuestionInput[]>([]);
-
     const [generatingTags, setGeneratingTags] = useState(false);
 
     useEffect(() => {
@@ -471,19 +475,15 @@ export default function QuestionBankPage() {
                 q.questionText.toLowerCase().includes(activeFilters.keyword.toLowerCase())
             );
         }
-
         if (activeFilters.language) {
             filtered = filtered.filter(q => q.language === activeFilters.language);
         }
-
         if (activeFilters.difficulty) {
             filtered = filtered.filter(q => q.difficulty === activeFilters.difficulty);
         }
-
         if (activeFilters.questionType) {
             filtered = filtered.filter(q => q.questionType === activeFilters.questionType);
         }
-
         if (activeFilters.tag) {
             filtered = filtered.filter(q =>
                 q.tags?.some(tag => tag.includes(activeFilters.tag.toLowerCase()))
@@ -494,7 +494,6 @@ export default function QuestionBankPage() {
         setCurrentPage(1);
     }, [questions, activeFilters]);
 
-    // Pagination logic
     const indexOfLastItem = currentPage * itemsPerPage;
     const indexOfFirstItem = indexOfLastItem - itemsPerPage;
     const currentQuestions = filteredQuestions.slice(indexOfFirstItem, indexOfLastItem);
@@ -505,7 +504,7 @@ export default function QuestionBankPage() {
     };
 
     const handleClearFilters = () => {
-        setFilters({
+        const emptyFilters = {
             keyword: "",
             language: "",
             difficulty: "",
@@ -513,7 +512,8 @@ export default function QuestionBankPage() {
             skillId: "",
             questionType: "",
             tag: ""
-        });
+        };
+        setFilters(emptyFilters);
         setActiveFilters({
             keyword: "",
             language: "",
@@ -523,71 +523,34 @@ export default function QuestionBankPage() {
         });
     };
 
-    const handleCSVChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (!file) return;
-        setFile(file);
-        Papa.parse(file, {
-            header: true,
-            skipEmptyLines: true,
-            complete: (results: { data: QuestionInput[] }) => {
-                const rows = results.data as QuestionInput[];
-                setPreview(rows);
-                toast.success(`Parsed ${rows.length} questions`);
-            },
-        });
-    };
-
-    const handleBulkUpload = async () => {
-        if (!preview.length) return;
-        setUploading(true);
-        const res = await fetch("/api/questions/bulk", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-                questions: preview.map((q) => ({ ...q, createdBy: session?.user?.email })),
-            }),
-        });
-        if (res.ok) {
-            toast.success("Bulk upload successful");
-            setFile(null);
-            setPreview([]);
-        } else {
-            toast.error("Bulk upload failed");
-        }
-        setUploading(false);
-    };
-
     const handleManualSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-
         setGeneratingTags(true);
 
         const content = question.questionText;
 
-        console.log(question);
-
         if (!content || !content.replace(/<(.|\n)*?>/g, '').trim()) {
             toast.error("Please enter the question text!");
+            setGeneratingTags(false);
             return;
         }
 
-        // Validate MCQ specific fields
         if (question.questionType === 'mcq') {
             if (!question.options || question.options.length < 2) {
                 toast.error("MCQ must have at least 2 options!");
+                setGeneratingTags(false);
                 return;
             }
-
             const hasCorrectAnswer = question.options.some(option => option.isCorrect);
             if (!hasCorrectAnswer) {
                 toast.error("Please mark one option as correct!");
+                setGeneratingTags(false);
                 return;
             }
-
             const emptyOptions = question.options.filter(option => !option.text.trim());
             if (emptyOptions.length > 0) {
                 toast.error("Please fill in all option texts!");
+                setGeneratingTags(false);
                 return;
             }
         }
@@ -615,6 +578,7 @@ export default function QuestionBankPage() {
                 );
                 handleCancelEdit();
                 fetchFilteredQuestions();
+                setShowForm(false);
             } else {
                 toast.error(isEditing ? "Failed to update question" : "Failed to add question");
             }
@@ -624,68 +588,14 @@ export default function QuestionBankPage() {
     };
 
     const difficultyConfig = {
-        easy: { icon: Target, color: 'text-green-600', bg: 'bg-green-500/10', border: 'border-green-500/20' },
-        medium: { icon: Zap, color: 'text-yellow-600', bg: 'bg-yellow-500/10', border: 'border-yellow-500/20' },
-        hard: { icon: Award, color: 'text-red-600', bg: 'bg-red-500/10', border: 'border-red-500/20' }
+        easy: { icon: Target, color: 'text-emerald-600', bg: 'bg-emerald-500/10', border: 'border-emerald-500/20', label: 'Easy' },
+        medium: { icon: Zap, color: 'text-amber-600', bg: 'bg-amber-500/10', border: 'border-amber-500/20', label: 'Medium' },
+        hard: { icon: Award, color: 'text-rose-600', bg: 'bg-rose-500/10', border: 'border-rose-500/20', label: 'Hard' }
     };
 
     const languageConfig = {
         python: { emoji: '🐍', name: 'Python' },
         sql: { emoji: '🗄️', name: 'SQL' },
-        // javascript: { emoji: '💛', name: 'JavaScript' }
-    };
-
-    interface TemplateQuestion {
-        questionText: string;
-        expectedOutput?: string;
-        difficulty: string;
-        marks: number;
-        language?: string;
-        questionType: string;
-        options?: string;
-        correctAnswer?: string;
-        explanation?: string;
-    }
-
-    const downloadTemplate = (): void => {
-        const templateData: TemplateQuestion[] = [
-            {
-                questionText: "Write a function to reverse a string",
-                expectedOutput: "function reverseString(str) { return str.split('').reverse().join(''); }",
-                difficulty: "Easy",
-                marks: 5,
-                language: "JavaScript",
-                questionType: "coding",
-                explanation: "This function splits the string into characters, reverses the array, then joins them back."
-            },
-            {
-                questionText: "What is the time complexity of binary search?",
-                difficulty: "Medium",
-                marks: 2,
-                questionType: "mcq",
-                options: "O(n)|O(log n)|O(n^2)|O(1)",
-                correctAnswer: "O(log n)",
-                explanation: "Binary search divides the search space in half with each comparison."
-            }
-        ];
-
-        const headers: (keyof TemplateQuestion)[] = ['questionText', 'expectedOutput', 'difficulty', 'marks', 'language', 'questionType', 'options', 'correctAnswer', 'explanation'];
-        const csvContent: string = [
-            headers.join(','),
-            ...templateData.map(row =>
-                headers.map(header => `"${row[header] || ''}"`).join(',')
-            )
-        ].join('\n');
-
-        const blob: Blob = new Blob([csvContent], { type: 'text/csv' });
-        const url: string = window.URL.createObjectURL(blob);
-        const a: HTMLAnchorElement = document.createElement('a');
-        a.href = url;
-        a.download = 'questions_template.csv';
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        window.URL.revokeObjectURL(url);
     };
 
     const handleEdit = (q: QuestionInput) => {
@@ -700,8 +610,8 @@ export default function QuestionBankPage() {
             jobId: q.jobId,
             skillId: q.skillId,
             questionType: q.questionType,
-            autoGenerate: q.autoGenerate || false, // Add this
-            testCases: q.testCases || [], // Add this
+            autoGenerate: q.autoGenerate || false,
+            testCases: q.testCases || [],
             options: q.options || [
                 { id: 'option_1', text: '', isCorrect: false },
                 { id: 'option_2', text: '', isCorrect: false }
@@ -709,6 +619,7 @@ export default function QuestionBankPage() {
             explanation: q.explanation
         });
         setIsEditing(true);
+        setShowForm(true);
         window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
@@ -732,6 +643,7 @@ export default function QuestionBankPage() {
     const handleCancelEdit = () => {
         setIsEditing(false);
         setSelectedQuestion(null);
+        setShowForm(false);
         setQuestion({
             questionText: "",
             expectedOutput: "",
@@ -742,51 +654,12 @@ export default function QuestionBankPage() {
             skillId: 1,
             questionType: 'coding',
             autoGenerate: false,
-            testCases: [], // Add this
+            testCases: [],
             options: [
                 { id: 'option_1', text: '', isCorrect: false },
                 { id: 'option_2', text: '', isCorrect: false }
             ]
         });
-    };
-
-    const downloadFilteredQuestions = () => {
-        if (filteredQuestions.length === 0) {
-            toast.error("No questions to download");
-            return;
-        }
-
-        const headers = ['questionText', 'expectedOutput', 'difficulty', 'marks', 'language', 'questionType', 'options', 'correctAnswer', 'explanation'];
-
-        const csvContent = [
-            headers.join(','),
-            ...filteredQuestions.map(q => {
-                const row = {
-                    questionText: q.questionText.replace(/<[^>]*>/g, '').replace(/"/g, '""'),
-                    expectedOutput: q.expectedOutput?.replace(/"/g, '""') || '',
-                    difficulty: q.difficulty,
-                    marks: q.marks,
-                    language: q.language || '',
-                    questionType: q.questionType,
-                    options: q.options ? q.options.map(opt => opt.text).join('|') : '',
-                    correctAnswer: q.options?.find(opt => opt.isCorrect)?.text || '',
-                    explanation: q.explanation?.replace(/"/g, '""') || ''
-                };
-                return headers.map(header => `"${row[header as keyof typeof row] || ''}"`).join(',');
-            })
-        ].join('\n');
-
-        const blob = new Blob([csvContent], { type: 'text/csv' });
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `filtered_questions_${new Date().toISOString().split('T')[0]}.csv`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        window.URL.revokeObjectURL(url);
-
-        toast.success(`Downloaded ${filteredQuestions.length} questions`);
     };
 
     const handleGenerateTestCases = async () => {
@@ -813,7 +686,7 @@ export default function QuestionBankPage() {
                 setQuestion({
                     ...question,
                     testCases: data.testCases,
-                    autoGenerate: false // Switch to manual mode to show test cases
+                    autoGenerate: false
                 });
                 toast.success(`Generated ${data.testCases.length} test cases!`, {
                     id: loadingToast
@@ -831,389 +704,299 @@ export default function QuestionBankPage() {
         }
     };
 
-
     return (
         <UnifiedDashboardLayout role="admin">
             <Head>
-                <title>SysRank - Online Assessment Platform</title>
-                <link rel="icon" href="/logo3.png" />
+                <title>Question Bank - SysRank</title>
             </Head>
-            <div className="min-h-screen p-6 space-y-6">
-                <div className="text-center space-y-4">
-                    <div className="flex items-center justify-center gap-3">
-                        <div className="p-3 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl shadow-lg">
-                            <BookOpen className="h-8 w-8 text-white" />
-                        </div>
-                        <div>
-                            <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                                Question Bank
-                            </h1>
-                            <p className="text-muted-foreground text-lg">
-                                Create and manage coding challenges & MCQs with style
-                            </p>
-                        </div>
-                        <Sparkles className="h-6 w-6 text-purple-500 animate-pulse" />
+
+            <div className="space-y-6 animate-in fade-in duration-500">
+                {/* Header Section */}
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div>
+                        <h1 className="text-3xl font-bold tracking-tight bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
+                            Question Bank
+                        </h1>
+                        <p className="text-muted-foreground mt-1">
+                            Manage your assessment content library
+                        </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <Button
+                            onClick={() => setShowForm(!showForm)}
+                            className={`${showForm ? 'bg-destructive hover:bg-destructive/90' : 'bg-primary hover:bg-primary/90'} transition-all duration-300 shadow-lg hover:shadow-primary/20`}
+                        >
+                            {showForm ? (
+                                <>
+                                    <X className="w-4 h-4 mr-2" />
+                                    Cancel
+                                </>
+                            ) : (
+                                <>
+                                    <Plus className="w-4 h-4 mr-2" />
+                                    Add Question
+                                </>
+                            )}
+                        </Button>
                     </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <Card className="border-2 border-dashed border-blue-200 dark:border-blue-800 hover:border-blue-400 dark:hover:border-blue-600 transition-colors">
-                        <CardContent className="p-6">
-                            <div className="flex items-center justify-between">
-                                <div>
-                                    <p className="text-sm font-medium text-muted-foreground">Total Questions</p>
-                                    <p className="text-3xl font-bold text-blue-600">{questions.length}</p>
-                                </div>
-                                <Layers className="h-8 w-8 text-blue-500" />
+                {/* Stats Cards */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <Card className="border-border/50 bg-gradient-to-br from-blue-500/5 to-transparent hover:border-blue-500/20 transition-all">
+                        <CardContent className="p-6 flex items-center justify-between">
+                            <div>
+                                <p className="text-sm font-medium text-muted-foreground">Total Questions</p>
+                                <h3 className="text-3xl font-bold text-blue-600 dark:text-blue-400 mt-1">{questions.length}</h3>
+                            </div>
+                            <div className="h-12 w-12 rounded-xl bg-blue-500/10 flex items-center justify-center">
+                                <Layers className="h-6 w-6 text-blue-600 dark:text-blue-400" />
                             </div>
                         </CardContent>
                     </Card>
-
-                    <Card className="border-2 border-dashed border-green-200 dark:border-green-800 hover:border-green-400 dark:hover:border-green-600 transition-colors">
-                        <CardContent className="p-6">
-                            <div className="flex items-center justify-between">
-                                <div>
-                                    <p className="text-sm font-medium text-muted-foreground">Coding Questions</p>
-                                    <p className="text-3xl font-bold text-green-600">
-                                        {questions.filter(q => q.questionType.toLocaleLowerCase() === 'coding').length}
-                                    </p>
-                                </div>
-                                <Code className="h-8 w-8 text-green-500" />
+                    <Card className="border-border/50 bg-gradient-to-br from-emerald-500/5 to-transparent hover:border-emerald-500/20 transition-all">
+                        <CardContent className="p-6 flex items-center justify-between">
+                            <div>
+                                <p className="text-sm font-medium text-muted-foreground">Coding Challenges</p>
+                                <h3 className="text-3xl font-bold text-emerald-600 dark:text-emerald-400 mt-1">
+                                    {questions.filter(q => q.questionType === 'coding').length}
+                                </h3>
+                            </div>
+                            <div className="h-12 w-12 rounded-xl bg-emerald-500/10 flex items-center justify-center">
+                                <Code className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
                             </div>
                         </CardContent>
                     </Card>
-
-                    <Card className="border-2 border-dashed border-purple-200 dark:border-purple-800 hover:border-purple-400 dark:hover:border-purple-600 transition-colors">
-                        <CardContent className="p-6">
-                            <div className="flex items-center justify-between">
-                                <div>
-                                    <p className="text-sm font-medium text-muted-foreground">MCQ Questions</p>
-                                    <p className="text-3xl font-bold text-purple-600">
-                                        {questions.filter(q => q.questionType.toLocaleLowerCase() === 'mcq').length}
-                                    </p>
-                                </div>
-                                <List className="h-8 w-8 text-purple-500" />
+                    <Card className="border-border/50 bg-gradient-to-br from-purple-500/5 to-transparent hover:border-purple-500/20 transition-all">
+                        <CardContent className="p-6 flex items-center justify-between">
+                            <div>
+                                <p className="text-sm font-medium text-muted-foreground">MCQ Items</p>
+                                <h3 className="text-3xl font-bold text-purple-600 dark:text-purple-400 mt-1">
+                                    {questions.filter(q => q.questionType === 'mcq').length}
+                                </h3>
+                            </div>
+                            <div className="h-12 w-12 rounded-xl bg-purple-500/10 flex items-center justify-center">
+                                <List className="h-6 w-6 text-purple-600 dark:text-purple-400" />
                             </div>
                         </CardContent>
                     </Card>
                 </div>
 
-                <Card className="border-2 border-dashed border-muted-foreground/20 hover:border-primary/50 transition-colors">
-                    <CardHeader className="pb-4">
-                        <CardTitle className="flex items-center gap-2 text-xl">
-                            <div className="p-2 bg-gradient-to-br from-green-500 to-emerald-600 rounded-lg shadow-lg">
-                                <Plus className="h-5 w-5 text-white" />
-                            </div>
-                            {isEditing ? 'Edit Question' : 'Add New Question'}
-                        </CardTitle>
-                        <CardDescription>
-                            Create coding challenges or multiple choice questions with rich formatting
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-6">
-                        <form onSubmit={handleManualSubmit} className="space-y-6">
-                            {/* Question Type Selection */}
-                            <div className="space-y-2">
-                                <Label className="text-sm font-semibold">Question Type</Label>
-                                <Tabs
-                                    value={question.questionType}
-                                    onValueChange={(value) => setQuestion({ ...question, questionType: value as 'coding' | 'mcq' })}
-                                    className="w-full"
-                                >
-                                    <TabsList className="grid w-full grid-cols-2">
-                                        <TabsTrigger value="coding" className="flex items-center gap-2">
-                                            <Code className="h-4 w-4" />
-                                            Coding Question
-                                        </TabsTrigger>
-                                        <TabsTrigger value="mcq" className="flex items-center gap-2">
-                                            <List className="h-4 w-4" />
-                                            MCQ Question
-                                        </TabsTrigger>
-                                    </TabsList>
-                                </Tabs>
-                            </div>
+                {/* Add/Edit Form */}
+                {showForm && (
+                    <Card className="border-border shadow-lg animate-in slide-in-from-top-4 duration-300">
+                        <CardHeader className="border-b bg-muted/30">
+                            <CardTitle className="flex items-center gap-2">
+                                {isEditing ? <Edit2 className="w-5 h-5 text-primary" /> : <Plus className="w-5 h-5 text-primary" />}
+                                {isEditing ? 'Edit Question' : 'Create New Question'}
+                            </CardTitle>
+                            <CardDescription>
+                                Fill in the details below to {isEditing ? 'update' : 'create'} a question.
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent className="p-6">
+                            <form onSubmit={handleManualSubmit} className="space-y-8">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                    {/* Left Column: Basic Info */}
+                                    <div className="space-y-6">
+                                        <div className="space-y-3">
+                                            <Label>Question Type</Label>
+                                            <Tabs
+                                                value={question.questionType}
+                                                onValueChange={(value) => setQuestion({ ...question, questionType: value as 'coding' | 'mcq' })}
+                                                className="w-full"
+                                            >
+                                                <TabsList className="grid w-full grid-cols-2 h-10">
+                                                    <TabsTrigger value="coding" className="flex items-center gap-2">
+                                                        <Code className="h-4 w-4" /> Coding
+                                                    </TabsTrigger>
+                                                    <TabsTrigger value="mcq" className="flex items-center gap-2">
+                                                        <List className="h-4 w-4" /> MCQ
+                                                    </TabsTrigger>
+                                                </TabsList>
+                                            </Tabs>
+                                        </div>
 
-                            {/* Question Text */}
-                            <div className="space-y-2">
-                                <Label className="text-sm font-semibold flex items-center gap-2">
-                                    <FileText className="h-4 w-4" />
-                                    Question (Rich Text & Images supported)
-                                </Label>
-                                <RichTextEditor
-                                    value={question.questionText}
-                                    onChange={(content: any) => setQuestion({ ...question, questionText: content })}
-                                    placeholder={`Write your ${question.questionType.toLocaleLowerCase() === 'coding' ? 'coding' : 'MCQ'} question here. Use the toolbar to format text and add images...`}
-                                />
-                            </div>
+                                        <div className="space-y-3">
+                                            <Label>Difficulty & Marks</Label>
+                                            <div className="flex gap-4">
+                                                <Select
+                                                    value={question.difficulty}
+                                                    onValueChange={(value) => setQuestion({ ...question, difficulty: value })}
+                                                >
+                                                    <SelectTrigger className="flex-1">
+                                                        <SelectValue />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        {Object.entries(difficultyConfig).map(([key, config]) => (
+                                                            <SelectItem key={key} value={key}>
+                                                                <div className="flex items-center gap-2">
+                                                                    <config.icon className={`h-4 w-4 ${config.color}`} />
+                                                                    <span>{config.label}</span>
+                                                                </div>
+                                                            </SelectItem>
+                                                        ))}
+                                                    </SelectContent>
+                                                </Select>
+                                                <div className="relative w-24">
+                                                    <Input
+                                                        type="number"
+                                                        min="1"
+                                                        value={question.marks}
+                                                        onChange={(e) => setQuestion({ ...question, marks: parseInt(e.target.value) || 1 })}
+                                                        className="pl-8"
+                                                    />
+                                                    <Award className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                                                </div>
+                                            </div>
+                                        </div>
 
-                            {/* Conditional Fields Based on Question Type */}
-                            {question.questionType.toLocaleLowerCase() === 'coding' ? (
-                                <div className="space-y-4">
-                                    <Label className="text-sm font-semibold flex items-center gap-2">
-                                        <Code className="h-4 w-4" />
-                                        Expected Output / Test Cases
-                                    </Label>
-
-                                    {/* Toggle Buttons */}
-                                    <div className="flex items-center gap-2">
-                                        <Button
-                                            type="button"
-                                            size="sm"
-                                            variant={!question.autoGenerate ? "default" : "outline"}
-                                            onClick={() => setQuestion({ ...question, autoGenerate: false })}
-                                        >
-                                            Manual Test Cases
-                                        </Button>
-                                        <Button
-                                            type="button"
-                                            size="sm"
-                                            variant={question.autoGenerate ? "default" : "outline"}
-                                            onClick={handleGenerateTestCases}
-                                        >
-                                            <Sparkles className="h-3 w-3 mr-1" />
-                                            AI Generate
-                                        </Button>
+                                        <div className="space-y-3">
+                                            <Label>Language / Skill</Label>
+                                            <Select
+                                                value={question.language}
+                                                onValueChange={(value) => setQuestion({ ...question, language: value })}
+                                            >
+                                                <SelectTrigger>
+                                                    <SelectValue />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    {Object.entries(languageConfig).map(([key, config]) => (
+                                                        <SelectItem key={key} value={key}>
+                                                            <span>{config.emoji} {config.name}</span>
+                                                        </SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
                                     </div>
 
-                                    {/* Conditional Rendering */}
-                                    {question.autoGenerate ? (
-                                        <div className="space-y-2">
-                                            <Label className="text-sm font-medium">Generated Expected Output</Label>
-                                            <Textarea
-                                                required
-                                                placeholder="AI generated test cases will appear here..."
-                                                className="min-h-[150px] font-mono text-sm border-2 border-dashed"
-                                                value={question.expectedOutput}
-                                                onChange={(e) => setQuestion({ ...question, expectedOutput: e.target.value })}
+                                    {/* Right Column: Content */}
+                                    <div className="space-y-6">
+                                        <div className="space-y-3">
+                                            <Label>Question Content</Label>
+                                            <RichTextEditor
+                                                value={question.questionText}
+                                                onChange={(content) => setQuestion({ ...question, questionText: content })}
+                                                placeholder="Describe the problem statement..."
                                             />
                                         </div>
+                                    </div>
+                                </div>
+
+                                <Separator />
+
+                                {/* Specific Content based on Type */}
+                                <div className="bg-muted/30 rounded-lg p-6 border border-border/50">
+                                    {question.questionType === 'coding' ? (
+                                        <div className="space-y-6">
+                                            <div className="flex items-center justify-between">
+                                                <div className="space-y-1">
+                                                    <h4 className="text-sm font-semibold">Test Cases</h4>
+                                                    <p className="text-xs text-muted-foreground">Define inputs and expected outputs for validation.</p>
+                                                </div>
+                                                <div className="flex items-center gap-2">
+                                                    <Button
+                                                        type="button"
+                                                        size="sm"
+                                                        variant={question.autoGenerate ? "default" : "outline"}
+                                                        onClick={handleGenerateTestCases}
+                                                        className="gap-2"
+                                                    >
+                                                        <Sparkles className="h-3.5 w-3.5" />
+                                                        AI Generate
+                                                    </Button>
+                                                </div>
+                                            </div>
+
+                                            {question.autoGenerate ? (
+                                                <div className="space-y-2 animate-in fade-in">
+                                                    <Label>Generated Output</Label>
+                                                    <Textarea
+                                                        value={question.expectedOutput}
+                                                        onChange={(e) => setQuestion({ ...question, expectedOutput: e.target.value })}
+                                                        className="font-mono text-sm min-h-[150px]"
+                                                        placeholder="AI generated content..."
+                                                    />
+                                                </div>
+                                            ) : (
+                                                <TestCasesEditor
+                                                    testCases={question.testCases || []}
+                                                    onChange={(testCases) => setQuestion({ ...question, testCases })}
+                                                />
+                                            )}
+                                        </div>
                                     ) : (
-                                        <TestCasesEditor
-                                            testCases={question.testCases || []}
-                                            onChange={(testCases) => setQuestion({ ...question, testCases })}
+                                        <MCQOptionsEditor
+                                            options={question.options || []}
+                                            onChange={(options) => setQuestion({ ...question, options })}
                                         />
                                     )}
                                 </div>
-                            ) : (
-                                <MCQOptionsEditor
-                                    options={question.options || []}
-                                    onChange={(options) => setQuestion({ ...question, options })}
-                                />
-                            )}
 
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                <div className="space-y-2">
-                                    <Label className="text-sm font-semibold">Difficulty</Label>
-                                    <Select
-                                        value={question.difficulty}
-                                        onValueChange={(value) => setQuestion({ ...question, difficulty: value })}
-                                    >
-                                        <SelectTrigger className="border-2">
-                                            <SelectValue />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            {Object.entries(difficultyConfig).map(([key, config]) => {
-                                                const IconComponent = config.icon;
-                                                return (
-                                                    <SelectItem key={key} value={key}>
-                                                        <div className="flex items-center gap-2">
-                                                            <IconComponent className={`h-4 w-4 ${config.color}`} />
-                                                            <span className="capitalize">{key}</span>
-                                                        </div>
-                                                    </SelectItem>
-                                                );
-                                            })}
-                                        </SelectContent>
-                                    </Select>
-                                </div>
-
-                                <div className="space-y-2">
-                                    <Label className="text-sm font-semibold">Marks</Label>
-                                    <Input
-                                        type="number"
-                                        min="1"
-                                        max="100"
-                                        placeholder="Points"
-                                        className="border-2"
-                                        value={question.marks}
-                                        onChange={(e) => setQuestion({ ...question, marks: parseInt(e.target.value) || 1 })}
-                                    />
-                                </div>
-
-                                <div className="space-y-2">
-                                    <Label className="text-sm font-semibold">Skill Sets</Label>
-                                    <Select
-                                        value={question.language}
-                                        onValueChange={(value) => setQuestion({ ...question, language: value })}
-                                    >
-                                        <SelectTrigger className="border-2">
-                                            <SelectValue />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            {Object.entries(languageConfig).map(([key, config]) => (
-                                                <SelectItem key={key} value={key}>
-                                                    <span>{config.emoji} {config.name}</span>
-                                                </SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
-                                </div>
-                            </div>
-
-                            <div className="flex gap-2">
-                                {isEditing && (
+                                <div className="flex justify-end gap-3 pt-4">
                                     <Button
                                         type="button"
-                                        onClick={handleCancelEdit}
                                         variant="outline"
-                                        size="lg"
-                                        className="flex-1"
+                                        onClick={handleCancelEdit}
                                     >
                                         Cancel
                                     </Button>
-                                )}
-                                <Button
-                                    type="submit"
-                                    size="lg"
-                                    disabled={generatingTags}
-                                    className={`${isEditing ? 'flex-1' : 'w-full'} bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-semibold py-6 shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-[1.02]`}
-                                >
-                                    {generatingTags ? (
-                                        <>
-                                            <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent mr-2" />
-                                            Generating AI Tags...
-                                        </>
-                                    ) : (
-                                        <>
-                                            <Save className="h-5 w-5 mr-2" />
-                                            {isEditing ? 'Update' : 'Save'} {question.questionType === 'coding' ? 'Coding' : 'MCQ'} Question
-                                        </>
-                                    )}
-                                </Button>
-                            </div>
-                        </form>
-                    </CardContent>
-                </Card>
-
-                {/* <Card className="border-2 border-dashed border-muted-foreground/20 hover:border-primary/50 transition-colors">
-                    <CardHeader className="pb-4">
-                        <CardTitle className="flex items-center gap-2 text-xl">
-                            <div className="p-2 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg shadow-lg">
-                                <FileSpreadsheet className="h-5 w-5 text-white" />
-                            </div>
-                            Bulk Upload (CSV)
-                        </CardTitle>
-                        <CardDescription>
-                            Upload multiple questions at once using CSV format (supports both coding and MCQ questions)
-                        </CardDescription>
-                        <div className="flex items-center justify-between mb-4">
-                            <p className="text-sm text-muted-foreground">
-                                Need help formatting your CSV? Download our template with examples of both question types.
-                            </p>
-                            <Button
-                                onClick={downloadTemplate}
-                                variant="outline"
-                                size="sm"
-                                className="gap-2"
-                            >
-                                <Download className="h-4 w-4" />
-                                Download Template
-                            </Button>
-                        </div>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                        <div className="flex flex-col sm:flex-row gap-4">
-                            <Input
-                                type="file"
-                                accept=".csv"
-                                onChange={handleCSVChange}
-                                className="border-2 border-dashed flex-1"
-                            />
-
-                            {preview.length > 0 && (
-                                <Button
-                                    onClick={handleBulkUpload}
-                                    disabled={uploading}
-                                    size="lg"
-                                    className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold shadow-lg hover:shadow-xl transition-all duration-200"
-                                >
-                                    {uploading ? (
-                                        <>
-                                            <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent mr-2" />
-                                            Uploading...
-                                        </>
-                                    ) : (
-                                        <>
-                                            <Upload className="h-4 w-4 mr-2" />
-                                            Upload {preview.length} Questions
-                                        </>
-                                    )}
-                                </Button>
-                            )}
-                        </div>
-
-                        {uploading && (
-                            <div className="space-y-2">
-                                <div className="flex items-center justify-between text-sm">
-                                    <span>Uploading questions...</span>
-                                    <span>Processing...</span>
+                                    <Button
+                                        type="submit"
+                                        disabled={generatingTags}
+                                        className="bg-primary hover:bg-primary/90 min-w-[120px]"
+                                    >
+                                        {generatingTags ? (
+                                            <>
+                                                <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent mr-2" />
+                                                Saving...
+                                            </>
+                                        ) : (
+                                            <>
+                                                <Save className="w-4 h-4 mr-2" />
+                                                {isEditing ? 'Update Question' : 'Save Question'}
+                                            </>
+                                        )}
+                                    </Button>
                                 </div>
-                                <Progress value={undefined} className="w-full" />
-                            </div>
-                        )}
+                            </form>
+                        </CardContent>
+                    </Card>
+                )}
 
-                        {preview.length > 0 && !uploading && (
-                            <Card className="border-green-200 dark:border-green-800 bg-green-50/50 dark:bg-green-950/50">
-                                <CardContent className="p-4">
-                                    <div className="flex items-center gap-2 mb-4">
-                                        <CheckCircle className="h-5 w-5 text-green-600" />
-                                        <span className="text-green-800 dark:text-green-200 font-medium">
-                                            Preview: {preview.length} questions ready for upload
-                                        </span>
-                                    </div>
-
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
-                                        <div className="flex items-center gap-2">
-                                            <Code className="h-4 w-4 text-blue-600" />
-                                            <span>Coding: {preview.filter(q => q.questionType.toLocaleLowerCase() === 'coding').length}</span>
-                                        </div>
-                                        <div className="flex items-center gap-2">
-                                            <List className="h-4 w-4 text-purple-600" />
-                                            <span>MCQ: {preview.filter(q => q.questionType.toLocaleLowerCase() === 'mcq').length}</span>
-                                        </div>
-                                    </div>
-                                </CardContent>
-                            </Card>
-                        )}
-                    </CardContent>
-                </Card> */}
-
-                {showQuestions && (
-                    <Card className="border-2 border-dashed border-muted-foreground/20">
-                        <CardHeader>
-                            <CardTitle className="flex items-center gap-2 text-lg">
-                                <Target className="h-5 w-5" />
-                                Filter Questions
-                            </CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                {/* Main Content Area */}
+                <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+                    {/* Filters Sidebar */}
+                    <div className="lg:col-span-1 space-y-4">
+                        <Card className="border-border/60 sticky top-6">
+                            <CardHeader className="pb-3">
+                                <CardTitle className="text-sm font-medium flex items-center gap-2">
+                                    <Filter className="w-4 h-4" />
+                                    Filters
+                                </CardTitle>
+                            </CardHeader>
+                            <CardContent className="space-y-4">
                                 <div className="space-y-2">
-                                    <Label className="text-sm">Search Keyword</Label>
-                                    <Input
-                                        placeholder="Search in questions..."
-                                        value={filters.keyword}
-                                        onChange={(e) => setFilters({ ...filters, keyword: e.target.value })}
-                                    />
+                                    <Label className="text-xs text-muted-foreground">Search</Label>
+                                    <div className="relative">
+                                        <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                                        <Input
+                                            placeholder="Keyword..."
+                                            value={filters.keyword}
+                                            onChange={(e) => setFilters({ ...filters, keyword: e.target.value })}
+                                            className="pl-9 h-9 text-sm"
+                                        />
+                                    </div>
                                 </div>
 
                                 <div className="space-y-2">
-                                    <Label className="text-sm">Question Type</Label>
+                                    <Label className="text-xs text-muted-foreground">Type</Label>
                                     <Select
-                                        value={filters.questionType || "all"}
+                                        value={filters.questionType}
                                         onValueChange={(value) => setFilters({ ...filters, questionType: value === "all" ? "" : value })}
                                     >
-                                        <SelectTrigger>
+                                        <SelectTrigger className="h-9 text-sm">
                                             <SelectValue placeholder="All Types" />
                                         </SelectTrigger>
                                         <SelectContent>
@@ -1225,12 +1008,12 @@ export default function QuestionBankPage() {
                                 </div>
 
                                 <div className="space-y-2">
-                                    <Label className="text-sm">Difficulty</Label>
+                                    <Label className="text-xs text-muted-foreground">Difficulty</Label>
                                     <Select
-                                        value={filters.difficulty || "all"}
+                                        value={filters.difficulty}
                                         onValueChange={(value) => setFilters({ ...filters, difficulty: value === "all" ? "" : value })}
                                     >
-                                        <SelectTrigger>
+                                        <SelectTrigger className="h-9 text-sm">
                                             <SelectValue placeholder="All Levels" />
                                         </SelectTrigger>
                                         <SelectContent>
@@ -1243,12 +1026,12 @@ export default function QuestionBankPage() {
                                 </div>
 
                                 <div className="space-y-2">
-                                    <Label className="text-sm">Language</Label>
+                                    <Label className="text-xs text-muted-foreground">Language</Label>
                                     <Select
-                                        value={filters.language || "all"}
+                                        value={filters.language}
                                         onValueChange={(value) => setFilters({ ...filters, language: value === "all" ? "" : value })}
                                     >
-                                        <SelectTrigger>
+                                        <SelectTrigger className="h-9 text-sm">
                                             <SelectValue placeholder="All Languages" />
                                         </SelectTrigger>
                                         <SelectContent>
@@ -1262,296 +1045,162 @@ export default function QuestionBankPage() {
                                     </Select>
                                 </div>
 
-                                <div className="space-y-2">
-                                    <Label className="text-sm">Tag</Label>
-                                    <Input
-                                        placeholder="Filter by tag..."
-                                        value={filters.tag}
-                                        onChange={(e) => setFilters({ ...filters, tag: e.target.value })}
-                                    />
+                                <div className="pt-2 flex gap-2">
+                                    <Button onClick={handleApplyFilters} className="flex-1 h-9 text-xs">
+                                        Apply
+                                    </Button>
+                                    <Button onClick={handleClearFilters} variant="outline" className="h-9 px-3">
+                                        <X className="w-4 h-4" />
+                                    </Button>
                                 </div>
-                            </div>
+                            </CardContent>
+                        </Card>
+                    </div>
 
-                            <div className="flex gap-2 mt-4">
-                                <Button onClick={handleApplyFilters} className="flex-1">
-                                    Apply Filters
-                                </Button>
-                                <Button onClick={handleClearFilters} variant="outline">
-                                    Clear
-                                </Button>
-                            </div>
-
-                            {(activeFilters.keyword || activeFilters.language || activeFilters.difficulty || activeFilters.questionType) && (
-                                <div className="mt-4 flex flex-wrap gap-2">
-                                    <span className="text-sm text-muted-foreground">Active filters:</span>
-                                    {activeFilters.keyword && (
-                                        <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs">
-                                            Keyword: {activeFilters.keyword}
-                                        </span>
-                                    )}
-                                    {activeFilters.questionType && (
-                                        <span className="px-2 py-1 bg-purple-100 text-purple-700 rounded text-xs">
-                                            Type: {activeFilters.questionType}
-                                        </span>
-                                    )}
-                                    {activeFilters.difficulty && (
-                                        <span className="px-2 py-1 bg-orange-100 text-orange-700 rounded text-xs">
-                                            Difficulty: {activeFilters.difficulty}
-                                        </span>
-                                    )}
-                                    {activeFilters.language && (
-                                        <span className="px-2 py-1 bg-green-100 text-green-700 rounded text-xs">
-                                            Language: {activeFilters.language}
-                                        </span>
-                                    )}
-                                </div>
-                            )}
-                        </CardContent>
-                    </Card>
-                )}
-
-                <Card className="border-2 border-dashed border-muted-foreground/20 hover:border-primary/50 transition-colors">
-                    <CardHeader className="pb-4">
+                    {/* Questions List */}
+                    <div className="lg:col-span-3 space-y-4">
                         <div className="flex items-center justify-between">
-                            <CardTitle className="flex items-center gap-2 text-xl">
-                                <div className="p-2 bg-gradient-to-br from-purple-500 to-pink-600 rounded-lg shadow-lg">
-                                    <List className="h-5 w-5 text-white" />
-                                </div>
+                            <h2 className="text-lg font-semibold">
                                 All Questions ({filteredQuestions.length})
-                            </CardTitle>
-                            <div className="flex gap-2">
-                                <Button
-                                    onClick={downloadFilteredQuestions}
-                                    variant="outline"
-                                    size="sm"
-                                    className="gap-2"
-                                    disabled={filteredQuestions.length === 0}
-                                >
-                                    <Download className="h-4 w-4" />
-                                    Download
-                                </Button>
-                                <Button
-                                    onClick={() => setShowQuestions(!showQuestions)}
-                                    variant="outline"
-                                >
-                                    {showQuestions ? 'Hide' : 'Show'} Questions
-                                </Button>
+                            </h2>
+                            <div className="text-sm text-muted-foreground">
+                                Page {currentPage} of {totalPages || 1}
                             </div>
                         </div>
-                    </CardHeader>
 
-                    {showQuestions && (
-                        <CardContent className="space-y-4">
-                            {filteredQuestions.length === 0 ? (
-                                <p className="text-center text-muted-foreground py-8">
-                                    {questions.length === 0 ? 'No questions found' : 'No questions match your filters'}
-                                </p>
-                            ) : (
-                                <>
-                                    <div className="text-sm text-muted-foreground">
-                                        Showing {indexOfFirstItem + 1} to {Math.min(indexOfLastItem, filteredQuestions.length)} of {filteredQuestions.length} questions
+                        {currentQuestions.length === 0 ? (
+                            <Card className="border-dashed border-2 bg-muted/10">
+                                <CardContent className="flex flex-col items-center justify-center py-12 text-center">
+                                    <div className="h-12 w-12 rounded-full bg-muted flex items-center justify-center mb-4">
+                                        <Search className="h-6 w-6 text-muted-foreground" />
                                     </div>
+                                    <h3 className="text-lg font-medium">No questions found</h3>
+                                    <p className="text-muted-foreground text-sm mt-1 max-w-xs">
+                                        Try adjusting your filters or add a new question to get started.
+                                    </p>
+                                    <Button
+                                        variant="outline"
+                                        className="mt-4"
+                                        onClick={handleClearFilters}
+                                    >
+                                        Clear Filters
+                                    </Button>
+                                </CardContent>
+                            </Card>
+                        ) : (
+                            <div className="space-y-3">
+                                {currentQuestions.map((q, idx) => (
+                                    <Card
+                                        key={q.id}
+                                        className="group hover:border-primary/40 transition-all duration-300 hover:shadow-md border-border/60"
+                                    >
+                                        <CardContent className="p-5">
+                                            <div className="flex items-start justify-between gap-4">
+                                                <div className="space-y-3 flex-1">
+                                                    <div className="flex items-center gap-2 flex-wrap">
+                                                        <Badge variant="outline" className={`${q.questionType === 'coding'
+                                                            ? 'bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-500/20'
+                                                            : 'bg-purple-500/10 text-purple-700 dark:text-purple-400 border-purple-500/20'
+                                                            }`}>
+                                                            {q.questionType === 'coding' ? <Code className="w-3 h-3 mr-1" /> : <List className="w-3 h-3 mr-1" />}
+                                                            {q.questionType.toUpperCase()}
+                                                        </Badge>
+                                                        <Badge variant="outline" className={`${difficultyConfig[q.difficulty as keyof typeof difficultyConfig]?.bg} ${difficultyConfig[q.difficulty as keyof typeof difficultyConfig]?.color} border-0`}>
+                                                            {q.difficulty.toUpperCase()}
+                                                        </Badge>
+                                                        {q.language && (
+                                                            <Badge variant="secondary" className="font-normal">
+                                                                {languageConfig[q.language as keyof typeof languageConfig]?.emoji} {languageConfig[q.language as keyof typeof languageConfig]?.name}
+                                                            </Badge>
+                                                        )}
+                                                        <span className="text-xs text-muted-foreground font-medium px-2">
+                                                            {q.marks} pts
+                                                        </span>
+                                                    </div>
 
-                                    {currentQuestions.map((q) => (
-                                        <Card key={q.id} className="border-2">
-                                            <CardContent className="p-4">
-                                                <div className="space-y-3">
-                                                    {/* Header with badges */}
-                                                    <div className="flex items-start justify-between gap-4">
+                                                    <div className="prose prose-sm dark:prose-invert max-w-none line-clamp-2 text-sm text-foreground/90">
+                                                        <div dangerouslySetInnerHTML={{ __html: q.questionText }} />
+                                                    </div>
+
+                                                    {q.tags && q.tags.length > 0 && (
                                                         <div className="flex items-center gap-2 flex-wrap">
-                                                            <span className={`px-2 py-1 rounded text-xs font-medium ${q.questionType === 'coding' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300' : 'bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300'
-                                                                }`}>
-                                                                {q.questionType === 'coding' ? 'CODING' : 'MCQ'}
-                                                            </span>
-                                                            <span className={`px-2 py-1 rounded text-xs font-medium ${difficultyConfig[q.difficulty as keyof typeof difficultyConfig]?.bg
-                                                                } ${difficultyConfig[q.difficulty as keyof typeof difficultyConfig]?.color}`}>
-                                                                {q.difficulty.toUpperCase()}
-                                                            </span>
-                                                            {q.language && (
-                                                                <span className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded">
-                                                                    {languageConfig[q.language as keyof typeof languageConfig]?.name}
+                                                            {q.tags.map((tag, i) => (
+                                                                <span key={i} className="text-xs text-muted-foreground bg-muted/50 px-2 py-0.5 rounded-full">
+                                                                    #{tag}
                                                                 </span>
-                                                            )}
-                                                            {q.tags && q.tags.length > 0 && (
-                                                                <div className="flex items-center gap-2 flex-wrap mt-2">
-                                                                    {q.tags.map((tag, idx) => (
-                                                                        <span
-                                                                            key={idx}
-                                                                            className="px-2 py-1 bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300 rounded-full text-xs font-medium"
-                                                                        >
-                                                                            #{tag}
-                                                                        </span>
-                                                                    ))}
-                                                                </div>
-                                                            )}
-                                                            <span className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded font-medium">
-                                                                {q.marks} marks
-                                                            </span>
-                                                        </div>
-                                                        <div className="flex gap-2">
-                                                            <Button
-                                                                onClick={() => handleEdit(q)}
-                                                                variant="outline"
-                                                                size="sm"
-                                                            >
-                                                                Edit
-                                                            </Button>
-                                                            <Button
-                                                                onClick={() => handleDelete(q.id!)}
-                                                                variant="destructive"
-                                                                size="sm"
-                                                            >
-                                                                Delete
-                                                            </Button>
-                                                        </div>
-                                                    </div>
-
-                                                    {/* Question Text */}
-                                                    <div className="border-l-4 border-primary/30 pl-4">
-                                                        <div
-                                                            className="prose prose-sm max-w-none dark:prose-invert"
-                                                            dangerouslySetInnerHTML={{ __html: q.questionText }}
-                                                        />
-                                                    </div>
-
-                                                    {/* Expected Output for Coding Questions */}
-                                                    {q.questionType === 'coding' && q.expectedOutput && (
-                                                        <div className="mt-3">
-                                                            <Label className="text-sm font-semibold mb-2 flex items-center gap-2">
-                                                                <Code className="h-4 w-4 text-green-600" />
-                                                                Expected Output / Solution
-                                                            </Label>
-                                                            <div className="bg-muted/50 p-3 rounded-lg border-2 border-dashed mt-2">
-                                                                <pre className="text-xs font-mono whitespace-pre-wrap overflow-x-auto">
-                                                                    {q.expectedOutput}
-                                                                </pre>
-                                                            </div>
-                                                        </div>
-                                                    )}
-
-                                                    {/* Test Cases for Coding Questions */}
-                                                    {q.questionType === 'coding' && q.testCases && q.testCases.length > 0 && (
-                                                        <div className="mt-3">
-                                                            <Label className="text-sm font-semibold mb-2 flex items-center gap-2">
-                                                                <Layers className="h-4 w-4 text-blue-600" />
-                                                                Test Cases ({q.testCases.length})
-                                                            </Label>
-                                                            <div className="space-y-2">
-                                                                {q.testCases.map((tc: TestCase, index: number) => (
-                                                                    <Card key={index} className="border-2">
-                                                                        <CardContent className="p-3">
-                                                                            <div className="flex items-center justify-between mb-2">
-                                                                                <span className="text-xs font-medium">Test Case {index + 1}</span>
-                                                                                {tc.isHidden && (
-                                                                                    <span className="px-2 py-0.5 bg-yellow-100 dark:bg-yellow-900 text-yellow-700 dark:text-yellow-300 rounded text-xs">
-                                                                                        Hidden
-                                                                                    </span>
-                                                                                )}
-                                                                            </div>
-                                                                            <div className="grid grid-cols-2 gap-3 text-xs">
-                                                                                <div>
-                                                                                    <span className="font-medium text-muted-foreground">Input:</span>
-                                                                                    <pre className="mt-1 p-2 bg-muted rounded font-mono whitespace-pre-wrap">
-                                                                                        {tc.input}
-                                                                                    </pre>
-                                                                                </div>
-                                                                                <div>
-                                                                                    <span className="font-medium text-muted-foreground">Expected Output:</span>
-                                                                                    <pre className="mt-1 p-2 bg-muted rounded font-mono whitespace-pre-wrap">
-                                                                                        {tc.expectedOutput}
-                                                                                    </pre>
-                                                                                </div>
-                                                                            </div>
-                                                                        </CardContent>
-                                                                    </Card>
-                                                                ))}
-                                                            </div>
-                                                        </div>
-                                                    )}
-
-                                                    {/* MCQ Options */}
-                                                    {q.questionType === 'mcq' && q.options && (
-                                                        <div className="space-y-2 mt-3">
-                                                            <Label className="text-sm font-semibold">Options:</Label>
-                                                            {q.options.map((opt: any, idx: number) => (
-                                                                <div
-                                                                    key={opt.id}
-                                                                    className={`flex items-center gap-2 text-sm p-2 rounded ${opt.isCorrect ? 'bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800' : 'bg-muted/30'
-                                                                        }`}
-                                                                >
-                                                                    <span className="font-bold min-w-[24px]">
-                                                                        {String.fromCharCode(65 + idx)}.
-                                                                    </span>
-                                                                    <span className="flex-1">{opt.text}</span>
-                                                                    {opt.isCorrect && (
-                                                                        <div className="flex items-center gap-1 text-green-600">
-                                                                            <CheckCircle className="h-4 w-4" />
-                                                                            <span className="text-xs font-medium">Correct</span>
-                                                                        </div>
-                                                                    )}
-                                                                </div>
                                                             ))}
                                                         </div>
                                                     )}
                                                 </div>
-                                            </CardContent>
-                                        </Card>
-                                    ))}
 
-                                    {/* Pagination Controls */}
-                                    {totalPages > 1 && (
-                                        <div className="flex items-center justify-between pt-4 border-t">
-                                            <Button
-                                                onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                                                disabled={currentPage === 1}
-                                                variant="outline"
-                                                size="sm"
-                                            >
-                                                Previous
-                                            </Button>
-
-                                            <div className="flex items-center gap-2">
-                                                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                                                    let pageNum;
-                                                    if (totalPages <= 5) {
-                                                        pageNum = i + 1;
-                                                    } else if (currentPage <= 3) {
-                                                        pageNum = i + 1;
-                                                    } else if (currentPage >= totalPages - 2) {
-                                                        pageNum = totalPages - 4 + i;
-                                                    } else {
-                                                        pageNum = currentPage - 2 + i;
-                                                    }
-
-                                                    return (
-                                                        <Button
-                                                            key={pageNum}
-                                                            onClick={() => setCurrentPage(pageNum)}
-                                                            variant={currentPage === pageNum ? "default" : "outline"}
-                                                            size="sm"
-                                                            className="w-10"
-                                                        >
-                                                            {pageNum}
-                                                        </Button>
-                                                    );
-                                                })}
+                                                <div className="flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        onClick={() => handleEdit(q)}
+                                                        className="h-8 w-8 hover:bg-primary/10 hover:text-primary"
+                                                    >
+                                                        <Edit2 className="w-4 h-4" />
+                                                    </Button>
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        onClick={() => handleDelete(q.id!)}
+                                                        className="h-8 w-8 hover:bg-destructive/10 hover:text-destructive"
+                                                    >
+                                                        <Trash2 className="w-4 h-4" />
+                                                    </Button>
+                                                </div>
                                             </div>
+                                        </CardContent>
+                                    </Card>
+                                ))}
+                            </div>
+                        )}
 
+                        {/* Pagination */}
+                        {totalPages > 1 && (
+                            <div className="flex items-center justify-center gap-2 pt-6">
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                                    disabled={currentPage === 1}
+                                >
+                                    Previous
+                                </Button>
+                                <div className="flex items-center gap-1">
+                                    {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                                        let pageNum = i + 1;
+                                        if (totalPages > 5) {
+                                            if (currentPage > 3) pageNum = currentPage - 2 + i;
+                                            if (pageNum > totalPages) pageNum = totalPages - 4 + i;
+                                        }
+                                        return (
                                             <Button
-                                                onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-                                                disabled={currentPage === totalPages}
-                                                variant="outline"
+                                                key={pageNum}
+                                                variant={currentPage === pageNum ? "default" : "ghost"}
                                                 size="sm"
+                                                className="w-8 h-8 p-0"
+                                                onClick={() => setCurrentPage(pageNum)}
                                             >
-                                                Next
+                                                {pageNum}
                                             </Button>
-                                        </div>
-                                    )}
-                                </>
-                            )}
-                        </CardContent>
-                    )}
-                </Card>
+                                        );
+                                    })}
+                                </div>
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                                    disabled={currentPage === totalPages}
+                                >
+                                    Next
+                                </Button>
+                            </div>
+                        )}
+                    </div>
+                </div>
             </div>
         </UnifiedDashboardLayout>
     );

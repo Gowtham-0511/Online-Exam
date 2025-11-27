@@ -38,6 +38,11 @@ import {
     Flag,
     BarChart3,
     PieChart,
+    Timer,
+    Zap,
+    MoreHorizontal,
+    Calendar,
+    Laptop
 } from "lucide-react";
 import {
     Dialog,
@@ -45,10 +50,14 @@ import {
     DialogDescription,
     DialogHeader,
     DialogTitle,
+    DialogFooter,
 } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import UnifiedDashboardLayout from "@/components/layouts/UnifiedDashboardLayout";
 import Head from "next/head";
+import { Separator } from "@/components/ui/separator";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
 interface ExamSession {
     examId: string;
@@ -97,7 +106,6 @@ export default function ExamMonitoring() {
     const [isRefreshing, setIsRefreshing] = useState(false);
     const [autoRefresh, setAutoRefresh] = useState(true);
 
-    // Add this with other state declarations
     const [examList, setExamList] = useState<Array<{
         id: string;
         title: string;
@@ -279,19 +287,19 @@ export default function ExamMonitoring() {
     return (
         <UnifiedDashboardLayout role="admin">
             <Head>
-                <title>SysRank - Online Assessment Platform</title>
+                <title>Exam Monitoring | SysRank</title>
                 <link rel="icon" href="/logo3.png" />
             </Head>
-            <div className="space-y-6">
+            <div className="space-y-6 animate-in fade-in duration-500">
                 {/* Header */}
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                     <div>
-                        <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
-                            <Activity className="w-6 h-6 text-primary" />
-                            Real-Time Exam Monitoring
+                        <h1 className="text-3xl font-bold tracking-tight bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent flex items-center gap-2">
+                            <Activity className="w-8 h-8 text-primary" />
+                            Live Exam Monitoring
                         </h1>
-                        <p className="text-sm text-muted-foreground mt-1">
-                            Track live exam sessions and user activity
+                        <p className="text-muted-foreground mt-1">
+                            Track real-time exam sessions, user activity, and performance metrics.
                         </p>
                     </div>
 
@@ -301,7 +309,7 @@ export default function ExamMonitoring() {
                             size="sm"
                             onClick={handleRefreshAll}
                             disabled={isRefreshing}
-                            className="gap-2"
+                            className="gap-2 shadow-sm hover:shadow-md transition-all"
                         >
                             <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
                             Refresh
@@ -310,233 +318,177 @@ export default function ExamMonitoring() {
                             variant={autoRefresh ? "default" : "outline"}
                             size="sm"
                             onClick={() => setAutoRefresh(!autoRefresh)}
-                            className="gap-2"
+                            className={`gap-2 shadow-sm hover:shadow-md transition-all ${autoRefresh ? 'bg-emerald-600 hover:bg-emerald-700' : ''}`}
                         >
                             <Activity className="w-4 h-4" />
-                            {autoRefresh ? 'Live' : 'Paused'}
+                            {autoRefresh ? 'Live Updates On' : 'Live Updates Paused'}
                         </Button>
-                        <Button variant="outline" size="sm" className="gap-2">
+                        <Button variant="outline" size="sm" className="gap-2 shadow-sm hover:shadow-md transition-all">
                             <Download className="w-4 h-4" />
-                            Export
+                            Export Report
                         </Button>
                     </div>
                 </div>
 
-                {/* Exam Selector */}
-                <Card className="border-border">
-                    <CardContent className="p-4">
-                        <div className="flex flex-col sm:flex-row sm:items-center gap-4">
-                            <div className="flex items-center gap-3">
-                                <Filter className="w-5 h-5 text-muted-foreground flex-shrink-0" />
-                                <Select
-                                    value={activeExam}
-                                    onValueChange={setActiveExam}
-                                    disabled={isLoadingExams}
-                                >
-                                    <SelectTrigger className="w-full sm:w-80">
-                                        <SelectValue placeholder={isLoadingExams ? "Loading exams..." : "Select Exam"} />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="all">
-                                            <div className="flex items-center justify-between w-full">
-                                                <span className="font-medium">All Exams</span>
-                                                {!isLoadingExams && examList.length > 0 && (
-                                                    <Badge variant="outline" className="ml-2 bg-primary/10 text-primary border-primary/20">
-                                                        {examList.reduce((sum, exam) => sum + exam.activeUsers, 0)} active
-                                                    </Badge>
-                                                )}
-                                            </div>
-                                        </SelectItem>
+                {/* Stats Overview */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 animate-in slide-in-from-bottom-4 duration-500 delay-100">
+                    <Card className="border-border/50 bg-gradient-to-br from-blue-500/5 to-transparent hover:shadow-lg transition-all duration-300">
+                        <CardHeader className="pb-2">
+                            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                                <Users className="w-4 h-4 text-blue-500" />
+                                Active Users
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="text-3xl font-bold text-blue-600 dark:text-blue-400">{stats.totalActive}</div>
+                            <p className="text-xs text-muted-foreground mt-1">Currently taking exams</p>
+                        </CardContent>
+                    </Card>
 
-                                        {isLoadingExams ? (
-                                            <SelectItem value="loading" disabled>
-                                                Loading exams...
+                    <Card className="border-border/50 bg-gradient-to-br from-purple-500/5 to-transparent hover:shadow-lg transition-all duration-300">
+                        <CardHeader className="pb-2">
+                            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                                <TrendingUp className="w-4 h-4 text-purple-500" />
+                                Avg Progress
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="text-3xl font-bold text-purple-600 dark:text-purple-400">{stats.averageProgress}%</div>
+                            <Progress value={stats.averageProgress} className="mt-2 h-1.5 bg-purple-500/20" indicatorClassName="bg-purple-500" />
+                        </CardContent>
+                    </Card>
+
+                    <Card className="border-border/50 bg-gradient-to-br from-emerald-500/5 to-transparent hover:shadow-lg transition-all duration-300">
+                        <CardHeader className="pb-2">
+                            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                                <Play className="w-4 h-4 text-emerald-500" />
+                                Code Executions
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="text-3xl font-bold text-emerald-600 dark:text-emerald-400">{stats.totalCodeRuns}</div>
+                            <p className="text-xs text-muted-foreground mt-1">Total runs across all questions</p>
+                        </CardContent>
+                    </Card>
+
+                    <Card className="border-border/50 bg-gradient-to-br from-amber-500/5 to-transparent hover:shadow-lg transition-all duration-300">
+                        <CardHeader className="pb-2">
+                            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                                <Clock className="w-4 h-4 text-amber-500" />
+                                Avg Time/Question
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="text-3xl font-bold text-amber-600 dark:text-amber-400">{formatTime(stats.averageTimePerQuestion)}</div>
+                            <p className="text-xs text-muted-foreground mt-1">Per question average</p>
+                        </CardContent>
+                    </Card>
+                </div>
+
+                {/* Exam Selector & Filters */}
+                <Card className="border-border/50 shadow-sm animate-in slide-in-from-bottom-4 duration-500 delay-200">
+                    <CardContent className="p-4">
+                        <div className="flex flex-col lg:flex-row lg:items-center gap-4">
+                            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 flex-1">
+                                <div className="flex items-center gap-2 w-full sm:w-auto">
+                                    <div className="p-2 bg-primary/10 rounded-lg">
+                                        <Filter className="w-4 h-4 text-primary" />
+                                    </div>
+                                    <Select
+                                        value={activeExam}
+                                        onValueChange={setActiveExam}
+                                        disabled={isLoadingExams}
+                                    >
+                                        <SelectTrigger className="w-full sm:w-[300px] h-10">
+                                            <SelectValue placeholder={isLoadingExams ? "Loading exams..." : "Select Exam to Monitor"} />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="all">
+                                                <span className="font-medium">All Exams</span>
                                             </SelectItem>
-                                        ) : examList.length === 0 ? (
-                                            <SelectItem value="no-exams" disabled>
-                                                No exams available
-                                            </SelectItem>
-                                        ) : (
-                                            examList.map((exam) => (
+                                            {examList.map((exam) => (
                                                 <SelectItem key={exam.id} value={exam.title}>
-                                                    <div className="flex flex-col py-1">
-                                                        <div className="flex items-center gap-2">
-                                                            <span className="font-medium text-foreground">{exam.title}</span>
-                                                            {exam.activeUsers > 0 && (
-                                                                <Badge variant="outline" className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20">
-                                                                    {exam.activeUsers} live
-                                                                </Badge>
-                                                            )}
-                                                        </div>
-                                                        <div className="flex items-center gap-2 mt-1">
-                                                            <span className="text-xs text-muted-foreground uppercase">{exam.language}</span>
-                                                            <span className="text-xs text-muted-foreground">•</span>
-                                                            <span className="text-xs text-muted-foreground">
-                                                                {exam.totalParticipants} participant{exam.totalParticipants !== 1 ? 's' : ''}
-                                                            </span>
-                                                        </div>
+                                                    <div className="flex items-center justify-between w-full gap-4">
+                                                        <span>{exam.title}</span>
+                                                        {exam.activeUsers > 0 && (
+                                                            <Badge variant="secondary" className="text-xs h-5 px-1.5 bg-emerald-500/10 text-emerald-600">
+                                                                {exam.activeUsers} live
+                                                            </Badge>
+                                                        )}
                                                     </div>
                                                 </SelectItem>
-                                            ))
-                                        )}
-                                    </SelectContent>
-                                </Select>
-                            </div>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
 
-                            <div className="flex-1" />
+                                <div className="h-8 w-px bg-border hidden sm:block" />
 
-                            <div className="flex items-center gap-3">
                                 {activeExam !== 'all' && (
-                                    <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-muted/50 rounded-lg border border-border">
-                                        <Users className="w-4 h-4 text-muted-foreground" />
-                                        <span className="text-sm font-medium text-foreground">
-                                            {examList.find(e => e.title === activeExam)?.activeUsers || 0}
-                                        </span>
-                                        <span className="text-xs text-muted-foreground">active now</span>
+                                    <div className="flex items-center gap-4 animate-in fade-in slide-in-from-left-4">
+                                        <div className="flex flex-col">
+                                            <span className="text-xs text-muted-foreground uppercase tracking-wider">Active Exam</span>
+                                            <span className="font-semibold text-sm">{examList.find(e => e.title === activeExam)?.title}</span>
+                                        </div>
+                                        <Badge variant="outline" className="bg-primary/5">
+                                            {examList.find(e => e.title === activeExam)?.language.toUpperCase()}
+                                        </Badge>
                                     </div>
                                 )}
-                                <div className="text-sm text-muted-foreground">
-                                    <div className="flex items-center gap-2">
-                                        <div className={`w-2 h-2 rounded-full ${autoRefresh ? 'bg-emerald-500 animate-pulse' : 'bg-muted-foreground'}`} />
-                                        <span className="hidden sm:inline">
-                                            {autoRefresh ? 'Live updating' : 'Updates paused'}
-                                        </span>
-                                    </div>
+                            </div>
+
+                            <div className="flex items-center gap-3 ml-auto">
+                                <div className="flex items-center gap-2 px-3 py-1.5 bg-muted/50 rounded-full border border-border/50">
+                                    <div className={`w-2 h-2 rounded-full ${autoRefresh ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'}`} />
+                                    <span className="text-xs font-medium text-muted-foreground">
+                                        {autoRefresh ? 'Live Data Feed' : 'Feed Paused'}
+                                    </span>
                                 </div>
                             </div>
                         </div>
                     </CardContent>
                 </Card>
 
-                {activeExam !== 'all' && examList.find(e => e.title === activeExam) && (
-                    <Card className="border-border bg-primary/5">
-                        <CardContent className="p-4">
-                            <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
-                                <div>
-                                    <div className="text-xs text-muted-foreground mb-1">Exam Title</div>
-                                    <div className="font-semibold text-foreground truncate">
-                                        {examList.find(e => e.title === activeExam)?.title}
-                                    </div>
-                                </div>
-                                <div>
-                                    <div className="text-xs text-muted-foreground mb-1">Language</div>
-                                    <Badge variant="outline" className="bg-muted">
-                                        {examList.find(e => e.title === activeExam)?.language.toUpperCase()}
-                                    </Badge>
-                                </div>
-                                <div>
-                                    <div className="text-xs text-muted-foreground mb-1">Active Users</div>
-                                    <div className="font-semibold text-emerald-600 dark:text-emerald-400">
-                                        {examList.find(e => e.title === activeExam)?.activeUsers || 0}
-                                    </div>
-                                </div>
-                                <div>
-                                    <div className="text-xs text-muted-foreground mb-1">Total Participants</div>
-                                    <div className="font-semibold text-foreground">
-                                        {examList.find(e => e.title === activeExam)?.totalParticipants || 0}
-                                    </div>
-                                </div>
-                            </div>
-                        </CardContent>
-                    </Card>
-                )}
-
-                {/* Stats Overview */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                    <Card className="border-border">
-                        <CardHeader className="pb-2">
-                            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                                <Users className="w-4 h-4" />
-                                Active Users
-                            </CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="text-3xl font-bold text-foreground">{stats.totalActive}</div>
-                            <p className="text-xs text-muted-foreground mt-1">Currently taking exams</p>
-                        </CardContent>
-                    </Card>
-
-                    <Card className="border-border">
-                        <CardHeader className="pb-2">
-                            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                                <TrendingUp className="w-4 h-4" />
-                                Avg Progress
-                            </CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="text-3xl font-bold text-foreground">{stats.averageProgress}%</div>
-                            <Progress value={stats.averageProgress} className="mt-2 h-2" />
-                        </CardContent>
-                    </Card>
-
-                    <Card className="border-border">
-                        <CardHeader className="pb-2">
-                            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                                <Play className="w-4 h-4" />
-                                Code Executions
-                            </CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="text-3xl font-bold text-foreground">{stats.totalCodeRuns}</div>
-                            <p className="text-xs text-muted-foreground mt-1">Total runs across all questions</p>
-                        </CardContent>
-                    </Card>
-
-                    <Card className="border-border">
-                        <CardHeader className="pb-2">
-                            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                                <Clock className="w-4 h-4" />
-                                Avg Time/Question
-                            </CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="text-3xl font-bold text-foreground">{formatTime(stats.averageTimePerQuestion)}</div>
-                            <p className="text-xs text-muted-foreground mt-1">Per question average</p>
-                        </CardContent>
-                    </Card>
-                </div>
-
                 {/* Main Content Tabs */}
-                <Tabs defaultValue="live-sessions" className="space-y-4">
-                    <TabsList className="grid w-full grid-cols-3 lg:w-auto lg:inline-grid">
-                        <TabsTrigger value="live-sessions" className="gap-2">
+                <Tabs defaultValue="live-sessions" className="space-y-4 animate-in slide-in-from-bottom-4 duration-500 delay-300">
+                    <TabsList className="grid w-full grid-cols-3 lg:w-[400px] bg-muted/50 p-1">
+                        <TabsTrigger value="live-sessions" className="gap-2 data-[state=active]:bg-background data-[state=active]:shadow-sm">
                             <Activity className="w-4 h-4" />
                             Live Sessions
                         </TabsTrigger>
-                        <TabsTrigger value="question-analytics" className="gap-2">
+                        <TabsTrigger value="question-analytics" className="gap-2 data-[state=active]:bg-background data-[state=active]:shadow-sm">
                             <BarChart3 className="w-4 h-4" />
-                            Question Analytics
+                            Analytics
                         </TabsTrigger>
-                        <TabsTrigger value="activity-feed" className="gap-2">
-                            <Code className="w-4 h-4" />
-                            Activity Feed
+                        <TabsTrigger value="activity-feed" className="gap-2 data-[state=active]:bg-background data-[state=active]:shadow-sm">
+                            <Zap className="w-4 h-4" />
+                            Activity
                         </TabsTrigger>
                     </TabsList>
 
                     {/* Live Sessions Tab */}
                     <TabsContent value="live-sessions" className="space-y-4">
-                        <Card className="border-border">
-                            <CardHeader>
+                        <Card className="border-border/50 shadow-sm">
+                            <CardHeader className="pb-3 border-b border-border/50 bg-muted/20">
                                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                                     <div>
-                                        <CardTitle className="text-base">Active Exam Sessions</CardTitle>
-                                        <CardDescription className="text-xs mt-1">
-                                            Real-time view of ongoing exams
+                                        <CardTitle className="text-lg font-semibold">Active Sessions</CardTitle>
+                                        <CardDescription>
+                                            Monitor students currently taking exams in real-time
                                         </CardDescription>
                                     </div>
-
-                                    <div className="flex flex-col sm:flex-row gap-2">
-                                        <div className="relative">
+                                    <div className="flex items-center gap-2">
+                                        <div className="relative w-full sm:w-64">
                                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                                             <Input
-                                                placeholder="Search users..."
+                                                placeholder="Search by name or email..."
                                                 value={searchQuery}
                                                 onChange={(e) => setSearchQuery(e.target.value)}
-                                                className="pl-9 w-full sm:w-64"
+                                                className="pl-9 h-9 bg-background"
                                             />
                                         </div>
                                         <Select value={filterStatus} onValueChange={setFilterStatus}>
-                                            <SelectTrigger className="w-full sm:w-32">
+                                            <SelectTrigger className="w-[130px] h-9">
                                                 <SelectValue placeholder="Status" />
                                             </SelectTrigger>
                                             <SelectContent>
@@ -549,86 +501,98 @@ export default function ExamMonitoring() {
                                     </div>
                                 </div>
                             </CardHeader>
-                            <CardContent>
-                                <div className="rounded-lg border border-border overflow-hidden">
-                                    <div className="overflow-x-auto">
-                                        <Table>
-                                            <TableHeader>
-                                                <TableRow className="bg-muted/50">
-                                                    <TableHead className="font-semibold">User</TableHead>
-                                                    <TableHead className="font-semibold">Exam</TableHead>
-                                                    <TableHead className="font-semibold">Status</TableHead>
-                                                    <TableHead className="font-semibold">Progress</TableHead>
-                                                    <TableHead className="font-semibold">Time Elapsed</TableHead>
-                                                    <TableHead className="font-semibold">Current Q</TableHead>
-                                                    <TableHead className="font-semibold">Last Activity</TableHead>
-                                                    <TableHead className="font-semibold text-right">Actions</TableHead>
+                            <CardContent className="p-0">
+                                <div className="overflow-x-auto">
+                                    <Table>
+                                        <TableHeader>
+                                            <TableRow className="bg-muted/30 hover:bg-muted/30">
+                                                <TableHead className="w-[250px]">Candidate</TableHead>
+                                                <TableHead>Exam</TableHead>
+                                                <TableHead>Status</TableHead>
+                                                <TableHead className="w-[200px]">Progress</TableHead>
+                                                <TableHead>Time</TableHead>
+                                                <TableHead>Current Q</TableHead>
+                                                <TableHead className="text-right">Actions</TableHead>
+                                            </TableRow>
+                                        </TableHeader>
+                                        <TableBody>
+                                            {filteredSessions.length === 0 ? (
+                                                <TableRow>
+                                                    <TableCell colSpan={7} className="h-[300px] text-center">
+                                                        <div className="flex flex-col items-center justify-center text-muted-foreground">
+                                                            <div className="p-4 rounded-full bg-muted/50 mb-4">
+                                                                <Users className="w-8 h-8 opacity-50" />
+                                                            </div>
+                                                            <p className="text-lg font-medium">No active sessions found</p>
+                                                            <p className="text-sm">Try adjusting your filters or selecting a different exam.</p>
+                                                        </div>
+                                                    </TableCell>
                                                 </TableRow>
-                                            </TableHeader>
-                                            <TableBody>
-                                                {filteredSessions.length === 0 ? (
-                                                    <TableRow>
-                                                        <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
-                                                            No active sessions found
-                                                        </TableCell>
-                                                    </TableRow>
-                                                ) : (
-                                                    filteredSessions.map((session, index) => (
-                                                        <TableRow key={index} className="hover:bg-muted/50">
-                                                            <TableCell>
+                                            ) : (
+                                                filteredSessions.map((session, index) => (
+                                                    <TableRow key={index} className="group hover:bg-muted/30 transition-colors">
+                                                        <TableCell>
+                                                            <div className="flex items-center gap-3">
+                                                                <Avatar className="h-9 w-9 border border-border">
+                                                                    <AvatarFallback className="bg-primary/10 text-primary text-xs">
+                                                                        {session.userName.substring(0, 2).toUpperCase()}
+                                                                    </AvatarFallback>
+                                                                </Avatar>
                                                                 <div>
-                                                                    <div className="font-medium text-foreground">{session.userName}</div>
+                                                                    <div className="font-medium text-sm">{session.userName}</div>
                                                                     <div className="text-xs text-muted-foreground">{session.userEmail}</div>
                                                                 </div>
-                                                            </TableCell>
-                                                            <TableCell className="text-sm text-foreground">{session.examTitle}</TableCell>
-                                                            <TableCell>
-                                                                <Badge variant="outline" className={getStatusColor(session.status)}>
-                                                                    {session.status}
-                                                                </Badge>
-                                                            </TableCell>
-                                                            <TableCell>
-                                                                <div className="space-y-1">
-                                                                    <div className="flex items-center justify-between text-xs">
-                                                                        <span className="text-muted-foreground">{session.questionsAttempted}/{session.totalQuestions}</span>
-                                                                        <span className="font-medium text-foreground">
-                                                                            {Math.round((session.questionsAttempted / session.totalQuestions) * 100)}%
-                                                                        </span>
-                                                                    </div>
-                                                                    <Progress
-                                                                        value={(session.questionsAttempted / session.totalQuestions) * 100}
-                                                                        className="h-2"
-                                                                    />
+                                                            </div>
+                                                        </TableCell>
+                                                        <TableCell>
+                                                            <div className="text-sm font-medium">{session.examTitle}</div>
+                                                        </TableCell>
+                                                        <TableCell>
+                                                            <Badge variant="outline" className={getStatusColor(session.status)}>
+                                                                {session.status}
+                                                            </Badge>
+                                                        </TableCell>
+                                                        <TableCell>
+                                                            <div className="space-y-1.5">
+                                                                <div className="flex items-center justify-between text-xs">
+                                                                    <span className="text-muted-foreground">{session.questionsAttempted} of {session.totalQuestions}</span>
+                                                                    <span className="font-medium">
+                                                                        {Math.round((session.questionsAttempted / session.totalQuestions) * 100)}%
+                                                                    </span>
                                                                 </div>
-                                                            </TableCell>
-                                                            <TableCell className="text-sm text-foreground font-mono">
+                                                                <Progress
+                                                                    value={(session.questionsAttempted / session.totalQuestions) * 100}
+                                                                    className="h-1.5"
+                                                                />
+                                                            </div>
+                                                        </TableCell>
+                                                        <TableCell>
+                                                            <div className="flex items-center gap-1.5 text-sm font-mono text-muted-foreground">
+                                                                <Timer className="w-3.5 h-3.5" />
                                                                 {formatTime(session.timeElapsed)}
-                                                            </TableCell>
-                                                            <TableCell>
-                                                                <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20">
-                                                                    Q{session.currentQuestion}
-                                                                </Badge>
-                                                            </TableCell>
-                                                            <TableCell className="text-xs text-muted-foreground">
-                                                                {session.lastActivity}
-                                                            </TableCell>
-                                                            <TableCell className="text-right">
-                                                                <Button
-                                                                    variant="ghost"
-                                                                    size="sm"
-                                                                    onClick={() => setSelectedUser(session.userEmail)}
-                                                                    className="gap-2"
-                                                                >
-                                                                    <Eye className="w-4 h-4" />
-                                                                    View Details
-                                                                </Button>
-                                                            </TableCell>
-                                                        </TableRow>
-                                                    ))
-                                                )}
-                                            </TableBody>
-                                        </Table>
-                                    </div>
+                                                            </div>
+                                                        </TableCell>
+                                                        <TableCell>
+                                                            <Badge variant="secondary" className="font-mono text-xs">
+                                                                Q{session.currentQuestion}
+                                                            </Badge>
+                                                        </TableCell>
+                                                        <TableCell className="text-right">
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="sm"
+                                                                onClick={() => setSelectedUser(session.userEmail)}
+                                                                className="opacity-0 group-hover:opacity-100 transition-opacity"
+                                                            >
+                                                                <Eye className="w-4 h-4 mr-2" />
+                                                                Details
+                                                            </Button>
+                                                        </TableCell>
+                                                    </TableRow>
+                                                ))
+                                            )}
+                                        </TableBody>
+                                    </Table>
                                 </div>
                             </CardContent>
                         </Card>
@@ -636,67 +600,80 @@ export default function ExamMonitoring() {
 
                     {/* Question Analytics Tab */}
                     <TabsContent value="question-analytics" className="space-y-4">
-                        <Card className="border-border">
-                            <CardHeader>
-                                <CardTitle className="text-base">Question Performance Metrics</CardTitle>
-                                <CardDescription className="text-xs mt-1">
-                                    Analyze question difficulty and completion rates
+                        <Card className="border-border/50 shadow-sm">
+                            <CardHeader className="pb-3 border-b border-border/50 bg-muted/20">
+                                <CardTitle className="text-lg font-semibold">Question Performance</CardTitle>
+                                <CardDescription>
+                                    Analyze difficulty levels and completion rates across questions
                                 </CardDescription>
                             </CardHeader>
-                            <CardContent>
-                                <div className="rounded-lg border border-border overflow-hidden">
-                                    <div className="overflow-x-auto">
-                                        <Table>
-                                            <TableHeader>
-                                                <TableRow className="bg-muted/50">
-                                                    <TableHead className="font-semibold">Q#</TableHead>
-                                                    <TableHead className="font-semibold">Question</TableHead>
-                                                    <TableHead className="font-semibold">Difficulty</TableHead>
-                                                    <TableHead className="font-semibold">Attempts</TableHead>
-                                                    <TableHead className="font-semibold">Avg Time</TableHead>
-                                                    <TableHead className="font-semibold">Code Runs</TableHead>
-                                                    <TableHead className="font-semibold">Completion Rate</TableHead>
+                            <CardContent className="p-0">
+                                <div className="overflow-x-auto">
+                                    <Table>
+                                        <TableHeader>
+                                            <TableRow className="bg-muted/30 hover:bg-muted/30">
+                                                <TableHead className="w-[80px]">Rank</TableHead>
+                                                <TableHead>Question Title</TableHead>
+                                                <TableHead>Difficulty</TableHead>
+                                                <TableHead>Attempts</TableHead>
+                                                <TableHead>Avg Time</TableHead>
+                                                <TableHead>Code Runs</TableHead>
+                                                <TableHead className="w-[200px]">Completion Rate</TableHead>
+                                            </TableRow>
+                                        </TableHeader>
+                                        <TableBody>
+                                            {questionAnalytics.length === 0 ? (
+                                                <TableRow>
+                                                    <TableCell colSpan={7} className="h-[200px] text-center text-muted-foreground">
+                                                        No analytics data available. Select an exam to view details.
+                                                    </TableCell>
                                                 </TableRow>
-                                            </TableHeader>
-                                            <TableBody>
-                                                {questionAnalytics.map((question) => (
-                                                    <TableRow key={question.questionId} className="hover:bg-muted/50">
+                                            ) : (
+                                                questionAnalytics.map((question) => (
+                                                    <TableRow key={question.questionId} className="hover:bg-muted/30">
                                                         <TableCell>
                                                             <div className="w-8 h-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center font-bold text-sm">
-                                                                {question.questionIndex}
+                                                                #{question.questionIndex}
                                                             </div>
                                                         </TableCell>
-                                                        <TableCell className="font-medium text-foreground">
+                                                        <TableCell className="font-medium">
                                                             {question.questionId}
                                                         </TableCell>
                                                         <TableCell>
                                                             <Badge variant="outline" className={getDifficultyColor(question.difficulty)}>
-                                                                {question.difficulty}
+                                                                {question.difficulty.toUpperCase()}
                                                             </Badge>
                                                         </TableCell>
-                                                        <TableCell className="text-sm text-foreground">{question.totalAttempts}</TableCell>
-                                                        <TableCell className="text-sm text-foreground font-mono">
+                                                        <TableCell>{question.totalAttempts}</TableCell>
+                                                        <TableCell className="font-mono text-xs text-muted-foreground">
                                                             {formatTime(question.averageTime)}
                                                         </TableCell>
                                                         <TableCell>
-                                                            <div className="flex items-center gap-2">
-                                                                <Play className="w-4 h-4 text-primary" />
-                                                                <span className="text-sm text-foreground font-medium">{question.codeRuns}</span>
+                                                            <div className="flex items-center gap-1.5">
+                                                                <Play className="w-3.5 h-3.5 text-muted-foreground" />
+                                                                <span>{question.codeRuns}</span>
                                                             </div>
                                                         </TableCell>
                                                         <TableCell>
-                                                            <div className="flex items-center gap-3">
-                                                                <Progress value={question.completionRate} className="flex-1 h-2" />
-                                                                <span className="text-sm font-medium text-foreground w-12">
-                                                                    {question.completionRate}%
-                                                                </span>
+                                                            <div className="space-y-1.5">
+                                                                <div className="flex items-center justify-between text-xs">
+                                                                    <span className="font-medium">{question.completionRate}%</span>
+                                                                </div>
+                                                                <Progress
+                                                                    value={question.completionRate}
+                                                                    className="h-1.5"
+                                                                    indicatorClassName={
+                                                                        question.completionRate > 75 ? "bg-emerald-500" :
+                                                                            question.completionRate > 40 ? "bg-amber-500" : "bg-rose-500"
+                                                                    }
+                                                                />
                                                             </div>
                                                         </TableCell>
                                                     </TableRow>
-                                                ))}
-                                            </TableBody>
-                                        </Table>
-                                    </div>
+                                                ))
+                                            )}
+                                        </TableBody>
+                                    </Table>
                                 </div>
                             </CardContent>
                         </Card>
@@ -704,57 +681,56 @@ export default function ExamMonitoring() {
 
                     {/* Activity Feed Tab */}
                     <TabsContent value="activity-feed" className="space-y-4">
-                        <Card className="border-border">
-                            <CardHeader>
-                                <CardTitle className="text-base">Recent User Actions</CardTitle>
-                                <CardDescription className="text-xs mt-1">
-                                    Live feed of user interactions
+                        <Card className="border-border/50 shadow-sm">
+                            <CardHeader className="pb-3 border-b border-border/50 bg-muted/20">
+                                <CardTitle className="text-lg font-semibold">Live Activity Feed</CardTitle>
+                                <CardDescription>
+                                    Real-time log of student interactions and system events
                                 </CardDescription>
                             </CardHeader>
-                            <CardContent>
-                                <ScrollArea className="h-[600px] pr-4">
-                                    <div className="space-y-3">
-                                        {recentActions.map((action) => (
+                            <CardContent className="p-0">
+                                <ScrollArea className="h-[600px]">
+                                    <div className="p-4 space-y-4">
+                                        {recentActions.map((action, idx) => (
                                             <div
-                                                key={action.id}
-                                                className="p-4 rounded-lg border border-border bg-card hover:bg-muted/30 transition-colors"
+                                                key={action.id || idx}
+                                                className="flex gap-4 p-4 rounded-xl border border-border/50 bg-card hover:bg-muted/30 transition-all duration-200 group"
                                             >
-                                                <div className="flex items-start justify-between gap-4">
-                                                    <div className="flex items-start gap-3 flex-1">
-                                                        <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary flex-shrink-0">
-                                                            {getActionIcon(action.actionType)}
+                                                <div className="flex-shrink-0 mt-1">
+                                                    <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary ring-4 ring-background group-hover:ring-muted/30 transition-all">
+                                                        {getActionIcon(action.actionType)}
+                                                    </div>
+                                                </div>
+                                                <div className="flex-1 min-w-0">
+                                                    <div className="flex items-center justify-between gap-2 mb-1">
+                                                        <div className="flex items-center gap-2">
+                                                            <span className="font-semibold text-sm">{action.userName}</span>
+                                                            <Badge variant="secondary" className="text-[10px] px-1.5 h-5 uppercase tracking-wider">
+                                                                {action.actionType.replace('_', ' ')}
+                                                            </Badge>
                                                         </div>
-                                                        <div className="flex-1 min-w-0">
-                                                            <div className="flex items-center gap-2 mb-1">
-                                                                <span className="font-semibold text-foreground">{action.userName}</span>
-                                                                <Badge variant="outline" className="text-xs bg-muted">
-                                                                    {action.actionType.replace('_', ' ')}
+                                                        <span className="text-xs text-muted-foreground whitespace-nowrap">
+                                                            {new Date(action.timestamp).toLocaleTimeString()}
+                                                        </span>
+                                                    </div>
+                                                    <p className="text-sm text-muted-foreground">
+                                                        Action performed on <span className="font-medium text-foreground">Question {action.questionIndex}</span>
+                                                        {action.timeSpent > 0 && ` • Time spent: ${formatTime(action.timeSpent)}`}
+                                                    </p>
+                                                    {action.metadata && (
+                                                        <div className="flex flex-wrap gap-2 mt-2">
+                                                            {action.metadata.language && (
+                                                                <Badge variant="outline" className="text-xs font-normal bg-muted/50">
+                                                                    {action.metadata.language}
                                                                 </Badge>
-                                                            </div>
-                                                            <p className="text-sm text-muted-foreground">
-                                                                Question {action.questionIndex} • Time spent: {formatTime(action.timeSpent)}
-                                                            </p>
-                                                            {action.metadata && (
-                                                                <div className="flex items-center gap-2 mt-2 text-xs text-muted-foreground">
-                                                                    {action.metadata.language && (
-                                                                        <span className="px-2 py-1 bg-muted rounded">
-                                                                            {action.metadata.language}
-                                                                        </span>
-                                                                    )}
-                                                                    {action.metadata.runNumber && (
-                                                                        <span className="px-2 py-1 bg-muted rounded">
-                                                                            Run #{action.metadata.runNumber}
-                                                                        </span>
-                                                                    )}
-                                                                </div>
+                                                            )}
+                                                            {action.metadata.runNumber && (
+                                                                <Badge variant="outline" className="text-xs font-normal bg-muted/50">
+                                                                    Run #{action.metadata.runNumber}
+                                                                </Badge>
                                                             )}
                                                         </div>
-                                                    </div>
-                                                    <div className="text-right flex-shrink-0">
-                                                        <div className="text-xs text-muted-foreground">
-                                                            {new Date(action.timestamp).toLocaleTimeString()}
-                                                        </div>
-                                                    </div>
+                                                    )}
                                                 </div>
                                             </div>
                                         ))}
@@ -767,103 +743,132 @@ export default function ExamMonitoring() {
 
                 {/* User Detail Modal */}
                 <Dialog open={!!selectedUser} onOpenChange={() => setSelectedUser(null)}>
-                    <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-                        <DialogHeader>
-                            <DialogTitle className="flex items-center gap-2">
-                                <Users className="w-5 h-5 text-primary" />
-                                User Activity Details
-                            </DialogTitle>
-                            <DialogDescription>
-                                Detailed breakdown of user's exam session
-                            </DialogDescription>
+                    <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col p-0 gap-0 overflow-hidden">
+                        <DialogHeader className="p-6 pb-4 border-b border-border/50 bg-muted/20">
+                            <div className="flex items-center gap-3">
+                                <div className="p-2 bg-primary/10 rounded-lg">
+                                    <Laptop className="w-5 h-5 text-primary" />
+                                </div>
+                                <div>
+                                    <DialogTitle className="text-xl">Session Details</DialogTitle>
+                                    <DialogDescription>
+                                        Detailed breakdown of student performance
+                                    </DialogDescription>
+                                </div>
+                            </div>
                         </DialogHeader>
 
                         {selectedUser && (
-                            <div className="space-y-6">
-                                {/* User Info */}
-                                <div className="p-4 bg-muted/30 rounded-lg border border-border">
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <div>
-                                            <div className="text-xs text-muted-foreground mb-1">User Email</div>
-                                            <div className="text-sm font-medium text-foreground">{selectedUser}</div>
+                            <div className="flex-1 overflow-y-auto">
+                                <div className="p-6 space-y-6">
+                                    {/* User Info Card */}
+                                    <div className="p-4 rounded-xl border border-border/50 bg-muted/30 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                                        <div className="flex items-center gap-4">
+                                            <Avatar className="h-12 w-12 border-2 border-background shadow-sm">
+                                                <AvatarFallback className="bg-primary text-primary-foreground text-lg">
+                                                    {selectedUser.substring(0, 2).toUpperCase()}
+                                                </AvatarFallback>
+                                            </Avatar>
+                                            <div>
+                                                <div className="font-semibold text-lg">{selectedUser}</div>
+                                                <div className="text-sm text-muted-foreground flex items-center gap-2">
+                                                    <span className="inline-block w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                                                    Session Active
+                                                </div>
+                                            </div>
                                         </div>
-                                        <div>
-                                            <div className="text-xs text-muted-foreground mb-1">Current Status</div>
-                                            <Badge variant="outline" className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20">
-                                                Active
-                                            </Badge>
+                                        <div className="flex gap-3">
+                                            <div className="text-right px-4 py-2 bg-background rounded-lg border border-border/50">
+                                                <div className="text-xs text-muted-foreground uppercase tracking-wider">Questions</div>
+                                                <div className="font-bold text-lg">
+                                                    {activeSessions.find(s => s.userEmail === selectedUser)?.questionsAttempted}
+                                                    <span className="text-muted-foreground text-sm font-normal"> / {activeSessions.find(s => s.userEmail === selectedUser)?.totalQuestions}</span>
+                                                </div>
+                                            </div>
+                                            <div className="text-right px-4 py-2 bg-background rounded-lg border border-border/50">
+                                                <div className="text-xs text-muted-foreground uppercase tracking-wider">Time</div>
+                                                <div className="font-bold text-lg font-mono">
+                                                    {formatTime(activeSessions.find(s => s.userEmail === selectedUser)?.timeElapsed || 0)}
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
-                                </div>
 
-                                {/* Per-question breakdown would go here */}
-                                <div className="space-y-3">
-                                    <h4 className="font-semibold text-foreground">Question-wise Activity</h4>
-                                    <div className="rounded-lg border border-border overflow-hidden">
-                                        <Table>
-                                            <TableHeader>
-                                                <TableRow className="bg-muted/50">
-                                                    <TableHead className="font-semibold">Question</TableHead>
-                                                    <TableHead className="font-semibold">Time Spent</TableHead>
-                                                    <TableHead className="font-semibold">Code Runs</TableHead>
-                                                    <TableHead className="font-semibold">Status</TableHead>
-                                                </TableRow>
-                                            </TableHeader>
-                                            <TableBody>
-                                                <TableRow className="hover:bg-muted/50">
-                                                    <TableCell className="font-medium text-foreground">Question 1</TableCell>
-                                                    <TableCell className="text-sm text-foreground font-mono">5m 30s</TableCell>
-                                                    <TableCell className="text-sm text-foreground">3 runs</TableCell>
-                                                    <TableCell>
-                                                        <Badge variant="outline" className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20">
-                                                            <CheckCircle2 className="w-3 h-3 mr-1" />
-                                                            Completed
-                                                        </Badge>
-                                                    </TableCell>
-                                                </TableRow>
-                                                <TableRow className="hover:bg-muted/50">
-                                                    <TableCell className="font-medium text-foreground">Question 2</TableCell>
-                                                    <TableCell className="text-sm text-foreground font-mono">8m 45s</TableCell>
-                                                    <TableCell className="text-sm text-foreground">7 runs</TableCell>
-                                                    <TableCell>
-                                                        <Badge variant="outline" className="bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20">
-                                                            <Clock className="w-3 h-3 mr-1" />
-                                                            In Progress
-                                                        </Badge>
-                                                    </TableCell>
-                                                </TableRow>
-                                            </TableBody>
-                                        </Table>
-                                    </div>
-                                </div>
-
-                                {/* Activity Timeline */}
-                                <div className="space-y-3">
-                                    <h4 className="font-semibold text-foreground">Activity Timeline</h4>
-                                    <ScrollArea className="h-64">
-                                        <div className="space-y-2">
-                                            {recentActions
-                                                .filter(a => a.userEmail === selectedUser)
-                                                .map((action, idx) => (
-                                                    <div key={idx} className="flex items-start gap-3 p-3 rounded-lg bg-muted/30 border border-border">
-                                                        <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary flex-shrink-0">
-                                                            {getActionIcon(action.actionType)}
-                                                        </div>
-                                                        <div className="flex-1">
-                                                            <div className="text-sm font-medium text-foreground">
-                                                                {action.actionType.replace('_', ' ').toUpperCase()}
-                                                            </div>
-                                                            <div className="text-xs text-muted-foreground">
-                                                                Question {action.questionIndex} • {new Date(action.timestamp).toLocaleTimeString()}
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                ))}
+                                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                                        {/* Question Breakdown */}
+                                        <div className="space-y-4">
+                                            <h4 className="font-semibold flex items-center gap-2">
+                                                <BarChart3 className="w-4 h-4 text-primary" />
+                                                Question Progress
+                                            </h4>
+                                            <div className="rounded-xl border border-border/50 overflow-hidden">
+                                                <Table>
+                                                    <TableHeader>
+                                                        <TableRow className="bg-muted/50">
+                                                            <TableHead className="w-[100px]">Question</TableHead>
+                                                            <TableHead>Status</TableHead>
+                                                            <TableHead className="text-right">Time</TableHead>
+                                                        </TableRow>
+                                                    </TableHeader>
+                                                    <TableBody>
+                                                        {[1, 2, 3].map((qId) => (
+                                                            <TableRow key={qId} className="hover:bg-muted/30">
+                                                                <TableCell className="font-medium">Q{qId}</TableCell>
+                                                                <TableCell>
+                                                                    <Badge variant="outline" className={qId === 1 ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20" : "bg-amber-500/10 text-amber-600 border-amber-500/20"}>
+                                                                        {qId === 1 ? "Completed" : "In Progress"}
+                                                                    </Badge>
+                                                                </TableCell>
+                                                                <TableCell className="text-right font-mono text-xs">
+                                                                    {qId === 1 ? "5m 30s" : "8m 45s"}
+                                                                </TableCell>
+                                                            </TableRow>
+                                                        ))}
+                                                    </TableBody>
+                                                </Table>
+                                            </div>
                                         </div>
-                                    </ScrollArea>
+
+                                        {/* Timeline */}
+                                        <div className="space-y-4">
+                                            <h4 className="font-semibold flex items-center gap-2">
+                                                <Clock className="w-4 h-4 text-primary" />
+                                                Recent Activity
+                                            </h4>
+                                            <ScrollArea className="h-[300px] rounded-xl border border-border/50 bg-background p-4">
+                                                <div className="space-y-4">
+                                                    {recentActions
+                                                        .filter(a => a.userEmail === selectedUser)
+                                                        .map((action, idx) => (
+                                                            <div key={idx} className="relative pl-6 pb-4 border-l border-border last:pb-0">
+                                                                <div className="absolute left-[-5px] top-0 w-2.5 h-2.5 rounded-full bg-primary ring-4 ring-background" />
+                                                                <div className="flex flex-col gap-1">
+                                                                    <span className="text-sm font-medium">
+                                                                        {action.actionType.replace('_', ' ').toUpperCase()}
+                                                                    </span>
+                                                                    <span className="text-xs text-muted-foreground">
+                                                                        {new Date(action.timestamp).toLocaleTimeString()} • Question {action.questionIndex}
+                                                                    </span>
+                                                                </div>
+                                                            </div>
+                                                        ))}
+                                                    {recentActions.filter(a => a.userEmail === selectedUser).length === 0 && (
+                                                        <div className="text-center text-muted-foreground py-8 text-sm">
+                                                            No recent activity recorded
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </ScrollArea>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         )}
+                        <DialogFooter className="p-4 border-t border-border/50 bg-muted/20">
+                            <Button variant="outline" onClick={() => setSelectedUser(null)}>
+                                Close Details
+                            </Button>
+                        </DialogFooter>
                     </DialogContent>
                 </Dialog>
             </div>

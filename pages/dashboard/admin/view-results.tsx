@@ -45,9 +45,13 @@ import {
     Code,
     Target,
     Timer,
-    Zap
+    Zap,
+    Calendar,
+    AlertCircle,
+    ChevronRight
 } from 'lucide-react';
 import Head from 'next/head';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 
 // Type definitions
 interface ExamSubmission {
@@ -112,16 +116,10 @@ const ViewResult: React.FC = () => {
     const [guestSearch, setGuestSearch] = useState('');
     const [guestDifficultyFilter, setGuestDifficultyFilter] = useState<'all' | 'easy' | 'medium' | 'hard'>('all');
 
-    // Dialog state for guest practice
-    // const [selectedGuestSubmission, setSelectedGuestSubmission] = useState<GuestPracticeSubmission | null>(null);
-    const [isGuestDetailsOpen, setIsGuestDetailsOpen] = useState(false);
-
-
-    // Add this with other state declarations
+    // Dialog state
     const [selectedSubmission, setSelectedSubmission] = useState<ExamSubmission | null>(null);
     const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
 
-    // Add this with other state declarations
     const [selectedGuestSubmission, setSelectedGuestSubmission] = useState<GuestPracticeSubmission | null>(null);
     const [guestDetailsDialogOpen, setGuestDetailsDialogOpen] = useState(false);
 
@@ -210,7 +208,7 @@ const ViewResult: React.FC = () => {
         }
     }, [activeTab, guestSubmissions.length]);
 
-    // Helper functions for exam submissions
+    // Helper functions
     const calculateTotalScore = (answersJson: string) => {
         try {
             const answers = JSON.parse(answersJson);
@@ -229,93 +227,8 @@ const ViewResult: React.FC = () => {
         }
     };
 
-    // Filter exam submissions
-    const filteredExamSubmissions = examSubmissions.filter(sub => {
-        const matchesSearch =
-            sub.userName.toLowerCase().includes(examSearch.toLowerCase()) ||
-            sub.email.toLowerCase().includes(examSearch.toLowerCase()) ||
-            sub.examId.toLowerCase().includes(examSearch.toLowerCase());
-
-        const matchesStatus =
-            examFilter === 'all' ? true :
-                examFilter === 'qualified' ? !sub.disqualified :
-                    sub.disqualified;
-
-        return matchesSearch && matchesStatus;
-    });
-
-    // Filter practice submissions
-    const filteredPracticeSubmissions = practiceSubmissions.filter(sub => {
-        const matchesSearch =
-            sub.userName.toLowerCase().includes(practiceSearch.toLowerCase()) ||
-            sub.email.toLowerCase().includes(practiceSearch.toLowerCase()) ||
-            sub.questionDescription.toLowerCase().includes(practiceSearch.toLowerCase());
-
-        const matchesStatus =
-            practiceFilter === 'all' ? true :
-                practiceFilter === 'passed' ? sub.isPassed :
-                    !sub.isPassed;
-
-        return matchesSearch && matchesStatus;
-    });
-
-    // Filter guest submissions
-    const filteredGuestSubmissions = guestSubmissions.filter(sub => {
-        const matchesSearch =
-            sub.sessionId.toLowerCase().includes(guestSearch.toLowerCase()) ||
-            sub.topic.toLowerCase().includes(guestSearch.toLowerCase());
-
-        const matchesDifficulty =
-            guestDifficultyFilter === 'all' ? true :
-                sub.difficulty.toLowerCase() === guestDifficultyFilter;
-
-        return matchesSearch && matchesDifficulty;
-    });
-
-    // Stats calculations
-    const examStats = {
-        total: filteredExamSubmissions.length,
-        qualified: filteredExamSubmissions.filter(s => !s.disqualified).length,
-        disqualified: filteredExamSubmissions.filter(s => s.disqualified).length,
-        avgScore: filteredExamSubmissions.length > 0
-            ? Math.round(filteredExamSubmissions.reduce((sum, s) => sum + calculateAIScore(s.ai_feedback), 0) / filteredExamSubmissions.length)
-            : 0
-    };
-
-    const practiceStats = {
-        total: filteredPracticeSubmissions.length,
-        passed: filteredPracticeSubmissions.filter(s => s.isPassed).length,
-        failed: filteredPracticeSubmissions.filter(s => !s.isPassed).length,
-        avgScore: filteredPracticeSubmissions.length > 0
-            ? Math.round(filteredPracticeSubmissions.reduce((sum, s) => sum + s.score, 0) / filteredPracticeSubmissions.length)
-            : 0
-    };
-
-    // Add this helper function before guestStats
     const parseScore = (score: string | number): number => {
         return typeof score === 'string' ? parseFloat(score) || 0 : score || 0;
-    };
-
-    const guestStats = {
-        total: filteredGuestSubmissions.length,
-        avgScore: filteredGuestSubmissions.length > 0
-            ? Math.round(filteredGuestSubmissions.reduce((sum, s) => sum + parseScore(s.score), 0) / filteredGuestSubmissions.length)
-            : 0,
-        avgCorrect: filteredGuestSubmissions.length > 0
-            ? Math.round(filteredGuestSubmissions.reduce((sum, s) => sum + (s.correctAnswers || 0), 0) / filteredGuestSubmissions.length)
-            : 0,
-        avgTime: filteredGuestSubmissions.length > 0
-            ? Math.round(filteredGuestSubmissions.reduce((sum, s) => sum + (s.timeSpent || 0), 0) / filteredGuestSubmissions.length)
-            : 0
-    };
-
-    const getDifficultyColor = (difficulty: string) => {
-        switch (difficulty.toLowerCase()) {
-            case 'easy': return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200';
-            case 'medium': return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200';
-            case 'hard': return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200';
-            default: return 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200';
-        }
     };
 
     const formatTime = (seconds: number) => {
@@ -324,18 +237,20 @@ const ViewResult: React.FC = () => {
         return `${minutes}m ${remainingSeconds}s`;
     };
 
-    const handleViewGuestDetails = (submission: GuestPracticeSubmission) => {
-        setSelectedGuestSubmission(submission);
-        setIsGuestDetailsOpen(true);
+    const getDifficultyColor = (difficulty: string) => {
+        switch (difficulty.toLowerCase()) {
+            case 'easy': return 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20';
+            case 'medium': return 'bg-amber-500/10 text-amber-600 border-amber-500/20';
+            case 'hard': return 'bg-rose-500/10 text-rose-600 border-rose-500/20';
+            default: return 'bg-muted text-muted-foreground border-border';
+        }
     };
 
-    // Add this helper function before the return statement
     const getSubmissionDetails = (submission: ExamSubmission) => {
         try {
             const answers = JSON.parse(submission.answersWithQuestionIds);
             const feedback = JSON.parse(submission.ai_feedback);
 
-            // Combine answers with feedback
             return answers.map((answer: any) => {
                 const feedbackItem = feedback.find((f: any) => f.questionId === answer.questionId);
                 return {
@@ -350,7 +265,6 @@ const ViewResult: React.FC = () => {
         }
     };
 
-    // Replace the existing getGuestSubmissionDetails function
     const getGuestSubmissionDetails = (submission: GuestPracticeSubmission) => {
         try {
             const questionsData = typeof submission.questionsData === 'string'
@@ -378,169 +292,232 @@ const ViewResult: React.FC = () => {
         }
     };
 
+    // Filters
+    const filteredExamSubmissions = examSubmissions.filter(sub => {
+        const matchesSearch =
+            sub.userName.toLowerCase().includes(examSearch.toLowerCase()) ||
+            sub.email.toLowerCase().includes(examSearch.toLowerCase()) ||
+            sub.examId.toLowerCase().includes(examSearch.toLowerCase());
+
+        const matchesStatus =
+            examFilter === 'all' ? true :
+                examFilter === 'qualified' ? !sub.disqualified :
+                    sub.disqualified;
+
+        return matchesSearch && matchesStatus;
+    });
+
+    const filteredPracticeSubmissions = practiceSubmissions.filter(sub => {
+        const matchesSearch =
+            sub.userName.toLowerCase().includes(practiceSearch.toLowerCase()) ||
+            sub.email.toLowerCase().includes(practiceSearch.toLowerCase()) ||
+            sub.questionDescription.toLowerCase().includes(practiceSearch.toLowerCase());
+
+        const matchesStatus =
+            practiceFilter === 'all' ? true :
+                practiceFilter === 'passed' ? sub.isPassed :
+                    !sub.isPassed;
+
+        return matchesSearch && matchesStatus;
+    });
+
+    const filteredGuestSubmissions = guestSubmissions.filter(sub => {
+        const matchesSearch =
+            sub.sessionId.toLowerCase().includes(guestSearch.toLowerCase()) ||
+            sub.topic.toLowerCase().includes(guestSearch.toLowerCase());
+
+        const matchesDifficulty =
+            guestDifficultyFilter === 'all' ? true :
+                sub.difficulty.toLowerCase() === guestDifficultyFilter;
+
+        return matchesSearch && matchesDifficulty;
+    });
+
+    // Stats
+    const examStats = {
+        total: filteredExamSubmissions.length,
+        qualified: filteredExamSubmissions.filter(s => !s.disqualified).length,
+        disqualified: filteredExamSubmissions.filter(s => s.disqualified).length,
+        avgScore: filteredExamSubmissions.length > 0
+            ? Math.round(filteredExamSubmissions.reduce((sum, s) => sum + calculateAIScore(s.ai_feedback), 0) / filteredExamSubmissions.length)
+            : 0
+    };
+
+    const practiceStats = {
+        total: filteredPracticeSubmissions.length,
+        passed: filteredPracticeSubmissions.filter(s => s.isPassed).length,
+        failed: filteredPracticeSubmissions.filter(s => !s.isPassed).length,
+        avgScore: filteredPracticeSubmissions.length > 0
+            ? Math.round(filteredPracticeSubmissions.reduce((sum, s) => sum + s.score, 0) / filteredPracticeSubmissions.length)
+            : 0
+    };
+
+    const guestStats = {
+        total: filteredGuestSubmissions.length,
+        avgScore: filteredGuestSubmissions.length > 0
+            ? Math.round(filteredGuestSubmissions.reduce((sum, s) => sum + parseScore(s.score), 0) / filteredGuestSubmissions.length)
+            : 0,
+        avgCorrect: filteredGuestSubmissions.length > 0
+            ? Math.round(filteredGuestSubmissions.reduce((sum, s) => sum + (s.correctAnswers || 0), 0) / filteredGuestSubmissions.length)
+            : 0,
+        avgTime: filteredGuestSubmissions.length > 0
+            ? Math.round(filteredGuestSubmissions.reduce((sum, s) => sum + (s.timeSpent || 0), 0) / filteredGuestSubmissions.length)
+            : 0
+    };
+
     return (
         <UnifiedDashboardLayout role='admin'>
             <Head>
-                <title>SysRank - Online Assessment Platform</title>
+                <title>Assessment Results | SysRank</title>
                 <link rel="icon" href="/logo3.png" />
             </Head>
-            <div className="space-y-6 p-6">
+            <div className="space-y-6 animate-in fade-in duration-500">
                 {/* Header */}
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                     <div>
-                        <h1 className="text-3xl font-bold tracking-tight">Assessment Results</h1>
+                        <h1 className="text-3xl font-bold tracking-tight bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent flex items-center gap-2">
+                            <Trophy className="w-8 h-8 text-primary" />
+                            Assessment Results
+                        </h1>
                         <p className="text-muted-foreground mt-1">
-                            View and manage all assessment submissions across different types
+                            Analyze performance across exams, practice problems, and guest sessions.
                         </p>
                     </div>
-                    {/* <Button className="gap-2">
-                        <Download className="h-4 w-4" />
-                        Export Results
-                    </Button> */}
                 </div>
 
                 {/* Tabs */}
-                <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-                    <TabsList className="grid w-full max-w-md grid-cols-3">
-                        <TabsTrigger value="exam" className="gap-2">
+                <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+                    <TabsList className="grid w-full grid-cols-3 lg:w-[400px] bg-muted/50 p-1">
+                        <TabsTrigger value="exam" className="gap-2 data-[state=active]:bg-background data-[state=active]:shadow-sm">
                             <FileText className="h-4 w-4" />
                             Exam
                         </TabsTrigger>
-                        <TabsTrigger value="practice" className="gap-2">
+                        <TabsTrigger value="practice" className="gap-2 data-[state=active]:bg-background data-[state=active]:shadow-sm">
                             <Code className="h-4 w-4" />
                             Practice
                         </TabsTrigger>
-                        <TabsTrigger value="guest" className="gap-2">
+                        <TabsTrigger value="guest" className="gap-2 data-[state=active]:bg-background data-[state=active]:shadow-sm">
                             <Users className="h-4 w-4" />
-                            Guest Practice
+                            Guest
                         </TabsTrigger>
                     </TabsList>
 
                     {/* EXAM TAB */}
-                    <TabsContent value="exam" className="space-y-4">
+                    <TabsContent value="exam" className="space-y-6 animate-in slide-in-from-bottom-4 duration-500">
                         {/* Stats Cards */}
-                        <div className="grid gap-4 md:grid-cols-4">
-                            <Card>
-                                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                    <CardTitle className="text-sm font-medium">Total Submissions</CardTitle>
-                                    <Users className="h-4 w-4 text-muted-foreground" />
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                            <Card className="border-border/50 bg-gradient-to-br from-blue-500/5 to-transparent hover:shadow-lg transition-all duration-300">
+                                <CardHeader className="pb-2">
+                                    <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                                        <Users className="w-4 h-4 text-blue-500" />
+                                        Total Submissions
+                                    </CardTitle>
                                 </CardHeader>
                                 <CardContent>
-                                    <div className="text-2xl font-bold">{examStats.total}</div>
+                                    <div className="text-3xl font-bold text-blue-600 dark:text-blue-400">{examStats.total}</div>
                                     <p className="text-xs text-muted-foreground mt-1">Exam attempts</p>
                                 </CardContent>
                             </Card>
 
-                            <Card>
-                                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                    <CardTitle className="text-sm font-medium">Qualified</CardTitle>
-                                    <CheckCircle2 className="h-4 w-4 text-green-600" />
+                            <Card className="border-border/50 bg-gradient-to-br from-emerald-500/5 to-transparent hover:shadow-lg transition-all duration-300">
+                                <CardHeader className="pb-2">
+                                    <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                                        <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                                        Qualified
+                                    </CardTitle>
                                 </CardHeader>
                                 <CardContent>
-                                    <div className="text-2xl font-bold text-green-600">{examStats.qualified}</div>
+                                    <div className="text-3xl font-bold text-emerald-600 dark:text-emerald-400">{examStats.qualified}</div>
                                     <p className="text-xs text-muted-foreground mt-1">
-                                        {examStats.total > 0 ? Math.round((examStats.qualified / examStats.total) * 100) : 0}% of total
+                                        {examStats.total > 0 ? Math.round((examStats.qualified / examStats.total) * 100) : 0}% success rate
                                     </p>
                                 </CardContent>
                             </Card>
 
-                            <Card>
-                                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                    <CardTitle className="text-sm font-medium">Disqualified</CardTitle>
-                                    <XCircle className="h-4 w-4 text-destructive" />
+                            <Card className="border-border/50 bg-gradient-to-br from-rose-500/5 to-transparent hover:shadow-lg transition-all duration-300">
+                                <CardHeader className="pb-2">
+                                    <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                                        <XCircle className="w-4 h-4 text-rose-500" />
+                                        Disqualified
+                                    </CardTitle>
                                 </CardHeader>
                                 <CardContent>
-                                    <div className="text-2xl font-bold text-destructive">{examStats.disqualified}</div>
+                                    <div className="text-3xl font-bold text-rose-600 dark:text-rose-400">{examStats.disqualified}</div>
                                     <p className="text-xs text-muted-foreground mt-1">
-                                        {examStats.total > 0 ? Math.round((examStats.disqualified / examStats.total) * 100) : 0}% of total
+                                        {examStats.total > 0 ? Math.round((examStats.disqualified / examStats.total) * 100) : 0}% failure rate
                                     </p>
                                 </CardContent>
                             </Card>
 
-                            <Card>
-                                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                    <CardTitle className="text-sm font-medium">Average Score</CardTitle>
-                                    <Trophy className="h-4 w-4 text-muted-foreground" />
+                            <Card className="border-border/50 bg-gradient-to-br from-amber-500/5 to-transparent hover:shadow-lg transition-all duration-300">
+                                <CardHeader className="pb-2">
+                                    <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                                        <Trophy className="w-4 h-4 text-amber-500" />
+                                        Avg Score
+                                    </CardTitle>
                                 </CardHeader>
                                 <CardContent>
-                                    <div className="text-2xl font-bold">{examStats.avgScore}</div>
-                                    <p className="text-xs text-muted-foreground mt-1">Out of total marks</p>
+                                    <div className="text-3xl font-bold text-amber-600 dark:text-amber-400">{examStats.avgScore}</div>
+                                    <p className="text-xs text-muted-foreground mt-1">Points per exam</p>
                                 </CardContent>
                             </Card>
                         </div>
 
-                        <Card>
-                            <CardHeader>
-                                <div className="flex items-center justify-between">
+                        <Card className="border-border/50 shadow-sm">
+                            <CardHeader className="pb-3 border-b border-border/50 bg-muted/20">
+                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                                     <div>
-                                        <CardTitle>Exam Submissions</CardTitle>
+                                        <CardTitle className="text-lg font-semibold">Exam Submissions</CardTitle>
                                         <CardDescription>
-                                            Showing {filteredExamSubmissions.length} submission(s)
+                                            Detailed list of all candidate submissions
                                         </CardDescription>
                                     </div>
-
                                     <div className="flex items-center gap-2">
-                                        <div className="relative">
-                                            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                                        <div className="relative w-full sm:w-64">
+                                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                                             <Input
-                                                type="search"
-                                                placeholder="Search by name or email..."
-                                                className="pl-8 w-[300px]"
+                                                placeholder="Search candidates..."
                                                 value={examSearch}
                                                 onChange={(e) => setExamSearch(e.target.value)}
+                                                className="pl-9 h-9 bg-background"
                                             />
                                         </div>
-
                                         <DropdownMenu>
                                             <DropdownMenuTrigger asChild>
-                                                <Button variant="outline" className="gap-2">
-                                                    <Filter className="h-4 w-4" />
+                                                <Button variant="outline" size="sm" className="gap-2 h-9">
+                                                    <Filter className="w-4 h-4" />
                                                     Filter
                                                 </Button>
                                             </DropdownMenuTrigger>
                                             <DropdownMenuContent align="end">
                                                 <DropdownMenuLabel>Filter by Status</DropdownMenuLabel>
                                                 <DropdownMenuSeparator />
-                                                <DropdownMenuItem onClick={() => setExamFilter('all')}>
-                                                    All Submissions
-                                                </DropdownMenuItem>
-                                                <DropdownMenuItem onClick={() => setExamFilter('qualified')}>
-                                                    Qualified Only
-                                                </DropdownMenuItem>
-                                                <DropdownMenuItem onClick={() => setExamFilter('disqualified')}>
-                                                    Disqualified Only
-                                                </DropdownMenuItem>
+                                                <DropdownMenuItem onClick={() => setExamFilter('all')}>All</DropdownMenuItem>
+                                                <DropdownMenuItem onClick={() => setExamFilter('qualified')}>Qualified</DropdownMenuItem>
+                                                <DropdownMenuItem onClick={() => setExamFilter('disqualified')}>Disqualified</DropdownMenuItem>
                                             </DropdownMenuContent>
                                         </DropdownMenu>
                                     </div>
                                 </div>
                             </CardHeader>
-                            <CardContent>
+                            <CardContent className="p-0">
                                 {examLoading ? (
-                                    <div className="flex items-center justify-center py-12">
-                                        <div className="text-center space-y-2">
-                                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
-                                            <p className="text-sm text-muted-foreground">Loading submissions...</p>
-                                        </div>
+                                    <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
+                                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mb-4"></div>
+                                        <p>Loading submissions...</p>
                                     </div>
                                 ) : filteredExamSubmissions.length === 0 ? (
-                                    <div className="flex flex-col items-center justify-center py-12 text-center">
-                                        <FileText className="h-12 w-12 text-muted-foreground mb-4" />
-                                        <h3 className="font-semibold text-lg">No submissions found</h3>
-                                        <p className="text-sm text-muted-foreground mt-1">
-                                            {examSearch || examFilter !== 'all'
-                                                ? 'Try adjusting your search or filters'
-                                                : 'Submissions will appear here once candidates complete the exam'}
-                                        </p>
+                                    <div className="flex flex-col items-center justify-center py-12 text-center text-muted-foreground">
+                                        <FileText className="w-12 h-12 opacity-20 mb-4" />
+                                        <h3 className="text-lg font-medium">No submissions found</h3>
+                                        <p className="text-sm">Try adjusting your search or filters.</p>
                                     </div>
                                 ) : (
-                                    <div className="overflow-x-auto rounded-md border">
+                                    <div className="overflow-x-auto">
                                         <Table>
                                             <TableHeader>
-                                                <TableRow>
-                                                    <TableHead className="w-[50px]">#</TableHead>
-                                                    <TableHead>Candidate</TableHead>
-                                                    <TableHead>Email</TableHead>
+                                                <TableRow className="bg-muted/30 hover:bg-muted/30">
+                                                    <TableHead className="w-[250px]">Candidate</TableHead>
                                                     <TableHead>Exam ID</TableHead>
                                                     <TableHead>Score</TableHead>
                                                     <TableHead>Status</TableHead>
@@ -549,76 +526,66 @@ const ViewResult: React.FC = () => {
                                                 </TableRow>
                                             </TableHeader>
                                             <TableBody>
-                                                {filteredExamSubmissions.map((submission, index) => {
+                                                {filteredExamSubmissions.map((submission) => {
                                                     const aiScore = calculateAIScore(submission.ai_feedback);
                                                     const totalMarks = calculateTotalScore(submission.answersWithQuestionIds);
 
                                                     return (
-                                                        <TableRow key={submission.id}>
-                                                            <TableCell className="font-medium">{index + 1}</TableCell>
+                                                        <TableRow key={submission.id} className="group hover:bg-muted/30 transition-colors">
                                                             <TableCell>
-                                                                <div className="font-medium">{submission.userName}</div>
-                                                            </TableCell>
-                                                            <TableCell className="text-muted-foreground">
-                                                                {submission.email}
+                                                                <div className="flex items-center gap-3">
+                                                                    <Avatar className="h-9 w-9 border border-border">
+                                                                        <AvatarFallback className="bg-primary/10 text-primary text-xs">
+                                                                            {submission.userName.substring(0, 2).toUpperCase()}
+                                                                        </AvatarFallback>
+                                                                    </Avatar>
+                                                                    <div>
+                                                                        <div className="font-medium text-sm">{submission.userName}</div>
+                                                                        <div className="text-xs text-muted-foreground">{submission.email}</div>
+                                                                    </div>
+                                                                </div>
                                                             </TableCell>
                                                             <TableCell>
-                                                                <Badge variant="outline" className="font-mono text-xs">
+                                                                <Badge variant="outline" className="font-mono text-xs bg-muted/50">
                                                                     {submission.examId}
                                                                 </Badge>
                                                             </TableCell>
                                                             <TableCell>
-                                                                <div className="flex items-center gap-2">
-                                                                    <span className="font-semibold">{aiScore}</span>
-                                                                    <span className="text-muted-foreground text-sm">/ {totalMarks}</span>
+                                                                <div className="flex items-center gap-1.5">
+                                                                    <span className="font-bold text-sm">{aiScore}</span>
+                                                                    <span className="text-muted-foreground text-xs">/ {totalMarks}</span>
                                                                 </div>
                                                             </TableCell>
                                                             <TableCell>
                                                                 {submission.disqualified ? (
-                                                                    <Badge variant="destructive" className="gap-1">
-                                                                        <XCircle className="h-3 w-3" />
+                                                                    <Badge variant="destructive" className="bg-rose-500/10 text-rose-600 border-rose-500/20 hover:bg-rose-500/20">
                                                                         Disqualified
                                                                     </Badge>
                                                                 ) : (
-                                                                    <Badge variant="default" className="gap-1 bg-green-600 hover:bg-green-700">
-                                                                        <CheckCircle2 className="h-3 w-3" />
+                                                                    <Badge variant="default" className="bg-emerald-500/10 text-emerald-600 border-emerald-500/20 hover:bg-emerald-500/20">
                                                                         Qualified
                                                                     </Badge>
                                                                 )}
                                                             </TableCell>
-                                                            <TableCell className="text-muted-foreground text-sm">
-                                                                {new Date(submission.submittedAt).toLocaleDateString('en-US', {
-                                                                    month: 'short',
-                                                                    day: 'numeric',
-                                                                    year: 'numeric',
-                                                                    hour: '2-digit',
-                                                                    minute: '2-digit'
-                                                                })}
+                                                            <TableCell>
+                                                                <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                                                                    <Calendar className="w-3.5 h-3.5" />
+                                                                    {new Date(submission.submittedAt).toLocaleDateString()}
+                                                                </div>
                                                             </TableCell>
                                                             <TableCell className="text-right">
-                                                                <DropdownMenu>
-                                                                    <DropdownMenuTrigger asChild>
-                                                                        <Button variant="ghost" size="sm">
-                                                                            <MoreVertical className="h-4 w-4" />
-                                                                        </Button>
-                                                                    </DropdownMenuTrigger>
-                                                                    <DropdownMenuContent align="end">
-                                                                        <DropdownMenuItem
-                                                                            className="gap-2"
-                                                                            onClick={() => {
-                                                                                setSelectedSubmission(submission);
-                                                                                setDetailsDialogOpen(true);
-                                                                            }}
-                                                                        >
-                                                                            <Eye className="h-4 w-4" />
-                                                                            View Details
-                                                                        </DropdownMenuItem>
-                                                                        <DropdownMenuItem className="gap-2">
-                                                                            <Download className="h-4 w-4" />
-                                                                            Download Report
-                                                                        </DropdownMenuItem>
-                                                                    </DropdownMenuContent>
-                                                                </DropdownMenu>
+                                                                <Button
+                                                                    variant="ghost"
+                                                                    size="sm"
+                                                                    onClick={() => {
+                                                                        setSelectedSubmission(submission);
+                                                                        setDetailsDialogOpen(true);
+                                                                    }}
+                                                                    className="opacity-0 group-hover:opacity-100 transition-opacity"
+                                                                >
+                                                                    <Eye className="w-4 h-4 mr-2" />
+                                                                    Details
+                                                                </Button>
                                                             </TableCell>
                                                         </TableRow>
                                                     );
@@ -632,211 +599,181 @@ const ViewResult: React.FC = () => {
                     </TabsContent>
 
                     {/* PRACTICE TAB */}
-                    <TabsContent value="practice" className="space-y-4">
+                    <TabsContent value="practice" className="space-y-6 animate-in slide-in-from-bottom-4 duration-500">
                         {/* Stats Cards */}
-                        <div className="grid gap-4 md:grid-cols-4">
-                            <Card>
-                                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                    <CardTitle className="text-sm font-medium">Total Attempts</CardTitle>
-                                    <Code className="h-4 w-4 text-muted-foreground" />
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                            <Card className="border-border/50 bg-gradient-to-br from-blue-500/5 to-transparent hover:shadow-lg transition-all duration-300">
+                                <CardHeader className="pb-2">
+                                    <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                                        <Code className="w-4 h-4 text-blue-500" />
+                                        Total Attempts
+                                    </CardTitle>
                                 </CardHeader>
                                 <CardContent>
-                                    <div className="text-2xl font-bold">{practiceStats.total}</div>
+                                    <div className="text-3xl font-bold text-blue-600 dark:text-blue-400">{practiceStats.total}</div>
                                     <p className="text-xs text-muted-foreground mt-1">Practice submissions</p>
                                 </CardContent>
                             </Card>
 
-                            <Card>
-                                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                    <CardTitle className="text-sm font-medium">Passed</CardTitle>
-                                    <CheckCircle2 className="h-4 w-4 text-green-600" />
+                            <Card className="border-border/50 bg-gradient-to-br from-emerald-500/5 to-transparent hover:shadow-lg transition-all duration-300">
+                                <CardHeader className="pb-2">
+                                    <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                                        <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                                        Passed
+                                    </CardTitle>
                                 </CardHeader>
                                 <CardContent>
-                                    <div className="text-2xl font-bold text-green-600">{practiceStats.passed}</div>
+                                    <div className="text-3xl font-bold text-emerald-600 dark:text-emerald-400">{practiceStats.passed}</div>
                                     <p className="text-xs text-muted-foreground mt-1">
                                         {practiceStats.total > 0 ? Math.round((practiceStats.passed / practiceStats.total) * 100) : 0}% success rate
                                     </p>
                                 </CardContent>
                             </Card>
 
-                            <Card>
-                                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                    <CardTitle className="text-sm font-medium">Failed</CardTitle>
-                                    <XCircle className="h-4 w-4 text-destructive" />
+                            <Card className="border-border/50 bg-gradient-to-br from-rose-500/5 to-transparent hover:shadow-lg transition-all duration-300">
+                                <CardHeader className="pb-2">
+                                    <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                                        <XCircle className="w-4 h-4 text-rose-500" />
+                                        Failed
+                                    </CardTitle>
                                 </CardHeader>
                                 <CardContent>
-                                    <div className="text-2xl font-bold text-destructive">{practiceStats.failed}</div>
+                                    <div className="text-3xl font-bold text-rose-600 dark:text-rose-400">{practiceStats.failed}</div>
                                     <p className="text-xs text-muted-foreground mt-1">
-                                        {practiceStats.total > 0 ? Math.round((practiceStats.failed / practiceStats.total) * 100) : 0}% of attempts
+                                        {practiceStats.total > 0 ? Math.round((practiceStats.failed / practiceStats.total) * 100) : 0}% failure rate
                                     </p>
                                 </CardContent>
                             </Card>
 
-                            <Card>
-                                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                    <CardTitle className="text-sm font-medium">Average Score</CardTitle>
-                                    <Trophy className="h-4 w-4 text-muted-foreground" />
+                            <Card className="border-border/50 bg-gradient-to-br from-amber-500/5 to-transparent hover:shadow-lg transition-all duration-300">
+                                <CardHeader className="pb-2">
+                                    <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                                        <Trophy className="w-4 h-4 text-amber-500" />
+                                        Avg Score
+                                    </CardTitle>
                                 </CardHeader>
                                 <CardContent>
-                                    <div className="text-2xl font-bold">{practiceStats.avgScore}</div>
-                                    <p className="text-xs text-muted-foreground mt-1">Average performance</p>
+                                    <div className="text-3xl font-bold text-amber-600 dark:text-amber-400">{practiceStats.avgScore}</div>
+                                    <p className="text-xs text-muted-foreground mt-1">Points per attempt</p>
                                 </CardContent>
                             </Card>
                         </div>
 
-                        <Card>
-                            <CardHeader>
-                                <div className="flex items-center justify-between">
+                        <Card className="border-border/50 shadow-sm">
+                            <CardHeader className="pb-3 border-b border-border/50 bg-muted/20">
+                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                                     <div>
-                                        <CardTitle>Practice Submissions</CardTitle>
+                                        <CardTitle className="text-lg font-semibold">Practice Submissions</CardTitle>
                                         <CardDescription>
-                                            Showing {filteredPracticeSubmissions.length} submission(s)
+                                            Review coding practice attempts and results
                                         </CardDescription>
                                     </div>
-
                                     <div className="flex items-center gap-2">
-                                        <div className="relative">
-                                            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                                        <div className="relative w-full sm:w-64">
+                                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                                             <Input
-                                                type="search"
-                                                placeholder="Search by name or question..."
-                                                className="pl-8 w-[300px]"
+                                                placeholder="Search user or question..."
                                                 value={practiceSearch}
                                                 onChange={(e) => setPracticeSearch(e.target.value)}
+                                                className="pl-9 h-9 bg-background"
                                             />
                                         </div>
-
                                         <DropdownMenu>
                                             <DropdownMenuTrigger asChild>
-                                                <Button variant="outline" className="gap-2">
-                                                    <Filter className="h-4 w-4" />
+                                                <Button variant="outline" size="sm" className="gap-2 h-9">
+                                                    <Filter className="w-4 h-4" />
                                                     Filter
                                                 </Button>
                                             </DropdownMenuTrigger>
                                             <DropdownMenuContent align="end">
                                                 <DropdownMenuLabel>Filter by Result</DropdownMenuLabel>
                                                 <DropdownMenuSeparator />
-                                                <DropdownMenuItem onClick={() => setPracticeFilter('all')}>
-                                                    All Submissions
-                                                </DropdownMenuItem>
-                                                <DropdownMenuItem onClick={() => setPracticeFilter('passed')}>
-                                                    Passed Only
-                                                </DropdownMenuItem>
-                                                <DropdownMenuItem onClick={() => setPracticeFilter('failed')}>
-                                                    Failed Only
-                                                </DropdownMenuItem>
+                                                <DropdownMenuItem onClick={() => setPracticeFilter('all')}>All</DropdownMenuItem>
+                                                <DropdownMenuItem onClick={() => setPracticeFilter('passed')}>Passed</DropdownMenuItem>
+                                                <DropdownMenuItem onClick={() => setPracticeFilter('failed')}>Failed</DropdownMenuItem>
                                             </DropdownMenuContent>
                                         </DropdownMenu>
                                     </div>
                                 </div>
                             </CardHeader>
-                            <CardContent>
+                            <CardContent className="p-0">
                                 {practiceLoading ? (
-                                    <div className="flex items-center justify-center py-12">
-                                        <div className="text-center space-y-2">
-                                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
-                                            <p className="text-sm text-muted-foreground">Loading practice submissions...</p>
-                                        </div>
+                                    <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
+                                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mb-4"></div>
+                                        <p>Loading practice data...</p>
                                     </div>
                                 ) : filteredPracticeSubmissions.length === 0 ? (
-                                    <div className="flex flex-col items-center justify-center py-12 text-center">
-                                        <Code className="h-12 w-12 text-muted-foreground mb-4" />
-                                        <h3 className="font-semibold text-lg">No practice submissions found</h3>
-                                        <p className="text-sm text-muted-foreground mt-1">
-                                            {practiceSearch || practiceFilter !== 'all'
-                                                ? 'Try adjusting your search or filters'
-                                                : 'Practice submissions will appear here'}
-                                        </p>
+                                    <div className="flex flex-col items-center justify-center py-12 text-center text-muted-foreground">
+                                        <Code className="w-12 h-12 opacity-20 mb-4" />
+                                        <h3 className="text-lg font-medium">No practice submissions found</h3>
+                                        <p className="text-sm">Try adjusting your search or filters.</p>
                                     </div>
                                 ) : (
-                                    <div className="overflow-x-auto rounded-md border">
+                                    <div className="overflow-x-auto">
                                         <Table>
                                             <TableHeader>
-                                                <TableRow>
-                                                    <TableHead className="w-[50px]">#</TableHead>
-                                                    <TableHead>User</TableHead>
+                                                <TableRow className="bg-muted/30 hover:bg-muted/30">
+                                                    <TableHead className="w-[200px]">User</TableHead>
                                                     <TableHead>Question</TableHead>
                                                     <TableHead>Language</TableHead>
                                                     <TableHead>Test Cases</TableHead>
                                                     <TableHead>Score</TableHead>
                                                     <TableHead>Time</TableHead>
-                                                    <TableHead>Attempt</TableHead>
                                                     <TableHead>Status</TableHead>
-                                                    <TableHead className="text-right">Actions</TableHead>
                                                 </TableRow>
                                             </TableHeader>
                                             <TableBody>
-                                                {filteredPracticeSubmissions.map((submission, index) => (
-                                                    <TableRow key={submission.id}>
-                                                        <TableCell className="font-medium">{index + 1}</TableCell>
+                                                {filteredPracticeSubmissions.map((submission) => (
+                                                    <TableRow key={submission.id} className="hover:bg-muted/30 transition-colors">
                                                         <TableCell>
-                                                            <div>
-                                                                <div className="font-medium">{submission.userName}</div>
-                                                                <div className="text-xs text-muted-foreground">{submission.email}</div>
+                                                            <div className="flex items-center gap-3">
+                                                                <Avatar className="h-8 w-8 border border-border">
+                                                                    <AvatarFallback className="bg-primary/10 text-primary text-xs">
+                                                                        {submission.userName.substring(0, 2).toUpperCase()}
+                                                                    </AvatarFallback>
+                                                                </Avatar>
+                                                                <div>
+                                                                    <div className="font-medium text-sm">{submission.userName}</div>
+                                                                    <div className="text-xs text-muted-foreground">{submission.email}</div>
+                                                                </div>
                                                             </div>
                                                         </TableCell>
                                                         <TableCell>
-                                                            <div className="max-w-[200px] truncate" title={submission.questionDescription}>
+                                                            <div className="max-w-[200px] truncate font-medium text-sm" title={submission.questionDescription}>
                                                                 {submission.questionDescription}
                                                             </div>
                                                         </TableCell>
                                                         <TableCell>
-                                                            <Badge variant="outline" className="font-mono text-xs">
+                                                            <Badge variant="outline" className="font-mono text-xs bg-muted/50">
                                                                 {submission.language}
                                                             </Badge>
                                                         </TableCell>
                                                         <TableCell>
-                                                            <div className="flex items-center gap-1">
-                                                                <Target className="h-3 w-3 text-muted-foreground" />
+                                                            <div className="flex items-center gap-1.5 text-sm">
+                                                                <Target className="w-3.5 h-3.5 text-muted-foreground" />
                                                                 <span className="font-medium">{submission.testCasesPassed}</span>
-                                                                <span className="text-muted-foreground text-sm">/ {submission.totalTestCases}</span>
+                                                                <span className="text-muted-foreground text-xs">/ {submission.totalTestCases}</span>
                                                             </div>
                                                         </TableCell>
                                                         <TableCell>
-                                                            <span className="font-semibold">{submission.score}</span>
+                                                            <span className="font-bold text-sm">{submission.score}</span>
                                                         </TableCell>
                                                         <TableCell>
-                                                            <div className="flex items-center gap-1 text-sm">
-                                                                <Zap className="h-3 w-3 text-muted-foreground" />
+                                                            <div className="flex items-center gap-1.5 text-xs text-muted-foreground font-mono">
+                                                                <Zap className="w-3.5 h-3.5" />
                                                                 {submission.executionTime}ms
                                                             </div>
                                                         </TableCell>
                                                         <TableCell>
-                                                            <Badge variant="secondary" className="text-xs">
-                                                                #{submission.attemptNumber}
-                                                            </Badge>
-                                                        </TableCell>
-                                                        <TableCell>
                                                             {submission.isPassed ? (
-                                                                <Badge variant="default" className="gap-1 bg-green-600 hover:bg-green-700">
-                                                                    <CheckCircle2 className="h-3 w-3" />
+                                                                <Badge variant="default" className="bg-emerald-500/10 text-emerald-600 border-emerald-500/20 hover:bg-emerald-500/20">
                                                                     Passed
                                                                 </Badge>
                                                             ) : (
-                                                                <Badge variant="destructive" className="gap-1">
-                                                                    <XCircle className="h-3 w-3" />
+                                                                <Badge variant="destructive" className="bg-rose-500/10 text-rose-600 border-rose-500/20 hover:bg-rose-500/20">
                                                                     Failed
                                                                 </Badge>
                                                             )}
-                                                        </TableCell>
-                                                        <TableCell className="text-right">
-                                                            <DropdownMenu>
-                                                                <DropdownMenuTrigger asChild>
-                                                                    <Button variant="ghost" size="sm">
-                                                                        <MoreVertical className="h-4 w-4" />
-                                                                    </Button>
-                                                                </DropdownMenuTrigger>
-                                                                <DropdownMenuContent align="end">
-                                                                    <DropdownMenuItem className="gap-2">
-                                                                        <Eye className="h-4 w-4" />
-                                                                        View Code
-                                                                    </DropdownMenuItem>
-                                                                    <DropdownMenuItem className="gap-2">
-                                                                        <FileText className="h-4 w-4" />
-                                                                        View Feedback
-                                                                    </DropdownMenuItem>
-                                                                </DropdownMenuContent>
-                                                            </DropdownMenu>
                                                         </TableCell>
                                                     </TableRow>
                                                 ))}
@@ -848,208 +785,182 @@ const ViewResult: React.FC = () => {
                         </Card>
                     </TabsContent>
 
-                    {/* GUEST PRACTICE TAB */}
-                    <TabsContent value="guest" className="space-y-4">
+                    {/* GUEST TAB */}
+                    <TabsContent value="guest" className="space-y-6 animate-in slide-in-from-bottom-4 duration-500">
                         {/* Stats Cards */}
-                        <div className="grid gap-4 md:grid-cols-4">
-                            <Card>
-                                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                    <CardTitle className="text-sm font-medium">Total Sessions</CardTitle>
-                                    <Users className="h-4 w-4 text-muted-foreground" />
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                            <Card className="border-border/50 bg-gradient-to-br from-blue-500/5 to-transparent hover:shadow-lg transition-all duration-300">
+                                <CardHeader className="pb-2">
+                                    <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                                        <Users className="w-4 h-4 text-blue-500" />
+                                        Total Sessions
+                                    </CardTitle>
                                 </CardHeader>
                                 <CardContent>
-                                    <div className="text-2xl font-bold">{guestStats.total}</div>
+                                    <div className="text-3xl font-bold text-blue-600 dark:text-blue-400">{guestStats.total}</div>
                                     <p className="text-xs text-muted-foreground mt-1">Guest attempts</p>
                                 </CardContent>
                             </Card>
 
-                            <Card>
-                                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                    <CardTitle className="text-sm font-medium">Avg Score</CardTitle>
-                                    <Trophy className="h-4 w-4 text-muted-foreground" />
+                            <Card className="border-border/50 bg-gradient-to-br from-emerald-500/5 to-transparent hover:shadow-lg transition-all duration-300">
+                                <CardHeader className="pb-2">
+                                    <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                                        <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                                        Avg Correct
+                                    </CardTitle>
                                 </CardHeader>
                                 <CardContent>
-                                    <div className="text-2xl font-bold">{guestStats.avgScore}</div>
-                                    <p className="text-xs text-muted-foreground mt-1">Average points</p>
-                                </CardContent>
-                            </Card>
-
-                            <Card>
-                                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                    <CardTitle className="text-sm font-medium">Avg Correct</CardTitle>
-                                    <CheckCircle2 className="h-4 w-4 text-green-600" />
-                                </CardHeader>
-                                <CardContent>
-                                    <div className="text-2xl font-bold text-green-600">{guestStats.avgCorrect}</div>
+                                    <div className="text-3xl font-bold text-emerald-600 dark:text-emerald-400">{guestStats.avgCorrect}</div>
                                     <p className="text-xs text-muted-foreground mt-1">Questions answered</p>
                                 </CardContent>
                             </Card>
 
-                            <Card>
-                                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                    <CardTitle className="text-sm font-medium">Avg Time</CardTitle>
-                                    <Timer className="h-4 w-4 text-muted-foreground" />
+                            <Card className="border-border/50 bg-gradient-to-br from-amber-500/5 to-transparent hover:shadow-lg transition-all duration-300">
+                                <CardHeader className="pb-2">
+                                    <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                                        <Trophy className="w-4 h-4 text-amber-500" />
+                                        Avg Score
+                                    </CardTitle>
                                 </CardHeader>
                                 <CardContent>
-                                    <div className="text-2xl font-bold">{formatTime(guestStats.avgTime)}</div>
+                                    <div className="text-3xl font-bold text-amber-600 dark:text-amber-400">{guestStats.avgScore}</div>
+                                    <p className="text-xs text-muted-foreground mt-1">Points per session</p>
+                                </CardContent>
+                            </Card>
+
+                            <Card className="border-border/50 bg-gradient-to-br from-purple-500/5 to-transparent hover:shadow-lg transition-all duration-300">
+                                <CardHeader className="pb-2">
+                                    <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                                        <Timer className="w-4 h-4 text-purple-500" />
+                                        Avg Time
+                                    </CardTitle>
+                                </CardHeader>
+                                <CardContent>
+                                    <div className="text-3xl font-bold text-purple-600 dark:text-purple-400">{formatTime(guestStats.avgTime)}</div>
                                     <p className="text-xs text-muted-foreground mt-1">Per session</p>
                                 </CardContent>
                             </Card>
                         </div>
 
-                        <Card>
-                            <CardHeader>
-                                <div className="flex items-center justify-between">
+                        <Card className="border-border/50 shadow-sm">
+                            <CardHeader className="pb-3 border-b border-border/50 bg-muted/20">
+                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                                     <div>
-                                        <CardTitle>Guest Practice Sessions</CardTitle>
+                                        <CardTitle className="text-lg font-semibold">Guest Sessions</CardTitle>
                                         <CardDescription>
-                                            Showing {filteredGuestSubmissions.length} session(s)
+                                            Anonymous practice sessions and their outcomes
                                         </CardDescription>
                                     </div>
-
                                     <div className="flex items-center gap-2">
-                                        <div className="relative">
-                                            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                                        <div className="relative w-full sm:w-64">
+                                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                                             <Input
-                                                type="search"
-                                                placeholder="Search by session or topic..."
-                                                className="pl-8 w-[300px]"
+                                                placeholder="Search topic or session ID..."
                                                 value={guestSearch}
                                                 onChange={(e) => setGuestSearch(e.target.value)}
+                                                className="pl-9 h-9 bg-background"
                                             />
                                         </div>
-
                                         <DropdownMenu>
                                             <DropdownMenuTrigger asChild>
-                                                <Button variant="outline" className="gap-2">
-                                                    <Filter className="h-4 w-4" />
+                                                <Button variant="outline" size="sm" className="gap-2 h-9">
+                                                    <Filter className="w-4 h-4" />
                                                     Filter
                                                 </Button>
                                             </DropdownMenuTrigger>
                                             <DropdownMenuContent align="end">
                                                 <DropdownMenuLabel>Filter by Difficulty</DropdownMenuLabel>
                                                 <DropdownMenuSeparator />
-                                                <DropdownMenuItem onClick={() => setGuestDifficultyFilter('all')}>
-                                                    All Difficulties
-                                                </DropdownMenuItem>
-                                                <DropdownMenuItem onClick={() => setGuestDifficultyFilter('easy')}>
-                                                    Easy
-                                                </DropdownMenuItem>
-                                                <DropdownMenuItem onClick={() => setGuestDifficultyFilter('medium')}>
-                                                    Medium
-                                                </DropdownMenuItem>
-                                                <DropdownMenuItem onClick={() => setGuestDifficultyFilter('hard')}>
-                                                    Hard
-                                                </DropdownMenuItem>
+                                                <DropdownMenuItem onClick={() => setGuestDifficultyFilter('all')}>All</DropdownMenuItem>
+                                                <DropdownMenuItem onClick={() => setGuestDifficultyFilter('easy')}>Easy</DropdownMenuItem>
+                                                <DropdownMenuItem onClick={() => setGuestDifficultyFilter('medium')}>Medium</DropdownMenuItem>
+                                                <DropdownMenuItem onClick={() => setGuestDifficultyFilter('hard')}>Hard</DropdownMenuItem>
                                             </DropdownMenuContent>
                                         </DropdownMenu>
                                     </div>
                                 </div>
                             </CardHeader>
-                            <CardContent>
+                            <CardContent className="p-0">
                                 {guestLoading ? (
-                                    <div className="flex items-center justify-center py-12">
-                                        <div className="text-center space-y-2">
-                                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
-                                            <p className="text-sm text-muted-foreground">Loading guest sessions...</p>
-                                        </div>
+                                    <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
+                                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mb-4"></div>
+                                        <p>Loading guest sessions...</p>
                                     </div>
                                 ) : filteredGuestSubmissions.length === 0 ? (
-                                    <div className="flex flex-col items-center justify-center py-12 text-center">
-                                        <Users className="h-12 w-12 text-muted-foreground mb-4" />
-                                        <h3 className="font-semibold text-lg">No guest sessions found</h3>
-                                        <p className="text-sm text-muted-foreground mt-1">
-                                            {guestSearch || guestDifficultyFilter !== 'all'
-                                                ? 'Try adjusting your search or filters'
-                                                : 'Guest practice sessions will appear here'}
-                                        </p>
+                                    <div className="flex flex-col items-center justify-center py-12 text-center text-muted-foreground">
+                                        <Users className="w-12 h-12 opacity-20 mb-4" />
+                                        <h3 className="text-lg font-medium">No guest sessions found</h3>
+                                        <p className="text-sm">Try adjusting your search or filters.</p>
                                     </div>
                                 ) : (
-                                    <div className="overflow-x-auto rounded-md border">
+                                    <div className="overflow-x-auto">
                                         <Table>
                                             <TableHeader>
-                                                <TableRow>
-                                                    <TableHead className="w-[50px]">#</TableHead>
-                                                    <TableHead>Session ID</TableHead>
+                                                <TableRow className="bg-muted/30 hover:bg-muted/30">
+                                                    <TableHead className="w-[150px]">Session ID</TableHead>
                                                     <TableHead>Topic</TableHead>
                                                     <TableHead>Difficulty</TableHead>
                                                     <TableHead>Score</TableHead>
                                                     <TableHead>Accuracy</TableHead>
-                                                    <TableHead>Time Spent</TableHead>
+                                                    <TableHead>Time</TableHead>
                                                     <TableHead>Completed</TableHead>
                                                     <TableHead className="text-right">Actions</TableHead>
                                                 </TableRow>
                                             </TableHeader>
                                             <TableBody>
-                                                {filteredGuestSubmissions.map((submission, index) => {
+                                                {filteredGuestSubmissions.map((submission) => {
                                                     const accuracy = submission.totalQuestions > 0
                                                         ? Math.round((submission.correctAnswers / submission.totalQuestions) * 100)
                                                         : 0;
 
                                                     return (
-                                                        <TableRow key={submission.id}>
-                                                            <TableCell className="font-medium">{index + 1}</TableCell>
+                                                        <TableRow key={submission.id} className="group hover:bg-muted/30 transition-colors">
                                                             <TableCell>
-                                                                <Badge variant="outline" className="font-mono text-xs">
+                                                                <Badge variant="outline" className="font-mono text-xs bg-muted/50">
                                                                     {submission.sessionId.substring(0, 8)}...
                                                                 </Badge>
                                                             </TableCell>
                                                             <TableCell>
-                                                                <span className="font-medium">{submission.topic}</span>
+                                                                <span className="font-medium text-sm">{submission.topic}</span>
                                                             </TableCell>
                                                             <TableCell>
-                                                                <Badge className={getDifficultyColor(submission.difficulty)}>
+                                                                <Badge variant="outline" className={getDifficultyColor(submission.difficulty)}>
                                                                     {submission.difficulty}
                                                                 </Badge>
                                                             </TableCell>
                                                             <TableCell>
-                                                                <span className="font-semibold text-lg">{submission.score}</span>
+                                                                <span className="font-bold text-sm">{submission.score}</span>
                                                             </TableCell>
                                                             <TableCell>
-                                                                <div className="flex items-center gap-2">
-                                                                    <div className="flex items-center gap-1">
-                                                                        <CheckCircle2 className="h-3 w-3 text-green-600" />
-                                                                        <span className="font-medium">{submission.correctAnswers}</span>
-                                                                    </div>
-                                                                    <span className="text-muted-foreground text-sm">/ {submission.totalQuestions}</span>
-                                                                    <span className="text-xs text-muted-foreground">({accuracy}%)</span>
+                                                                <div className="flex items-center gap-1.5 text-sm">
+                                                                    <Target className="w-3.5 h-3.5 text-muted-foreground" />
+                                                                    <span className="font-medium">{accuracy}%</span>
                                                                 </div>
                                                             </TableCell>
                                                             <TableCell>
-                                                                <div className="flex items-center gap-1">
-                                                                    <Clock className="h-3 w-3 text-muted-foreground" />
+                                                                <div className="flex items-center gap-1.5 text-xs text-muted-foreground font-mono">
+                                                                    <Clock className="w-3.5 h-3.5" />
                                                                     {formatTime(submission.timeSpent)}
                                                                 </div>
                                                             </TableCell>
-                                                            <TableCell className="text-muted-foreground text-sm">
-                                                                {new Date(submission.completedAt).toLocaleDateString('en-US', {
-                                                                    month: 'short',
-                                                                    day: 'numeric',
-                                                                    year: 'numeric',
-                                                                    hour: '2-digit',
-                                                                    minute: '2-digit'
-                                                                })}
+                                                            <TableCell>
+                                                                <span className="text-xs text-muted-foreground">
+                                                                    {new Date(submission.completedAt).toLocaleDateString()}
+                                                                </span>
                                                             </TableCell>
                                                             <TableCell className="text-right">
-                                                                <DropdownMenu>
-                                                                    <DropdownMenuTrigger asChild>
-                                                                        <Button variant="ghost" size="sm">
-                                                                            <MoreVertical className="h-4 w-4" />
-                                                                        </Button>
-                                                                    </DropdownMenuTrigger>
-                                                                    <DropdownMenuContent align="end">
-                                                                        <DropdownMenuItem
-                                                                            className="gap-2"
-                                                                            onClick={() => {
-                                                                                setSelectedGuestSubmission(submission);
-                                                                                setGuestDetailsDialogOpen(true);
-                                                                            }}
-                                                                        >
-                                                                            <Eye className="h-4 w-4" />
-                                                                            View Details
-                                                                        </DropdownMenuItem>
-                                                                    </DropdownMenuContent>
-                                                                </DropdownMenu>
+                                                                <Button
+                                                                    variant="ghost"
+                                                                    size="sm"
+                                                                    onClick={() => {
+                                                                        setSelectedGuestSubmission(submission);
+                                                                        setGuestDetailsDialogOpen(true);
+                                                                    }}
+                                                                    className="opacity-0 group-hover:opacity-100 transition-opacity"
+                                                                >
+                                                                    <Eye className="w-4 h-4 mr-2" />
+                                                                    Details
+                                                                </Button>
                                                             </TableCell>
                                                         </TableRow>
                                                     );
@@ -1062,341 +973,243 @@ const ViewResult: React.FC = () => {
                         </Card>
                     </TabsContent>
                 </Tabs>
-            </div>
 
-            {/* Replace the Dialog opening tag and content */}
-            {selectedSubmission && (
+                {/* Exam Details Dialog */}
                 <Dialog open={detailsDialogOpen} onOpenChange={setDetailsDialogOpen}>
-                    <DialogContent className="max-w-5xl max-h-[90vh] bg-card border-border p-0">
-                        <div className="p-6 border-b border-border">
-                            <DialogHeader>
-                                <DialogTitle className="text-2xl font-bold">Submission Details</DialogTitle>
-                                <DialogDescription className="text-base">
-                                    {selectedSubmission.userName} - {selectedSubmission.email}
-                                </DialogDescription>
-                            </DialogHeader>
-                        </div>
+                    <DialogContent className="max-w-5xl max-h-[90vh] flex flex-col p-0 gap-0 overflow-hidden">
+                        <DialogHeader className="p-6 pb-4 border-b border-border/50 bg-muted/20">
+                            <div className="flex items-center gap-3">
+                                <div className="p-2 bg-primary/10 rounded-lg">
+                                    <FileText className="w-5 h-5 text-primary" />
+                                </div>
+                                <div>
+                                    <DialogTitle className="text-xl">Submission Details</DialogTitle>
+                                    <DialogDescription>
+                                        {selectedSubmission?.userName} • {selectedSubmission?.email}
+                                    </DialogDescription>
+                                </div>
+                            </div>
+                        </DialogHeader>
 
-                        <ScrollArea className="h-[70vh] px-6">
-                            <div className="space-y-6 py-4">
-                                {/* Summary Info */}
-                                <div className="grid grid-cols-2 gap-6">
-                                    <div>
-                                        <p className="text-sm text-muted-foreground mb-1">Exam ID</p>
-                                        <p className="font-semibold text-base break-words">{selectedSubmission.examId}</p>
-                                    </div>
-                                    <div>
-                                        <p className="text-sm text-muted-foreground mb-1">Submitted At</p>
-                                        <p className="font-semibold text-base">
-                                            {new Date(selectedSubmission.submittedAt).toLocaleString('en-US', {
-                                                month: '2-digit',
-                                                day: '2-digit',
-                                                year: 'numeric',
-                                                hour: '2-digit',
-                                                minute: '2-digit',
-                                                hour12: true
-                                            })}
-                                        </p>
-                                    </div>
-                                    <div>
-                                        <p className="text-sm text-muted-foreground mb-1">Total Score</p>
-                                        <p className="font-bold text-2xl">
-                                            {calculateAIScore(selectedSubmission.ai_feedback)} / {calculateTotalScore(selectedSubmission.answersWithQuestionIds)}
-                                        </p>
-                                    </div>
-                                    <div>
-                                        <p className="text-sm text-muted-foreground mb-1">Status</p>
-                                        <div className="mt-1">
+                        {selectedSubmission && (
+                            <ScrollArea className="h-[calc(85vh-280px)]">
+                                <div className="p-6 space-y-6">
+                                    {/* Summary Stats */}
+                                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                        <div className="p-4 rounded-xl border border-border/50 bg-muted/30">
+                                            <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Exam ID</p>
+                                            <p className="font-semibold text-sm break-all">{selectedSubmission.examId}</p>
+                                        </div>
+                                        <div className="p-4 rounded-xl border border-border/50 bg-muted/30">
+                                            <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Total Score</p>
+                                            <div className="flex items-baseline gap-1">
+                                                <span className="text-2xl font-bold text-primary">{calculateAIScore(selectedSubmission.ai_feedback)}</span>
+                                                <span className="text-sm text-muted-foreground">/ {calculateTotalScore(selectedSubmission.answersWithQuestionIds)}</span>
+                                            </div>
+                                        </div>
+                                        <div className="p-4 rounded-xl border border-border/50 bg-muted/30">
+                                            <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Status</p>
                                             {selectedSubmission.disqualified ? (
-                                                <Badge variant="destructive" className="gap-1.5 px-3 py-1">
-                                                    <XCircle className="h-3.5 w-3.5" />
-                                                    Disqualified
-                                                </Badge>
+                                                <Badge variant="destructive" className="bg-rose-500/10 text-rose-600 border-rose-500/20">Disqualified</Badge>
                                             ) : (
-                                                <Badge className="gap-1.5 px-3 py-1 bg-green-600 hover:bg-green-700">
-                                                    <CheckCircle2 className="h-3.5 w-3.5" />
-                                                    Qualified
-                                                </Badge>
+                                                <Badge variant="default" className="bg-emerald-500/10 text-emerald-600 border-emerald-500/20">Qualified</Badge>
                                             )}
                                         </div>
+                                        <div className="p-4 rounded-xl border border-border/50 bg-muted/30">
+                                            <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Submitted</p>
+                                            <p className="font-medium text-sm">
+                                                {new Date(selectedSubmission.submittedAt).toLocaleString()}
+                                            </p>
+                                        </div>
                                     </div>
-                                </div>
 
-                                <Separator className="my-6" />
+                                    <Separator />
 
-                                {/* Questions, Answers, and Feedback */}
-                                <div className="space-y-4 pb-4">
-                                    {getSubmissionDetails(selectedSubmission).map((item: any, index: number) => (
-                                        <div key={item.questionId} className="border border-border rounded-lg overflow-hidden bg-card">
-                                            {/* Question Header */}
-                                            <div className="p-4 bg-muted/50 border-b border-border">
-                                                <div className="flex items-center justify-between gap-4 mb-3">
-                                                    <div className="flex items-center gap-2 flex-wrap">
-                                                        <Badge variant="outline" className="text-sm font-semibold px-2.5 py-0.5">
-                                                            Q{index + 1}
-                                                        </Badge>
-                                                        <Badge
-                                                            variant={item.type === 'mcq' ? 'secondary' : 'default'}
-                                                            className="text-sm px-2.5 py-0.5"
-                                                        >
-                                                            {item.type === 'mcq' ? 'MCQ' : 'Coding'}
-                                                        </Badge>
+                                    {/* Questions List */}
+                                    <div className="space-y-6">
+                                        <h3 className="font-semibold text-lg flex items-center gap-2">
+                                            <Code className="w-5 h-5 text-primary" />
+                                            Questions & Feedback
+                                        </h3>
+                                        {getSubmissionDetails(selectedSubmission).map((item: any, index: number) => (
+                                            <div key={item.questionId} className="rounded-xl border border-border/50 overflow-hidden bg-card">
+                                                <div className="p-4 bg-muted/30 border-b border-border/50 flex items-start justify-between gap-4">
+                                                    <div className="space-y-1">
+                                                        <div className="flex items-center gap-2">
+                                                            <Badge variant="outline" className="bg-background">Q{index + 1}</Badge>
+                                                            <Badge variant="secondary" className="text-xs">{item.type === 'mcq' ? 'MCQ' : 'Coding'}</Badge>
+                                                        </div>
+                                                        <div
+                                                            className="text-sm font-medium mt-2 prose dark:prose-invert max-w-none"
+                                                            dangerouslySetInnerHTML={{
+                                                                __html: item.question
+                                                                    .replace(/<p[^>]*>/g, '')
+                                                                    .replace(/<\/p>/g, '<br />')
+                                                                    .trim()
+                                                            }}
+                                                        />
                                                     </div>
-                                                    <div className="flex items-center gap-2 shrink-0">
-                                                        <span className="text-lg font-bold">
-                                                            {item.marksAwarded} / {item.marks}
-                                                        </span>
+                                                    <div className="flex flex-col items-end gap-1 shrink-0">
+                                                        <div className="flex items-center gap-1.5">
+                                                            <span className="font-bold text-lg">{item.marksAwarded}</span>
+                                                            <span className="text-muted-foreground text-sm">/ {item.marks}</span>
+                                                        </div>
                                                         {item.marksAwarded === item.marks ? (
-                                                            <CheckCircle2 className="h-5 w-5 text-green-600" />
+                                                            <Badge variant="outline" className="bg-emerald-500/10 text-emerald-600 border-emerald-500/20">Perfect</Badge>
                                                         ) : item.marksAwarded > 0 ? (
-                                                            <Clock className="h-5 w-5 text-yellow-600" />
+                                                            <Badge variant="outline" className="bg-amber-500/10 text-amber-600 border-amber-500/20">Partial</Badge>
                                                         ) : (
-                                                            <XCircle className="h-5 w-5 text-destructive" />
+                                                            <Badge variant="outline" className="bg-rose-500/10 text-rose-600 border-rose-500/20">Failed</Badge>
                                                         )}
                                                     </div>
                                                 </div>
 
-                                                {/* Question Text */}
-                                                <div className="text-base font-semibold leading-relaxed break-words">
-                                                    <div
-                                                        dangerouslySetInnerHTML={{
-                                                            __html: item.question
-                                                                .replace(/<p[^>]*>/g, '')
-                                                                .replace(/<\/p>/g, '<br />')
-                                                                .replace(/<div[^>]*>/g, '')
-                                                                .replace(/<\/div>/g, '<br />')
-                                                                .replace(/<br\s*\/?>\s*<br\s*\/?>/g, '<br />')
-                                                                .replace(/&nbsp;/g, ' ')
-                                                                .trim()
-                                                        }}
-                                                        className="[&_b]:font-bold [&_strong]:font-bold [&_code]:bg-muted [&_code]:px-1 [&_code]:py-0.5 [&_code]:rounded [&_code]:text-sm [&_code]:font-mono break-words"
-                                                    />
-                                                </div>
-                                            </div>
-
-                                            {/* Answer and Feedback */}
-                                            <div className="p-4 space-y-4">
-                                                {/* User's Answer */}
-                                                <div>
-                                                    <p className="text-sm font-semibold text-muted-foreground mb-2">
-                                                        User's Answer:
-                                                    </p>
-                                                    {item.type === 'mcq' ? (
-                                                        <div className="p-3 bg-muted/30 rounded-md border border-border break-words">
-                                                            <p className="font-medium">{item.selectedOptionText || item.answer}</p>
+                                                <div className="p-4 space-y-4">
+                                                    <div>
+                                                        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">User Answer</p>
+                                                        <div className="bg-muted/30 rounded-lg border border-border/50 p-3 overflow-x-auto">
+                                                            {item.type === 'mcq' ? (
+                                                                <p className="text-sm font-medium">{item.selectedOptionText || item.answer}</p>
+                                                            ) : (
+                                                                <pre className="text-sm font-mono text-foreground/90">{item.answer}</pre>
+                                                            )}
                                                         </div>
-                                                    ) : (
-                                                        <div className="p-4 bg-muted/30 rounded-md border border-border overflow-hidden">
-                                                            <pre className="overflow-x-auto text-sm font-mono whitespace-pre-wrap break-words">
-                                                                <code className="text-foreground">{item.answer}</code>
-                                                            </pre>
-                                                        </div>
-                                                    )}
-                                                </div>
+                                                    </div>
 
-                                                {/* AI Feedback */}
-                                                <div>
-                                                    <p className="text-sm font-semibold text-muted-foreground mb-2">
-                                                        Feedback:
-                                                    </p>
-                                                    <div className={`p-4 rounded-md border-l-4 ${item.marksAwarded === item.marks
-                                                        ? 'bg-green-500/10 border-green-600'
-                                                        : item.marksAwarded > 0
-                                                            ? 'bg-yellow-500/10 border-yellow-600'
-                                                            : 'bg-red-500/10 border-red-600'
-                                                        }`}>
-                                                        <p className="text-sm leading-relaxed break-words">{item.feedback}</p>
+                                                    <div>
+                                                        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">AI Feedback</p>
+                                                        <div className={`rounded-lg border p-3 text-sm leading-relaxed ${item.marksAwarded === item.marks
+                                                            ? 'bg-emerald-500/5 border-emerald-500/20 text-emerald-700 dark:text-emerald-300'
+                                                            : item.marksAwarded > 0
+                                                                ? 'bg-amber-500/5 border-amber-500/20 text-amber-700 dark:text-amber-300'
+                                                                : 'bg-rose-500/5 border-rose-500/20 text-rose-700 dark:text-rose-300'
+                                                            }`}>
+                                                            {item.feedback}
+                                                        </div>
                                                     </div>
                                                 </div>
                                             </div>
-                                        </div>
-                                    ))}
+                                        ))}
+                                    </div>
                                 </div>
-                            </div>
-                        </ScrollArea>
+                            </ScrollArea>
+                        )}
                     </DialogContent>
                 </Dialog>
-            )}
 
-            {/* Guest Practice Details Dialog */}
-            {selectedGuestSubmission && (
+                {/* Guest Details Dialog */}
                 <Dialog open={guestDetailsDialogOpen} onOpenChange={setGuestDetailsDialogOpen}>
-                    <DialogContent className="max-w-5xl max-h-[90vh] bg-card border-border p-0 flex flex-col">
-                        <div className="p-6 border-b border-border shrink-0">
-                            <DialogHeader>
-                                <DialogTitle className="text-2xl font-bold">Guest Practice Session Details</DialogTitle>
-                                <DialogDescription className="text-base">
-                                    Session ID: {selectedGuestSubmission.sessionId}
-                                </DialogDescription>
-                            </DialogHeader>
-                        </div>
-
-                        <ScrollArea className="flex-1 px-6 overflow-y-auto">
-                            <div className="space-y-6 py-4 pb-6">
-                                {/* Summary Info */}
-                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                                    <div>
-                                        <p className="text-sm text-muted-foreground mb-1">Topic</p>
-                                        <p className="font-semibold text-base">{selectedGuestSubmission.topic}</p>
-                                    </div>
-                                    <div>
-                                        <p className="text-sm text-muted-foreground mb-1">Difficulty</p>
-                                        <Badge className={getDifficultyColor(selectedGuestSubmission.difficulty)}>
-                                            {selectedGuestSubmission.difficulty}
-                                        </Badge>
-                                    </div>
-                                    <div>
-                                        <p className="text-sm text-muted-foreground mb-1">Score</p>
-                                        <p className="font-bold text-2xl">{selectedGuestSubmission.score}</p>
-                                    </div>
-                                    <div>
-                                        <p className="text-sm text-muted-foreground mb-1">Accuracy</p>
-                                        <p className="font-bold text-2xl">
-                                            {selectedGuestSubmission.totalQuestions > 0
-                                                ? Math.round((selectedGuestSubmission.correctAnswers / selectedGuestSubmission.totalQuestions) * 100)
-                                                : 0}%
-                                        </p>
-                                    </div>
-                                    <div>
-                                        <p className="text-sm text-muted-foreground mb-1">Correct Answers</p>
-                                        <p className="font-semibold text-lg text-green-600">
-                                            {selectedGuestSubmission.correctAnswers} / {selectedGuestSubmission.totalQuestions}
-                                        </p>
-                                    </div>
-                                    <div>
-                                        <p className="text-sm text-muted-foreground mb-1">Time Spent</p>
-                                        <p className="font-semibold text-lg">{formatTime(selectedGuestSubmission.timeSpent)}</p>
-                                    </div>
-                                    <div className="col-span-2">
-                                        <p className="text-sm text-muted-foreground mb-1">Completed At</p>
-                                        <p className="font-semibold text-base">
-                                            {new Date(selectedGuestSubmission.completedAt).toLocaleString('en-US', {
-                                                month: 'long',
-                                                day: 'numeric',
-                                                year: 'numeric',
-                                                hour: '2-digit',
-                                                minute: '2-digit',
-                                                hour12: true
-                                            })}
-                                        </p>
-                                    </div>
+                    <DialogContent className="max-w-5xl max-h-[90vh] flex flex-col p-0 gap-0 overflow-hidden">
+                        <DialogHeader className="p-6 pb-4 border-b border-border/50 bg-muted/20">
+                            <div className="flex items-center gap-3">
+                                <div className="p-2 bg-primary/10 rounded-lg">
+                                    <Users className="w-5 h-5 text-primary" />
                                 </div>
+                                <div>
+                                    <DialogTitle className="text-xl">Guest Session Details</DialogTitle>
+                                    <DialogDescription>
+                                        Session ID: {selectedGuestSubmission?.sessionId}
+                                    </DialogDescription>
+                                </div>
+                            </div>
+                        </DialogHeader>
 
-                                <Separator className="my-6" />
+                        {selectedGuestSubmission && (
+                            <ScrollArea className="h-[calc(100vh-280px)]">
+                                <div className="p-6 space-y-6">
+                                    {/* Summary Stats */}
+                                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                        <div className="p-4 rounded-xl border border-border/50 bg-muted/30">
+                                            <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Topic</p>
+                                            <p className="font-semibold text-sm">{selectedGuestSubmission.topic}</p>
+                                        </div>
+                                        <div className="p-4 rounded-xl border border-border/50 bg-muted/30">
+                                            <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Difficulty</p>
+                                            <Badge variant="outline" className={getDifficultyColor(selectedGuestSubmission.difficulty)}>
+                                                {selectedGuestSubmission.difficulty}
+                                            </Badge>
+                                        </div>
+                                        <div className="p-4 rounded-xl border border-border/50 bg-muted/30">
+                                            <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Score</p>
+                                            <p className="text-2xl font-bold text-primary">{selectedGuestSubmission.score}</p>
+                                        </div>
+                                        <div className="p-4 rounded-xl border border-border/50 bg-muted/30">
+                                            <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Accuracy</p>
+                                            <div className="flex items-baseline gap-1">
+                                                <span className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">
+                                                    {selectedGuestSubmission.totalQuestions > 0
+                                                        ? Math.round((selectedGuestSubmission.correctAnswers / selectedGuestSubmission.totalQuestions) * 100)
+                                                        : 0}%
+                                                </span>
+                                                <span className="text-sm text-muted-foreground">
+                                                    ({selectedGuestSubmission.correctAnswers}/{selectedGuestSubmission.totalQuestions})
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
 
-                                {/* Questions and Answers */}
-                                <div className="space-y-4">
-                                    <h3 className="font-bold text-xl">Questions & Answers</h3>
+                                    <Separator />
 
-                                    {getGuestSubmissionDetails(selectedGuestSubmission).map((item: any) => (
-                                        <div key={item.questionNumber} className="border border-border rounded-lg overflow-hidden bg-card">
-                                            {/* Question Header */}
-                                            <div className="p-4 bg-muted/50 border-b border-border">
-                                                <div className="flex items-center justify-between gap-4 mb-3">
-                                                    <div className="flex items-center gap-2 flex-wrap">
-                                                        <Badge variant="outline" className="text-sm font-semibold px-2.5 py-0.5">
-                                                            Q{item.questionNumber}
-                                                        </Badge>
-                                                        <Badge
-                                                            variant={item.type === 'mcq' ? 'secondary' : 'default'}
-                                                            className="text-sm px-2.5 py-0.5"
-                                                        >
-                                                            {item.type === 'mcq' ? 'MCQ' : 'Coding'}
-                                                        </Badge>
+                                    {/* Questions List */}
+                                    <div className="space-y-6">
+                                        <h3 className="font-semibold text-lg flex items-center gap-2">
+                                            <Code className="w-5 h-5 text-primary" />
+                                            Session Q&A
+                                        </h3>
+                                        {getGuestSubmissionDetails(selectedGuestSubmission).map((item: any) => (
+                                            <div key={item.questionNumber} className="rounded-xl border border-border/50 overflow-hidden bg-card">
+                                                <div className="p-4 bg-muted/30 border-b border-border/50">
+                                                    <div className="flex items-center gap-2 mb-2">
+                                                        <Badge variant="outline" className="bg-background">Q{item.questionNumber}</Badge>
+                                                        <Badge variant="secondary" className="text-xs">{item.type === 'mcq' ? 'MCQ' : 'Coding'}</Badge>
                                                         {item.type === 'coding' && item.language && (
-                                                            <Badge variant="outline" className="text-sm px-2.5 py-0.5 font-mono">
-                                                                {item.language.toUpperCase()}
-                                                            </Badge>
+                                                            <Badge variant="outline" className="font-mono text-xs">{item.language}</Badge>
                                                         )}
                                                     </div>
-                                                </div>
-
-                                                {/* Question Title */}
-                                                <h4 className="text-lg font-bold mb-3 break-words">{item.question}</h4>
-
-                                                {/* Question Description */}
-                                                {item.description && (
-                                                    <div className="mt-2 text-sm leading-relaxed break-words whitespace-pre-wrap bg-muted/30 p-3 rounded-md max-w-full overflow-hidden">
-                                                        {item.description}
-                                                    </div>
-                                                )}
-                                            </div>
-
-                                            {/* Answer Section */}
-                                            <div className="p-4 space-y-4">
-                                                {/* User's Answer */}
-                                                <div>
-                                                    <p className="text-sm font-semibold text-muted-foreground mb-2">
-                                                        User's Answer:
-                                                    </p>
-                                                    {item.type === 'mcq' ? (
-                                                        <div className="p-3 bg-muted/30 rounded-md border border-border break-words">
-                                                            <p className="font-medium">
-                                                                {item.userAnswer >= 0 && item.options
-                                                                    ? item.options[item.userAnswer]
-                                                                    : item.userAnswer === -1
-                                                                        ? <span className="text-muted-foreground italic">Not answered</span>
-                                                                        : item.userAnswer}
-                                                            </p>
-                                                        </div>
-                                                    ) : (
-                                                        <div className="p-4 bg-muted/30 rounded-md border border-border overflow-hidden max-w-full">
-                                                            <pre className="overflow-x-auto text-sm font-mono whitespace-pre-wrap break-words max-w-full">
-                                                                <code className="text-foreground">
-                                                                    {item.userAnswer || <span className="text-muted-foreground italic">No answer provided</span>}
-                                                                </code>
-                                                            </pre>
-                                                        </div>
+                                                    <h4 className="font-medium text-base mb-2">{item.question}</h4>
+                                                    {item.description && (
+                                                        <p className="text-sm text-muted-foreground bg-background/50 p-3 rounded-lg border border-border/50">
+                                                            {item.description}
+                                                        </p>
                                                     )}
                                                 </div>
 
-                                                {/* Test Cases (for coding questions) */}
-                                                {item.type === 'coding' && item.testCases && item.testCases.length > 0 && (
+                                                <div className="p-4 space-y-4">
                                                     <div>
-                                                        <p className="text-sm font-semibold text-muted-foreground mb-2">
-                                                            Test Cases:
-                                                        </p>
-                                                        <div className="space-y-2">
-                                                            {item.testCases.map((testCase: any, tcIndex: number) => (
-                                                                <div key={tcIndex} className="p-3 bg-muted/30 rounded-md border border-border">
-                                                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                                                                        <div className="break-words">
-                                                                            <p className="text-muted-foreground font-medium mb-1">Input:</p>
-                                                                            <code className="text-xs font-mono break-words block">{testCase.input}</code>
-                                                                        </div>
-                                                                        <div className="break-words">
-                                                                            <p className="text-muted-foreground font-medium mb-1">Expected Output:</p>
-                                                                            <code className="text-xs font-mono break-words block">{testCase.expectedOutput}</code>
-                                                                        </div>
-                                                                    </div>
-                                                                </div>
-                                                            ))}
+                                                        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">User Answer</p>
+                                                        <div className="bg-muted/30 rounded-lg border border-border/50 p-3 overflow-x-auto">
+                                                            {item.type === 'mcq' ? (
+                                                                <p className="text-sm font-medium">
+                                                                    {item.userAnswer >= 0 && item.options
+                                                                        ? item.options[item.userAnswer]
+                                                                        : <span className="text-muted-foreground italic">Not answered</span>}
+                                                                </p>
+                                                            ) : (
+                                                                <pre className="text-sm font-mono text-foreground/90">
+                                                                    {item.userAnswer || <span className="text-muted-foreground italic">No answer provided</span>}
+                                                                </pre>
+                                                            )}
                                                         </div>
                                                     </div>
-                                                )}
 
-                                                {/* Explanation (if available) */}
-                                                {item.explanation && (
-                                                    <div>
-                                                        <p className="text-sm font-semibold text-muted-foreground mb-2">
-                                                            Explanation:
-                                                        </p>
-                                                        <div className="p-4 rounded-md bg-blue-500/10 border-l-4 border-blue-600 break-words max-w-full overflow-hidden">
-                                                            <p className="text-sm leading-relaxed break-words whitespace-pre-wrap">
+                                                    {item.explanation && (
+                                                        <div>
+                                                            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Explanation</p>
+                                                            <div className="rounded-lg border border-blue-500/20 bg-blue-500/5 p-3 text-sm text-blue-700 dark:text-blue-300">
                                                                 {item.explanation}
-                                                            </p>
+                                                            </div>
                                                         </div>
-                                                    </div>
-                                                )}
+                                                    )}
+                                                </div>
                                             </div>
-                                        </div>
-                                    ))}
+                                        ))}
+                                    </div>
                                 </div>
-                            </div>
-                        </ScrollArea>
+                            </ScrollArea>
+                        )}
                     </DialogContent>
                 </Dialog>
-            )}
+            </div>
         </UnifiedDashboardLayout>
     );
 };

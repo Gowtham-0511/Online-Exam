@@ -11,16 +11,14 @@ import {
     Lightbulb,
     BookOpen,
     Code,
-    MessageSquare,
     Loader2,
     RotateCcw,
     Copy,
-    Check
+    Check,
+    Shield
 } from 'lucide-react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import {
@@ -44,6 +42,7 @@ interface QuickPrompt {
     label: string;
     prompt: string;
     color: string;
+    bgColor: string;
 }
 
 const AIStudyBuddy = () => {
@@ -70,25 +69,29 @@ const AIStudyBuddy = () => {
             icon: Lightbulb,
             label: "Explain a Concept",
             prompt: "Can you explain the concept of ",
-            color: "from-chart-1 to-chart-2"
+            color: "text-amber-600 dark:text-amber-400",
+            bgColor: "bg-amber-50 dark:bg-amber-900/20"
         },
         {
             icon: Code,
             label: "Debug My Code",
             prompt: "Help me debug this code: ",
-            color: "from-chart-3 to-chart-4"
+            color: "text-blue-600 dark:text-blue-400",
+            bgColor: "bg-blue-50 dark:bg-blue-900/20"
         },
         {
             icon: BookOpen,
             label: "Practice Problems",
             prompt: "Give me practice problems on ",
-            color: "from-primary to-accent"
+            color: "text-violet-600 dark:text-violet-400",
+            bgColor: "bg-violet-50 dark:bg-violet-900/20"
         },
         {
             icon: Brain,
             label: "Quiz Me",
             prompt: "Quiz me on ",
-            color: "from-chart-5 to-secondary"
+            color: "text-emerald-600 dark:text-emerald-400",
+            bgColor: "bg-emerald-50 dark:bg-emerald-900/20"
         }
     ];
 
@@ -178,39 +181,38 @@ const AIStudyBuddy = () => {
                 <link rel="icon" href="/logo3.png" />
             </Head>
 
-            <div className="min-h-screen bg-background flex flex-col">
+            <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col">
                 {/* Header */}
-                <div className="bg-card/80 backdrop-blur-sm border-b border-border sticky top-0 z-40">
-                    <div className="max-w-7xl mx-auto px-6 py-4">
-                        <div className="flex items-center justify-between">
+                <div className="sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+                    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                        <div className="flex h-16 items-center justify-between">
                             <div className="flex items-center gap-3">
-                                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center">
-                                    <Brain className="w-6 h-6 text-primary-foreground" />
+                                <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-violet-100 text-violet-600 dark:bg-violet-900/30 dark:text-violet-400">
+                                    <Brain className="w-5 h-5" />
                                 </div>
                                 <div>
-                                    <h1 className="text-2xl font-bold text-foreground">
+                                    <h1 className="text-lg font-semibold text-foreground">
                                         AI Study Buddy
                                     </h1>
-                                    <p className="text-xs text-muted-foreground">
-                                        Your personal learning companion
-                                    </p>
                                 </div>
                             </div>
 
                             <div className="flex items-center gap-2">
                                 <Button
                                     onClick={handleReset}
-                                    variant="outline"
+                                    variant="ghost"
                                     size="sm"
                                     disabled={messages.length === 0}
+                                    className="text-muted-foreground hover:text-primary"
                                 >
                                     <RotateCcw className="w-4 h-4 mr-2" />
-                                    Reset Chat
+                                    Reset
                                 </Button>
                                 <Button
                                     onClick={() => setShowExitWarning(true)}
-                                    variant="outline"
-                                    className="border-destructive/50 text-destructive hover:bg-destructive/10"
+                                    variant="ghost"
+                                    size="sm"
+                                    className="text-muted-foreground hover:text-destructive hover:bg-destructive/10"
                                 >
                                     <ArrowLeft className="w-4 h-4 mr-2" />
                                     Exit
@@ -221,17 +223,18 @@ const AIStudyBuddy = () => {
                 </div>
 
                 {/* Warning Banner */}
-                <Alert className="rounded-none border-x-0 border-t-0 bg-primary/10">
-                    <Ghost className="h-4 w-4 text-primary" />
-                    <AlertDescription className="text-primary font-medium">
-                        🔒 Ghost Mode: This conversation won't be saved
-                    </AlertDescription>
-                </Alert>
+                <div className="bg-amber-50 dark:bg-amber-950/30 border-b border-amber-100 dark:border-amber-900/50 px-4 py-2">
+                    <div className="max-w-7xl mx-auto flex items-center justify-center gap-2 text-sm text-amber-700 dark:text-amber-400">
+                        <Shield className="w-4 h-4" />
+                        <span className="font-medium">Ghost Mode Active:</span>
+                        <span>This conversation will not be saved.</span>
+                    </div>
+                </div>
 
                 {/* Main Content */}
-                <div className="flex-1 max-w-7xl mx-auto w-full px-6 py-6 flex flex-col">
+                <div className="flex-1 max-w-5xl mx-auto w-full px-4 sm:px-6 py-6 flex flex-col">
                     {/* Chat Area */}
-                    <Card className="flex-1 flex flex-col">
+                    <Card className="flex-1 flex flex-col border-border/50 shadow-sm overflow-hidden bg-card">
                         <CardContent className="flex-1 flex flex-col p-0">
                             {/* Messages */}
                             <ScrollArea
@@ -239,77 +242,82 @@ const AIStudyBuddy = () => {
                                 className="flex-1 p-6"
                             >
                                 {messages.length === 0 ? (
-                                    <div className="h-full flex flex-col items-center justify-center text-center space-y-6">
-                                        <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-primary to-accent flex items-center justify-center">
-                                            <Sparkles className="w-10 h-10 text-primary-foreground" />
+                                    <div className="h-full flex flex-col items-center justify-center text-center space-y-8 py-12">
+                                        <div className="w-16 h-16 rounded-2xl bg-violet-100 dark:bg-violet-900/20 flex items-center justify-center">
+                                            <Sparkles className="w-8 h-8 text-violet-600 dark:text-violet-400" />
                                         </div>
-                                        <div>
-                                            <h3 className="text-2xl font-bold text-foreground mb-2">
-                                                Ready to Learn Together?
+                                        <div className="max-w-md space-y-2">
+                                            <h3 className="text-xl font-semibold text-foreground">
+                                                How can I help you learn today?
                                             </h3>
-                                            <p className="text-muted-foreground max-w-md">
-                                                Ask me anything! I can explain concepts, debug code, create practice problems,
-                                                or quiz you on any topic.
+                                            <p className="text-muted-foreground">
+                                                I can explain complex topics, debug your code, create practice problems,
+                                                or quiz you on any subject.
                                             </p>
                                         </div>
 
                                         {/* Quick Prompts */}
-                                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 w-full max-w-3xl">
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full max-w-2xl px-4">
                                             {quickPrompts.map((prompt, idx) => {
                                                 const Icon = prompt.icon;
                                                 return (
                                                     <button
                                                         key={idx}
                                                         onClick={() => handleQuickPrompt(prompt.prompt)}
-                                                        className="group p-4 rounded-xl border-2 border-border hover:border-primary/50 transition-all duration-300 hover:shadow-lg"
+                                                        className="flex items-center gap-3 p-4 rounded-xl border border-border/50 hover:border-primary/50 hover:bg-accent/50 transition-all duration-200 text-left group"
                                                     >
-                                                        <div className={`w-10 h-10 rounded-lg bg-gradient-to-br ${prompt.color} flex items-center justify-center mx-auto mb-2 group-hover:scale-110 transition-transform`}>
-                                                            <Icon className="w-5 h-5 text-primary-foreground" />
+                                                        <div className={`w-10 h-10 rounded-lg ${prompt.bgColor} ${prompt.color} flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition-transform`}>
+                                                            <Icon className="w-5 h-5" />
                                                         </div>
-                                                        <p className="text-sm font-medium text-foreground">
-                                                            {prompt.label}
-                                                        </p>
+                                                        <div>
+                                                            <p className="text-sm font-medium text-foreground group-hover:text-primary transition-colors">
+                                                                {prompt.label}
+                                                            </p>
+                                                            <p className="text-xs text-muted-foreground line-clamp-1">
+                                                                "{prompt.prompt}..."
+                                                            </p>
+                                                        </div>
                                                     </button>
                                                 );
                                             })}
                                         </div>
                                     </div>
                                 ) : (
-                                    <div className="space-y-4">
+                                    <div className="space-y-6">
                                         {messages.map((message) => (
                                             <div
                                                 key={message.id}
                                                 className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
                                             >
-                                                <div className={`flex gap-3 max-w-[80%] ${message.role === 'user' ? 'flex-row-reverse' : 'flex-row'}`}>
+                                                <div className={`flex gap-3 max-w-[85%] md:max-w-[75%] ${message.role === 'user' ? 'flex-row-reverse' : 'flex-row'}`}>
                                                     {/* Avatar */}
-                                                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${message.role === 'user'
-                                                            ? 'bg-secondary'
-                                                            : 'bg-gradient-to-br from-primary to-accent'
+                                                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 mt-1 ${message.role === 'user'
+                                                        ? 'bg-primary text-primary-foreground'
+                                                        : 'bg-violet-100 text-violet-600 dark:bg-violet-900/30 dark:text-violet-400'
                                                         }`}>
                                                         {message.role === 'user' ? (
-                                                            <span className="text-xs font-bold text-secondary-foreground">
+                                                            <span className="text-xs font-bold">
                                                                 {session?.user?.name?.[0] || 'U'}
                                                             </span>
                                                         ) : (
-                                                            <Brain className="w-4 h-4 text-primary-foreground" />
+                                                            <Brain className="w-4 h-4" />
                                                         )}
                                                     </div>
 
                                                     {/* Message Content */}
                                                     <div className={`flex flex-col ${message.role === 'user' ? 'items-end' : 'items-start'}`}>
-                                                        <div className={`rounded-2xl px-4 py-3 ${message.role === 'user'
-                                                                ? 'bg-primary text-primary-foreground'
-                                                                : 'bg-muted'
+                                                        <div className={`rounded-2xl px-5 py-3.5 shadow-sm ${message.role === 'user'
+                                                            ? 'bg-primary text-primary-foreground'
+                                                            : 'bg-muted/50 border border-border/50'
                                                             }`}>
-                                                            <p className="text-sm whitespace-pre-wrap break-words">
+                                                            <p className="text-sm whitespace-pre-wrap break-words leading-relaxed">
                                                                 {message.content}
                                                             </p>
                                                         </div>
 
                                                         {/* Actions */}
-                                                        <div className="flex items-center gap-2 mt-1">
-                                                            <span className="text-xs text-muted-foreground">
+                                                        <div className="flex items-center gap-2 mt-1 px-1">
+                                                            <span className="text-[10px] text-muted-foreground/70 uppercase tracking-wider font-medium">
                                                                 {message.timestamp.toLocaleTimeString([], {
                                                                     hour: '2-digit',
                                                                     minute: '2-digit'
@@ -318,12 +326,12 @@ const AIStudyBuddy = () => {
                                                             {message.role === 'assistant' && (
                                                                 <Button
                                                                     variant="ghost"
-                                                                    size="sm"
-                                                                    className="h-6 px-2"
+                                                                    size="icon"
+                                                                    className="h-5 w-5 text-muted-foreground hover:text-foreground"
                                                                     onClick={() => handleCopy(message.content, message.id)}
                                                                 >
                                                                     {copiedId === message.id ? (
-                                                                        <Check className="w-3 h-3 text-primary" />
+                                                                        <Check className="w-3 h-3 text-emerald-500" />
                                                                     ) : (
                                                                         <Copy className="w-3 h-3" />
                                                                     )}
@@ -339,11 +347,12 @@ const AIStudyBuddy = () => {
                                         {isLoading && (
                                             <div className="flex justify-start">
                                                 <div className="flex gap-3">
-                                                    <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-accent flex items-center justify-center">
-                                                        <Brain className="w-4 h-4 text-primary-foreground" />
+                                                    <div className="w-8 h-8 rounded-lg bg-violet-100 text-violet-600 dark:bg-violet-900/30 dark:text-violet-400 flex items-center justify-center mt-1">
+                                                        <Brain className="w-4 h-4" />
                                                     </div>
-                                                    <div className="bg-muted rounded-2xl px-4 py-3">
-                                                        <Loader2 className="w-5 h-5 animate-spin text-primary" />
+                                                    <div className="bg-muted/50 border border-border/50 rounded-2xl px-4 py-3 flex items-center gap-2">
+                                                        <Loader2 className="w-4 h-4 animate-spin text-primary" />
+                                                        <span className="text-xs text-muted-foreground">Thinking...</span>
                                                     </div>
                                                 </div>
                                             </div>
@@ -353,32 +362,32 @@ const AIStudyBuddy = () => {
                             </ScrollArea>
 
                             {/* Input Area */}
-                            <div className="border-t border-border p-4">
-                                <div className="flex gap-2">
+                            <div className="border-t border-border/50 p-4 bg-background/50 backdrop-blur-sm">
+                                <div className="relative flex gap-2 max-w-4xl mx-auto">
                                     <Textarea
                                         ref={textareaRef}
                                         value={input}
                                         onChange={(e) => setInput(e.target.value)}
-                                        onKeyPress={handleKeyPress}
-                                        placeholder="Ask me anything... (Shift+Enter for new line)"
-                                        className="min-h-[60px] max-h-[200px] resize-none"
+                                        onKeyDown={handleKeyPress}
+                                        placeholder="Ask anything... (Shift+Enter for new line)"
+                                        className="min-h-[50px] max-h-[200px] resize-none pr-12 py-3 bg-background border-border/60 focus-visible:ring-primary/20"
                                         disabled={isLoading}
                                     />
                                     <Button
                                         onClick={handleSendMessage}
                                         disabled={!input.trim() || isLoading}
-                                        className="bg-gradient-to-r from-primary to-accent text-primary-foreground hover:opacity-90"
-                                        size="icon"
+                                        className="absolute right-2 bottom-2 h-8 w-8 p-0 rounded-lg"
+                                        size="sm"
                                     >
                                         {isLoading ? (
-                                            <Loader2 className="w-5 h-5 animate-spin" />
+                                            <Loader2 className="w-4 h-4 animate-spin" />
                                         ) : (
-                                            <Send className="w-5 h-5" />
+                                            <Send className="w-4 h-4" />
                                         )}
                                     </Button>
                                 </div>
-                                <p className="text-xs text-muted-foreground mt-2">
-                                    Press Enter to send, Shift+Enter for new line
+                                <p className="text-[10px] text-center text-muted-foreground mt-2">
+                                    AI can make mistakes. Verify important information.
                                 </p>
                             </div>
                         </CardContent>
@@ -389,10 +398,10 @@ const AIStudyBuddy = () => {
                 <Dialog open={showExitWarning} onOpenChange={setShowExitWarning}>
                     <DialogContent className="sm:max-w-md">
                         <DialogHeader>
-                            <div className="w-16 h-16 rounded-full bg-destructive/10 flex items-center justify-center mx-auto mb-4">
-                                <Ghost className="w-8 h-8 text-destructive" />
+                            <div className="w-12 h-12 rounded-full bg-destructive/10 flex items-center justify-center mx-auto mb-4">
+                                <Ghost className="w-6 h-6 text-destructive" />
                             </div>
-                            <DialogTitle className="text-center text-2xl">Exit Study Buddy?</DialogTitle>
+                            <DialogTitle className="text-center">Exit Study Buddy?</DialogTitle>
                             <DialogDescription className="text-center">
                                 Your entire conversation will be permanently deleted.
                                 This cannot be undone!

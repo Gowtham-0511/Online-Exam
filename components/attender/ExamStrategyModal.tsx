@@ -21,9 +21,12 @@ import {
     Trophy,
     List,
     Timer,
-    Lightbulb
+    Lightbulb,
+    ArrowRight,
+    Hourglass
 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 type ExamStrategyModalProps = {
     isOpen: boolean;
@@ -61,329 +64,297 @@ export const ExamStrategyModal: React.FC<ExamStrategyModalProps> = ({
         }
     }, [isOpen, examId, email]);
 
-    const getReadinessColor = (level: string) => {
-        switch (level) {
-            case 'Excellent': return 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-400';
-            case 'Good': return 'bg-blue-100 text-blue-700 dark:bg-blue-950/50 dark:text-blue-400';
-            case 'Fair': return 'bg-amber-100 text-amber-700 dark:bg-amber-950/50 dark:text-amber-400';
-            default: return 'bg-rose-100 text-rose-700 dark:bg-rose-950/50 dark:text-rose-400';
-        }
-    };
-
     const getDifficultyColor = (difficulty: string) => {
         switch (difficulty) {
-            case 'Easy': return 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50';
-            case 'Medium': return 'bg-amber-100 text-amber-700 dark:bg-amber-950/50';
-            case 'Hard': return 'bg-rose-100 text-rose-700 dark:bg-rose-950/50';
-            default: return 'bg-gray-100 text-gray-700 dark:bg-gray-950/50';
+            case 'Easy': return 'bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-950/30 dark:text-emerald-400 dark:border-emerald-800';
+            case 'Medium': return 'bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-950/30 dark:text-amber-400 dark:border-amber-800';
+            case 'Hard': return 'bg-rose-100 text-rose-700 border-rose-200 dark:bg-rose-950/30 dark:text-rose-400 dark:border-rose-800';
+            default: return 'bg-muted text-muted-foreground border-border';
         }
     };
 
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
-            <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto">
-                <DialogHeader>
-                    <DialogTitle className="text-xl flex items-center gap-2">
-                        <Brain className="h-6 w-6 text-purple-600" />
+            <DialogContent className="max-w-4xl max-h-[85vh] p-0 gap-0 overflow-hidden border-border shadow-lg animate-in fade-in zoom-in-95 duration-300">
+                <DialogHeader className="p-6 pb-4 border-b border-border bg-muted/10">
+                    <DialogTitle className="text-xl font-bold flex items-center gap-2">
+                        <div className="p-2 rounded-lg bg-purple-100 text-purple-600 dark:bg-purple-950/30 dark:text-purple-400">
+                            <Brain className="h-5 w-5" />
+                        </div>
                         AI Exam Strategy
                     </DialogTitle>
                     <DialogDescription>
-                        Personalized strategy based on your performance history
+                        Personalized insights and tactical plan for your upcoming exam
                     </DialogDescription>
                 </DialogHeader>
 
-                {isLoading ? (
-                    <div className="space-y-4 py-4">
-                        <Skeleton className="h-32 w-full" />
-                        <Skeleton className="h-48 w-full" />
-                        <Skeleton className="h-48 w-full" />
-                    </div>
-                ) : strategy?.success ? (
-                    <div className="space-y-6 py-4">
-                        <Tabs defaultValue="strategy" className="w-full">
-                            <TabsList className="grid w-full grid-cols-3">
-                                <TabsTrigger value="strategy">
-                                    <Zap className="h-4 w-4 mr-2" />
-                                    Strategy
-                                </TabsTrigger>
-                                <TabsTrigger value="questions">
-                                    <List className="h-4 w-4 mr-2" />
-                                    Questions
-                                </TabsTrigger>
-                                <TabsTrigger value="timing">
-                                    <Clock className="h-4 w-4 mr-2" />
-                                    Timing
-                                </TabsTrigger>
-                            </TabsList>
-
-                            {/* Strategy Tab */}
-                            <TabsContent value="strategy" className="space-y-4">
-                                {/* Time Management */}
-                                <div className="p-4 border border-border rounded-lg">
-                                    <h4 className="font-semibold text-foreground mb-3 flex items-center gap-2">
-                                        <Timer className="h-4 w-4 text-blue-600" />
+                <ScrollArea className="max-h-[calc(85vh-8rem)]">
+                    <div className="p-6">
+                        {isLoading ? (
+                            <div className="space-y-6">
+                                <div className="grid grid-cols-3 gap-4">
+                                    {[1, 2, 3].map(i => <Skeleton key={i} className="h-24 w-full rounded-xl" />)}
+                                </div>
+                                <Skeleton className="h-64 w-full rounded-xl" />
+                                <Skeleton className="h-48 w-full rounded-xl" />
+                            </div>
+                        ) : strategy?.success ? (
+                            <Tabs defaultValue="strategy" className="w-full space-y-6">
+                                <TabsList className="grid w-full grid-cols-3 p-1 bg-muted/50 rounded-xl">
+                                    <TabsTrigger value="strategy" className="rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm transition-all">
+                                        <Zap className="h-4 w-4 mr-2" />
+                                        Core Strategy
+                                    </TabsTrigger>
+                                    <TabsTrigger value="questions" className="rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm transition-all">
+                                        <List className="h-4 w-4 mr-2" />
+                                        Question Analysis
+                                    </TabsTrigger>
+                                    <TabsTrigger value="timing" className="rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm transition-all">
+                                        <Clock className="h-4 w-4 mr-2" />
                                         Time Management
-                                    </h4>
-                                    <div className="grid grid-cols-3 gap-3 mb-3">
-                                        <div className="p-3 bg-muted/50 rounded-lg">
-                                            <p className="text-xs text-muted-foreground mb-1">Total Time</p>
-                                            <p className="text-lg font-bold text-foreground">
-                                                {strategy.strategy.timeManagement.totalAvailable} min
-                                            </p>
+                                    </TabsTrigger>
+                                </TabsList>
+
+                                {/* Strategy Tab */}
+                                <TabsContent value="strategy" className="space-y-6 animate-in slide-in-from-right-4 duration-300">
+                                    {/* Key Metrics */}
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                        <div className="p-4 rounded-xl border border-border bg-card hover:bg-muted/20 transition-colors">
+                                            <div className="flex items-center gap-2 mb-2 text-muted-foreground">
+                                                <Timer className="h-4 w-4" />
+                                                <span className="text-xs font-medium uppercase tracking-wider">Total Time</span>
+                                            </div>
+                                            <p className="text-2xl font-bold text-foreground">{strategy.strategy.timeManagement.totalAvailable} min</p>
+                                            <p className="text-xs text-muted-foreground mt-1">Available for exam</p>
                                         </div>
-                                        <div className="p-3 bg-muted/50 rounded-lg">
-                                            <p className="text-xs text-muted-foreground mb-1">Estimated Need</p>
-                                            <p className="text-lg font-bold text-foreground">
-                                                {strategy.strategy.timeManagement.estimatedRequired} min
-                                            </p>
+                                        <div className="p-4 rounded-xl border border-border bg-card hover:bg-muted/20 transition-colors">
+                                            <div className="flex items-center gap-2 mb-2 text-muted-foreground">
+                                                <Hourglass className="h-4 w-4" />
+                                                <span className="text-xs font-medium uppercase tracking-wider">Est. Need</span>
+                                            </div>
+                                            <p className="text-2xl font-bold text-foreground">{strategy.strategy.timeManagement.estimatedRequired} min</p>
+                                            <p className="text-xs text-muted-foreground mt-1">Based on your speed</p>
                                         </div>
-                                        <div className="p-3 bg-muted/50 rounded-lg">
-                                            <p className="text-xs text-muted-foreground mb-1">Buffer Time</p>
-                                            <p className="text-lg font-bold text-foreground">
-                                                {strategy.strategy.timeManagement.buffer} min
-                                            </p>
+                                        <div className="p-4 rounded-xl border border-border bg-card hover:bg-muted/20 transition-colors">
+                                            <div className="flex items-center gap-2 mb-2 text-muted-foreground">
+                                                <Target className="h-4 w-4" />
+                                                <span className="text-xs font-medium uppercase tracking-wider">Buffer</span>
+                                            </div>
+                                            <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">{strategy.strategy.timeManagement.buffer} min</p>
+                                            <p className="text-xs text-muted-foreground mt-1">Safety margin</p>
                                         </div>
                                     </div>
-                                    <div className="p-3 bg-blue-50 dark:bg-blue-950/20 rounded-lg">
-                                        <p className="text-sm text-foreground">
-                                            <strong>Recommendation:</strong> {strategy.strategy.timeManagement.recommendation}
-                                        </p>
+
+                                    {/* Recommendation Alert */}
+                                    <div className="p-4 rounded-xl bg-blue-50 border border-blue-100 text-blue-900 dark:bg-blue-950/20 dark:border-blue-900/50 dark:text-blue-100 flex items-start gap-3">
+                                        <Lightbulb className="h-5 w-5 shrink-0 mt-0.5 text-blue-600 dark:text-blue-400" />
+                                        <div>
+                                            <h4 className="font-semibold text-sm mb-1">AI Recommendation</h4>
+                                            <p className="text-sm opacity-90">{strategy.strategy.timeManagement.recommendation}</p>
+                                        </div>
                                     </div>
-                                </div>
 
-                                {/* Question Order Strategy */}
-                                <div className="p-4 border border-border rounded-lg">
-                                    <h4 className="font-semibold text-foreground mb-3 flex items-center gap-2">
-                                        <Trophy className="h-4 w-4 text-amber-600" />
-                                        Recommended Question Order
-                                    </h4>
-                                    <div className="space-y-3">
-                                        {/* Phase 1 */}
-                                        <div className="p-3 bg-emerald-50 dark:bg-emerald-950/20 rounded-lg border border-emerald-200 dark:border-emerald-800">
-                                            <div className="flex items-center justify-between mb-2">
-                                                <h5 className="font-medium text-sm text-foreground">
-                                                    {strategy.strategy.questionOrder.phase1.title}
-                                                </h5>
-                                                <Badge variant="outline" className="text-xs">
-                                                    {strategy.strategy.questionOrder.phase1.estimatedTime} min
-                                                </Badge>
-                                            </div>
-                                            <p className="text-xs text-muted-foreground mb-2">
-                                                {strategy.strategy.questionOrder.phase1.strategy}
-                                            </p>
-                                            <div className="flex flex-wrap gap-1">
-                                                {strategy.strategy.questionOrder.phase1.questions.slice(0, 10).map((q: number) => (
-                                                    <Badge key={q} variant="outline" className="text-xs bg-emerald-100 text-emerald-700">
-                                                        Q{q}
-                                                    </Badge>
-                                                ))}
-                                            </div>
-                                        </div>
-
-                                        {/* Phase 2 */}
-                                        <div className="p-3 bg-blue-50 dark:bg-blue-950/20 rounded-lg border border-blue-200 dark:border-blue-800">
-                                            <div className="flex items-center justify-between mb-2">
-                                                <h5 className="font-medium text-sm text-foreground">
-                                                    {strategy.strategy.questionOrder.phase2.title}
-                                                </h5>
-                                                <Badge variant="outline" className="text-xs">
-                                                    {strategy.strategy.questionOrder.phase2.estimatedTime} min
-                                                </Badge>
-                                            </div>
-                                            <p className="text-xs text-muted-foreground mb-2">
-                                                {strategy.strategy.questionOrder.phase2.strategy}
-                                            </p>
-                                            <div className="flex flex-wrap gap-1">
-                                                {strategy.strategy.questionOrder.phase2.questions.slice(0, 10).map((q: number) => (
-                                                    <Badge key={q} variant="outline" className="text-xs bg-blue-100 text-blue-700">
-                                                        Q{q}
-                                                    </Badge>
-                                                ))}
-                                            </div>
-                                        </div>
-
-                                        {/* Phase 3 */}
-                                        {strategy.strategy.questionOrder.phase3.questions.length > 0 && (
-                                            <div className="p-3 bg-amber-50 dark:bg-amber-950/20 rounded-lg border border-amber-200 dark:border-amber-800">
-                                                <div className="flex items-center justify-between mb-2">
-                                                    <h5 className="font-medium text-sm text-foreground">
-                                                        {strategy.strategy.questionOrder.phase3.title}
-                                                    </h5>
-                                                    <Badge variant="outline" className="text-xs">
-                                                        {strategy.strategy.questionOrder.phase3.estimatedTime} min
-                                                    </Badge>
-                                                </div>
-                                                <p className="text-xs text-muted-foreground mb-2">
-                                                    {strategy.strategy.questionOrder.phase3.strategy}
-                                                </p>
-                                                <div className="flex flex-wrap gap-1">
-                                                    {strategy.strategy.questionOrder.phase3.questions.slice(0, 10).map((q: number) => (
-                                                        <Badge key={q} variant="outline" className="text-xs bg-amber-100 text-amber-700">
-                                                            Q{q}
+                                    {/* Phased Approach */}
+                                    <div className="space-y-4">
+                                        <h3 className="text-lg font-semibold flex items-center gap-2">
+                                            <Trophy className="h-5 w-5 text-amber-500" />
+                                            Execution Phases
+                                        </h3>
+                                        <div className="relative pl-6 border-l-2 border-border space-y-8">
+                                            {/* Phase 1 */}
+                                            <div className="relative">
+                                                <div className="absolute -left-[29px] top-0 h-4 w-4 rounded-full border-2 border-emerald-500 bg-background" />
+                                                <div className="space-y-2">
+                                                    <div className="flex items-center justify-between">
+                                                        <h4 className="font-semibold text-foreground">{strategy.strategy.questionOrder.phase1.title}</h4>
+                                                        <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/30 dark:text-emerald-400 dark:border-emerald-800">
+                                                            {strategy.strategy.questionOrder.phase1.estimatedTime} min
                                                         </Badge>
-                                                    ))}
+                                                    </div>
+                                                    <p className="text-sm text-muted-foreground">{strategy.strategy.questionOrder.phase1.strategy}</p>
+                                                    <div className="flex flex-wrap gap-2">
+                                                        {strategy.strategy.questionOrder.phase1.questions.slice(0, 10).map((q: number) => (
+                                                            <Badge key={q} variant="secondary" className="text-xs font-mono">Q{q}</Badge>
+                                                        ))}
+                                                    </div>
                                                 </div>
                                             </div>
-                                        )}
-                                    </div>
-                                </div>
 
-                                {/* Tips */}
-                                <div className="p-4 border border-border rounded-lg">
-                                    <h4 className="font-semibold text-foreground mb-3 flex items-center gap-2">
-                                        <Lightbulb className="h-4 w-4 text-amber-600" />
-                                        Pro Tips
-                                    </h4>
-                                    <div className="space-y-2">
-                                        {strategy.strategy.tips.map((tip: string, idx: number) => (
-                                            <div key={idx} className="flex items-start gap-2 p-2 bg-muted/50 rounded">
-                                                <CheckCircle2 className="h-4 w-4 text-green-600 mt-0.5 shrink-0" />
-                                                <p className="text-sm text-foreground">{tip}</p>
+                                            {/* Phase 2 */}
+                                            <div className="relative">
+                                                <div className="absolute -left-[29px] top-0 h-4 w-4 rounded-full border-2 border-blue-500 bg-background" />
+                                                <div className="space-y-2">
+                                                    <div className="flex items-center justify-between">
+                                                        <h4 className="font-semibold text-foreground">{strategy.strategy.questionOrder.phase2.title}</h4>
+                                                        <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/30 dark:text-blue-400 dark:border-blue-800">
+                                                            {strategy.strategy.questionOrder.phase2.estimatedTime} min
+                                                        </Badge>
+                                                    </div>
+                                                    <p className="text-sm text-muted-foreground">{strategy.strategy.questionOrder.phase2.strategy}</p>
+                                                    <div className="flex flex-wrap gap-2">
+                                                        {strategy.strategy.questionOrder.phase2.questions.slice(0, 10).map((q: number) => (
+                                                            <Badge key={q} variant="secondary" className="text-xs font-mono">Q{q}</Badge>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            {/* Phase 3 */}
+                                            {strategy.strategy.questionOrder.phase3.questions.length > 0 && (
+                                                <div className="relative">
+                                                    <div className="absolute -left-[29px] top-0 h-4 w-4 rounded-full border-2 border-amber-500 bg-background" />
+                                                    <div className="space-y-2">
+                                                        <div className="flex items-center justify-between">
+                                                            <h4 className="font-semibold text-foreground">{strategy.strategy.questionOrder.phase3.title}</h4>
+                                                            <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/30 dark:text-amber-400 dark:border-amber-800">
+                                                                {strategy.strategy.questionOrder.phase3.estimatedTime} min
+                                                            </Badge>
+                                                        </div>
+                                                        <p className="text-sm text-muted-foreground">{strategy.strategy.questionOrder.phase3.strategy}</p>
+                                                        <div className="flex flex-wrap gap-2">
+                                                            {strategy.strategy.questionOrder.phase3.questions.slice(0, 10).map((q: number) => (
+                                                                <Badge key={q} variant="secondary" className="text-xs font-mono">Q{q}</Badge>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    {/* Pro Tips */}
+                                    <div className="space-y-3 pt-4 border-t border-border">
+                                        <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Pro Tips</h3>
+                                        <div className="grid gap-2">
+                                            {strategy.strategy.tips.map((tip: string, idx: number) => (
+                                                <div key={idx} className="flex items-start gap-3 p-3 rounded-lg bg-muted/30 border border-border/50">
+                                                    <CheckCircle2 className="h-4 w-4 text-emerald-500 mt-0.5 shrink-0" />
+                                                    <p className="text-sm text-foreground">{tip}</p>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </TabsContent>
+
+                                {/* Questions Tab */}
+                                <TabsContent value="questions" className="space-y-4 animate-in slide-in-from-right-4 duration-300">
+                                    <div className="grid gap-3">
+                                        {strategy.questionAnalysis.map((question: any) => (
+                                            <div key={question.questionId} className="group p-4 rounded-xl border border-border bg-card hover:shadow-md transition-all duration-200">
+                                                <div className="flex items-start justify-between mb-3">
+                                                    <div className="flex items-center gap-3">
+                                                        <Badge variant="outline" className="h-8 w-8 rounded-full flex items-center justify-center p-0 font-bold bg-muted text-foreground border-border">
+                                                            {question.questionNumber}
+                                                        </Badge>
+                                                        <div>
+                                                            <p className="text-sm font-medium text-foreground">{question.topic}</p>
+                                                            <div className="flex items-center gap-2 mt-1">
+                                                                <Badge variant="outline" className={`text-[10px] px-1.5 py-0 ${getDifficultyColor(question.predictedDifficulty)}`}>
+                                                                    {question.predictedDifficulty}
+                                                                </Badge>
+                                                                <span className="text-xs text-muted-foreground">{question.marks} marks</span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground bg-muted/30 px-2 py-1 rounded-md">
+                                                        <Clock className="h-3 w-3" />
+                                                        ~{question.estimatedTime} min
+                                                    </div>
+                                                </div>
+
+                                                <div className="space-y-3 pl-11">
+                                                    <div className="space-y-1.5">
+                                                        <div className="flex items-center justify-between text-xs">
+                                                            <span className="text-muted-foreground">Success Probability</span>
+                                                            <span className={`font-bold ${question.successProbability >= 70 ? 'text-emerald-600' : question.successProbability >= 40 ? 'text-amber-600' : 'text-rose-600'}`}>
+                                                                {question.successProbability}%
+                                                            </span>
+                                                        </div>
+                                                        <Progress
+                                                            value={question.successProbability}
+                                                            className="h-1.5"
+                                                            indicatorClassName={question.successProbability >= 70 ? 'bg-emerald-500' : question.successProbability >= 40 ? 'bg-amber-500' : 'bg-rose-500'}
+                                                        />
+                                                    </div>
+                                                    <div className="text-xs text-muted-foreground bg-muted/20 p-2 rounded border border-border/50">
+                                                        <span className="font-semibold text-foreground mr-1">Tip:</span>
+                                                        {question.recommendation}
+                                                    </div>
+                                                </div>
                                             </div>
                                         ))}
                                     </div>
-                                </div>
-                            </TabsContent>
+                                </TabsContent>
 
-                            {/* Questions Tab */}
-                            <TabsContent value="questions" className="space-y-3">
-                                <div className="max-h-96 overflow-y-auto space-y-2">
-                                    {strategy.questionAnalysis.map((question: any) => (
-                                        <div key={question.questionId} className="p-3 border border-border rounded-lg hover:border-primary/50 transition-all">
-                                            <div className="flex items-start justify-between mb-2">
-                                                <div className="flex items-center gap-2">
-                                                    <Badge variant="outline" className="text-xs font-bold">
-                                                        Q{question.questionNumber}
-                                                    </Badge>
-                                                    <Badge variant="outline" className={`text-xs ${getDifficultyColor(question.predictedDifficulty)}`}>
-                                                        {question.predictedDifficulty}
-                                                    </Badge>
-                                                    <Badge variant="outline" className="text-xs">
-                                                        {question.marks} marks
-                                                    </Badge>
+                                {/* Timing Tab */}
+                                <TabsContent value="timing" className="space-y-6 animate-in slide-in-from-right-4 duration-300">
+                                    <div className="p-6 rounded-xl border border-border bg-card">
+                                        <h3 className="text-lg font-semibold mb-6">Suggested Timeline</h3>
+                                        <div className="space-y-0 relative before:absolute before:inset-y-0 before:left-6 before:w-0.5 before:bg-border">
+                                            {[
+                                                { time: '0-5 min', title: 'Initial Review', desc: 'Quick scan of all questions', color: 'bg-purple-500' },
+                                                { time: `5-${5 + strategy.strategy.questionOrder.phase1.estimatedTime} min`, title: 'Phase 1: Quick Wins', desc: `${strategy.strategy.questionOrder.phase1.questions.length} questions`, color: 'bg-emerald-500' },
+                                                { time: 'Next Block', title: 'Phase 2: Core Questions', desc: `${strategy.strategy.questionOrder.phase2.questions.length} questions`, color: 'bg-blue-500' },
+                                                ...(strategy.strategy.questionOrder.phase3.questions.length > 0 ? [{ time: 'Next Block', title: 'Phase 3: Challenge', desc: `${strategy.strategy.questionOrder.phase3.questions.length} questions`, color: 'bg-amber-500' }] : []),
+                                                { time: `Last ${Math.round(strategy.duration * 0.2)} min`, title: 'Final Review', desc: 'Verify answers', color: 'bg-purple-500' }
+                                            ].map((item, idx) => (
+                                                <div key={idx} className="relative flex gap-6 pb-8 last:pb-0 group">
+                                                    <div className={`absolute left-6 -translate-x-1/2 w-3 h-3 rounded-full border-2 border-background ${item.color} z-10`} />
+                                                    <div className="w-24 pt-0.5 text-xs font-medium text-muted-foreground text-right shrink-0">
+                                                        {item.time}
+                                                    </div>
+                                                    <div className="pb-1">
+                                                        <h4 className="text-sm font-semibold text-foreground">{item.title}</h4>
+                                                        <p className="text-xs text-muted-foreground mt-0.5">{item.desc}</p>
+                                                    </div>
                                                 </div>
-                                                <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                                                    <Clock className="h-3 w-3" />
-                                                    ~{question.estimatedTime} min
-                                                </div>
-                                            </div>
+                                            ))}
+                                        </div>
+                                    </div>
 
+                                    <div className="p-6 rounded-xl border border-border bg-card">
+                                        <h3 className="text-lg font-semibold mb-4">Time Allocation</h3>
+                                        <div className="space-y-4">
                                             <div className="space-y-2">
-                                                <div className="flex items-center justify-between text-sm">
-                                                    <span className="text-muted-foreground">Topic: {question.topic}</span>
-                                                    <span className="font-medium text-foreground">
-                                                        Success Probability: {question.successProbability}%
-                                                    </span>
+                                                <div className="flex justify-between text-sm">
+                                                    <span className="text-muted-foreground">Answering Questions</span>
+                                                    <span className="font-bold">80%</span>
                                                 </div>
-                                                <Progress value={question.successProbability} className="h-1.5" />
-                                                <div className="p-2 bg-blue-50 dark:bg-blue-950/20 rounded text-xs text-foreground">
-                                                    <strong>Strategy:</strong> {question.recommendation}
+                                                <Progress value={80} className="h-2" indicatorClassName="bg-blue-500" />
+                                            </div>
+                                            <div className="space-y-2">
+                                                <div className="flex justify-between text-sm">
+                                                    <span className="text-muted-foreground">Review & Buffer</span>
+                                                    <span className="font-bold">20%</span>
                                                 </div>
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            </TabsContent>
-
-                            {/* Timing Tab */}
-                            <TabsContent value="timing" className="space-y-4">
-                                <div className="p-4 border border-border rounded-lg">
-                                    <h4 className="font-semibold text-foreground mb-4">Suggested Timeline</h4>
-                                    <div className="space-y-3">
-                                        {/* Initial Review */}
-                                        <div className="flex items-center gap-3">
-                                            <div className="w-24 text-sm font-medium text-foreground">0-5 min</div>
-                                            <div className="flex-1 p-3 bg-purple-50 dark:bg-purple-950/20 rounded-lg">
-                                                <p className="text-sm text-foreground">Quick scan of all questions</p>
-                                            </div>
-                                        </div>
-
-                                        {/* Phase 1 */}
-                                        <div className="flex items-center gap-3">
-                                            <div className="w-24 text-sm font-medium text-foreground">
-                                                5-{5 + strategy.strategy.questionOrder.phase1.estimatedTime} min
-                                            </div>
-                                            <div className="flex-1 p-3 bg-emerald-50 dark:bg-emerald-950/20 rounded-lg">
-                                                <p className="text-sm text-foreground">
-                                                    Quick wins ({strategy.strategy.questionOrder.phase1.questions.length} questions)
-                                                </p>
-                                            </div>
-                                        </div>
-
-                                        {/* Phase 2 */}
-                                        <div className="flex items-center gap-3">
-                                            <div className="w-24 text-sm font-medium text-foreground">
-                                                Next {strategy.strategy.questionOrder.phase2.estimatedTime} min
-                                            </div>
-                                            <div className="flex-1 p-3 bg-blue-50 dark:bg-blue-950/20 rounded-lg">
-                                                <p className="text-sm text-foreground">
-                                                    Core questions ({strategy.strategy.questionOrder.phase2.questions.length} questions)
-                                                </p>
-                                            </div>
-                                        </div>
-
-                                        {/* Phase 3 */}
-                                        {strategy.strategy.questionOrder.phase3.questions.length > 0 && (
-                                            <div className="flex items-center gap-3">
-                                                <div className="w-24 text-sm font-medium text-foreground">
-                                                    Next {strategy.strategy.questionOrder.phase3.estimatedTime} min
-                                                </div>
-                                                <div className="flex-1 p-3 bg-amber-50 dark:bg-amber-950/20 rounded-lg">
-                                                    <p className="text-sm text-foreground">
-                                                        Challenging questions ({strategy.strategy.questionOrder.phase3.questions.length} questions)
-                                                    </p>
-                                                </div>
-                                            </div>
-                                        )}
-
-                                        {/* Review Time */}
-                                        <div className="flex items-center gap-3">
-                                            <div className="w-24 text-sm font-medium text-foreground">
-                                                Last {Math.round(strategy.duration * 0.2)} min
-                                            </div>
-                                            <div className="flex-1 p-3 bg-purple-50 dark:bg-purple-950/20 rounded-lg">
-                                                <p className="text-sm text-foreground">Review and finalize answers</p>
+                                                <Progress value={20} className="h-2" indicatorClassName="bg-purple-500" />
                                             </div>
                                         </div>
                                     </div>
+                                </TabsContent>
+                            </Tabs>
+                        ) : (
+                            <div className="flex flex-col items-center justify-center py-12 text-center space-y-4">
+                                <div className="p-4 rounded-full bg-destructive/10 text-destructive">
+                                    <AlertCircle className="h-8 w-8" />
                                 </div>
-
-                                {/* Time Allocation Chart */}
-                                <div className="p-4 border border-border rounded-lg">
-                                    <h4 className="font-semibold text-foreground mb-3">Time Allocation</h4>
-                                    <div className="space-y-2">
-                                        <div className="flex items-center gap-2">
-                                            <div className="w-32 text-sm text-muted-foreground">Answering</div>
-                                            <div className="flex-1">
-                                                <Progress value={80} className="h-6" />
-                                            </div>
-                                            <span className="text-sm font-medium w-16 text-right">80%</span>
-                                        </div>
-                                        <div className="flex items-center gap-2">
-                                            <div className="w-32 text-sm text-muted-foreground">Review</div>
-                                            <div className="flex-1">
-                                                <Progress value={20} className="h-6" />
-                                            </div>
-                                            <span className="text-sm font-medium w-16 text-right">20%</span>
-                                        </div>
-                                    </div>
+                                <div className="space-y-2">
+                                    <h3 className="font-semibold text-lg">Strategy Generation Failed</h3>
+                                    <p className="text-muted-foreground max-w-xs mx-auto">
+                                        We couldn't generate a strategy for this exam at the moment. Please try again later.
+                                    </p>
                                 </div>
-                            </TabsContent>
-                        </Tabs>
+                                <Button variant="outline" onClick={onClose}>Close</Button>
+                            </div>
+                        )}
+                    </div>
+                </ScrollArea>
 
-                        {/* Action Button */}
-                        <div className="flex justify-end gap-3 pt-4 border-t border-border">
-                            <Button variant="outline" onClick={onClose}>
-                                Close
-                            </Button>
-                        </div>
-                    </div>
-                ) : (
-                    <div className="py-8 text-center text-muted-foreground">
-                        <AlertCircle className="h-12 w-12 mx-auto mb-3 opacity-50" />
-                        <p>Unable to generate exam strategy</p>
-                    </div>
-                )}
+                <div className="p-4 border-t border-border bg-muted/10 flex justify-end">
+                    <Button onClick={onClose}>
+                        Got it, thanks!
+                    </Button>
+                </div>
             </DialogContent>
         </Dialog>
     );

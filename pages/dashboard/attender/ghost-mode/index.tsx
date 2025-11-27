@@ -14,7 +14,9 @@ import {
     Lightbulb,
     Trophy,
     Star,
-    AlertCircle
+    AlertCircle,
+    Shield,
+    Zap
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -41,7 +43,6 @@ const GhostModeLanding = () => {
     const router = useRouter();
     const { data: session } = useSession();
     const [showExitWarning, setShowExitWarning] = useState(false);
-    const [selectedMode, setSelectedMode] = useState<any>(null);
     const [ghostSession, setGhostSession] = useState<GhostSession | null>(null);
 
     // Initialize ghost session on mount
@@ -64,13 +65,13 @@ const GhostModeLanding = () => {
             subtitle: 'Your personal learning companion',
             description: 'Chat with AI as you study. Ask questions, get instant explanations, and learn concepts through interactive conversations.',
             icon: Brain,
-            color: 'from-primary to-accent',
+            color: 'text-violet-500',
+            bgColor: 'bg-violet-500/10',
             route: '/dashboard/attender/ghost-mode/study-buddy',
             features: [
                 'Real-time doubt clearing',
-                'Concept explanations with examples',
-                'Interactive Q&A sessions',
-                'Learn by teaching AI back'
+                'Concept explanations',
+                'Interactive Q&A'
             ],
             comingSoon: false
         },
@@ -80,13 +81,13 @@ const GhostModeLanding = () => {
             subtitle: 'Create custom exams with AI',
             description: 'Tell AI what you want to learn, and it generates perfect practice exams. Customize difficulty, topics, and question types.',
             icon: Sparkles,
-            color: 'from-chart-1 to-chart-2',
+            color: 'text-amber-500',
+            bgColor: 'bg-amber-500/10',
             route: '/dashboard/attender/ghost-mode/dream-exam',
             features: [
                 'AI-generated questions',
-                'Custom difficulty levels',
-                'Mixed question types (MCQ + Coding)',
-                'Instant feedback & solutions'
+                'Custom difficulty',
+                'Instant feedback'
             ],
             comingSoon: false
         },
@@ -96,15 +97,15 @@ const GhostModeLanding = () => {
             subtitle: 'Experiment without limits',
             description: 'A safe playground to experiment with code. Try wild ideas, break things, and learn from mistakes without any consequences.',
             icon: Code,
-            color: 'from-chart-3 to-chart-4',
+            color: 'text-blue-500',
+            bgColor: 'bg-blue-500/10',
             route: '/dashboard/attender/ghost-mode/sandbox',
             features: [
                 'Multi-language support',
                 'AI debugging assistant',
-                'Code review on demand',
-                'No consequences, pure learning'
+                'No consequences'
             ],
-            comingSoon: true
+            comingSoon: false
         },
         {
             id: 'battle-arena',
@@ -112,15 +113,15 @@ const GhostModeLanding = () => {
             subtitle: 'Compete with peers anonymously',
             description: 'Challenge friends or random opponents in timed coding battles. Win rounds, earn temporary badges, but nothing saves!',
             icon: Users,
-            color: 'from-destructive/80 to-destructive',
+            color: 'text-rose-500',
+            bgColor: 'bg-rose-500/10',
             route: '/dashboard/attender/ghost-mode/battle',
             features: [
                 'Real-time coding duels',
                 'Anonymous matchmaking',
-                'Live leaderboard (session only)',
-                'Practice competition skills'
+                'Live leaderboard'
             ],
-            comingSoon: true
+            comingSoon: false
         },
         {
             id: 'skill-tree',
@@ -128,12 +129,12 @@ const GhostModeLanding = () => {
             subtitle: 'Visual learning progression',
             description: 'See your learning journey as an RPG-style skill tree. Complete challenges to unlock new topics and abilities.',
             icon: Target,
-            color: 'from-chart-5 to-secondary',
+            color: 'text-emerald-500',
+            bgColor: 'bg-emerald-500/10',
             route: '/dashboard/attender/ghost-mode/skill-tree',
             features: [
                 'Visual skill dependencies',
                 'Unlock advanced topics',
-                'Achievement milestones',
                 'Gamified progression'
             ],
             comingSoon: true
@@ -163,100 +164,106 @@ const GhostModeLanding = () => {
                 <link rel="icon" href="/logo3.png" />
             </Head>
 
-            <div className="min-h-screen bg-background">
+            <div className="min-h-screen bg-slate-50 dark:bg-slate-950">
                 {/* Header */}
-                <div className="bg-card/80 backdrop-blur-sm border-b border-border sticky top-0 z-40">
-                    <div className="max-w-7xl mx-auto px-6 py-4">
-                        <div className="flex items-center justify-between">
+                <div className="sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+                    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                        <div className="flex h-16 items-center justify-between">
                             <div className="flex items-center gap-3">
-                                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center">
-                                    <Ghost className="w-6 h-6 text-primary-foreground" />
+                                <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-slate-900 text-white dark:bg-slate-50 dark:text-slate-900">
+                                    <Ghost className="w-5 h-5" />
                                 </div>
                                 <div>
-                                    <h1 className="text-2xl font-bold text-foreground">
+                                    <h1 className="text-lg font-semibold text-foreground">
                                         Ghost Mode
                                     </h1>
-                                    <p className="text-xs text-muted-foreground">
-                                        {ghostSession?.nickname} • Session: {ghostSession?.sessionId.slice(-6)}
-                                    </p>
+                                </div>
+                                <div className="hidden md:flex items-center gap-2 px-2 py-1 rounded-md bg-muted/50 text-xs text-muted-foreground">
+                                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                                    Session Active
                                 </div>
                             </div>
 
-                            <Button
-                                onClick={handleExitGhostMode}
-                                variant="outline"
-                                className="border-destructive/50 text-destructive hover:bg-destructive/10"
-                            >
-                                <ArrowLeft className="w-4 h-4 mr-2" />
-                                Exit Ghost Mode
-                            </Button>
+                            <div className="flex items-center gap-4">
+                                <div className="hidden md:block text-right">
+                                    <p className="text-sm font-medium text-foreground">{ghostSession?.nickname}</p>
+                                    <p className="text-xs text-muted-foreground font-mono">ID: {ghostSession?.sessionId.slice(-6)}</p>
+                                </div>
+                                <Button
+                                    onClick={handleExitGhostMode}
+                                    variant="ghost"
+                                    size="sm"
+                                    className="text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                                >
+                                    <ArrowLeft className="w-4 h-4 mr-2" />
+                                    Exit
+                                </Button>
+                            </div>
                         </div>
                     </div>
                 </div>
 
                 {/* Warning Banner */}
-                <Alert className="rounded-none border-x-0 border-t-0 bg-gradient-to-r from-primary to-accent">
-                    <AlertCircle className="h-4 w-4 text-primary-foreground" />
-                    <AlertDescription className="text-primary-foreground font-medium">
-                        🔒 Private Mode Active: Nothing you do here will be saved to your account
-                    </AlertDescription>
-                </Alert>
+                <div className="bg-amber-50 dark:bg-amber-950/30 border-b border-amber-100 dark:border-amber-900/50 px-4 py-2">
+                    <div className="max-w-7xl mx-auto flex items-center justify-center gap-2 text-sm text-amber-700 dark:text-amber-400">
+                        <Shield className="w-4 h-4" />
+                        <span className="font-medium">Incognito Session:</span>
+                        <span>Activity in Ghost Mode is not saved to your permanent profile.</span>
+                    </div>
+                </div>
 
                 {/* Main Content */}
-                <div className="max-w-7xl mx-auto px-6 py-12">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
                     {/* Hero Section */}
-                    <div className="text-center mb-12">
-                        <Badge variant="secondary" className="mb-6 bg-primary/10 text-primary border-primary/20 hover:bg-primary/20">
-                            <Sparkles className="w-4 h-4 mr-2" />
-                            No Pressure • No Records • Pure Learning
+                    <div className="text-center mb-16 space-y-4">
+                        <Badge variant="secondary" className="mb-2">
+                            <Sparkles className="w-3 h-3 mr-1" />
+                            Experimental Features
                         </Badge>
-                        <h2 className="text-4xl md:text-5xl font-bold text-foreground mb-4">
-                            Choose Your Learning
-                            <span className="block bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-                                Adventure
-                            </span>
+                        <h2 className="text-3xl md:text-4xl font-bold tracking-tight text-foreground">
+                            Choose Your Learning Adventure
                         </h2>
                         <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-                            Each mode offers a unique way to learn and practice. Everything is temporary -
-                            experiment freely, make mistakes, and grow without fear!
+                            Experiment freely, make mistakes, and grow without fear.
+                            Select a mode to start your private session.
                         </p>
                     </div>
 
                     {/* Modes Grid */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-16">
                         {ghostModes.map((mode) => {
                             const Icon = mode.icon;
                             return (
                                 <Card
                                     key={mode.id}
-                                    className={`group relative overflow-hidden transition-all duration-300 ${mode.comingSoon
-                                            ? 'opacity-60 cursor-not-allowed'
-                                            : 'hover:shadow-2xl hover:shadow-primary/20 cursor-pointer hover:border-primary/50'
+                                    className={`group relative transition-all duration-200 border-border/50 ${mode.comingSoon
+                                        ? 'opacity-60'
+                                        : 'hover:shadow-md hover:border-primary/20 cursor-pointer bg-card'
                                         }`}
                                     onClick={() => handleModeSelect(mode)}
                                 >
-                                    {mode.comingSoon && (
-                                        <Badge className="absolute top-4 right-4 z-10 bg-chart-1 text-primary-foreground">
-                                            Coming Soon
-                                        </Badge>
-                                    )}
-
-                                    <div className={`absolute inset-0 bg-gradient-to-br ${mode.color} opacity-0 ${!mode.comingSoon && 'group-hover:opacity-10'} transition-opacity duration-300`} />
-
-                                    <CardHeader className="relative">
-                                        <div className={`w-14 h-14 rounded-xl bg-gradient-to-br ${mode.color} flex items-center justify-center mb-4 ${!mode.comingSoon && 'group-hover:scale-110'} transition-transform duration-300`}>
-                                            <Icon className="w-7 h-7 text-primary-foreground" />
+                                    <CardHeader>
+                                        <div className="flex items-start justify-between mb-2">
+                                            <div className={`p-3 rounded-xl ${mode.bgColor} ${mode.color} ring-1 ring-inset ring-black/5`}>
+                                                <Icon className="w-6 h-6" />
+                                            </div>
+                                            {mode.comingSoon && (
+                                                <Badge variant="outline" className="text-xs font-normal">
+                                                    Coming Soon
+                                                </Badge>
+                                            )}
                                         </div>
-
                                         <CardTitle className="text-xl">{mode.title}</CardTitle>
-                                        <CardDescription>{mode.subtitle}</CardDescription>
+                                        <CardDescription className="line-clamp-2">
+                                            {mode.description}
+                                        </CardDescription>
                                     </CardHeader>
 
-                                    <CardContent className="relative">
-                                        <div className="space-y-2 mb-4">
+                                    <CardContent>
+                                        <div className="space-y-3 mb-6">
                                             {mode.features.slice(0, 3).map((feature, idx) => (
                                                 <div key={idx} className="flex items-center text-xs text-muted-foreground">
-                                                    <div className={`w-1.5 h-1.5 rounded-full bg-gradient-to-r ${mode.color} mr-2`} />
+                                                    <div className={`w-1.5 h-1.5 rounded-full ${mode.bgColor.replace('/10', '')} mr-2`} />
                                                     {feature}
                                                 </div>
                                             ))}
@@ -264,14 +271,11 @@ const GhostModeLanding = () => {
 
                                         {!mode.comingSoon && (
                                             <Button
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    handleModeSelect(mode);
-                                                }}
-                                                className={`w-full bg-gradient-to-r ${mode.color} text-primary-foreground hover:opacity-90`}
+                                                className="w-full group-hover:bg-primary group-hover:text-primary-foreground transition-colors"
+                                                variant="secondary"
                                             >
-                                                <Play className="w-4 h-4 mr-2" />
-                                                Start Mode
+                                                Enter Mode
+                                                <Play className="w-4 h-4 ml-2 opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all" />
                                             </Button>
                                         )}
                                     </CardContent>
@@ -282,46 +286,40 @@ const GhostModeLanding = () => {
 
                     {/* Info Cards */}
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                        <Card>
-                            <CardHeader>
-                                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-chart-1 to-chart-2 flex items-center justify-center mb-4">
-                                    <Lightbulb className="w-6 h-6 text-primary-foreground" />
+                        <Card className="bg-transparent border-none shadow-none">
+                            <CardHeader className="px-0">
+                                <div className="w-10 h-10 rounded-lg bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center mb-3 text-blue-600 dark:text-blue-400">
+                                    <Lightbulb className="w-5 h-5" />
                                 </div>
-                                <CardTitle className="text-lg">Learn Your Way</CardTitle>
-                            </CardHeader>
-                            <CardContent>
-                                <p className="text-sm text-muted-foreground">
+                                <CardTitle className="text-base">Learn Your Way</CardTitle>
+                                <CardDescription>
                                     Choose the learning style that fits your mood. Visual, narrative, competitive, or collaborative!
-                                </p>
-                            </CardContent>
+                                </CardDescription>
+                            </CardHeader>
                         </Card>
 
-                        <Card>
-                            <CardHeader>
-                                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-chart-3 to-chart-4 flex items-center justify-center mb-4">
-                                    <Trophy className="w-6 h-6 text-primary-foreground" />
+                        <Card className="bg-transparent border-none shadow-none">
+                            <CardHeader className="px-0">
+                                <div className="w-10 h-10 rounded-lg bg-amber-50 dark:bg-amber-900/20 flex items-center justify-center mb-3 text-amber-600 dark:text-amber-400">
+                                    <Trophy className="w-5 h-5" />
                                 </div>
-                                <CardTitle className="text-lg">Zero Pressure</CardTitle>
-                            </CardHeader>
-                            <CardContent>
-                                <p className="text-sm text-muted-foreground">
+                                <CardTitle className="text-base">Zero Pressure</CardTitle>
+                                <CardDescription>
                                     Bad score? Who cares! It disappears when you leave. Focus on learning, not performance anxiety.
-                                </p>
-                            </CardContent>
+                                </CardDescription>
+                            </CardHeader>
                         </Card>
 
-                        <Card>
-                            <CardHeader>
-                                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center mb-4">
-                                    <Star className="w-6 h-6 text-primary-foreground" />
+                        <Card className="bg-transparent border-none shadow-none">
+                            <CardHeader className="px-0">
+                                <div className="w-10 h-10 rounded-lg bg-purple-50 dark:bg-purple-900/20 flex items-center justify-center mb-3 text-purple-600 dark:text-purple-400">
+                                    <Zap className="w-5 h-5" />
                                 </div>
-                                <CardTitle className="text-lg">AI-Powered</CardTitle>
-                            </CardHeader>
-                            <CardContent>
-                                <p className="text-sm text-muted-foreground">
+                                <CardTitle className="text-base">AI-Powered</CardTitle>
+                                <CardDescription>
                                     Every mode uses AI to personalize content, provide feedback, and adapt to your level in real-time.
-                                </p>
-                            </CardContent>
+                                </CardDescription>
+                            </CardHeader>
                         </Card>
                     </div>
                 </div>
@@ -330,10 +328,10 @@ const GhostModeLanding = () => {
                 <Dialog open={showExitWarning} onOpenChange={setShowExitWarning}>
                     <DialogContent className="sm:max-w-md">
                         <DialogHeader>
-                            <div className="w-16 h-16 rounded-full bg-destructive/10 flex items-center justify-center mx-auto mb-4">
-                                <Ghost className="w-8 h-8 text-destructive" />
+                            <div className="w-12 h-12 rounded-full bg-destructive/10 flex items-center justify-center mx-auto mb-4">
+                                <Ghost className="w-6 h-6 text-destructive" />
                             </div>
-                            <DialogTitle className="text-center text-2xl">Leave Ghost Mode?</DialogTitle>
+                            <DialogTitle className="text-center">Leave Ghost Mode?</DialogTitle>
                             <DialogDescription className="text-center">
                                 All your progress, custom exams, and learning data in Ghost Mode will be permanently deleted.
                                 This cannot be undone!
