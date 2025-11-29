@@ -30,6 +30,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
+import * as Icons from 'lucide-react';
 
 const fetcher = (url: string) => fetch(url).then(res => res.json());
 
@@ -92,8 +93,6 @@ const AttenderDashboard = () => {
         }
     );
 
-    console.log("aiInsights", aiInsights);
-
     const { data: performancePrediction, error: predictionError, isLoading: predictionLoading } = useSWR(
         session?.user?.email && completedExams.length >= 2
             ? `/api/attender/predict-performance?email=${encodeURIComponent(session.user.email)}`
@@ -118,6 +117,18 @@ const AttenderDashboard = () => {
         }
     );
 
+    const { data: userStats, error: statsError, isLoading: statsLoading } = useSWR(
+        session?.user?.email
+            ? `/api/attender/stats?email=${encodeURIComponent(session.user.email)}`
+            : null,
+        fetcher,
+        {
+            revalidateOnFocus: false,
+            revalidateOnReconnect: true,
+            dedupingInterval: 60000,
+        }
+    );
+
     // Calculate stats
     const stats = {
         totalExams: upcomingExams.length || 0,
@@ -129,10 +140,10 @@ const AttenderDashboard = () => {
                 }, 0) / completedExams.length
             ).toFixed(1)
             : "-",
-        bestRank: "-", // Placeholder as per original
-        currentStreak: "-", // Placeholder
+        bestRank: userStats?.rank || "-",
+        currentStreak: userStats?.streak || 0,
         completedExams: completedExams.length,
-        skillRating: 1200 // Placeholder
+        skillRating: userStats?.skillRating || 1000
     };
 
     // Handlers
@@ -170,7 +181,7 @@ const AttenderDashboard = () => {
     };
 
     const handleStartExam = (examTitle: string) => {
-        router.push(`/ dashboard / attender / view - exams`);
+        router.push(`/dashboard/attender/view-exams`);
     };
 
     const handleViewStrategy = (exam: Exam) => {
@@ -247,7 +258,7 @@ const AttenderDashboard = () => {
                             disabled={isRefreshing}
                             className={isRefreshing ? "animate-spin" : ""}
                         >
-                            <Icons.RefreshCw className={`w - 4 h - 4 mr - 2 ${isRefreshing ? "animate-spin" : ""} `} />
+                            <Icons.RefreshCw className={`w-4 h-4 mr-2 ${isRefreshing ? "animate-spin" : ""}`} />
                             {isRefreshing ? "Refreshing..." : "Refresh Insights"}
                         </Button>
                     </div>
@@ -276,7 +287,7 @@ const AttenderDashboard = () => {
                             <StatsItem
                                 icon={Target}
                                 label="Avg. Score"
-                                value={`${stats.averageScore}% `}
+                                value={`${stats.averageScore}%`}
                                 color="text-amber-500"
                                 bg="bg-amber-500/10"
                             />
@@ -463,7 +474,7 @@ const AttenderDashboard = () => {
 const StatsItem = ({ icon: Icon, label, value, color, bg }: any) => (
     <Card className="border-border/50 shadow-sm hover:shadow-md transition-shadow">
         <CardContent className="p-4 flex items-center gap-4">
-            <div className={`p - 3 rounded - xl ${bg} ${color} `}>
+            <div className={`p-3 rounded-xl ${bg} ${color}`}>
                 <Icon className="w-5 h-5" />
             </div>
             <div>
@@ -473,8 +484,5 @@ const StatsItem = ({ icon: Icon, label, value, color, bg }: any) => (
         </CardContent>
     </Card>
 );
-
-// Helper for Icons namespace if needed, though we imported specific icons
-import * as Icons from 'lucide-react';
 
 export default AttenderDashboard;
