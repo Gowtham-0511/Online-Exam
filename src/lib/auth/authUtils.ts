@@ -1,5 +1,5 @@
 // Client-side auth utilities
-export type UserRole = "attender" | "examiner" | "admin";
+export type UserRole = "attender" | "organizer" | "admin";
 
 // This function now makes an API call instead of direct database access
 export const createOrFetchUser = async (

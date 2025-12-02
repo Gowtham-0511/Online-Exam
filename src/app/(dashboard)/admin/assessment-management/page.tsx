@@ -208,7 +208,7 @@ const AssessmentManagement = () => {
                         </p>
                     </div>
                     <Button
-                        onClick={() => router.push('/dashboard/examiner')}
+                        onClick={() => router.push('/organizer/create')}
                         size="lg"
                         className="shadow-lg hover:shadow-primary/20 transition-all duration-300 bg-primary hover:bg-primary/90"
                     >
@@ -343,7 +343,7 @@ const AssessmentManagement = () => {
                                         : 'Get started by creating your first assessment.'}
                                 </p>
                             </div>
-                            <Button onClick={() => router.push('/dashboard/examiner')} className="mt-4">
+                            <Button onClick={() => router.push('/organizer/create')} className="mt-4">
                                 <Plus className="w-4 h-4 mr-2" />
                                 Create Assessment
                             </Button>
@@ -381,10 +381,10 @@ const AssessmentManagement = () => {
                                                 </Button>
                                             </DropdownMenuTrigger>
                                             <DropdownMenuContent align="end">
-                                                <DropdownMenuItem onClick={() => router.push(`/dashboard/examiner/edit/${assessment.id}`)}>
+                                                {/* <DropdownMenuItem onClick={() => router.push(`/dashboard/organizer/edit/${assessment.id}`)}>
                                                     <Edit className="w-4 h-4 mr-2" />
                                                     Edit
-                                                </DropdownMenuItem>
+                                                </DropdownMenuItem> */}
                                                 <DropdownMenuSeparator />
                                                 <DropdownMenuItem
                                                     onClick={() => handleDeleteAssessment(assessment.id)}

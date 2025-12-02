@@ -1,6 +1,6 @@
 import { cn } from '@/lib/utils';
 import { ScrollArea } from '../ui/scroll-area';
-import { ClipboardCheck, ClipboardList, Clock, FilePlus2, HelpCircle, KeyRound, Layers, LayoutDashboard, LineChart, ListChecks, LogOut, MonitorPlay, ScrollText, Settings, ShieldCheck, Target, Trophy, Users } from 'lucide-react';
+import { ClipboardCheck, ClipboardList, Clock, FilePlus2, HelpCircle, KeyRound, Layers, LayoutDashboard, LineChart, ListChecks, LogOut, MonitorPlay, ScrollText, Settings, ShieldCheck, Target, Trophy, Users, UserCircle, Users2, ChevronDown } from 'lucide-react';
 import Image from 'next/image';
 import React, { useCallback, useMemo, useState } from 'react';
 import { Skeleton } from '../ui/skeleton';
@@ -20,7 +20,7 @@ interface MenuItem {
     badge?: string;
 }
 
-export type UserRole = 'admin' | 'examiner' | 'attender';
+export type UserRole = 'admin' | 'organizer' | 'attender';
 
 const ROLE_MENUS: Record<UserRole, MenuItem[]> = {
     admin: [
@@ -88,7 +88,14 @@ const ROLE_MENUS: Record<UserRole, MenuItem[]> = {
             description: 'View Results',
         },
     ],
-    examiner: [
+    organizer: [
+        {
+            id: 'Home',
+            navigation: 'index',
+            label: 'Home',
+            icon: LayoutDashboard,
+            description: 'Home',
+        },
         {
             id: 'CreateExam',
             navigation: 'index',
@@ -112,7 +119,7 @@ const ROLE_MENUS: Record<UserRole, MenuItem[]> = {
         },
         {
             id: 'viewResults',
-            navigation: 'examiner-submissions',
+            navigation: 'organizer-submissions',
             label: 'Submissions',
             icon: ScrollText,
             description: 'View exam results',
@@ -159,7 +166,7 @@ const ROLE_MENUS: Record<UserRole, MenuItem[]> = {
 
 const ROLE_DEFAULT_PAGES: Record<UserRole, string> = {
     admin: 'overview',
-    examiner: 'CreateExam',
+    organizer: 'Home',
     attender: 'Home',
 };
 
@@ -174,7 +181,17 @@ const Sidebar = ({ isCollapsed = false, setDesktopSidebarCollapsed, setSidebarOp
     const pathname = usePathname();
     const [hoveredItem, setHoveredItem] = useState<string | null>(null);
 
-    const role = (session?.user as any)?.role as UserRole || 'attender';
+    // Determine role from URL path first, fallback to session role
+    const role = useMemo(() => {
+        if (pathname) {
+            const segments = pathname.split('/').filter(Boolean);
+            const pathRole = segments[0] as UserRole;
+            if (pathRole === 'admin' || pathRole === 'organizer' || pathRole === 'attender') {
+                return pathRole;
+            }
+        }
+        return (session?.user as any)?.role as UserRole || 'attender';
+    }, [pathname, session]);
 
     const userData = useMemo(() => ({
         userName: session?.user?.name || 'User',
@@ -221,6 +238,49 @@ const Sidebar = ({ isCollapsed = false, setDesktopSidebarCollapsed, setSidebarOp
         });
     }, []);
 
+    // Get user's actual role from session (not the current path role)
+    const userSessionRole = useMemo(() => {
+        return (session?.user as any)?.role as UserRole || 'attender';
+    }, [session]);
+
+    // Determine which roles the user can access based on their session role
+    const accessibleRoles = useMemo(() => {
+        const roleHierarchy: Record<UserRole, UserRole[]> = {
+            admin: ['admin', 'organizer', 'attender'],
+            organizer: ['organizer', 'attender'],
+            attender: ['attender']
+        };
+        return roleHierarchy[userSessionRole] || ['attender'];
+    }, [userSessionRole]);
+
+    // Helper to get role display info
+    const getRoleInfo = useCallback((roleType: UserRole) => {
+        const roleConfig = {
+            admin: {
+                label: 'Admin',
+                icon: ShieldCheck,
+                color: 'text-red-500',
+                bgColor: 'bg-red-500/10',
+                description: 'Full system access'
+            },
+            organizer: {
+                label: 'Organizer',
+                icon: Users2,
+                color: 'text-blue-500',
+                bgColor: 'bg-blue-500/10',
+                description: 'Manage exams & results'
+            },
+            attender: {
+                label: 'Attender',
+                icon: UserCircle,
+                color: 'text-green-500',
+                bgColor: 'bg-green-500/10',
+                description: 'Take exams & view results'
+            }
+        };
+        return roleConfig[roleType];
+    }, []);
+
     return (
         <div className="flex flex-col h-full bg-gradient-to-b from-background via-background to-muted/20 border-r border-border/40 overflow-hidden relative">
             {/* Ambient gradient overlay */}
@@ -257,6 +317,101 @@ const Sidebar = ({ isCollapsed = false, setDesktopSidebarCollapsed, setSidebarOp
                     )}
                 </div>
             </div>
+
+            {/* Role Switcher - Only show if user has access to multiple roles */}
+            {accessibleRoles.length > 1 && (
+                <div className={cn(
+                    "relative border-b border-border/40 transition-all duration-300",
+                    isCollapsed ? "px-2 py-3" : "px-3 py-3"
+                )}>
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button
+                                variant="outline"
+                                className={cn(
+                                    "w-full justify-between h-auto transition-all duration-200 hover:bg-muted/60",
+                                    isCollapsed ? "px-2 py-2" : "px-3 py-2.5"
+                                )}
+                            >
+                                {isCollapsed ? (
+                                    <div className="flex items-center justify-center w-full">
+                                        {React.createElement(getRoleInfo(role).icon, {
+                                            className: cn("w-5 h-5", getRoleInfo(role).color)
+                                        })}
+                                    </div>
+                                ) : (
+                                    <>
+                                        <div className="flex items-center gap-2.5">
+                                            {React.createElement(getRoleInfo(role).icon, {
+                                                className: cn("w-4 h-4", getRoleInfo(role).color)
+                                            })}
+                                            <div className="flex flex-col items-start">
+                                                <span className="text-xs font-medium text-foreground">
+                                                    {getRoleInfo(role).label}
+                                                </span>
+                                                <span className="text-[10px] text-muted-foreground">
+                                                    Switch Dashboard
+                                                </span>
+                                            </div>
+                                        </div>
+                                        <ChevronDown className="w-4 h-4 text-muted-foreground" />
+                                    </>
+                                )}
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent
+                            align={isCollapsed ? "start" : "center"}
+                            side={isCollapsed ? "right" : "bottom"}
+                            className="w-56"
+                        >
+                            <DropdownMenuLabel className="text-xs text-muted-foreground">
+                                Switch Dashboard
+                            </DropdownMenuLabel>
+                            <DropdownMenuSeparator />
+                            {accessibleRoles.map((roleType) => {
+                                const roleInfo = getRoleInfo(roleType);
+                                const RoleIcon = roleInfo.icon;
+                                const isCurrentRole = roleType === role;
+
+                                return (
+                                    <DropdownMenuItem
+                                        key={roleType}
+                                        asChild
+                                        className="cursor-pointer"
+                                    >
+                                        <Link
+                                            href={`/${roleType}`}
+                                            onClick={closeMobileSidebar}
+                                            className={cn(
+                                                "flex items-center gap-3 py-2.5",
+                                                isCurrentRole && "bg-muted"
+                                            )}
+                                        >
+                                            <div className={cn(
+                                                "flex items-center justify-center w-8 h-8 rounded-lg",
+                                                roleInfo.bgColor
+                                            )}>
+                                                <RoleIcon className={cn("w-4 h-4", roleInfo.color)} />
+                                            </div>
+                                            <div className="flex flex-col flex-1">
+                                                <span className="text-sm font-medium">
+                                                    {roleInfo.label}
+                                                </span>
+                                                <span className="text-xs text-muted-foreground">
+                                                    {roleInfo.description}
+                                                </span>
+                                            </div>
+                                            {isCurrentRole && (
+                                                <div className="w-2 h-2 rounded-full bg-primary" />
+                                            )}
+                                        </Link>
+                                    </DropdownMenuItem>
+                                );
+                            })}
+                        </DropdownMenuContent>
+                    </DropdownMenu>
+                </div>
+            )}
 
             {/* Navigation */}
             <ScrollArea className="flex-1 py-6 relative">

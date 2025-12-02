@@ -37,7 +37,7 @@ import ThemeToggle from '@/components/ThemeToggle';
 import { useSession } from 'next-auth/react';
 import { Skeleton } from '@/components/ui/skeleton';
 
-export type UserRole = 'admin' | 'examiner' | 'attender';
+export type UserRole = 'admin' | 'organizer' | 'attender';
 
 interface UnifiedDashboardLayoutProps {
     children: React.ReactNode;
@@ -118,7 +118,7 @@ const ROLE_MENUS: Record<UserRole, MenuItem[]> = {
             description: 'View Results',
         },
     ],
-    examiner: [
+    organizer: [
         {
             id: 'CreateExam',
             navigation: 'index',
@@ -142,7 +142,7 @@ const ROLE_MENUS: Record<UserRole, MenuItem[]> = {
         },
         {
             id: 'viewResults',
-            navigation: 'examiner-submissions',
+            navigation: 'organizer-submissions',
             label: 'Submissions',
             icon: ScrollText,
             description: 'View exam results',
@@ -189,7 +189,7 @@ const ROLE_MENUS: Record<UserRole, MenuItem[]> = {
 
 const ROLE_DEFAULT_PAGES: Record<UserRole, string> = {
     admin: 'overview',
-    examiner: 'CreateExam',
+    organizer: 'CreateExam',
     attender: 'Home',
 };
 
@@ -201,11 +201,20 @@ const Layout = ({ children }: UnifiedDashboardLayoutProps) => {
     const pathname = usePathname();
     const { data: session, status } = useSession();
 
-    const role = (session?.user as any)?.role as UserRole || 'attender';
+    // Determine role from URL path first, fallback to session role
+    const role = useMemo(() => {
+        if (pathname) {
+            const segments = pathname.split('/').filter(Boolean);
+            const pathRole = segments[0] as UserRole;
+            if (pathRole === 'admin' || pathRole === 'organizer' || pathRole === 'attender') {
+                return pathRole;
+            }
+        }
+        return (session?.user as any)?.role as UserRole || 'attender';
+    }, [pathname, session]);
 
     const menuItems = useMemo(() => ROLE_MENUS[role] || [], [role]);
     const defaultPageId = useMemo(() => ROLE_DEFAULT_PAGES[role] || '', [role]);
-
 
     useEffect(() => {
         setMounted(true);
@@ -214,6 +223,26 @@ const Layout = ({ children }: UnifiedDashboardLayoutProps) => {
     const toggleDesktopSidebar = useCallback(() => {
         setDesktopSidebarCollapsed(prev => !prev);
     }, []);
+
+    // Client-side route protection (fallback to middleware)
+    useEffect(() => {
+        if (!mounted || status === 'loading' || !session || !pathname) {
+            return;
+        }
+
+        const userRole = (session?.user as any)?.role as UserRole;
+        const userEmail = session?.user?.email;
+
+        // Import and use the canAccessRoute function
+        import('@/lib/auth/roleUtils').then(({ canAccessRoute, getDefaultDashboard }) => {
+            const hasAccess = canAccessRoute(userRole, userEmail, pathname);
+
+            if (!hasAccess) {
+                const defaultDashboard = getDefaultDashboard(userRole);
+                router.push(defaultDashboard);
+            }
+        });
+    }, [mounted, status, session, pathname, router]);
 
     const currentPageId = useMemo(() => {
         if (!pathname) return defaultPageId;
@@ -315,7 +344,7 @@ const Layout = ({ children }: UnifiedDashboardLayoutProps) => {
                             <div className={cn(
                                 "w-2 h-2 rounded-full animate-pulse",
                                 role === 'admin' ? "bg-red-500" :
-                                    role === 'examiner' ? "bg-blue-500" : "bg-green-500"
+                                    role === 'organizer' ? "bg-blue-500" : "bg-green-500"
                             )} />
                             <span className="text-xs font-medium capitalize text-muted-foreground">
                                 {role} Mode

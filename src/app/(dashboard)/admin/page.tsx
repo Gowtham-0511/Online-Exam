@@ -306,7 +306,7 @@ export default function AdminDashboard() {
                             <Button
                                 variant="outline"
                                 className="w-full justify-start group border-border hover:border-primary hover:bg-primary/5 hover:text-primary transition-all duration-300 hover:scale-[1.02] hover:shadow-md"
-                                onClick={() => window.location.href = '/examiner/create'}
+                                onClick={() => window.location.href = '/organizer/create'}
                             >
                                 <FileText className="w-4 h-4 mr-2 group-hover:scale-110 transition-transform" />
                                 Create Exam

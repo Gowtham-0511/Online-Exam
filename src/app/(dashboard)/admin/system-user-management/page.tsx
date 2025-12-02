@@ -484,7 +484,7 @@ const SystemUserPage = () => {
                                 </SelectTrigger>
                                 <SelectContent>
                                     <SelectItem value="admin">Administrator</SelectItem>
-                                    <SelectItem value="examiner">Examiner</SelectItem>
+                                    <SelectItem value="organizer">organizer</SelectItem>
                                     <SelectItem value="attender">Attender</SelectItem>
                                 </SelectContent>
                             </Select>
