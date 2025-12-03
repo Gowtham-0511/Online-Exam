@@ -98,7 +98,7 @@ const ROLE_MENUS: Record<UserRole, MenuItem[]> = {
         },
         {
             id: 'CreateExam',
-            navigation: 'index',
+            navigation: 'create-exam',
             label: 'Create Exam',
             icon: FilePlus2,
             description: 'Create a new exam',
@@ -140,13 +140,13 @@ const ROLE_MENUS: Record<UserRole, MenuItem[]> = {
             icon: LayoutDashboard,
             description: '',
         },
-        {
-            id: 'ViewExams',
-            navigation: 'view-exams',
-            label: 'Assessments',
-            icon: ListChecks,
-            description: 'View all exams',
-        },
+        // {
+        //     id: 'ViewExams',
+        //     navigation: 'view-exams',
+        //     label: 'Assessments',
+        //     icon: ListChecks,
+        //     description: 'View all exams',
+        // },
         {
             id: 'ExamResults',
             navigation: 'exam-results',

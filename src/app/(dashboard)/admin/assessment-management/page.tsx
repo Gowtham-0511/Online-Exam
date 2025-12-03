@@ -208,7 +208,7 @@ const AssessmentManagement = () => {
                         </p>
                     </div>
                     <Button
-                        onClick={() => router.push('/organizer/create')}
+                        onClick={() => router.push('/organizer/create-exam')}
                         size="lg"
                         className="shadow-lg hover:shadow-primary/20 transition-all duration-300 bg-primary hover:bg-primary/90"
                     >
@@ -343,7 +343,7 @@ const AssessmentManagement = () => {
                                         : 'Get started by creating your first assessment.'}
                                 </p>
                             </div>
-                            <Button onClick={() => router.push('/organizer/create')} className="mt-4">
+                            <Button onClick={() => router.push('/organizer/create-exam')} className="mt-4">
                                 <Plus className="w-4 h-4 mr-2" />
                                 Create Assessment
                             </Button>
