@@ -105,7 +105,7 @@ const GhostModeLanding = () => {
                 'AI debugging assistant',
                 'No consequences'
             ],
-            comingSoon: false
+            comingSoon: true
         },
         {
             id: 'battle-arena',
@@ -121,7 +121,7 @@ const GhostModeLanding = () => {
                 'Anonymous matchmaking',
                 'Live leaderboard'
             ],
-            comingSoon: false
+            comingSoon: true
         },
         {
             id: 'skill-tree',

@@ -3,196 +3,22 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: exam-web
+    container_name: sysrank-exam-web
     ports:
       - "3000:3000"
     environment:
-      - PYTHON_EXECUTOR_URL=http://python:5000
-      - SQL_EXECUTOR_URL=http://sql:5001
-      - JAVASCRIPT_EXECUTOR_URL=http://javascript:5002
-      - JAVA_SERVICE_URL=http://java:5003
-      - PYSPARK_SERVICE_URL=http://pyspark:5005
-      - DAX_SERVICE_URL=http://dax:5006
-    depends_on:
-      - python
-      - sql
-      - redis
-      - javascript
-      - java
-      - pyspark
-      - dax
-    networks:
-      - exam-net
-
-  python:
-    build:
-      context: ./python
-      dockerfile: Dockerfile
-    container_name: python
-    ports:
-      - "5000:5000"
-    environment:
-      - PYTHONUNBUFFERED=1
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379  
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-    depends_on:
-      - redis  
-    networks:
-      - exam-net
-
-  sql:
-    build:
-      context: ./sql
-      dockerfile: Dockerfile
-    container_name: sql
-    ports:
-      - "5001:5001"
-    environment:
-      - PYTHONUNBUFFERED=1
+      - PYTHON_SERVICE_URL=http://host.docker.internal:5000
+      - SQL_SERVICE_URL=http://host.docker.internal:5001
+      - JAVASCRIPT_SERVICE_URL=http://host.docker.internal:5002
+      - JAVA_SERVICE_URL=http://host.docker.internal:5003
+      - PYSPARK_SERVICE_URL=http://host.docker.internal:5005
+      - DAX_SERVICE_URL=http://host.docker.internal:5006
+      - DBT_SERVICE_URL=http://host.docker.internal:5004
       - REDIS_HOST=redis
       - REDIS_PORT=6379
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:5001/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-    depends_on:
-      - redis
-    networks:
-      - exam-net
-    
-  javascript:
-    build:
-      context: ./javascript
-      dockerfile: Dockerfile
-    container_name: javascript
-    ports:
-      - "5002:5002"
-    environment:
-      - PYTHONUNBUFFERED=1
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:5002/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-    depends_on:
-      - redis
-    networks:
-      - exam-net
-
-  java:
-    build:
-      context: ./java
-      dockerfile: Dockerfile
-    container_name: java
-    ports:
-      - "5003:5003"
-    environment:
-      - PYTHONUNBUFFERED=1
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:5003/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-    depends_on:
-      - redis
-    networks:
-      - exam-net
-
-  pyspark:
-    build:
-      context: ./pyspark
-      dockerfile: Dockerfile
-    container_name: pyspark
-    ports:
-      - "5005:5005"
-    environment:
-      - PYTHONUNBUFFERED=1
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
-      - PYSPARK_PYTHON=python3
-      - PYSPARK_DRIVER_PYTHON=python3
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:5005/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-    depends_on:
-      - redis
-    networks:
-      - exam-net
-    # Increase memory for Spark
-    deploy:
-      resources:
-        limits:
-          memory: 2G
-        reservations:
-          memory: 1G
-
-  dax:
-    build:
-      context: ./dax
-      dockerfile: Dockerfile
-    container_name: dax
-    ports:
-      - "5006:5006"
-    environment:
-      - PYTHONUNBUFFERED=1
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:5006/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-    networks:
-      - exam-net
-
-  redis:
-    image: redis:latest
-    container_name: redis
-    ports:
-      - "6379:6379"
-    networks:
-      - exam-net
-  
-  rq-worker:
-    build:
-      context: ./python
-      dockerfile: Dockerfile
-    container_name: rq-worker
-    command: rq worker python_execution --url redis://redis:6379
-    environment:
-      - PYTHONUNBUFFERED=1
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
-    depends_on:
-      - redis
-    networks:
-      - exam-net
-  
-  sql-worker:
-    build:
-      context: ./sql
-      dockerfile: Dockerfile
-    container_name: sql-worker
-    command: rq worker sql_execution --url redis://redis:6379
-    environment:
-      - PYTHONUNBUFFERED=1
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
-    depends_on:
-      - redis
-    networks:
-      - exam-net
-
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: always
   nginx:
     image: nginx:latest
     container_name: nginx-proxy
@@ -205,9 +31,10 @@ services:
       - ./nginx/certs:/etc/nginx/certs:ro
     depends_on:
       - exam-web
-    networks:
-      - exam-net
 
-networks:
-  exam-net:
-    driver: bridge
+  redis:
+    image: redis:latest
+    container_name: redis
+    ports:
+      - "6380:6379"
+    restart: always

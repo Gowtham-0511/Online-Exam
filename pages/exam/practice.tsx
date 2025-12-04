@@ -33,10 +33,15 @@ import {
     EyeOff,
     FileText,
     ListChecks,
+    Sparkles,
+    Activity,
+    BookOpen,
+    Ghost,
 } from "lucide-react";
 import Editor from "@monaco-editor/react";
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 interface MCQQuestion {
     type: "mcq";
@@ -81,17 +86,15 @@ export default function PracticeExam() {
     const [timeLeft, setTimeLeft] = useState(0);
     const [examDetails, setExamDetails] = useState<any>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const [submissionId, setSubmissionId] = useState<number | null>(null);
     const [isRunning, setIsRunning] = useState(false);
     const [testResults, setTestResults] = useState<TestResult[]>([]);
     const [questionResults, setQuestionResults] = useState<{ [key: number]: TestResult[] }>({});
     const [activeTab, setActiveTab] = useState<"problem" | "submission">("problem");
     const [showSolution, setShowSolution] = useState(false);
+    const [showExitWarning, setShowExitWarning] = useState(false);
 
-    const [isFullscreen, setIsFullscreen] = useState(false);
+
     const [showFullscreenPrompt, setShowFullscreenPrompt] = useState(true);
-    const [tabSwitchCount, setTabSwitchCount] = useState(0);
-    const [warnings, setWarnings] = useState<string[]>([]);
 
     // Load questions and initialize
     useEffect(() => {
@@ -128,101 +131,6 @@ export default function PracticeExam() {
         }
     }, [timeLeft, showResults]);
 
-
-    // Fullscreen change detection
-    useEffect(() => {
-        const handleFullscreenChange = () => {
-            const isCurrentlyFullscreen = !!(
-                document.fullscreenElement ||
-                (document as any).webkitFullscreenElement ||
-                (document as any).mozFullScreenElement ||
-                (document as any).msFullscreenElement
-            );
-
-            setIsFullscreen(isCurrentlyFullscreen);
-
-            // If user exits fullscreen during exam, show warning and pause
-            if (!isCurrentlyFullscreen && !showFullscreenPrompt && !showResults) {
-                const warning = `Warning: Exited fullscreen at ${new Date().toLocaleTimeString()}`;
-                setWarnings(prev => [...prev, warning]);
-                alert("⚠️ Warning: You exited fullscreen mode!\n\nPlease return to fullscreen to continue the exam.");
-                enterFullscreen();
-            }
-        };
-
-        document.addEventListener('fullscreenchange', handleFullscreenChange);
-        document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
-        document.addEventListener('mozfullscreenchange', handleFullscreenChange);
-        document.addEventListener('MSFullscreenChange', handleFullscreenChange);
-
-        return () => {
-            document.removeEventListener('fullscreenchange', handleFullscreenChange);
-            document.removeEventListener('webkitfullscreenchange', handleFullscreenChange);
-            document.removeEventListener('mozfullscreenchange', handleFullscreenChange);
-            document.removeEventListener('MSFullscreenChange', handleFullscreenChange);
-        };
-    }, [showFullscreenPrompt, showResults]);
-
-    // Tab switch / window blur detection
-    useEffect(() => {
-        if (showFullscreenPrompt || showResults) return;
-
-        const handleVisibilityChange = () => {
-            if (document.hidden) {
-                const warning = `Warning: Tab switched at ${new Date().toLocaleTimeString()}`;
-                setWarnings(prev => [...prev, warning]);
-                setTabSwitchCount(prev => prev + 1);
-            }
-        };
-
-        const handleBlur = () => {
-            if (!showResults) {
-                const warning = `Warning: Window lost focus at ${new Date().toLocaleTimeString()}`;
-                setWarnings(prev => [...prev, warning]);
-                setTabSwitchCount(prev => prev + 1);
-            }
-        };
-
-        document.addEventListener('visibilitychange', handleVisibilityChange);
-        window.addEventListener('blur', handleBlur);
-
-        return () => {
-            document.removeEventListener('visibilitychange', handleVisibilityChange);
-            window.removeEventListener('blur', handleBlur);
-        };
-    }, [showFullscreenPrompt, showResults]);
-
-    // Show alert after multiple tab switches
-    useEffect(() => {
-        if (tabSwitchCount > 0 && tabSwitchCount % 3 === 0 && !showResults) {
-            alert(`⚠️ Warning: You have switched tabs ${tabSwitchCount} times!\n\nExcessive tab switching may result in exam termination.`);
-        }
-    }, [tabSwitchCount, showResults]);
-
-    // Prevent right-click and copy-paste
-    useEffect(() => {
-        if (showFullscreenPrompt || showResults) return;
-
-        const preventContextMenu = (e: MouseEvent) => {
-            e.preventDefault();
-            return false;
-        };
-
-        const preventCopy = (e: ClipboardEvent) => {
-            e.preventDefault();
-            return false;
-        };
-
-        document.addEventListener('contextmenu', preventContextMenu);
-        document.addEventListener('copy', preventCopy);
-        document.addEventListener('cut', preventCopy);
-
-        return () => {
-            document.removeEventListener('contextmenu', preventContextMenu);
-            document.removeEventListener('copy', preventCopy);
-            document.removeEventListener('cut', preventCopy);
-        };
-    }, [showFullscreenPrompt, showResults]);
 
     const prepareSqlQuery = (testCaseInput: string, userCode: string): string => {
         if (!testCaseInput) return userCode;
@@ -340,11 +248,21 @@ export default function PracticeExam() {
             }
 
             setTestResults(results);
-            // Store results for this specific question
             setQuestionResults(prev => ({
                 ...prev,
                 [currentQuestion]: results
             }));
+
+            // Animate test results
+            // setTimeout(() => {
+            //     gsap.from(".test-result-item", {
+            //         x: -20,
+            //         opacity: 0,
+            //         duration: 0.4,
+            //         stagger: 0.1,
+            //         ease: "power2.out"
+            //     });
+            // }, 100);
         } catch (error: any) {
             console.error("Error running code:", error);
         } finally {
@@ -353,41 +271,9 @@ export default function PracticeExam() {
     };
 
     const handleSubmit = async () => {
-        setIsSubmitting(true);
-
-        try {
-            const response = await fetch("/api/practice/submit", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    sessionId: examDetails?.sessionId || localStorage.getItem("guestSessionId"),
-                    examId: examDetails?.id,
-                    questions,
-                    answers: {
-                        mcq: selectedAnswers,
-                        coding: codeAnswers
-                    },
-                    timeSpent: (examDetails?.duration * 60) - timeLeft,
-                    topic: examDetails?.topic,
-                    difficulty: examDetails?.difficulty,
-                    violations: {
-                        tabSwitches: tabSwitchCount,
-                        warnings: warnings
-                    }
-                })
-            });
-
-            if (response.ok) {
-                const data = await response.json();
-                setSubmissionId(data.submissionId);
-            }
-        } catch (error) {
-            console.error("Error submitting exam:", error);
-        } finally {
-            exitFullscreen(); // Exit fullscreen after submission
-            setShowResults(true);
-            setIsSubmitting(false);
-        }
+        exitFullscreen();
+        setShowResults(true);
+        setIsSubmitting(false);
     };
 
     const hasQuestionBeenRun = (questionIndex: number): boolean => {
@@ -408,21 +294,18 @@ export default function PracticeExam() {
         if (q.type === "mcq") {
             return selectedAnswers[questionIndex] === q.correctAnswer;
         } else if (q.type === "coding") {
-            // Check if this question has test results
             const results = questionResults[questionIndex];
 
             if (!results || results.length === 0) {
-                return false; // Not run yet
+                return false;
             }
 
-            // Check if all visible test cases passed
             const visibleTests = q.testCases.filter(tc => !tc.isHidden);
 
             if (visibleTests.length === 0) {
                 return false;
             }
 
-            // All results must be passed
             const allPassed = results.every(r => r.passed === true);
 
             return allPassed && results.length === visibleTests.length;
@@ -449,7 +332,6 @@ export default function PracticeExam() {
 
     const currentQ = questions[currentQuestion];
 
-    // Add this function before the downloadPDF function
     const loadImageAsBase64 = (imagePath: string): Promise<string> => {
         return new Promise((resolve, reject) => {
             const img = new Image();
@@ -473,7 +355,6 @@ export default function PracticeExam() {
         const score = calculateScore();
         const scorePercentage = (score.correct / score.total) * 100;
 
-        // Load logo
         let logoBase64 = '';
         try {
             logoBase64 = await loadImageAsBase64('/logo3.png');
@@ -481,11 +362,9 @@ export default function PracticeExam() {
             console.warn('Could not load logo:', error);
         }
 
-        // Page dimensions
         const pageWidth = doc.internal.pageSize.width;
         const pageHeight = doc.internal.pageSize.height;
 
-        // Add watermark
         const addWatermark = () => {
             doc.setTextColor(200, 200, 200);
             doc.setFontSize(50);
@@ -499,33 +378,27 @@ export default function PracticeExam() {
             doc.restoreGraphicsState();
         };
 
-        // Add header with logo
         const addHeader = () => {
-            // Header background
             doc.setFillColor(63, 169, 160);
             doc.rect(0, 0, pageWidth, 35, 'F');
 
-            // Add logo if available
             if (logoBase64) {
                 try {
-                    doc.addImage(logoBase64, 'PNG', 10, 5, 25, 25); // x, y, width, height
+                    doc.addImage(logoBase64, 'PNG', 10, 5, 25, 25);
                 } catch (error) {
                     console.warn('Could not add logo to PDF:', error);
                 }
             }
 
-            // Company/Platform name (moved to the right of logo)
             doc.setTextColor(255, 255, 255);
             doc.setFontSize(22);
             doc.setFont('helvetica', 'bold');
             doc.text('Sysrank Assessment', logoBase64 ? 40 : 15, 15);
 
-            // Subtitle
             doc.setFontSize(10);
             doc.setFont('helvetica', 'normal');
             doc.text('Practice Exam Report', logoBase64 ? 40 : 15, 22);
 
-            // Date on the right
             doc.setFontSize(9);
             doc.text(`Generated: ${new Date().toLocaleDateString('en-US', {
                 month: 'short',
@@ -535,47 +408,33 @@ export default function PracticeExam() {
                 minute: '2-digit'
             })}`, pageWidth - 15, 15, { align: 'right' } as any);
 
-            // Reset colors
             doc.setTextColor(50, 50, 50);
         };
 
-        // Add footer
         const addFooter = (pageNum: number, totalPages: number) => {
-            // Footer line
             doc.setDrawColor(63, 169, 160);
             doc.setLineWidth(0.5);
             doc.line(15, pageHeight - 15, pageWidth - 15, pageHeight - 15);
 
-            // Footer text
             doc.setFontSize(8);
             doc.setTextColor(128, 128, 128);
             doc.setFont('helvetica', 'normal');
 
-            // Left side - confidential
             doc.text('Confidential - For Review Only', 15, pageHeight - 10);
-
-            // Center - page number
             doc.text(
                 `Page ${pageNum} of ${totalPages}`,
                 pageWidth / 2,
                 pageHeight - 10,
                 { align: 'center' } as any
             );
-
-            // Right side - website
             doc.text('www.systechusa.com', pageWidth - 15, pageHeight - 10, { align: 'right' } as any);
         };
 
-        // Add watermark to first page
         addWatermark();
-
-        // Add header
         addHeader();
 
-        // Exam Details Section
         let yPos = 45;
 
-        // Title
         doc.setFontSize(20);
         doc.setFont('helvetica', 'bold');
         doc.setTextColor(44, 68, 86);
@@ -583,29 +442,24 @@ export default function PracticeExam() {
 
         yPos += 12;
 
-        // Info cards
         const cardData = [
             { label: 'Topic', value: examDetails?.topic || 'N/A' },
             { label: 'Difficulty', value: examDetails?.difficulty || 'N/A' },
             { label: 'Duration', value: `${examDetails?.duration || 'N/A'} minutes` },
-            // { label: 'Session ID', value: (examDetails?.sessionId || '').substring(0, 20) + '...' }
         ];
 
         cardData.forEach((card, index) => {
             const xPos = 15 + (index % 2) * 95;
             const cardY = yPos + Math.floor(index / 2) * 20;
 
-            // Card background
             doc.setFillColor(245, 245, 245);
             doc.roundedRect(xPos, cardY, 90, 16, 2, 2, 'F');
 
-            // Label
             doc.setFontSize(9);
             doc.setFont('helvetica', 'normal');
             doc.setTextColor(100, 100, 100);
             doc.text(card.label, xPos + 3, cardY + 6);
 
-            // Value
             doc.setFontSize(11);
             doc.setFont('helvetica', 'bold');
             doc.setTextColor(50, 50, 50);
@@ -614,110 +468,6 @@ export default function PracticeExam() {
 
         yPos += 50;
 
-        // Score Section with visual circle
-        doc.setFontSize(16);
-        doc.setFont('helvetica', 'bold');
-        doc.setTextColor(63, 169, 160);
-        doc.text('Score Summary', 15, yPos);
-
-        yPos += 10;
-
-        // Score circle
-        const centerX = pageWidth / 2;
-        const circleY = yPos + 25;
-        const radius = 20;
-
-        // Outer circle (background)
-        doc.setFillColor(240, 240, 240);
-        doc.circle(centerX, circleY, radius, 'F');
-
-        // Score color based on percentage
-        let scoreColorR = 239, scoreColorG = 68, scoreColorB = 68;
-        if (scorePercentage >= 70) {
-            scoreColorR = 34; scoreColorG = 197; scoreColorB = 94;
-        } else if (scorePercentage >= 50) {
-            scoreColorR = 234; scoreColorG = 179; scoreColorB = 8;
-        }
-
-        // Draw score percentage as text in circle
-        doc.setFontSize(24);
-        doc.setFont('helvetica', 'bold');
-        doc.setTextColor(scoreColorR, scoreColorG, scoreColorB);
-        doc.text(`${Math.round(scorePercentage)}%`, centerX, circleY, { align: 'center' } as any);
-
-        doc.setFontSize(8);
-        doc.setTextColor(100, 100, 100);
-        doc.text('Overall Score', centerX, circleY + 6, { align: 'center' } as any);
-
-        // Stats boxes around circle
-        const stats = [
-            { label: 'Correct', value: score.correct, r: 34, g: 197, b: 94, x: 30, y: circleY - 10 },
-            { label: 'Incorrect', value: score.incorrect, r: 239, g: 68, b: 68, x: 30, y: circleY + 10 },
-            { label: 'Total', value: score.total, r: 63, g: 169, b: 160, x: pageWidth - 50, y: circleY - 10 },
-            { label: 'Tab Switches', value: tabSwitchCount, r: 234, g: 179, b: 8, x: pageWidth - 50, y: circleY + 10 }
-        ];
-
-        stats.forEach(stat => {
-            doc.setFillColor(stat.r, stat.g, stat.b);
-            doc.roundedRect(stat.x - 3, stat.y - 5, 35, 10, 1, 1, 'F');
-
-            doc.setFontSize(12);
-            doc.setFont('helvetica', 'bold');
-            doc.setTextColor(255, 255, 255);
-            doc.text(stat.value.toString(), stat.x, stat.y, { align: 'left' } as any);
-
-            doc.setFontSize(7);
-            doc.setFont('helvetica', 'normal');
-            doc.text(stat.label, stat.x + 12, stat.y, { align: 'left' } as any);
-        });
-
-        yPos += 60;
-
-        // Performance badge
-        let performance = "Needs Improvement";
-        let perfR = 239, perfG = 68, perfB = 68;
-        if (scorePercentage >= 70) {
-            performance = "Excellent";
-            perfR = 34; perfG = 197; perfB = 94;
-        } else if (scorePercentage >= 50) {
-            performance = "Good";
-            perfR = 234; perfG = 179; perfB = 8;
-        }
-
-        doc.setFillColor(perfR, perfG, perfB);
-        doc.roundedRect(15, yPos, 70, 12, 2, 2, 'F');
-        doc.setFontSize(11);
-        doc.setFont('helvetica', 'bold');
-        doc.setTextColor(255, 255, 255);
-        doc.text(`Performance: ${performance}`, 18, yPos + 8);
-
-        yPos += 20;
-
-        // Violations warning (if any)
-        if (warnings.length > 0) {
-            doc.setFillColor(254, 242, 242);
-            doc.setDrawColor(239, 68, 68);
-            doc.setLineWidth(1);
-            doc.roundedRect(15, yPos, pageWidth - 30, 8 + (warnings.length * 5), 2, 2, 'FD');
-
-            doc.setFontSize(10);
-            doc.setFont('helvetica', 'bold');
-            doc.setTextColor(239, 68, 68);
-            doc.text('WARNING: Exam Violations Detected', 18, yPos + 6);
-
-            doc.setFontSize(8);
-            doc.setFont('helvetica', 'normal');
-            doc.setTextColor(100, 100, 100);
-            warnings.slice(0, 3).forEach((warning, idx) => {
-                doc.text(`• ${warning}`, 20, yPos + 12 + (idx * 5));
-            });
-
-            yPos += 10 + (warnings.length * 5);
-        }
-
-        yPos += 10;
-
-        // Questions Review Section
         doc.setFontSize(16);
         doc.setFont('helvetica', 'bold');
         doc.setTextColor(63, 169, 160);
@@ -725,17 +475,20 @@ export default function PracticeExam() {
 
         yPos += 8;
 
-        // Prepare table data
         const tableData = questions.map((q, index) => {
             const isCorrect = getQuestionResult(index);
             const hasRun = hasQuestionBeenRun(index);
 
             if (q.type === "mcq") {
+                const userAnswer = selectedAnswers[index] !== -1 ? q.options[selectedAnswers[index]] : "Not Answered";
+                const correctAnswer = q.options[q.correctAnswer];
+
                 return [
                     `Q${index + 1}`,
-                    "MCQ",
+                    q.question,
                     hasRun ? (isCorrect ? "PASS" : "FAIL") : "NOT ANSWERED",
-                    hasRun ? (isCorrect ? "Correct" : "Incorrect") : "Not Answered"
+                    userAnswer,
+                    correctAnswer
                 ];
             } else {
                 const results = questionResults[index];
@@ -754,19 +507,21 @@ export default function PracticeExam() {
                     }
                 }
 
+                const userCode = codeAnswers[index] || "No code submitted";
+
                 return [
                     `Q${index + 1}`,
-                    q.language.toUpperCase(),
+                    q.question,
                     hasRun ? (isCorrect ? "PASS" : "FAIL") : "NOT ANSWERED",
+                    userCode,
                     statusText
                 ];
             }
         });
 
-        // Draw table
         autoTable(doc, {
             startY: yPos,
-            head: [["Question", "Type", "Result", "Status"]],
+            head: [["#", "Question", "Result", "Your Answer", "Correct Answer"]],
             body: tableData,
             theme: "grid",
             headStyles: {
@@ -777,21 +532,21 @@ export default function PracticeExam() {
                 halign: 'center'
             },
             bodyStyles: {
-                fontSize: 9,
+                fontSize: 8,
                 textColor: [50, 50, 50]
             },
             alternateRowStyles: {
                 fillColor: [245, 245, 245]
             },
             columnStyles: {
-                0: { halign: 'center', cellWidth: 25 },
-                1: { halign: 'center', cellWidth: 35 },
+                0: { halign: 'center', cellWidth: 15 },
+                1: { halign: 'left', cellWidth: 50 },
                 2: { halign: 'center', cellWidth: 25, fontStyle: 'bold' },
-                3: { halign: 'left' }
+                3: { halign: 'left', cellWidth: 50 },
+                4: { halign: 'left', cellWidth: 50 }
             },
             margin: { left: 15, right: 15 },
             didDrawCell: (data: any) => {
-                // Color code the Result column
                 if (data.column.index === 2 && data.section === 'body') {
                     const result = data.cell.text[0];
                     if (result === 'PASS') {
@@ -806,7 +561,6 @@ export default function PracticeExam() {
             }
         });
 
-        // Add footer to all pages
         const pageCount = (doc as any).internal.pages.length - 1;
         for (let i = 1; i <= pageCount; i++) {
             doc.setPage(i);
@@ -817,7 +571,6 @@ export default function PracticeExam() {
             }
         }
 
-        // Save the PDF
         const fileName = `${examDetails?.topic || "practice"}-exam-report-${new Date().toISOString().split('T')[0]}.pdf`;
         doc.save(fileName);
     };
@@ -859,10 +612,15 @@ export default function PracticeExam() {
         setShowFullscreenPrompt(false);
     };
 
+    const confirmExit = () => {
+        router.push('/dashboard/attender/ghost-mode/dream-exam');
+    };
+
+
     if (questions.length === 0) {
         return (
             <div className="min-h-screen bg-background flex items-center justify-center p-4">
-                <Card className="max-w-md w-full">
+                <Card className="max-w-md w-full shadow-lg">
                     <CardContent className="pt-6 text-center space-y-4">
                         <AlertCircle className="w-12 h-12 mx-auto text-muted-foreground" />
                         <div>
@@ -871,7 +629,7 @@ export default function PracticeExam() {
                                 Start a new practice exam from the learning page.
                             </p>
                         </div>
-                        <Button onClick={() => router.push("/learning")} className="w-full">
+                        <Button onClick={() => router.push("/")} className="w-full">
                             <ArrowLeft className="w-4 h-4 mr-2" />
                             Back to Learning
                         </Button>
@@ -893,117 +651,140 @@ export default function PracticeExam() {
 
                 <div className="min-h-screen bg-background">
                     {/* Header */}
-                    <header className="border-b border-border bg-card sticky top-0 z-50">
-                        <div className="container mx-auto px-4 sm:px-6 py-4">
-                            <div className="flex items-center justify-between">
-                                <div className="flex items-center space-x-3">
-                                    <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center">
-                                        <Trophy className="w-5 h-5 text-primary-foreground" />
+                    <div className="sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+                        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                            <div className="flex h-16 items-center justify-between">
+                                <div className="flex items-center gap-3">
+                                    <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400">
+                                        <Sparkles className="w-5 h-5" />
                                     </div>
                                     <div>
-                                        <h1 className="text-lg font-bold text-foreground">Practice Complete</h1>
-                                        <p className="text-xs text-muted-foreground">{examDetails?.topic}</p>
+                                        <h1 className="text-lg font-semibold text-foreground">
+                                            Dream Exam Results
+                                        </h1>
                                     </div>
                                 </div>
-                                <Button variant="ghost" size="sm" onClick={() => router.push("/learning")}>
-                                    <Home className="w-4 h-4 mr-2" />
-                                    Home
+
+                                <Button
+                                    onClick={() => setShowExitWarning(true)}
+                                    variant="ghost"
+                                    size="sm"
+                                    className="text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                                >
+                                    <ArrowLeft className="w-4 h-4 mr-2" />
+                                    Exit
                                 </Button>
                             </div>
                         </div>
-                    </header>
+                    </div>
 
-                    <div className="container mx-auto px-4 sm:px-6 py-8 max-w-6xl">
+                    {/* Status Banner */}
+                    <div className="bg-green-50 dark:bg-green-950/30 border-b border-green-100 dark:border-green-900/50 px-4 py-2">
+                        <div className="max-w-7xl mx-auto flex items-center justify-center gap-2 text-sm text-green-700 dark:text-green-400">
+                            <CheckCircle2 className="w-4 h-4" />
+                            <span className="font-medium">Exam Complete!</span>
+                            <span>Your results are ready for review.</span>
+                        </div>
+                    </div>
+
+                    {/* Main Content */}
+                    <div className="container mx-auto px-4 sm:px-6 py-12 max-w-7xl">
                         {/* Score Card */}
-                        <Card className="mb-6">
-                            <CardContent className="pt-6">
-                                <div className="flex flex-col md:flex-row items-center justify-between gap-6">
+                        <Card className="mb-10 overflow-hidden shadow-xl border-primary/20 bg-gradient-to-br from-primary/5 via-card to-card">
+                            <CardContent className="pt-8 pb-8">
+                                <div className="flex flex-col lg:flex-row items-center justify-between gap-8">
                                     {/* Score Circle */}
                                     <div className="flex flex-col items-center">
-                                        <div className="relative w-32 h-32">
+                                        <div className="relative w-40 h-40">
                                             <svg className="w-full h-full transform -rotate-90">
                                                 <circle
-                                                    cx="64"
-                                                    cy="64"
-                                                    r="56"
+                                                    cx="80"
+                                                    cy="80"
+                                                    r="70"
                                                     stroke="currentColor"
-                                                    strokeWidth="8"
+                                                    strokeWidth="10"
                                                     fill="none"
-                                                    className="text-muted"
+                                                    className="text-muted/20"
                                                 />
                                                 <circle
-                                                    cx="64"
-                                                    cy="64"
-                                                    r="56"
+                                                    cx="80"
+                                                    cy="80"
+                                                    r="70"
                                                     stroke="currentColor"
-                                                    strokeWidth="8"
+                                                    strokeWidth="10"
                                                     fill="none"
-                                                    strokeDasharray={`${2 * Math.PI * 56}`}
-                                                    strokeDashoffset={`${2 * Math.PI * 56 * (1 - scorePercentage / 100)}`}
-                                                    className={`transition-all duration-1000 ${scorePercentage >= 70 ? "text-green-500" :
-                                                        scorePercentage >= 50 ? "text-yellow-500" : "text-red-500"
+                                                    strokeDasharray={`${2 * Math.PI * 70}`}
+                                                    strokeDashoffset={`${2 * Math.PI * 70 * (1 - scorePercentage / 100)}`}
+                                                    className={`transition-all duration-1000 ${scorePercentage >= 70
+                                                        ? "text-green-500"
+                                                        : scorePercentage >= 50
+                                                            ? "text-yellow-500"
+                                                            : "text-red-500"
                                                         }`}
                                                     strokeLinecap="round"
                                                 />
                                             </svg>
                                             <div className="absolute inset-0 flex flex-col items-center justify-center">
-                                                <div className="text-3xl font-bold text-foreground">
+                                                <div className="text-4xl font-bold text-foreground">
                                                     {Math.round(scorePercentage)}%
                                                 </div>
-                                                <div className="text-xs text-muted-foreground">Score</div>
+                                                <div className="text-sm text-muted-foreground mt-1">Overall Score</div>
                                             </div>
                                         </div>
                                     </div>
 
-                                    {/* Stats */}
-                                    <div className="flex-1 grid grid-cols-3 gap-4 w-full">
-                                        <div className="text-center p-4 rounded-lg bg-green-500/10">
-                                            <div className="text-2xl font-bold text-green-500">{score.correct}</div>
-                                            <div className="text-xs text-muted-foreground mt-1">Correct</div>
+                                    {/* Stats Grid */}
+                                    <div className="flex-1 grid grid-cols-3 gap-6 w-full max-w-2xl">
+                                        <div className="text-center p-6 rounded-xl bg-gradient-to-br from-green-500/10 to-green-500/5 border-2 border-green-500/20 hover:border-green-500/40 transition-all">
+                                            <div className="text-3xl font-bold text-green-500 mb-2">{score.correct}</div>
+                                            <div className="text-sm text-muted-foreground font-medium">Correct</div>
                                         </div>
-                                        <div className="text-center p-4 rounded-lg bg-red-500/10">
-                                            <div className="text-2xl font-bold text-red-500">{score.incorrect}</div>
-                                            <div className="text-xs text-muted-foreground mt-1">Incorrect</div>
+                                        <div className="text-center p-6 rounded-xl bg-gradient-to-br from-red-500/10 to-red-500/5 border-2 border-red-500/20 hover:border-red-500/40 transition-all">
+                                            <div className="text-3xl font-bold text-red-500 mb-2">{score.incorrect}</div>
+                                            <div className="text-sm text-muted-foreground font-medium">Incorrect</div>
                                         </div>
-                                        <div className="text-center p-4 rounded-lg bg-primary/10">
-                                            <div className="text-2xl font-bold text-primary">{score.total}</div>
-                                            <div className="text-xs text-muted-foreground mt-1">Total</div>
+                                        <div className="text-center p-6 rounded-xl bg-gradient-to-br from-primary/10 to-primary/5 border-2 border-primary/20 hover:border-primary/40 transition-all">
+                                            <div className="text-3xl font-bold text-primary mb-2">{score.total}</div>
+                                            <div className="text-sm text-muted-foreground font-medium">Total</div>
                                         </div>
                                     </div>
                                 </div>
 
-                                <Separator className="my-6" />
+                                <Separator className="my-8" />
 
                                 {/* Actions */}
-                                <div className="flex flex-wrap gap-3">
-                                    <Button variant="outline" onClick={() => router.push("/learning")} className="flex-1 sm:flex-none">
-                                        <Home className="w-4 h-4 mr-2" />
-                                        Home
-                                    </Button>
-                                    <Button variant="outline" onClick={downloadPDF} className="flex-1 sm:flex-none">
+                                <div className="flex flex-wrap gap-4 justify-center">
+                                    <Button
+                                        variant="outline"
+                                        onClick={downloadPDF}
+                                        className="min-w-[180px] h-11 hover:bg-primary/5 hover:border-primary/40 transition-all"
+                                    >
                                         <Download className="w-4 h-4 mr-2" />
                                         Download Report
-                                    </Button>
-                                    <Button className="flex-1 sm:flex-none">
-                                        <RotateCcw className="w-4 h-4 mr-2" />
-                                        Try Again
                                     </Button>
                                 </div>
                             </CardContent>
                         </Card>
 
-                        {/* Review Answers */}
-                        <div className="space-y-4">
-                            <h2 className="text-xl font-bold text-foreground">Review Your Answers</h2>
+                        {/* Review Section */}
+                        <div className="space-y-6">
+                            <div className="flex items-center gap-3 mb-8">
+                                <div className="w-1 h-10 bg-gradient-to-b from-primary to-primary/50 rounded-full" />
+                                <h2 className="text-2xl font-bold text-foreground">Review Your Answers</h2>
+                            </div>
+
                             {questions.map((q, index) => {
                                 const isCorrect = getQuestionResult(index);
                                 const hasRun = hasQuestionBeenRun(index);
+
                                 if (q.type === "mcq") {
                                     return (
-                                        <Card key={index}>
+                                        <Card key={index} className="overflow-hidden hover:shadow-lg transition-all border-l-4 hover:border-l-primary border-l-transparent">
                                             <CardContent className="pt-6">
-                                                <div className="flex items-start gap-3">
-                                                    <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${isCorrect ? "bg-green-500/10" : "bg-red-500/10"
+                                                <div className="flex items-start gap-4">
+                                                    <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${isCorrect
+                                                        ? "bg-green-500/10 ring-2 ring-green-500/20"
+                                                        : "bg-red-500/10 ring-2 ring-red-500/20"
                                                         }`}>
                                                         {isCorrect ? (
                                                             <CheckCircle2 className="w-5 h-5 text-green-500" />
@@ -1011,38 +792,50 @@ export default function PracticeExam() {
                                                             <XCircle className="w-5 h-5 text-red-500" />
                                                         )}
                                                     </div>
+
                                                     <div className="flex-1">
-                                                        <div className="flex items-start justify-between mb-3">
-                                                            <h3 className="font-medium text-foreground">
+                                                        <div className="flex items-start justify-between mb-4">
+                                                            <h3 className="font-semibold text-foreground text-lg">
                                                                 Question {index + 1}
-                                                                <Badge className="ml-2" variant={isCorrect ? "default" : "destructive"}>
+                                                                <Badge
+                                                                    className={`ml-3 ${isCorrect
+                                                                        ? "bg-green-500/10 text-green-600 border-green-500/20"
+                                                                        : "bg-red-500/10 text-red-600 border-red-500/20"
+                                                                        }`}
+                                                                    variant="outline"
+                                                                >
                                                                     {isCorrect ? "Correct" : "Incorrect"}
                                                                 </Badge>
                                                             </h3>
                                                         </div>
-                                                        <p className="text-foreground mb-4">{q.question}</p>
-                                                        <div className="space-y-2">
+
+                                                        <p className="text-foreground mb-5 text-base">{q.question}</p>
+
+                                                        <div className="space-y-3">
                                                             {q.options.map((option, optionIndex) => {
                                                                 const isCorrectAnswer = optionIndex === q.correctAnswer;
                                                                 const isSelectedAnswer = optionIndex === selectedAnswers[index];
+
                                                                 return (
                                                                     <div
                                                                         key={optionIndex}
-                                                                        className={`p-3 rounded-lg border-2 ${isCorrectAnswer
+                                                                        className={`p-4 rounded-lg border-2 transition-all ${isCorrectAnswer
                                                                             ? "border-green-500 bg-green-500/5"
                                                                             : isSelectedAnswer
                                                                                 ? "border-red-500 bg-red-500/5"
-                                                                                : "border-border"
+                                                                                : "border-border bg-background/50"
                                                                             }`}
                                                                     >
-                                                                        <div className="flex items-center gap-2">
-                                                                            <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${isCorrectAnswer || isSelectedAnswer ? "border-current" : "border-border"
+                                                                        <div className="flex items-center gap-3">
+                                                                            <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${isCorrectAnswer || isSelectedAnswer
+                                                                                ? "border-current"
+                                                                                : "border-border"
                                                                                 }`}>
                                                                                 {(isCorrectAnswer || isSelectedAnswer) && (
-                                                                                    <div className="w-2.5 h-2.5 rounded-full bg-current"></div>
+                                                                                    <div className="w-3 h-3 rounded-full bg-current"></div>
                                                                                 )}
                                                                             </div>
-                                                                            <span className={isCorrectAnswer || isSelectedAnswer ? "font-medium" : ""}>
+                                                                            <span className={`${isCorrectAnswer || isSelectedAnswer ? "font-medium" : ""}`}>
                                                                                 {option}
                                                                             </span>
                                                                         </div>
@@ -1050,10 +843,13 @@ export default function PracticeExam() {
                                                                 );
                                                             })}
                                                         </div>
+
                                                         {q.explanation && (
-                                                            <Alert className="mt-4">
-                                                                <AlertCircle className="h-4 w-4" />
-                                                                <AlertDescription>{q.explanation}</AlertDescription>
+                                                            <Alert className="mt-5 border-primary/20 bg-primary/5">
+                                                                <AlertCircle className="h-4 w-4 text-primary" />
+                                                                <AlertDescription className="text-foreground ml-2">
+                                                                    {q.explanation}
+                                                                </AlertDescription>
                                                             </Alert>
                                                         )}
                                                     </div>
@@ -1065,10 +861,15 @@ export default function PracticeExam() {
                                     const results = questionResults[index];
 
                                     return (
-                                        <Card key={index}>
+                                        <Card key={index} className="overflow-hidden hover:shadow-lg transition-all border-l-4 hover:border-l-primary border-l-transparent">
                                             <CardContent className="pt-6">
-                                                <div className="flex items-start gap-3">
-                                                    <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${hasRun ? (isCorrect ? "bg-green-500/10" : "bg-red-500/10") : "bg-gray-500/10"
+                                                <div className="flex items-start gap-4">
+                                                    <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${hasRun
+                                                        ? (isCorrect
+                                                            ? "bg-green-500/10 ring-2 ring-green-500/20"
+                                                            : "bg-red-500/10 ring-2 ring-red-500/20"
+                                                        )
+                                                        : "bg-gray-500/10 ring-2 ring-gray-500/20"
                                                         }`}>
                                                         {hasRun ? (
                                                             isCorrect ? (
@@ -1080,34 +881,56 @@ export default function PracticeExam() {
                                                             <AlertCircle className="w-5 h-5 text-gray-500" />
                                                         )}
                                                     </div>
+
                                                     <div className="flex-1">
-                                                        <div className="flex items-start justify-between mb-3">
-                                                            <h3 className="font-medium text-foreground">
+                                                        <div className="flex items-start justify-between mb-4">
+                                                            <h3 className="font-semibold text-foreground text-lg">
                                                                 Question {index + 1}
-                                                                <Badge className="ml-2" variant={hasRun ? (isCorrect ? "default" : "destructive") : "secondary"}>
+                                                                <Badge
+                                                                    className={`ml-3 ${hasRun
+                                                                        ? (isCorrect
+                                                                            ? "bg-green-500/10 text-green-600 border-green-500/20"
+                                                                            : "bg-red-500/10 text-red-600 border-red-500/20"
+                                                                        )
+                                                                        : "bg-gray-500/10 text-gray-600 border-gray-500/20"
+                                                                        }`}
+                                                                    variant="outline"
+                                                                >
                                                                     {hasRun ? (isCorrect ? "Passed" : "Failed") : "Not Run"}
                                                                 </Badge>
                                                             </h3>
                                                         </div>
-                                                        <p className="text-foreground mb-2 font-semibold">{q.question}</p>
-                                                        <p className="text-muted-foreground text-sm mb-4">{q.description}</p>
+
+                                                        <p className="text-foreground mb-2 font-semibold text-base">{q.question}</p>
+                                                        <p className="text-muted-foreground text-sm mb-5">{q.description}</p>
 
                                                         {results && results.length > 0 && (
-                                                            <div className="space-y-2 mt-4">
-                                                                <h4 className="text-sm font-semibold text-foreground">Test Results:</h4>
+                                                            <div className="space-y-3 mt-5">
+                                                                <h4 className="text-sm font-semibold text-foreground flex items-center gap-2">
+                                                                    <Activity className="w-4 h-4 text-primary" />
+                                                                    Test Results:
+                                                                </h4>
                                                                 {results.map((result, idx) => (
-                                                                    <div key={idx} className={`p-3 rounded-lg border-2 ${result.passed ? "border-green-500 bg-green-500/5" : "border-red-500 bg-red-500/5"
-                                                                        }`}>
+                                                                    <div
+                                                                        key={idx}
+                                                                        className={`p-4 rounded-lg border-2 transition-all ${result.passed
+                                                                            ? "border-green-500 bg-green-500/5"
+                                                                            : "border-red-500 bg-red-500/5"
+                                                                            }`}
+                                                                    >
                                                                         <div className="flex items-center justify-between mb-2">
                                                                             <span className="text-sm font-medium">Test Case {idx + 1}</span>
-                                                                            <Badge variant={result.passed ? "default" : "destructive"} className="text-xs">
+                                                                            <Badge
+                                                                                variant={result.passed ? "default" : "destructive"}
+                                                                                className="text-xs"
+                                                                            >
                                                                                 {result.passed ? "Passed" : "Failed"}
                                                                             </Badge>
                                                                         </div>
                                                                         {!result.passed && result.error && (
                                                                             <div className="text-xs mt-2">
                                                                                 <span className="text-muted-foreground">Error:</span>
-                                                                                <pre className="mt-1 p-2 bg-background rounded text-red-400 overflow-x-auto text-xs">
+                                                                                <pre className="mt-1 p-3 bg-background rounded text-red-400 overflow-x-auto text-xs font-mono border border-red-500/20">
                                                                                     {result.error}
                                                                                 </pre>
                                                                             </div>
@@ -1118,9 +941,9 @@ export default function PracticeExam() {
                                                         )}
 
                                                         {!hasRun && (
-                                                            <Alert className="mt-4">
-                                                                <AlertCircle className="h-4 w-4" />
-                                                                <AlertDescription>
+                                                            <Alert className="mt-5 border-amber-500/20 bg-amber-500/5">
+                                                                <AlertCircle className="h-4 w-4 text-amber-500" />
+                                                                <AlertDescription className="text-foreground ml-2">
                                                                     This question was not run during the exam.
                                                                 </AlertDescription>
                                                             </Alert>
@@ -1136,6 +959,38 @@ export default function PracticeExam() {
                         </div>
                     </div>
                 </div>
+
+
+                {/* Exit Warning Dialog */}
+                <Dialog open={showExitWarning} onOpenChange={setShowExitWarning}>
+                    <DialogContent className="sm:max-w-md">
+                        <DialogHeader>
+                            <div className="w-12 h-12 rounded-full bg-destructive/10 flex items-center justify-center mx-auto mb-4">
+                                <Ghost className="w-6 h-6 text-destructive" />
+                            </div>
+                            <DialogTitle className="text-center">Exit Dream Exam?</DialogTitle>
+                            <DialogDescription className="text-center">
+                                Any unsaved configuration or progress will be lost.
+                            </DialogDescription>
+                        </DialogHeader>
+                        <DialogFooter className="flex-col sm:flex-row gap-3">
+                            <Button
+                                variant="outline"
+                                onClick={() => setShowExitWarning(false)}
+                                className="flex-1"
+                            >
+                                Stay Here
+                            </Button>
+                            <Button
+                                variant="destructive"
+                                onClick={confirmExit}
+                                className="flex-1"
+                            >
+                                Yes, Exit
+                            </Button>
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
             </>
         );
     }
@@ -1148,111 +1003,101 @@ export default function PracticeExam() {
                     <title>Enter Fullscreen | Practice Exam</title>
                 </Head>
 
-                <div className="min-h-screen bg-background flex items-center justify-center p-4">
-                    <Card className="max-w-2xl w-full">
-                        <CardContent className="pt-8 pb-6">
-                            <div className="text-center space-y-6">
-                                {/* Icon */}
-                                <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mx-auto">
-                                    <AlertCircle className="w-10 h-10 text-primary" />
+                <div className="min-h-screen bg-background flex items-center justify-center p-4 relative overflow-hidden font-sans">
+                    {/* Animated background elements */}
+                    <div className="absolute top-0 left-0 w-96 h-96 bg-gradient-to-br from-primary/20 to-transparent rounded-full blur-3xl animate-pulse" />
+                    <div className="absolute bottom-0 right-0 w-96 h-96 bg-gradient-to-tl from-primary/10 to-transparent rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }} />
+
+                    <Card className="max-w-3xl w-full shadow-2xl border-primary/20 relative z-10 bg-gradient-to-br from-card via-card to-primary/5">
+                        <CardContent className="pt-10 pb-8 px-8">
+                            <div className="text-center space-y-8">
+                                {/* Icon with enhanced styling */}
+                                <div className="w-24 h-24 bg-gradient-to-br from-primary to-primary/80 rounded-full flex items-center justify-center mx-auto shadow-lg shadow-primary/30 ring-4 ring-primary/10">
+                                    <AlertCircle className="w-12 h-12 text-primary-foreground" />
                                 </div>
 
-                                {/* Title */}
-                                <div>
-                                    <h2 className="text-2xl font-bold text-foreground mb-2">
+                                {/* Title & Description */}
+                                <div className="space-y-3">
+                                    <h2 className="text-3xl font-bold text-foreground">
                                         Fullscreen Mode Required
                                     </h2>
-                                    <p className="text-muted-foreground">
-                                        To maintain exam integrity, you must enter fullscreen mode
+                                    <p className="text-muted-foreground text-lg max-w-md mx-auto">
+                                        To maintain exam integrity and provide the best experience, please enter fullscreen mode
                                     </p>
                                 </div>
 
-                                {/* Exam Details */}
-                                <Card className="bg-muted/50">
-                                    <CardContent className="pt-4">
-                                        <div className="grid grid-cols-2 gap-4 text-sm">
-                                            <div className="text-center">
-                                                <div className="text-2xl font-bold text-primary">
+                                {/* Exam Details Grid - Enhanced */}
+                                <Card className="bg-gradient-to-br from-primary/5 via-muted/30 to-primary/5 border-primary/20 shadow-inner overflow-hidden">
+                                    <CardContent className="pt-6 pb-6">
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <div className="text-center p-5 rounded-xl bg-gradient-to-br from-background/80 to-background/50 border border-primary/10 hover:border-primary/30 transition-all">
+                                                <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center mx-auto mb-3">
+                                                    <BookOpen className="w-5 h-5 text-primary" />
+                                                </div>
+                                                <div className="text-2xl font-bold text-foreground mb-1">
                                                     {examDetails?.topic}
                                                 </div>
-                                                <div className="text-muted-foreground">Topic</div>
+                                                <div className="text-xs text-muted-foreground font-medium uppercase tracking-wide">
+                                                    Topic
+                                                </div>
                                             </div>
-                                            <div className="text-center">
-                                                <div className="text-2xl font-bold text-primary">
+
+                                            <div className="text-center p-5 rounded-xl bg-gradient-to-br from-background/80 to-background/50 border border-primary/10 hover:border-primary/30 transition-all">
+                                                <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center mx-auto mb-3">
+                                                    <Target className="w-5 h-5 text-primary" />
+                                                </div>
+                                                <div className="text-2xl font-bold text-foreground mb-1">
                                                     {questions.length}
                                                 </div>
-                                                <div className="text-muted-foreground">Questions</div>
+                                                <div className="text-xs text-muted-foreground font-medium uppercase tracking-wide">
+                                                    Questions
+                                                </div>
                                             </div>
-                                            <div className="text-center">
-                                                <div className="text-2xl font-bold text-primary">
+
+                                            <div className="text-center p-5 rounded-xl bg-gradient-to-br from-background/80 to-background/50 border border-primary/10 hover:border-primary/30 transition-all">
+                                                <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center mx-auto mb-3">
+                                                    <Clock className="w-5 h-5 text-primary" />
+                                                </div>
+                                                <div className="text-2xl font-bold text-foreground mb-1">
                                                     {examDetails?.duration}
                                                 </div>
-                                                <div className="text-muted-foreground">Minutes</div>
+                                                <div className="text-xs text-muted-foreground font-medium uppercase tracking-wide">
+                                                    Minutes
+                                                </div>
                                             </div>
-                                            <div className="text-center">
-                                                <div className="text-2xl font-bold text-primary capitalize">
+
+                                            <div className="text-center p-5 rounded-xl bg-gradient-to-br from-background/80 to-background/50 border border-primary/10 hover:border-primary/30 transition-all">
+                                                <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center mx-auto mb-3">
+                                                    <Sparkles className="w-5 h-5 text-primary" />
+                                                </div>
+                                                <div className="text-2xl font-bold text-foreground mb-1 capitalize">
                                                     {examDetails?.difficulty}
                                                 </div>
-                                                <div className="text-muted-foreground">Difficulty</div>
+                                                <div className="text-xs text-muted-foreground font-medium uppercase tracking-wide">
+                                                    Difficulty
+                                                </div>
                                             </div>
                                         </div>
                                     </CardContent>
                                 </Card>
 
-                                <Separator />
+                                <Separator className="my-2" />
 
-                                {/* Rules */}
-                                <div className="text-left space-y-3">
-                                    <h3 className="font-semibold text-foreground flex items-center gap-2">
-                                        <Target className="w-5 h-5 text-primary" />
-                                        Exam Rules
-                                    </h3>
-                                    <ul className="space-y-2 text-sm text-muted-foreground">
-                                        <li className="flex items-start gap-2">
-                                            <CheckCircle2 className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
-                                            <span>You must remain in fullscreen mode throughout the exam</span>
-                                        </li>
-                                        <li className="flex items-start gap-2">
-                                            <XCircle className="w-4 h-4 text-red-500 mt-0.5 flex-shrink-0" />
-                                            <span>Switching tabs or windows will be recorded as a violation</span>
-                                        </li>
-                                        <li className="flex items-start gap-2">
-                                            <XCircle className="w-4 h-4 text-red-500 mt-0.5 flex-shrink-0" />
-                                            <span>Right-click and copy-paste are disabled during the exam</span>
-                                        </li>
-                                        <li className="flex items-start gap-2">
-                                            <Clock className="w-4 h-4 text-yellow-500 mt-0.5 flex-shrink-0" />
-                                            <span>Timer starts immediately after entering fullscreen</span>
-                                        </li>
-                                        <li className="flex items-start gap-2">
-                                            <AlertCircle className="w-4 h-4 text-orange-500 mt-0.5 flex-shrink-0" />
-                                            <span>Excessive violations may result in automatic submission</span>
-                                        </li>
-                                    </ul>
-                                </div>
-
-                                <Alert>
-                                    <AlertCircle className="h-4 w-4" />
-                                    <AlertDescription>
-                                        Press <kbd className="px-2 py-1 bg-muted rounded text-xs font-mono">F11</kbd> or click the button below to enter fullscreen mode
-                                    </AlertDescription>
-                                </Alert>
-
-                                {/* Action Buttons */}
-                                <div className="flex gap-3 pt-4">
+                                {/* Action Buttons - Enhanced */}
+                                <div className="flex flex-col sm:flex-row gap-4 pt-2">
                                     <Button
                                         variant="outline"
-                                        onClick={() => router.push("/learning")}
-                                        className="flex-1"
+                                        onClick={() => router.push("/ghost-mode/dream-exam")}
+                                        className="flex-1 h-12 text-base hover:bg-red-500/10 hover:border-red-500/40 hover:text-red-600 transition-all group"
                                     >
-                                        <ArrowLeft className="w-4 h-4 mr-2" />
-                                        Cancel
+                                        <ArrowLeft className="w-4 h-4 mr-2 group-hover:-translate-x-1 transition-transform" />
+                                        Cancel Exam
                                     </Button>
                                     <Button
                                         onClick={handleStartExam}
-                                        className="flex-1 bg-primary hover:bg-primary/90"
+                                        className="flex-1 h-12 text-base bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 shadow-lg shadow-primary/30 hover:shadow-primary/40 transition-all group"
                                     >
-                                        <Play className="w-4 h-4 mr-2" />
+                                        <Play className="w-4 h-4 mr-2 group-hover:scale-110 transition-transform" />
                                         Start Exam in Fullscreen
                                     </Button>
                                 </div>
@@ -1288,13 +1133,6 @@ export default function PracticeExam() {
                         </div>
 
                         <div className="flex items-center gap-4">
-                            {/* Warning Badge */}
-                            {tabSwitchCount > 0 && (
-                                <Badge variant="destructive" className="animate-pulse">
-                                    <AlertCircle className="w-3 h-3 mr-1" />
-                                    {tabSwitchCount} Warning{tabSwitchCount > 1 ? 's' : ''}
-                                </Badge>
-                            )}
                             {/* Timer */}
                             <div className="flex items-center gap-2 px-3 py-1.5 bg-muted rounded-lg">
                                 <Clock className={`w-4 h-4 ${timeLeft < 300 ? "text-red-500" : "text-muted-foreground"}`} />
@@ -1655,6 +1493,7 @@ export default function PracticeExam() {
                     </Button>
                 </div>
             </div>
+
         </>
     );
 }
