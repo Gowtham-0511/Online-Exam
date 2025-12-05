@@ -1,5 +1,7 @@
+'use client';
+
 import React, { useState } from 'react';
-import { useRouter } from 'next/router';
+import { useRouter, useParams } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import useSWR from 'swr';
 import Editor from '@monaco-editor/react';
@@ -9,6 +11,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Label } from '@/components/ui/label';
 import * as Icons from 'lucide-react';
 import {
     ResizableHandle,
@@ -20,7 +24,8 @@ const fetcher = (url: string) => fetch(url).then(res => res.json());
 
 const PracticeQuestionPage = () => {
     const router = useRouter();
-    const { questionId } = router.query;
+    const params = useParams();
+    const questionId = params?.questionId as string;
     const { data: session, status } = useSession();
 
     const [code, setCode] = useState('');
@@ -31,6 +36,8 @@ const PracticeQuestionPage = () => {
     const [showHints, setShowHints] = useState(false);
     const [visibleHintCount, setVisibleHintCount] = useState(0);
     const [theme, setTheme] = useState<'vs-dark' | 'light'>('vs-dark');
+    const [selectedMcqAnswer, setSelectedMcqAnswer] = useState<number | null>(null);
+    const [mcqSubmitted, setMcqSubmitted] = useState(false);
 
     const { data: questionData, isLoading } = useSWR(
         questionId && session?.user?.email
@@ -39,13 +46,15 @@ const PracticeQuestionPage = () => {
         fetcher
     );
 
-    const question = questionData?.questions?.find((q: any) => q.id === parseInt(questionId as string));
+    const question = questionData?.questions?.find((q: any) => q.id === parseInt(questionId));
+    const isMcqQuestion = question?.language === 'mcq';
+    const mcqOptions = question?.mcqOptions ? (typeof question.mcqOptions === 'string' ? JSON.parse(question.mcqOptions) : question.mcqOptions) : null;
 
     React.useEffect(() => {
-        if (question) {
-            setCode(question.starterCode);
+        if (question && !isMcqQuestion) {
+            setCode(question.starterCode || '');
         }
-    }, [question]);
+    }, [question, isMcqQuestion]);
 
     if (status === 'loading' || isLoading) {
         return (
@@ -70,23 +79,123 @@ const PracticeQuestionPage = () => {
         );
     }
 
+    const prepareSqlQuery = (testCaseInput: string, userCode: string): string => {
+        if (!testCaseInput) return userCode;
+
+        const createStatements = testCaseInput.match(/CREATE TABLE[^;]+;/gi) || [];
+        const insertStatements = testCaseInput.match(/INSERT INTO[^;]+;/gi) || [];
+        const dropStatements = createStatements.map((stmt) => {
+            const match = stmt.match(/CREATE TABLE\s+(\w+)/i);
+            return match ? `DROP TABLE IF EXISTS ${match[1]};` : '';
+        }).filter(Boolean);
+
+        return `${dropStatements.join('\n')}\n${testCaseInput};\n${userCode}`;
+    };
+
     const handleRunCode = async () => {
         setIsRunning(true);
         setExecutionResult(null);
 
         try {
-            const response = await fetch('/api/practice/execute-code', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    code,
-                    language: question.language,
-                    testCases: question.testCases
-                })
-            });
+            const visibleTests = question.testCases.filter((tc: any) => !tc.isHidden);
+            const results = [];
 
-            const result = await response.json();
-            setExecutionResult(result);
+            for (const testCase of visibleTests) {
+                try {
+                    const language = question.language.toLowerCase();
+                    let endpoint = "/api/execute/";
+
+                    if (language === "python" || language === "python3") {
+                        endpoint += "python";
+                    } else if (language === "javascript" || language === "js" || language === "node") {
+                        endpoint += "javascript";
+                    } else if (language === "java") {
+                        endpoint += "java";
+                    } else if (language === "pyspark" || language === "spark" || language === "databricks") {
+                        endpoint += "pyspark";
+                    } else if (language === "dax" || language === "powerbi") {
+                        endpoint += "dax";
+                    } else if (language === "c++" || language === "cpp") {
+                        endpoint += "cpp";
+                    } else if (language === "sql" || language === "mysql" || language === "postgresql") {
+                        endpoint += "sql";
+                    } else {
+                        throw new Error(`Unsupported language: ${question.language}`);
+                    }
+
+                    const requestBody = language === "sql" || language === "mysql" || language === "postgresql"
+                        ? {
+                            query: code, // You might need a prepareSqlQuery function here
+                            testCase: testCase,
+                            serverType: 'postgres',
+                            credentials: {
+                                host: '20.83.224.62',
+                                port: 5432,
+                                username: 'sysrankuser',
+                                password: 'RankPass!123',
+                                database: 'practice_db'
+                            }
+                        }
+                        : (language === "dax" || language === "powerbi")
+                            ? {
+                                expression: code,
+                                testCase: {
+                                    input: testCase.input,
+                                    expectedOutput: testCase.expectedOutput
+                                }
+                            }
+                            : {
+                                code,
+                                testCase: {
+                                    input: testCase.input,
+                                    expectedOutput: testCase.expectedOutput
+                                }
+                            };
+
+                    const response = await fetch(endpoint, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify(requestBody),
+                    });
+
+                    const result = await response.json();
+
+                    if (result.success) {
+                        const actualOutput = result.output?.trim() || "";
+                        const expectedOutput = testCase.expectedOutput.trim();
+                        const passed = actualOutput === expectedOutput;
+
+                        results.push({
+                            passed,
+                            testCase,
+                            actualOutput,
+                        });
+                    } else {
+                        results.push({
+                            passed: false,
+                            testCase,
+                            actualOutput: "",
+                            error: result.error || "Execution failed",
+                        });
+                    }
+                } catch (error: any) {
+                    results.push({
+                        passed: false,
+                        testCase,
+                        actualOutput: "",
+                        error: error.message || "Execution error",
+                    });
+                }
+            }
+
+            // Set execution result in the format your UI expects
+            const passedCount = results.filter(r => r.passed).length;
+            setExecutionResult({
+                success: passedCount === results.length,
+                testCasesPassed: passedCount,
+                totalTestCases: results.length,
+                testResults: results
+            });
             setActiveTab('testcases');
         } catch (error) {
             console.error('Execution error:', error);
@@ -99,10 +208,36 @@ const PracticeQuestionPage = () => {
         }
     };
 
-    const handleSubmit = async () => {
-        if (!executionResult) {
-            alert('Please run your code first!');
+    const handleMcqCheck = () => {
+        if (selectedMcqAnswer === null) {
+            alert('Please select an answer!');
             return;
+        }
+
+        setMcqSubmitted(true);
+        const isCorrect = selectedMcqAnswer === mcqOptions.correctAnswer;
+
+        setExecutionResult({
+            success: isCorrect,
+            isMcq: true,
+            selectedAnswer: selectedMcqAnswer,
+            correctAnswer: mcqOptions.correctAnswer,
+            isCorrect
+        });
+        setActiveTab('result');
+    };
+
+    const handleSubmit = async () => {
+        if (isMcqQuestion) {
+            if (!mcqSubmitted) {
+                alert('Please check your answer first!');
+                return;
+            }
+        } else {
+            if (!executionResult) {
+                alert('Please run your code first!');
+                return;
+            }
         }
 
         setIsSubmitting(true);
@@ -115,7 +250,8 @@ const PracticeQuestionPage = () => {
                     practiceQuestionId: question.id,
                     email: session.user.email,
                     userName: session.user.name,
-                    submittedCode: code,
+                    submittedCode: isMcqQuestion ? null : code,
+                    selectedMcqAnswer: isMcqQuestion ? selectedMcqAnswer : null,
                     language: question.language,
                     executionResult
                 })
@@ -124,7 +260,11 @@ const PracticeQuestionPage = () => {
             const result = await response.json();
 
             if (response.ok) {
-                setActiveTab('testcases');
+                if (isMcqQuestion) {
+                    setActiveTab('result');
+                } else {
+                    setActiveTab('testcases');
+                }
                 setTimeout(() => {
                     if (result.isPassed) {
                         router.push('/dashboard/attender/practice');
@@ -139,8 +279,14 @@ const PracticeQuestionPage = () => {
     };
 
     const handleReset = () => {
-        setCode(question.starterCode);
-        setExecutionResult(null);
+        if (isMcqQuestion) {
+            setSelectedMcqAnswer(null);
+            setMcqSubmitted(false);
+            setExecutionResult(null);
+        } else {
+            setCode(question.starterCode || '');
+            setExecutionResult(null);
+        }
     };
 
     const getDifficultyColor = (difficulty: string) => {
@@ -174,8 +320,12 @@ const PracticeQuestionPage = () => {
                                 {question.difficulty}
                             </Badge>
                             <Badge variant="outline" className="gap-1">
-                                <Icons.Code2 className="h-3 w-3" />
-                                {question.language}
+                                {isMcqQuestion ? (
+                                    <Icons.ListChecks className="h-3 w-3" />
+                                ) : (
+                                    <Icons.Code2 className="h-3 w-3" />
+                                )}
+                                {isMcqQuestion ? 'MCQ' : question.language}
                             </Badge>
                         </div>
                     </div>
@@ -187,17 +337,19 @@ const PracticeQuestionPage = () => {
                                 Best: {question.bestScore.toFixed(0)}%
                             </Badge>
                         )}
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => setTheme(theme === 'vs-dark' ? 'light' : 'vs-dark')}
-                        >
-                            {theme === 'vs-dark' ? (
-                                <Icons.Sun className="h-4 w-4" />
-                            ) : (
-                                <Icons.Moon className="h-4 w-4" />
-                            )}
-                        </Button>
+                        {!isMcqQuestion && (
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => setTheme(theme === 'vs-dark' ? 'light' : 'vs-dark')}
+                            >
+                                {theme === 'vs-dark' ? (
+                                    <Icons.Sun className="h-4 w-4" />
+                                ) : (
+                                    <Icons.Moon className="h-4 w-4" />
+                                )}
+                            </Button>
+                        )}
                     </div>
                 </div>
             </header>
@@ -206,7 +358,7 @@ const PracticeQuestionPage = () => {
             <div className="flex-1 overflow-hidden">
                 <ResizablePanelGroup direction="horizontal" className="h-full">
                     {/* Left Panel - Problem Description */}
-                    <ResizablePanel defaultSize={40} minSize={30}>
+                    <ResizablePanel defaultSize={isMcqQuestion ? 100 : 40} minSize={30}>
                         <div className="h-full flex flex-col bg-card">
                             <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col overflow-hidden">
                                 <div className="border-b px-4 flex-shrink-0">
@@ -215,20 +367,34 @@ const PracticeQuestionPage = () => {
                                             <Icons.FileText className="h-4 w-4" />
                                             Problem
                                         </TabsTrigger>
-                                        <TabsTrigger value="testcases" className="gap-2">
-                                            <Icons.FlaskConical className="h-4 w-4" />
-                                            Test Cases
-                                            {executionResult && (
-                                                executionResult.success ? (
-                                                    <Icons.CheckCircle2 className="h-3 w-3 text-emerald-500" />
-                                                ) : (
-                                                    <Icons.XCircle className="h-3 w-3 text-rose-500" />
-                                                )
-                                            )}
-                                        </TabsTrigger>
+                                        {isMcqQuestion ? (
+                                            <TabsTrigger value="result" className="gap-2">
+                                                <Icons.CheckCircle2 className="h-4 w-4" />
+                                                Result
+                                                {executionResult && (
+                                                    executionResult.success ? (
+                                                        <Icons.CheckCircle2 className="h-3 w-3 text-emerald-500" />
+                                                    ) : (
+                                                        <Icons.XCircle className="h-3 w-3 text-rose-500" />
+                                                    )
+                                                )}
+                                            </TabsTrigger>
+                                        ) : (
+                                            <TabsTrigger value="testcases" className="gap-2">
+                                                <Icons.FlaskConical className="h-4 w-4" />
+                                                Test Cases
+                                                {executionResult && (
+                                                    executionResult.success ? (
+                                                        <Icons.CheckCircle2 className="h-3 w-3 text-emerald-500" />
+                                                    ) : (
+                                                        <Icons.XCircle className="h-3 w-3 text-rose-500" />
+                                                    )
+                                                )}
+                                            </TabsTrigger>
+                                        )}
                                         <TabsTrigger value="hints" className="gap-2">
                                             <Icons.Lightbulb className="h-4 w-4" />
-                                            Hints ({visibleHintCount}/{question.hints.length})
+                                            Hints ({visibleHintCount}/{question.hints?.length || 0})
                                         </TabsTrigger>
                                     </TabsList>
                                 </div>
@@ -258,106 +424,241 @@ const PracticeQuestionPage = () => {
                                                     </AlertDescription>
                                                 </Alert>
                                             )}
-                                        </div>
-                                    </ScrollArea>
-                                </TabsContent>
 
-                                {/* Test Cases Tab */}
-                                <TabsContent value="testcases" className="mt-0 flex-1 overflow-hidden">
-                                    <ScrollArea className="h-full">
-                                        <div className="p-6 space-y-4">
-                                            {executionResult ? (
-                                                <>
-                                                    <Alert className={executionResult.success ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-950/20' : 'border-rose-500 bg-rose-50 dark:bg-rose-950/20'}>
-                                                        {executionResult.success ? (
-                                                            <Icons.CheckCircle2 className="h-4 w-4 text-emerald-600" />
-                                                        ) : (
-                                                            <Icons.XCircle className="h-4 w-4 text-rose-600" />
-                                                        )}
-                                                        <AlertDescription>
-                                                            <div className="font-semibold mb-1">
-                                                                {executionResult.success ? 'All test cases passed! 🎉' : 'Some test cases failed'}
-                                                            </div>
-                                                            <div className="text-sm">
-                                                                Passed: {executionResult.testCasesPassed}/{executionResult.totalTestCases}
-                                                            </div>
-                                                            {executionResult.executionTime && (
-                                                                <div className="text-xs text-muted-foreground mt-1">
-                                                                    Runtime: {executionResult.executionTime}ms
-                                                                </div>
-                                                            )}
-                                                        </AlertDescription>
-                                                    </Alert>
-
-                                                    {executionResult.testResults?.map((result: any, idx: number) => (
-                                                        <div
-                                                            key={idx}
-                                                            className={`rounded-lg border-2 p-4 ${result.passed
-                                                                ? 'border-emerald-200 bg-emerald-50/50 dark:border-emerald-800 dark:bg-emerald-950/20'
-                                                                : 'border-rose-200 bg-rose-50/50 dark:border-rose-800 dark:bg-rose-950/20'
-                                                                }`}
-                                                        >
-                                                            <div className="flex items-center justify-between mb-3">
-                                                                <span className="font-semibold text-sm">Test Case {idx + 1}</span>
-                                                                <Badge variant={result.passed ? 'default' : 'destructive'} className="gap-1">
-                                                                    {result.passed ? (
-                                                                        <>
-                                                                            <Icons.Check className="h-3 w-3" />
-                                                                            Passed
-                                                                        </>
-                                                                    ) : (
-                                                                        <>
-                                                                            <Icons.X className="h-3 w-3" />
-                                                                            Failed
-                                                                        </>
+                                            {/* MCQ Options */}
+                                            {isMcqQuestion && mcqOptions && (
+                                                <div className="space-y-4 mt-6">
+                                                    <h3 className="font-semibold text-lg">Select your answer:</h3>
+                                                    <RadioGroup
+                                                        value={selectedMcqAnswer?.toString()}
+                                                        onValueChange={(value) => {
+                                                            if (!mcqSubmitted) {
+                                                                setSelectedMcqAnswer(parseInt(value));
+                                                            }
+                                                        }}
+                                                        disabled={mcqSubmitted}
+                                                    >
+                                                        {mcqOptions.options.map((option: string, idx: number) => (
+                                                            <div
+                                                                key={idx}
+                                                                className={`flex items-start space-x-3 p-4 rounded-lg border-2 transition-all ${mcqSubmitted
+                                                                    ? idx === mcqOptions.correctAnswer
+                                                                        ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-950/20'
+                                                                        : idx === selectedMcqAnswer && idx !== mcqOptions.correctAnswer
+                                                                            ? 'border-rose-500 bg-rose-50 dark:bg-rose-950/20'
+                                                                            : 'border-border bg-card'
+                                                                    : selectedMcqAnswer === idx
+                                                                        ? 'border-primary bg-primary/5'
+                                                                        : 'border-border bg-card hover:border-primary/50'
+                                                                    }`}
+                                                            >
+                                                                <RadioGroupItem value={idx.toString()} id={`option-${idx}`} disabled={mcqSubmitted} />
+                                                                <Label
+                                                                    htmlFor={`option-${idx}`}
+                                                                    className="flex-1 cursor-pointer text-sm leading-relaxed"
+                                                                >
+                                                                    <span className="font-semibold mr-2">{String.fromCharCode(65 + idx)}.</span>
+                                                                    {option}
+                                                                    {mcqSubmitted && idx === mcqOptions.correctAnswer && (
+                                                                        <Icons.CheckCircle2 className="inline-block ml-2 h-4 w-4 text-emerald-600" />
                                                                     )}
-                                                                </Badge>
+                                                                    {mcqSubmitted && idx === selectedMcqAnswer && idx !== mcqOptions.correctAnswer && (
+                                                                        <Icons.XCircle className="inline-block ml-2 h-4 w-4 text-rose-600" />
+                                                                    )}
+                                                                </Label>
                                                             </div>
+                                                        ))}
+                                                    </RadioGroup>
 
-                                                            {!result.testCase.isHidden && (
-                                                                <div className="space-y-2 text-xs">
-                                                                    <div>
-                                                                        <p className="font-semibold text-muted-foreground mb-1">Input:</p>
-                                                                        <pre className="bg-background border rounded p-2 overflow-x-auto whitespace-pre-wrap break-all max-w-full">
-                                                                            {result.testCase.input}
-                                                                        </pre>
-                                                                    </div>
-                                                                    <div>
-                                                                        <p className="font-semibold text-muted-foreground mb-1">Expected Output:</p>
-                                                                        <pre className="bg-background border rounded p-2 overflow-x-auto whitespace-pre-wrap break-all max-w-full">
-                                                                            {result.testCase.expectedOutput}
-                                                                        </pre>
-                                                                    </div>
-                                                                    <div>
-                                                                        <p className="font-semibold text-muted-foreground mb-1">Your Output:</p>
-                                                                        <pre className={`border rounded p-2 overflow-x-auto whitespace-pre-wrap break-all max-w-full ${result.passed ? 'bg-background' : 'bg-rose-50 dark:bg-rose-950/20'
-                                                                            }`}>
-                                                                            {result.actualOutput || '(empty)'}
-                                                                        </pre>
-                                                                    </div>
-                                                                </div>
+                                                    <div className="flex gap-2 pt-4">
+                                                        <Button
+                                                            onClick={handleMcqCheck}
+                                                            disabled={selectedMcqAnswer === null || mcqSubmitted}
+                                                            variant="outline"
+                                                            className="gap-2"
+                                                        >
+                                                            <Icons.CheckCircle2 className="h-4 w-4" />
+                                                            Check Answer
+                                                        </Button>
+                                                        <Button
+                                                            onClick={handleReset}
+                                                            variant="ghost"
+                                                            className="gap-2"
+                                                        >
+                                                            <Icons.RotateCcw className="h-4 w-4" />
+                                                            Reset
+                                                        </Button>
+                                                        <Button
+                                                            onClick={handleSubmit}
+                                                            disabled={!mcqSubmitted || isSubmitting}
+                                                            className="gap-2 bg-emerald-600 hover:bg-emerald-700 ml-auto"
+                                                        >
+                                                            {isSubmitting ? (
+                                                                <>
+                                                                    <Icons.Loader2 className="h-4 w-4 animate-spin" />
+                                                                    Submitting...
+                                                                </>
+                                                            ) : (
+                                                                <>
+                                                                    <Icons.Send className="h-4 w-4" />
+                                                                    Submit
+                                                                </>
                                                             )}
-
-                                                            {result.error && (
-                                                                <div className="mt-2">
-                                                                    <p className="text-xs font-semibold text-rose-600 mb-1">Error:</p>
-                                                                    <pre className="text-xs text-rose-600 bg-rose-50 dark:bg-rose-950/20 border border-rose-200 rounded p-2 overflow-x-auto whitespace-pre-wrap break-all max-w-full">
-                                                                        {result.error}
-                                                                    </pre>
-                                                                </div>
-                                                            )}
-                                                        </div>
-                                                    ))}
-                                                </>
-                                            ) : (
-                                                <div className="text-center py-12">
-                                                    <Icons.FlaskConical className="h-12 w-12 mx-auto text-muted-foreground/50 mb-4" />
-                                                    <p className="text-muted-foreground">Run your code to see test results</p>
+                                                        </Button>
+                                                    </div>
                                                 </div>
                                             )}
                                         </div>
                                     </ScrollArea>
                                 </TabsContent>
+
+                                {/* MCQ Result Tab */}
+                                {isMcqQuestion && (
+                                    <TabsContent value="result" className="mt-0 flex-1 overflow-hidden">
+                                        <ScrollArea className="h-full">
+                                            <div className="p-6 space-y-4">
+                                                {executionResult ? (
+                                                    <>
+                                                        <Alert className={executionResult.success ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-950/20' : 'border-rose-500 bg-rose-50 dark:bg-rose-950/20'}>
+                                                            {executionResult.success ? (
+                                                                <Icons.CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                                                            ) : (
+                                                                <Icons.XCircle className="h-4 w-4 text-rose-600" />
+                                                            )}
+                                                            <AlertDescription>
+                                                                <div className="font-semibold mb-1">
+                                                                    {executionResult.success ? 'Correct! 🎉' : 'Incorrect'}
+                                                                </div>
+                                                                <div className="text-sm">
+                                                                    Your answer: <strong>{String.fromCharCode(65 + executionResult.selectedAnswer)}</strong>
+                                                                </div>
+                                                                {!executionResult.success && (
+                                                                    <div className="text-sm">
+                                                                        Correct answer: <strong>{String.fromCharCode(65 + executionResult.correctAnswer)}</strong>
+                                                                    </div>
+                                                                )}
+                                                            </AlertDescription>
+                                                        </Alert>
+
+                                                        {question.solutionExplanation && (
+                                                            <Alert className="border-blue-200 bg-blue-50 dark:bg-blue-950/20">
+                                                                <Icons.Info className="h-4 w-4 text-blue-600" />
+                                                                <AlertDescription>
+                                                                    <div className="font-semibold mb-2">Explanation:</div>
+                                                                    <div className="text-sm">{question.solutionExplanation}</div>
+                                                                </AlertDescription>
+                                                            </Alert>
+                                                        )}
+                                                    </>
+                                                ) : (
+                                                    <div className="text-center py-12">
+                                                        <Icons.CheckCircle2 className="h-12 w-12 mx-auto text-muted-foreground/50 mb-4" />
+                                                        <p className="text-muted-foreground">Check your answer to see the result</p>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </ScrollArea>
+                                    </TabsContent>
+                                )}
+
+                                {/* Test Cases Tab (Coding Only) */}
+                                {!isMcqQuestion && (
+                                    <TabsContent value="testcases" className="mt-0 flex-1 overflow-hidden">
+                                        <ScrollArea className="h-full">
+                                            <div className="p-6 space-y-4">
+                                                {executionResult ? (
+                                                    <>
+                                                        <Alert className={executionResult.success ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-950/20' : 'border-rose-500 bg-rose-50 dark:bg-rose-950/20'}>
+                                                            {executionResult.success ? (
+                                                                <Icons.CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                                                            ) : (
+                                                                <Icons.XCircle className="h-4 w-4 text-rose-600" />
+                                                            )}
+                                                            <AlertDescription>
+                                                                <div className="font-semibold mb-1">
+                                                                    {executionResult.success ? 'All test cases passed! 🎉' : 'Some test cases failed'}
+                                                                </div>
+                                                                <div className="text-sm">
+                                                                    Passed: {executionResult.testCasesPassed}/{executionResult.totalTestCases}
+                                                                </div>
+                                                                {executionResult.executionTime && (
+                                                                    <div className="text-xs text-muted-foreground mt-1">
+                                                                        Runtime: {executionResult.executionTime}ms
+                                                                    </div>
+                                                                )}
+                                                            </AlertDescription>
+                                                        </Alert>
+
+                                                        {executionResult.testResults?.map((result: any, idx: number) => (
+                                                            <div
+                                                                key={idx}
+                                                                className={`rounded-lg border-2 p-4 ${result.passed
+                                                                    ? 'border-emerald-200 bg-emerald-50/50 dark:border-emerald-800 dark:bg-emerald-950/20'
+                                                                    : 'border-rose-200 bg-rose-50/50 dark:border-rose-800 dark:bg-rose-950/20'
+                                                                    }`}
+                                                            >
+                                                                <div className="flex items-center justify-between mb-3">
+                                                                    <span className="font-semibold text-sm">Test Case {idx + 1}</span>
+                                                                    <Badge variant={result.passed ? 'default' : 'destructive'} className="gap-1">
+                                                                        {result.passed ? (
+                                                                            <>
+                                                                                <Icons.Check className="h-3 w-3" />
+                                                                                Passed
+                                                                            </>
+                                                                        ) : (
+                                                                            <>
+                                                                                <Icons.X className="h-3 w-3" />
+                                                                                Failed
+                                                                            </>
+                                                                        )}
+                                                                    </Badge>
+                                                                </div>
+
+                                                                {!result.testCase.isHidden && (
+                                                                    <div className="space-y-2 text-xs">
+                                                                        <div>
+                                                                            <p className="font-semibold text-muted-foreground mb-1">Input:</p>
+                                                                            <pre className="bg-background border rounded p-2 overflow-x-auto whitespace-pre-wrap break-all max-w-full">
+                                                                                {result.testCase.input}
+                                                                            </pre>
+                                                                        </div>
+                                                                        <div>
+                                                                            <p className="font-semibold text-muted-foreground mb-1">Expected Output:</p>
+                                                                            <pre className="bg-background border rounded p-2 overflow-x-auto whitespace-pre-wrap break-all max-w-full">
+                                                                                {result.testCase.expectedOutput}
+                                                                            </pre>
+                                                                        </div>
+                                                                        <div>
+                                                                            <p className="font-semibold text-muted-foreground mb-1">Your Output:</p>
+                                                                            <pre className={`border rounded p-2 overflow-x-auto whitespace-pre-wrap break-all max-w-full ${result.passed ? 'bg-background' : 'bg-rose-50 dark:bg-rose-950/20'
+                                                                                }`}>
+                                                                                {result.actualOutput || '(empty)'}
+                                                                            </pre>
+                                                                        </div>
+                                                                    </div>
+                                                                )}
+
+                                                                {result.error && (
+                                                                    <div className="mt-2">
+                                                                        <p className="text-xs font-semibold text-rose-600 mb-1">Error:</p>
+                                                                        <pre className="text-xs text-rose-600 bg-rose-50 dark:bg-rose-950/20 border border-rose-200 rounded p-2 overflow-x-auto whitespace-pre-wrap break-all max-w-full">
+                                                                            {result.error}
+                                                                        </pre>
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        ))}
+                                                    </>
+                                                ) : (
+                                                    <div className="text-center py-12">
+                                                        <Icons.FlaskConical className="h-12 w-12 mx-auto text-muted-foreground/50 mb-4" />
+                                                        <p className="text-muted-foreground">Run your code to see test results</p>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </ScrollArea>
+                                    </TabsContent>
+                                )}
 
                                 {/* Hints Tab */}
                                 <TabsContent value="hints" className="mt-0 flex-1 overflow-hidden">
@@ -374,7 +675,7 @@ const PracticeQuestionPage = () => {
                                                 </div>
                                             ) : (
                                                 <>
-                                                    {question.hints.slice(0, visibleHintCount).map((hint: string, idx: number) => (
+                                                    {question.hints?.slice(0, visibleHintCount).map((hint: string, idx: number) => (
                                                         <Alert key={idx} className="border-amber-200 bg-amber-50 dark:bg-amber-950/20">
                                                             <Icons.Lightbulb className="h-4 w-4 text-amber-600" />
                                                             <AlertDescription>
@@ -382,14 +683,14 @@ const PracticeQuestionPage = () => {
                                                             </AlertDescription>
                                                         </Alert>
                                                     ))}
-                                                    {visibleHintCount < question.hints.length && (
+                                                    {visibleHintCount < (question.hints?.length || 0) && (
                                                         <Button
                                                             onClick={() => setVisibleHintCount(visibleHintCount + 1)}
                                                             variant="outline"
                                                             className="w-full gap-2"
                                                         >
                                                             <Icons.Eye className="h-4 w-4" />
-                                                            Show Next Hint ({visibleHintCount + 1}/{question.hints.length})
+                                                            Show Next Hint ({visibleHintCount + 1}/{question.hints?.length})
                                                         </Button>
                                                     )}
                                                 </>
@@ -401,97 +702,100 @@ const PracticeQuestionPage = () => {
                         </div>
                     </ResizablePanel>
 
-                    <ResizableHandle withHandle />
-
-                    {/* Right Panel - Code Editor */}
-                    <ResizablePanel defaultSize={60} minSize={40}>
-                        <div className="h-full flex flex-col">
-                            {/* Editor Header */}
-                            <div className="border-b bg-card px-4 py-2 flex items-center justify-between">
-                                <div className="flex items-center gap-2">
-                                    <Icons.Code2 className="h-4 w-4 text-muted-foreground" />
-                                    <span className="text-sm font-medium">Code Editor</span>
-                                    <Badge variant="outline" className="text-xs">{question.language}</Badge>
-                                </div>
-                                <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={handleReset}
-                                    className="gap-2 text-xs"
-                                >
-                                    <Icons.RotateCcw className="h-3 w-3" />
-                                    Reset
-                                </Button>
-                            </div>
-
-                            {/* Monaco Editor */}
-                            <div className="flex-1">
-                                <Editor
-                                    height="100%"
-                                    language={question.language.toLowerCase()}
-                                    value={code}
-                                    onChange={(value) => setCode(value || '')}
-                                    theme={theme}
-                                    options={{
-                                        minimap: { enabled: true },
-                                        fontSize: 14,
-                                        lineNumbers: 'on',
-                                        scrollBeyondLastLine: false,
-                                        automaticLayout: true,
-                                        tabSize: 4,
-                                        wordWrap: 'on',
-                                        formatOnPaste: true,
-                                        formatOnType: true,
-                                        suggestOnTriggerCharacters: true,
-                                        quickSuggestions: true,
-                                    }}
-                                />
-                            </div>
-
-                            {/* Action Bar */}
-                            <div className="border-t bg-card p-4">
-                                <div className="flex items-center justify-between gap-2">
-                                    <div className="flex items-center gap-2">
+                    {/* Right Panel - Code Editor (Coding Questions Only) */}
+                    {!isMcqQuestion && (
+                        <>
+                            <ResizableHandle withHandle />
+                            <ResizablePanel defaultSize={60} minSize={40}>
+                                <div className="h-full flex flex-col">
+                                    {/* Editor Header */}
+                                    <div className="border-b bg-card px-4 py-2 flex items-center justify-between">
+                                        <div className="flex items-center gap-2">
+                                            <Icons.Code2 className="h-4 w-4 text-muted-foreground" />
+                                            <span className="text-sm font-medium">Code Editor</span>
+                                            <Badge variant="outline" className="text-xs">{question.language}</Badge>
+                                        </div>
                                         <Button
-                                            onClick={handleRunCode}
-                                            disabled={isRunning}
-                                            variant="outline"
-                                            className="gap-2"
+                                            variant="ghost"
+                                            size="sm"
+                                            onClick={handleReset}
+                                            className="gap-2 text-xs"
                                         >
-                                            {isRunning ? (
-                                                <>
-                                                    <Icons.Loader2 className="h-4 w-4 animate-spin" />
-                                                    Running...
-                                                </>
-                                            ) : (
-                                                <>
-                                                    <Icons.Play className="h-4 w-4" />
-                                                    Run Code
-                                                </>
-                                            )}
+                                            <Icons.RotateCcw className="h-3 w-3" />
+                                            Reset
                                         </Button>
                                     </div>
-                                    <Button
-                                        onClick={handleSubmit}
-                                        disabled={isSubmitting || !executionResult}
-                                        className="gap-2 bg-emerald-600 hover:bg-emerald-700"
-                                    >
-                                        {isSubmitting ? (
-                                            <>
-                                                <Icons.Loader2 className="h-4 w-4 animate-spin" />
-                                                Submitting...
-                                            </>
-                                        ) : (
-                                            <>
-                                                <Icons.Send className="h-4 w-4" />
-                                                Submit
-                                            </>
-                                        )}
-                                    </Button>
+
+                                    {/* Monaco Editor */}
+                                    <div className="flex-1">
+                                        <Editor
+                                            height="100%"
+                                            language={question.language.toLowerCase()}
+                                            value={code}
+                                            onChange={(value) => setCode(value || '')}
+                                            theme={theme}
+                                            options={{
+                                                minimap: { enabled: true },
+                                                fontSize: 14,
+                                                lineNumbers: 'on',
+                                                scrollBeyondLastLine: false,
+                                                automaticLayout: true,
+                                                tabSize: 4,
+                                                wordWrap: 'on',
+                                                formatOnPaste: true,
+                                                formatOnType: true,
+                                                suggestOnTriggerCharacters: true,
+                                                quickSuggestions: true,
+                                            }}
+                                        />
+                                    </div>
+
+                                    {/* Action Bar */}
+                                    <div className="border-t bg-card p-4">
+                                        <div className="flex items-center justify-between gap-2">
+                                            <div className="flex items-center gap-2">
+                                                <Button
+                                                    onClick={handleRunCode}
+                                                    disabled={isRunning}
+                                                    variant="outline"
+                                                    className="gap-2"
+                                                >
+                                                    {isRunning ? (
+                                                        <>
+                                                            <Icons.Loader2 className="h-4 w-4 animate-spin" />
+                                                            Running...
+                                                        </>
+                                                    ) : (
+                                                        <>
+                                                            <Icons.Play className="h-4 w-4" />
+                                                            Run Code
+                                                        </>
+                                                    )}
+                                                </Button>
+                                            </div>
+                                            <Button
+                                                onClick={handleSubmit}
+                                                disabled={isSubmitting || !executionResult}
+                                                className="gap-2 bg-emerald-600 hover:bg-emerald-700"
+                                            >
+                                                {isSubmitting ? (
+                                                    <>
+                                                        <Icons.Loader2 className="h-4 w-4 animate-spin" />
+                                                        Submitting...
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <Icons.Send className="h-4 w-4" />
+                                                        Submit
+                                                    </>
+                                                )}
+                                            </Button>
+                                        </div>
+                                    </div>
                                 </div>
-                            </div>
-                        </div>
-                    </ResizablePanel>
+                            </ResizablePanel>
+                        </>
+                    )}
                 </ResizablePanelGroup>
             </div>
         </div>

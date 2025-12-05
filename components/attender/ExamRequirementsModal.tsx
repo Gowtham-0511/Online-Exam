@@ -27,11 +27,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-interface Exam {
-    id: number;
-    title: string;
-    isExamProctored: boolean;
-}
+import { Exam } from '@/types/attender';
 
 interface ExamRequirementsModalProps {
     isOpen: boolean;

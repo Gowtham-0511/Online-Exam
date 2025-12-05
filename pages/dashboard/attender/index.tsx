@@ -31,6 +31,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import * as Icons from 'lucide-react';
+import { ExamRequirementsModal } from '@/components/attender/ExamRequirementsModal';
 
 const fetcher = (url: string) => fetch(url).then(res => res.json());
 
@@ -48,6 +49,8 @@ const AttenderDashboard = () => {
         examId: string;
         email: string;
     } | null>(null);
+
+    const [selectedExamForRequirements, setSelectedExamForRequirements] = useState<Exam | null>(null);
 
     // Refresh states
     const [isRefreshing, setIsRefreshing] = useState(false);
@@ -181,7 +184,17 @@ const AttenderDashboard = () => {
     };
 
     const handleStartExam = (examTitle: string) => {
-        router.push(`/dashboard/attender/view-exams`);
+        const exam = upcomingExams.find((e: Exam) => e.title === examTitle);
+        if (exam) {
+            setSelectedExamForRequirements(exam);
+        }
+    };
+
+    const handleProceedToExam = () => {
+        if (selectedExamForRequirements) {
+            router.push(`/exam/${selectedExamForRequirements.title}`);
+            setSelectedExamForRequirements(null);
+        }
     };
 
     const handleViewStrategy = (exam: Exam) => {
@@ -300,6 +313,30 @@ const AttenderDashboard = () => {
                             />
                         </div>
 
+                        {/* Ghost Mode */}
+                        <GhostModeCard />
+
+                        {/* Practice Zone CTA - MOVED HERE */}
+                        <Card className="bg-gradient-to-br from-primary/10 via-primary/5 to-secondary/10 border-primary/30 shadow-lg hover:shadow-xl transition-all">
+                            <CardContent className="p-8">
+                                <div className="flex flex-col md:flex-row items-center gap-6">
+                                    <div className="p-4 rounded-2xl bg-primary/20 text-primary ring-4 ring-primary/10">
+                                        <Code2 className="w-10 h-10" />
+                                    </div>
+                                    <div className="flex-1 text-center md:text-left space-y-2">
+                                        <h3 className="text-2xl font-bold">Practice Zone</h3>
+                                        <p className="text-muted-foreground">
+                                            Sharpen your skills with AI-generated problems tailored to your weak areas. Build confidence before taking assessments.
+                                        </p>
+                                    </div>
+                                    <Button size="lg" className="gap-2 shadow-lg" onClick={() => router.push('/dashboard/attender/practice')}>
+                                        <Sparkles className="w-5 h-5" />
+                                        Start Practicing
+                                    </Button>
+                                </div>
+                            </CardContent>
+                        </Card>
+
                         {/* Upcoming Exams */}
                         <section className="space-y-4">
                             <div className="flex items-center justify-between">
@@ -397,28 +434,6 @@ const AttenderDashboard = () => {
                             </CardContent>
                         </Card>
 
-                        {/* Practice Zone CTA */}
-                        <Card className="bg-primary/5 border-primary/20 shadow-sm">
-                            <CardContent className="p-6 space-y-4">
-                                <div className="flex items-center gap-3">
-                                    <div className="p-2 rounded-lg bg-primary/10 text-primary">
-                                        <Code2 className="w-6 h-6" />
-                                    </div>
-                                    <h3 className="font-semibold">Practice Zone</h3>
-                                </div>
-                                <p className="text-sm text-muted-foreground">
-                                    Sharpen your skills with AI-generated problems tailored to your weak areas.
-                                </p>
-                                <Button className="w-full gap-2" onClick={() => router.push('/dashboard/attender/practice')}>
-                                    <Sparkles className="w-4 h-4" />
-                                    Start Practicing
-                                </Button>
-                            </CardContent>
-                        </Card>
-
-                        {/* Ghost Mode */}
-                        <GhostModeCard />
-
                         {/* AI Insights (Compact) */}
                         {completedExams.length > 0 && (
                             <div className="space-y-4">
@@ -464,6 +479,15 @@ const AttenderDashboard = () => {
                     onClose={() => setSelectedExamForStrategy(null)}
                     examId={selectedExamForStrategy.examId}
                     email={selectedExamForStrategy.email}
+                />
+            )}
+
+            {selectedExamForRequirements && (
+                <ExamRequirementsModal
+                    isOpen={!!selectedExamForRequirements}
+                    onClose={() => setSelectedExamForRequirements(null)}
+                    exam={selectedExamForRequirements}
+                    onProceed={handleProceedToExam}
                 />
             )}
         </UnifiedDashboardLayout>

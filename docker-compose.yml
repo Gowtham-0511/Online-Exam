@@ -19,6 +19,9 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"
     restart: always
+    depends_on:
+      - redis
+
   nginx:
     image: nginx:latest
     container_name: nginx-proxy

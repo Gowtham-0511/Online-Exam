@@ -25,12 +25,25 @@ import {
     Clock,
     Zap,
     ChevronRight,
-    Play,
-    MoreHorizontal,
     RefreshCw
 } from 'lucide-react';
-import { PracticeProgressChart } from '@/components/attender/practice/PracticeProgressChart';
 import Head from 'next/head';
+
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 const fetcher = (url: string) => fetch(url).then(res => res.json());
 
@@ -43,6 +56,16 @@ const PracticePage = () => {
     const [selectedDifficulties, setSelectedDifficulties] = useState<string[]>([]);
     const [selectedStatus, setSelectedStatus] = useState<string | null>(null);
     const [isGenerating, setIsGenerating] = useState(false);
+
+    const [showGeneratorDialog, setShowGeneratorDialog] = useState(false);
+    const [activeTab, setActiveTab] = useState("mcq");
+    const [mcqTopic, setMcqTopic] = useState("");
+    const [codingTopic, setCodingTopic] = useState("");
+    const [customExam, setCustomExam] = useState({
+        difficulty: "medium",
+        duration: "30",
+        questionCount: "10",
+    });
 
     // Fetch practice questions
     const { data: questionsData, isLoading: questionsLoading, mutate: refetchQuestions } = useSWR(
@@ -82,16 +105,34 @@ const PracticePage = () => {
     }, [questions, searchQuery, selectedLanguages, selectedDifficulties, selectedStatus]);
 
     const handleGenerateQuestions = async () => {
+
+        const topic = activeTab === "mcq" ? mcqTopic : codingTopic;
+        const questionType = activeTab === "mcq" ? "mcq" : "coding";
+        if (!topic) {
+            // Show error in dialog
+            return;
+        }
+
         setIsGenerating(true);
         try {
             const response = await fetch('/api/practice/generate-questions', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email: session?.user?.email, count: 5 })
+                body: JSON.stringify({
+                    email: session?.user?.email,
+                    topic: topic,
+                    difficulty: customExam.difficulty,
+                    count: parseInt(customExam.questionCount),
+                    questionType: questionType
+                })
             });
 
             if (response.ok) {
                 refetchQuestions();
+                setShowGeneratorDialog(false);
+                // Reset form
+                setMcqTopic("");
+                setCodingTopic("");
             }
         } catch (error) {
             console.error('Generate error:', error);
@@ -196,21 +237,11 @@ const PracticePage = () => {
                             </CardHeader>
                             <CardContent>
                                 <Button
-                                    onClick={handleGenerateQuestions}
-                                    disabled={isGenerating}
+                                    onClick={() => setShowGeneratorDialog(true)}
                                     className="w-full gap-2 bg-primary hover:bg-primary/90"
                                 >
-                                    {isGenerating ? (
-                                        <>
-                                            <Loader2 className="h-4 w-4 animate-spin" />
-                                            Generating...
-                                        </>
-                                    ) : (
-                                        <>
-                                            <RefreshCw className="h-4 w-4" />
-                                            Generate Questions
-                                        </>
-                                    )}
+                                    <RefreshCw className="h-4 w-4" />
+                                    Generate Questions
                                 </Button>
                             </CardContent>
                         </Card>
@@ -414,17 +445,17 @@ const PracticePage = () => {
                                                         )}
                                                     </div>
                                                     <h3 className="font-semibold text-lg group-hover:text-primary transition-colors">
-                                                        {question.title}
+                                                        {question.questionTitle}
                                                     </h3>
                                                     <div className="flex items-center gap-4 text-xs text-muted-foreground">
                                                         <span className="flex items-center gap-1">
                                                             <Zap className="h-3 w-3" />
                                                             {question.points || 10} Points
                                                         </span>
-                                                        <span className="flex items-center gap-1">
+                                                        {/* <span className="flex items-center gap-1">
                                                             <Clock className="h-3 w-3" />
                                                             ~15 mins
-                                                        </span>
+                                                        </span> */}
                                                     </div>
                                                 </div>
                                                 <div className="flex items-center gap-3 shrink-0">
@@ -445,6 +476,140 @@ const PracticePage = () => {
                         </div>
                     </div>
                 </div>
+
+                {/* Generator Dialog */}
+                <Dialog open={showGeneratorDialog} onOpenChange={setShowGeneratorDialog}>
+                    <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+                        <DialogHeader>
+                            <DialogTitle className="flex items-center gap-2">
+                                <Sparkles className="w-5 h-5 text-primary" />
+                                Custom Practice Session
+                            </DialogTitle>
+                            <DialogDescription>
+                                Configure your own practice environment. Choose your mode, topic, and difficulty.
+                            </DialogDescription>
+                        </DialogHeader>
+
+                        <div className="space-y-6">
+                            <Tabs defaultValue="mcq" value={activeTab} onValueChange={setActiveTab}>
+                                <TabsList className="grid w-full grid-cols-2">
+                                    <TabsTrigger value="mcq">
+                                        <CheckCircle2 className="w-4 h-4 mr-2" />
+                                        MCQ Practice
+                                    </TabsTrigger>
+                                    <TabsTrigger value="coding">
+                                        <Code2 className="w-4 h-4 mr-2" />
+                                        Coding Challenges
+                                    </TabsTrigger>
+                                </TabsList>
+
+                                <TabsContent value="mcq" className="space-y-4 mt-4">
+                                    <div className="space-y-2">
+                                        <Label>Topic</Label>
+                                        <Input
+                                            placeholder="Enter any topic (e.g., React Hooks, Data Structures)"
+                                            value={mcqTopic}
+                                            onChange={(e) => setMcqTopic(e.target.value)}
+                                        />
+                                        <p className="text-xs text-muted-foreground">
+                                            Type anything! Our AI will generate relevant multiple-choice questions.
+                                        </p>
+                                    </div>
+                                </TabsContent>
+
+                                <TabsContent value="coding" className="space-y-4 mt-4">
+                                    <div className="space-y-2">
+                                        <Label>Programming Language</Label>
+                                        <Select value={codingTopic} onValueChange={setCodingTopic}>
+                                            <SelectTrigger>
+                                                <SelectValue placeholder="Select a language..." />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="Python">Python</SelectItem>
+                                                <SelectItem value="JavaScript">JavaScript</SelectItem>
+                                                <SelectItem value="Java">Java</SelectItem>
+                                                <SelectItem value="C++">C++</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+                                </TabsContent>
+                            </Tabs>
+
+                            <div className="grid grid-cols-3 gap-4">
+                                <div className="space-y-2">
+                                    <Label>Difficulty</Label>
+                                    <Select
+                                        value={customExam.difficulty}
+                                        onValueChange={(value) => setCustomExam({ ...customExam, difficulty: value })}
+                                    >
+                                        <SelectTrigger>
+                                            <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="easy">Easy</SelectItem>
+                                            <SelectItem value="medium">Medium</SelectItem>
+                                            <SelectItem value="hard">Hard</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+
+                                <div className="space-y-2">
+                                    <Label>Questions</Label>
+                                    <Select
+                                        value={customExam.questionCount}
+                                        onValueChange={(value) => setCustomExam({ ...customExam, questionCount: value })}
+                                    >
+                                        <SelectTrigger>
+                                            <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="5">5 Questions</SelectItem>
+                                            <SelectItem value="10">10 Questions</SelectItem>
+                                            <SelectItem value="15">15 Questions</SelectItem>
+                                            <SelectItem value="20">20 Questions</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+
+                                <div className="space-y-2">
+                                    <Label>Duration</Label>
+                                    <Select
+                                        value={customExam.duration}
+                                        onValueChange={(value) => setCustomExam({ ...customExam, duration: value })}
+                                    >
+                                        <SelectTrigger>
+                                            <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="15">15 min</SelectItem>
+                                            <SelectItem value="30">30 min</SelectItem>
+                                            <SelectItem value="45">45 min</SelectItem>
+                                            <SelectItem value="60">60 min</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                            </div>
+
+                            <Button
+                                onClick={handleGenerateQuestions}
+                                disabled={isGenerating || (activeTab === "mcq" ? !mcqTopic : !codingTopic)}
+                                className="w-full"
+                            >
+                                {isGenerating ? (
+                                    <>
+                                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                        Generating...
+                                    </>
+                                ) : (
+                                    <>
+                                        <Sparkles className="w-4 h-4 mr-2" />
+                                        Generate Questions
+                                    </>
+                                )}
+                            </Button>
+                        </div>
+                    </DialogContent>
+                </Dialog>
             </div>
         </UnifiedDashboardLayout>
     );

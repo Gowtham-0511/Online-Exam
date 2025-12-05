@@ -46,6 +46,8 @@ import {
 import { Badge } from '@/components/ui/badge';
 import Image from 'next/image';
 import { Separator } from '@/components/ui/separator';
+import { canAccessRole, getDefaultDashboard, UserRole as AuthUserRole } from '@/lib/authUtils';
+import RoleSwitcher from '@/components/RoleSwitcher';
 
 // Types
 interface MenuItem {
@@ -176,13 +178,13 @@ const ROLE_MENUS: Record<UserRole, MenuItem[]> = {
             icon: Home,
             description: '',
         },
-        {
-            id: 'ViewExams',
-            navigation: 'view-exams',
-            label: 'Assessments',
-            icon: ListChecks,
-            description: 'View all exams',
-        },
+        // {
+        //     id: 'ViewExams',
+        //     navigation: 'view-exams',
+        //     label: 'Assessments',
+        //     icon: ListChecks,
+        //     description: 'View all exams',
+        // },
         {
             id: 'ExamResults',
             navigation: 'exam-results',
@@ -233,6 +235,26 @@ export default function UnifiedDashboardLayout({ children, role }: UnifiedDashbo
     useEffect(() => {
         setMounted(true);
     }, []);
+
+    // Role-based access control
+    useEffect(() => {
+        if (status === 'loading') return;
+
+        // Not authenticated - redirect to login
+        if (!session) {
+            router.push(`/?callbackUrl=${encodeURIComponent(router.pathname)}`);
+            return;
+        }
+
+        const userRole = session.user?.role as AuthUserRole;
+
+        // Check if user has permission to access this role's dashboard
+        if (!canAccessRole(userRole, role as AuthUserRole)) {
+            // Redirect to their appropriate dashboard
+            const defaultDashboard = getDefaultDashboard(userRole);
+            router.push(defaultDashboard);
+        }
+    }, [session, status, router, role]);
 
     // Get menu items based on role
     const menuItems = useMemo(() => ROLE_MENUS[role], [role]);
@@ -434,7 +456,22 @@ export default function UnifiedDashboardLayout({ children, role }: UnifiedDashbo
         </div>
     );
 
-    if (!mounted) return null;
+    // Show loading state while checking authentication
+    if (!mounted || status === 'loading') {
+        return (
+            <div className="flex items-center justify-center min-h-screen bg-background">
+                <div className="flex flex-col items-center gap-4">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+                    <p className="text-sm text-muted-foreground">Loading...</p>
+                </div>
+            </div>
+        );
+    }
+
+    // Don't render if not authenticated or doesn't have permission
+    if (!session || !canAccessRole(session.user?.role as AuthUserRole, role as AuthUserRole)) {
+        return null;
+    }
 
     return (
         <div className="min-h-screen bg-background transition-colors duration-300">
@@ -497,17 +534,7 @@ export default function UnifiedDashboardLayout({ children, role }: UnifiedDashbo
                     </div>
 
                     <div className="flex items-center gap-3">
-                        <div className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-full bg-muted/50 border border-border/50">
-                            <div className={cn(
-                                "w-2 h-2 rounded-full animate-pulse",
-                                role === 'admin' ? "bg-red-500" :
-                                    role === 'examiner' ? "bg-blue-500" : "bg-green-500"
-                            )} />
-                            <span className="text-xs font-medium capitalize text-muted-foreground">
-                                {role} Mode
-                            </span>
-                        </div>
-
+                        <RoleSwitcher currentRole={role} />
                         <ThemeToggle />
                     </div>
                 </header>
