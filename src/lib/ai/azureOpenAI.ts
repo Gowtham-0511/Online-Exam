@@ -1,27 +1,39 @@
 import { AzureOpenAI } from "openai";
 
-const endpoint = process.env.AZURE_OAI_ENDPOINT!.replace(/^['"]|['"]$/g, "");
-const apiKey = process.env.AZURE_OAI_API_KEY!;
-const deploymentName = process.env.AZURE_OAI_DEPLOY!;
-const apiVersion = process.env.AZURE_OAI_API_VER!;
+const endpoint = (process.env.AZURE_OAI_ENDPOINT || "").replace(
+  /^['"]|['"]$/g,
+  ""
+);
+const apiKey = process.env.AZURE_OAI_API_KEY || "";
+const deploymentName = process.env.AZURE_OAI_DEPLOY || "";
+const apiVersion = process.env.AZURE_OAI_API_VER || "";
 
-const client = new AzureOpenAI({
-    endpoint,
-    apiKey,
-    apiVersion,
-});
+let clientInstance: AzureOpenAI | null = null;
+
+function getClient(): AzureOpenAI {
+  if (!clientInstance) {
+    clientInstance = new AzureOpenAI({
+      endpoint,
+      apiKey,
+      apiVersion,
+    });
+  }
+  return clientInstance;
+}
 
 export async function generateQuestionTags(
-    questionText: string,
-    questionType: string,
-    language?: string
+  questionText: string,
+  questionType: string,
+  language?: string
 ): Promise<string[]> {
-    const cleanText = questionText.replace(/<[^>]*>/g, "").trim();
+  const cleanText = questionText.replace(/<[^>]*>/g, "").trim();
 
-    const isDeterministicModel = /(mini|instruct)/i.test(deploymentName);
+  const isDeterministicModel = /(mini|instruct)/i.test(deploymentName);
 
-    const basePrompt = `
-        Analyze the following ${questionType} question${language ? ` (${language})` : ""} 
+  const basePrompt = `
+        Analyze the following ${questionType} question${
+    language ? ` (${language})` : ""
+  } 
         and return 1–3 relevant technical tags describing its key topic or concept.
         Question:
             ${cleanText}
@@ -29,96 +41,97 @@ export async function generateQuestionTags(
         Return tags as comma-separated words (like: joins, subquery, recursion, oop).
     `;
 
-    async function getTagsFromAI(prompt: string): Promise<string[]> {
-        const params: any = {
-            model: deploymentName,
-            messages: [
-                {
-                    role: "system",
-                    content:
-                        "You are a helpful AI that assigns technical tags to questions. Be concise and return only tags, no explanations.",
-                },
-                {
-                    role: "user",
-                    content: prompt,
-                },
-            ],
-            // max_completion_tokens: 100,
-        };
+  async function getTagsFromAI(prompt: string): Promise<string[]> {
+    const params: any = {
+      model: deploymentName,
+      messages: [
+        {
+          role: "system",
+          content:
+            "You are a helpful AI that assigns technical tags to questions. Be concise and return only tags, no explanations.",
+        },
+        {
+          role: "user",
+          content: prompt,
+        },
+      ],
+      // max_completion_tokens: 100,
+    };
 
-        if (!isDeterministicModel) {
-            params.temperature = 0.5;
-            params.top_p = 0.9;
-        }
-
-        const result = await client.chat.completions.create(params);
-
-        const content = result.choices[0]?.message?.content?.trim() || "";
-        console.log("AI raw content:", JSON.stringify(content));
-
-        // Clean up and normalize
-        const tags = content
-            .replace(/(^tags?:?|\n)/gi, "")
-            .split(/[,;]/)
-            .map((tag: string) =>
-                tag.trim().toLowerCase().replace(/[^a-z0-9-]/g, "")
-            )
-            .filter((tag) => tag.length > 2 && tag.length < 30)
-            .slice(0, 3);
-
-        return tags;
+    if (!isDeterministicModel) {
+      params.temperature = 0.5;
+      params.top_p = 0.9;
     }
 
-    try {
-        let tags = await getTagsFromAI(basePrompt);
+    const result = await getClient().chat.completions.create(params);
 
-        // Retry once if empty or failed
-        if (tags.length === 0) {
-            console.log("⚠️ Empty result — retrying with fallback prompt...");
-            const fallbackPrompt = `Give 1–3 short technical keywords for this ${questionType} question:\n${cleanText}\nExample: joins, subquery, recursion`;
-            tags = await getTagsFromAI(fallbackPrompt);
-        }
+    const content = result.choices[0]?.message?.content?.trim() || "";
+    console.log("AI raw content:", JSON.stringify(content));
 
-        console.log("Parsed tags:", tags);
+    // Clean up and normalize
+    const tags = content
+      .replace(/(^tags?:?|\n)/gi, "")
+      .split(/[,;]/)
+      .map((tag: string) =>
+        tag
+          .trim()
+          .toLowerCase()
+          .replace(/[^a-z0-9-]/g, "")
+      )
+      .filter((tag) => tag.length > 2 && tag.length < 30)
+      .slice(0, 3);
 
-        return tags.length > 0 ? tags : ["general"];
-    } catch (error: any) {
-        console.error("Azure OpenAI Error:", error.message);
-        console.error("Status:", error.status);
-        console.error("Code:", error.code);
-        console.error("Param:", error.param);
-        return ["uncategorized"];
+    return tags;
+  }
+
+  try {
+    let tags = await getTagsFromAI(basePrompt);
+
+    // Retry once if empty or failed
+    if (tags.length === 0) {
+      console.log("⚠️ Empty result — retrying with fallback prompt...");
+      const fallbackPrompt = `Give 1–3 short technical keywords for this ${questionType} question:\n${cleanText}\nExample: joins, subquery, recursion`;
+      tags = await getTagsFromAI(fallbackPrompt);
     }
+
+    console.log("Parsed tags:", tags);
+
+    return tags.length > 0 ? tags : ["general"];
+  } catch (error: any) {
+    console.error("Azure OpenAI Error:", error.message);
+    console.error("Status:", error.status);
+    console.error("Code:", error.code);
+    console.error("Param:", error.param);
+    return ["uncategorized"];
+  }
 }
 
 export async function regenerateTagsForQuestion(
-    questionId: number,
-    questionText: string,
-    questionType: string,
-    language?: string
+  questionId: number,
+  questionText: string,
+  questionType: string,
+  language?: string
 ): Promise<string[]> {
-    return generateQuestionTags(questionText, questionType, language);
+  return generateQuestionTags(questionText, questionType, language);
 }
 
-export async function analyzeStudentPerformance(
-    studentData: {
-        questionDetails: Array<{
-            questionText: string;
-            questionType: string;
-            score: number;
-            maxMarks: number;
-            feedback: string;
-        }>;
-        userName: string;
-    }
-): Promise<{
-    strengths: Array<{ topic: string; score: number; description: string }>;
-    weaknesses: Array<{ topic: string; score: number; description: string }>;
-    recommendations: string[];
+export async function analyzeStudentPerformance(studentData: {
+  questionDetails: Array<{
+    questionText: string;
+    questionType: string;
+    score: number;
+    maxMarks: number;
+    feedback: string;
+  }>;
+  userName: string;
+}): Promise<{
+  strengths: Array<{ topic: string; score: number; description: string }>;
+  weaknesses: Array<{ topic: string; score: number; description: string }>;
+  recommendations: string[];
 }> {
-    const isDeterministicModel = /(mini|instruct)/i.test(deploymentName);
+  const isDeterministicModel = /(mini|instruct)/i.test(deploymentName);
 
-    const prompt = `Analyze this student's performance across multiple questions and identify:
+  const prompt = `Analyze this student's performance across multiple questions and identify:
         1. Top 3-5 strength areas (topics they excel at)
         2. Top 3-5 weakness areas (topics needing improvement)
         3. 2-3 specific recommendations for improvement
@@ -127,12 +140,19 @@ export async function analyzeStudentPerformance(
         Questions Attempted: ${studentData.questionDetails.length}
 
         Performance Data:
-        ${studentData.questionDetails.map((q, i) => `
+        ${studentData.questionDetails
+          .map(
+            (q, i) => `
         Q${i + 1}: ${q.questionText.replace(/<[^>]*>/g, "").substring(0, 100)}
         Type: ${q.questionType}
-        Score: ${q.score}/${q.maxMarks} (${((q.score / q.maxMarks) * 100).toFixed(0)}%)
+        Score: ${q.score}/${q.maxMarks} (${(
+              (q.score / q.maxMarks) *
+              100
+            ).toFixed(0)}%)
         Feedback: ${q.feedback}
-        `).join('\n')}
+        `
+          )
+          .join("\n")}
 
         Return JSON in this exact format:
         {
@@ -142,59 +162,60 @@ export async function analyzeStudentPerformance(
         }
     `;
 
-    const params: any = {
-        model: deploymentName,
-        messages: [
-            {
-                role: "system",
-                content: "You are an educational AI that analyzes student performance. Return only valid JSON, no markdown or explanations.",
-            },
-            {
-                role: "user",
-                content: prompt,
-            },
-        ],
-        response_format: { type: "json_object" },
+  const params: any = {
+    model: deploymentName,
+    messages: [
+      {
+        role: "system",
+        content:
+          "You are an educational AI that analyzes student performance. Return only valid JSON, no markdown or explanations.",
+      },
+      {
+        role: "user",
+        content: prompt,
+      },
+    ],
+    response_format: { type: "json_object" },
+  };
+
+  if (!isDeterministicModel) {
+    params.temperature = 0.7;
+    params.top_p = 0.9;
+  }
+
+  try {
+    const result = await getClient().chat.completions.create(params);
+    const content = result.choices[0]?.message?.content?.trim() || "{}";
+    const analysis = JSON.parse(content);
+
+    return {
+      strengths: analysis.strengths || [],
+      weaknesses: analysis.weaknesses || [],
+      recommendations: analysis.recommendations || [],
     };
-
-    if (!isDeterministicModel) {
-        params.temperature = 0.7;
-        params.top_p = 0.9;
-    }
-
-    try {
-        const result = await client.chat.completions.create(params);
-        const content = result.choices[0]?.message?.content?.trim() || "{}";
-        const analysis = JSON.parse(content);
-
-        return {
-            strengths: analysis.strengths || [],
-            weaknesses: analysis.weaknesses || [],
-            recommendations: analysis.recommendations || [],
-        };
-    } catch (error: any) {
-        console.error("Azure OpenAI Analysis Error:", error.message);
-        return {
-            strengths: [],
-            weaknesses: [],
-            recommendations: ["Unable to generate recommendations at this time."],
-        };
-    }
+  } catch (error: any) {
+    console.error("Azure OpenAI Analysis Error:", error.message);
+    return {
+      strengths: [],
+      weaknesses: [],
+      recommendations: ["Unable to generate recommendations at this time."],
+    };
+  }
 }
 
 export async function predictQuestionDifficulty(
-    questionText: string,
-    questionType: string,
-    totalMarks: number
+  questionText: string,
+  questionType: string,
+  totalMarks: number
 ): Promise<{
-    predictedDifficulty: 'Easy' | 'Medium' | 'Hard';
-    confidence: number;
-    reasoning: string;
-    estimatedSuccessRate: number;
+  predictedDifficulty: "Easy" | "Medium" | "Hard";
+  confidence: number;
+  reasoning: string;
+  estimatedSuccessRate: number;
 }> {
-    const isDeterministicModel = /(mini|instruct)/i.test(deploymentName);
+  const isDeterministicModel = /(mini|instruct)/i.test(deploymentName);
 
-    const prompt = `Analyze this ${questionType} question and predict its difficulty level for students:
+  const prompt = `Analyze this ${questionType} question and predict its difficulty level for students:
 
         Question: ${questionText.replace(/<[^>]*>/g, "")}
         Type: ${questionType}
@@ -215,53 +236,71 @@ export async function predictQuestionDifficulty(
         }
     `;
 
-    const params: any = {
-        model: deploymentName,
-        messages: [
-            { role: "system", content: "You are an educational AI that predicts question difficulty. Return only valid JSON." },
-            { role: "user", content: prompt }
-        ],
-        response_format: { type: "json_object" }
+  const params: any = {
+    model: deploymentName,
+    messages: [
+      {
+        role: "system",
+        content:
+          "You are an educational AI that predicts question difficulty. Return only valid JSON.",
+      },
+      { role: "user", content: prompt },
+    ],
+    response_format: { type: "json_object" },
+  };
+
+  if (!isDeterministicModel) {
+    params.temperature = 0.3;
+  }
+
+  try {
+    const result = await getClient().chat.completions.create(params);
+    return JSON.parse(result.choices[0]?.message?.content || "{}");
+  } catch (error) {
+    console.error("Difficulty prediction error:", error);
+    return {
+      predictedDifficulty: "Medium",
+      confidence: 0,
+      reasoning: "Unable to predict",
+      estimatedSuccessRate: 50,
     };
-
-    if (!isDeterministicModel) {
-        params.temperature = 0.3;
-    }
-
-    try {
-        const result = await client.chat.completions.create(params);
-        return JSON.parse(result.choices[0]?.message?.content || "{}");
-    } catch (error) {
-        console.error("Difficulty prediction error:", error);
-        return {
-            predictedDifficulty: 'Medium',
-            confidence: 0,
-            reasoning: 'Unable to predict',
-            estimatedSuccessRate: 50
-        };
-    }
+  }
 }
 
 export async function analyzeCommonMistakes(
-    questionText: string,
-    studentAnswers: Array<{ answer: string; score: number; maxMarks: number; feedback: string }>
+  questionText: string,
+  studentAnswers: Array<{
+    answer: string;
+    score: number;
+    maxMarks: number;
+    feedback: string;
+  }>
 ): Promise<{
-    commonMistakes: Array<{ pattern: string; frequency: number; suggestion: string }>;
-    insights: string[];
-    improvementTips: string[];
+  commonMistakes: Array<{
+    pattern: string;
+    frequency: number;
+    suggestion: string;
+  }>;
+  insights: string[];
+  improvementTips: string[];
 }> {
-    const isDeterministicModel = /(mini|instruct)/i.test(deploymentName);
+  const isDeterministicModel = /(mini|instruct)/i.test(deploymentName);
 
-    const prompt = `Analyze student responses to identify common mistakes and patterns:
+  const prompt = `Analyze student responses to identify common mistakes and patterns:
 
         Question: ${questionText.replace(/<[^>]*>/g, "")}
 
         Student Responses (${studentAnswers.length} total):
-        ${studentAnswers.slice(0, 10).map((s, i) => `
+        ${studentAnswers
+          .slice(0, 10)
+          .map(
+            (s, i) => `
         Student ${i + 1}: ${s.answer.substring(0, 200)}
         Score: ${s.score}/${s.maxMarks}
         Feedback: ${s.feedback}
-        `).join('\n')}
+        `
+          )
+          .join("\n")}
 
         Identify:
         1. Top 3-5 common mistakes/misconceptions
@@ -276,44 +315,51 @@ export async function analyzeCommonMistakes(
         }
     `;
 
-    const params: any = {
-        model: deploymentName,
-        messages: [
-            { role: "system", content: "You are an educational AI analyzing student performance patterns. Return only valid JSON." },
-            { role: "user", content: prompt }
-        ],
-        response_format: { type: "json_object" }
-    };
+  const params: any = {
+    model: deploymentName,
+    messages: [
+      {
+        role: "system",
+        content:
+          "You are an educational AI analyzing student performance patterns. Return only valid JSON.",
+      },
+      { role: "user", content: prompt },
+    ],
+    response_format: { type: "json_object" },
+  };
 
-    if (!isDeterministicModel) {
-        params.temperature = 0.6;
-    }
+  if (!isDeterministicModel) {
+    params.temperature = 0.6;
+  }
 
-    try {
-        const result = await client.chat.completions.create(params);
-        return JSON.parse(result.choices[0]?.message?.content || "{}");
-    } catch (error) {
-        console.error("Common mistakes analysis error:", error);
-        return { commonMistakes: [], insights: [], improvementTips: [] };
-    }
+  try {
+    const result = await getClient().chat.completions.create(params);
+    return JSON.parse(result.choices[0]?.message?.content || "{}");
+  } catch (error) {
+    console.error("Common mistakes analysis error:", error);
+    return { commonMistakes: [], insights: [], improvementTips: [] };
+  }
 }
 
-export async function generateStudyPlan(
-    studentData: {
-        userName: string;
-        weaknesses: Array<{ topic: string; score: number }>;
-        strengths: Array<{ topic: string; score: number }>;
-        totalQuestions: number;
-        successRate: number;
-    }
-): Promise<{
-    weeklyPlan: Array<{ day: string; topic: string; activities: string[]; duration: string }>;
-    priorityTopics: string[];
-    estimatedImprovementTime: string;
+export async function generateStudyPlan(studentData: {
+  userName: string;
+  weaknesses: Array<{ topic: string; score: number }>;
+  strengths: Array<{ topic: string; score: number }>;
+  totalQuestions: number;
+  successRate: number;
+}): Promise<{
+  weeklyPlan: Array<{
+    day: string;
+    topic: string;
+    activities: string[];
+    duration: string;
+  }>;
+  priorityTopics: string[];
+  estimatedImprovementTime: string;
 }> {
-    const isDeterministicModel = /(mini|instruct)/i.test(deploymentName);
+  const isDeterministicModel = /(mini|instruct)/i.test(deploymentName);
 
-    const prompt = `
+  const prompt = `
         Create a personalized 7-day study plan for this student:
 
         Student: ${studentData.userName}
@@ -321,10 +367,14 @@ export async function generateStudyPlan(
         Questions Attempted: ${studentData.totalQuestions}
 
         Weak Areas:
-        ${studentData.weaknesses.map(w => `- ${w.topic}: ${w.score}%`).join('\n')}
+        ${studentData.weaknesses
+          .map((w) => `- ${w.topic}: ${w.score}%`)
+          .join("\n")}
 
         Strong Areas:
-        ${studentData.strengths.map(s => `- ${s.topic}: ${s.score}%`).join('\n')}
+        ${studentData.strengths
+          .map((s) => `- ${s.topic}: ${s.score}%`)
+          .join("\n")}
 
         Create a structured weekly study plan focusing on weak areas first.
 
@@ -338,51 +388,66 @@ export async function generateStudyPlan(
         }
 `;
 
-    const params: any = {
-        model: deploymentName,
-        messages: [
-            { role: "system", content: "You are an educational AI creating personalized study plans. Return only valid JSON." },
-            { role: "user", content: prompt }
-        ],
-        response_format: { type: "json_object" }
+  const params: any = {
+    model: deploymentName,
+    messages: [
+      {
+        role: "system",
+        content:
+          "You are an educational AI creating personalized study plans. Return only valid JSON.",
+      },
+      { role: "user", content: prompt },
+    ],
+    response_format: { type: "json_object" },
+  };
+
+  if (!isDeterministicModel) {
+    params.temperature = 0.7;
+  }
+
+  try {
+    const result = await getClient().chat.completions.create(params);
+    return JSON.parse(result.choices[0]?.message?.content || "{}");
+  } catch (error) {
+    console.error("Study plan generation error:", error);
+    return {
+      weeklyPlan: [],
+      priorityTopics: [],
+      estimatedImprovementTime: "N/A",
     };
-
-    if (!isDeterministicModel) {
-        params.temperature = 0.7;
-    }
-
-    try {
-        const result = await client.chat.completions.create(params);
-        return JSON.parse(result.choices[0]?.message?.content || "{}");
-    } catch (error) {
-        console.error("Study plan generation error:", error);
-        return { weeklyPlan: [], priorityTopics: [], estimatedImprovementTime: "N/A" };
-    }
+  }
 }
 
 export async function predictFuturePerformance(
-    studentHistory: Array<{
-        examId: string;
-        score: number;
-        totalPossible: number;
-        date: string;
-    }>
+  studentHistory: Array<{
+    examId: string;
+    score: number;
+    totalPossible: number;
+    date: string;
+  }>
 ): Promise<{
-    predictedScore: number;
-    trend: 'improving' | 'declining' | 'stable';
-    confidence: number;
-    insights: string[];
-    riskLevel: 'low' | 'medium' | 'high';
+  predictedScore: number;
+  trend: "improving" | "declining" | "stable";
+  confidence: number;
+  insights: string[];
+  riskLevel: "low" | "medium" | "high";
 }> {
-    const isDeterministicModel = /(mini|instruct)/i.test(deploymentName);
+  const isDeterministicModel = /(mini|instruct)/i.test(deploymentName);
 
-    const prompt = `Analyze student exam history and predict future performance:
+  const prompt = `Analyze student exam history and predict future performance:
 
         Exam History (${studentHistory.length} exams):
-        ${studentHistory.map((h, i) => `
-        Exam ${i + 1}: ${h.score}/${h.totalPossible} (${((h.score / h.totalPossible) * 100).toFixed(1)}%)
+        ${studentHistory
+          .map(
+            (h, i) => `
+        Exam ${i + 1}: ${h.score}/${h.totalPossible} (${(
+              (h.score / h.totalPossible) *
+              100
+            ).toFixed(1)}%)
         Date: ${h.date}
-        `).join('\n')}
+        `
+          )
+          .join("\n")}
 
         Predict:
         1. Expected score percentage in next exam
@@ -401,55 +466,69 @@ export async function predictFuturePerformance(
         }
 `;
 
-    const params: any = {
-        model: deploymentName,
-        messages: [
-            { role: "system", content: "You are an educational AI predicting student performance. Return only valid JSON." },
-            { role: "user", content: prompt }
-        ],
-        response_format: { type: "json_object" }
+  const params: any = {
+    model: deploymentName,
+    messages: [
+      {
+        role: "system",
+        content:
+          "You are an educational AI predicting student performance. Return only valid JSON.",
+      },
+      { role: "user", content: prompt },
+    ],
+    response_format: { type: "json_object" },
+  };
+
+  if (!isDeterministicModel) {
+    params.temperature = 0.4;
+  }
+
+  try {
+    const result = await getClient().chat.completions.create(params);
+    return JSON.parse(result.choices[0]?.message?.content || "{}");
+  } catch (error) {
+    console.error("Performance prediction error:", error);
+    return {
+      predictedScore: 50,
+      trend: "stable",
+      confidence: 0,
+      insights: [],
+      riskLevel: "medium",
     };
-
-    if (!isDeterministicModel) {
-        params.temperature = 0.4;
-    }
-
-    try {
-        const result = await client.chat.completions.create(params);
-        return JSON.parse(result.choices[0]?.message?.content || "{}");
-    } catch (error) {
-        console.error("Performance prediction error:", error);
-        return {
-            predictedScore: 50,
-            trend: 'stable',
-            confidence: 0,
-            insights: [],
-            riskLevel: 'medium'
-        };
-    }
+  }
 }
 
 export async function compareStudents(
-    student1: { userName: string; successRate: number; strengths: string[]; weaknesses: string[] },
-    student2: { userName: string; successRate: number; strengths: string[]; weaknesses: string[] }
+  student1: {
+    userName: string;
+    successRate: number;
+    strengths: string[];
+    weaknesses: string[];
+  },
+  student2: {
+    userName: string;
+    successRate: number;
+    strengths: string[];
+    weaknesses: string[];
+  }
 ): Promise<{
-    comparison: string;
-    recommendations: { forStudent1: string[]; forStudent2: string[] };
-    peerLearningOpportunities: string[];
+  comparison: string;
+  recommendations: { forStudent1: string[]; forStudent2: string[] };
+  peerLearningOpportunities: string[];
 }> {
-    const isDeterministicModel = /(mini|instruct)/i.test(deploymentName);
+  const isDeterministicModel = /(mini|instruct)/i.test(deploymentName);
 
-    const prompt = `Compare these two students and provide insights:
+  const prompt = `Compare these two students and provide insights:
 
         Student A: ${student1.userName}
         Success Rate: ${student1.successRate.toFixed(1)}%
-        Strengths: ${student1.strengths.join(', ')}
-        Weaknesses: ${student1.weaknesses.join(', ')}
+        Strengths: ${student1.strengths.join(", ")}
+        Weaknesses: ${student1.weaknesses.join(", ")}
 
         Student B: ${student2.userName}
         Success Rate: ${student2.successRate.toFixed(1)}%
-        Strengths: ${student2.strengths.join(', ')}
-        Weaknesses: ${student2.weaknesses.join(', ')}
+        Strengths: ${student2.strengths.join(", ")}
+        Weaknesses: ${student2.weaknesses.join(", ")}
 
         Provide:
         1. Comparison summary
@@ -467,57 +546,67 @@ export async function compareStudents(
         }
 `;
 
-    const params: any = {
-        model: deploymentName,
-        messages: [
-            { role: "system", content: "You are an educational AI comparing student performance. Return only valid JSON." },
-            { role: "user", content: prompt }
-        ],
-        response_format: { type: "json_object" }
+  const params: any = {
+    model: deploymentName,
+    messages: [
+      {
+        role: "system",
+        content:
+          "You are an educational AI comparing student performance. Return only valid JSON.",
+      },
+      { role: "user", content: prompt },
+    ],
+    response_format: { type: "json_object" },
+  };
+
+  if (!isDeterministicModel) {
+    params.temperature = 0.6;
+  }
+
+  try {
+    const result = await getClient().chat.completions.create(params);
+    return JSON.parse(result.choices[0]?.message?.content || "{}");
+  } catch (error) {
+    console.error("Student comparison error:", error);
+    return {
+      comparison: "Unable to compare",
+      recommendations: { forStudent1: [], forStudent2: [] },
+      peerLearningOpportunities: [],
     };
-
-    if (!isDeterministicModel) {
-        params.temperature = 0.6;
-    }
-
-    try {
-        const result = await client.chat.completions.create(params);
-        return JSON.parse(result.choices[0]?.message?.content || "{}");
-    } catch (error) {
-        console.error("Student comparison error:", error);
-        return {
-            comparison: "Unable to compare",
-            recommendations: { forStudent1: [], forStudent2: [] },
-            peerLearningOpportunities: []
-        };
-    }
+  }
 }
 
 export async function generateLearningPlanQuestions(
-    weekData: {
-        weekNumber: number;
-        topics: string[];
-        goals: string[];
-        language: string;
-        difficulty: string;
-    },
-    questionCount: number = 3
-): Promise<Array<{
+  weekData: {
+    weekNumber: number;
+    topics: string[];
+    goals: string[];
+    language: string;
+    difficulty: string;
+  },
+  questionCount: number = 3
+): Promise<
+  Array<{
     questionText: string;
     difficulty: string;
     totalMarks: number;
-    testCases: Array<{ input: string; expectedOutput: string; isHidden: boolean }>;
+    testCases: Array<{
+      input: string;
+      expectedOutput: string;
+      isHidden: boolean;
+    }>;
     starterCode: string;
     solution: string;
     hints: string[];
-}>> {
-    const isDeterministicModel = /(mini|instruct)/i.test(deploymentName);
+  }>
+> {
+  const isDeterministicModel = /(mini|instruct)/i.test(deploymentName);
 
-    const prompt = `Generate ${questionCount} coding practice questions for a learning plan.
+  const prompt = `Generate ${questionCount} coding practice questions for a learning plan.
 
         Week ${weekData.weekNumber} Details:
-        Topics: ${weekData.topics.join(', ')}
-        Goals: ${weekData.goals.join(', ')}
+        Topics: ${weekData.topics.join(", ")}
+        Goals: ${weekData.goals.join(", ")}
         Language: ${weekData.language}
         Difficulty: ${weekData.difficulty}
 
@@ -548,92 +637,104 @@ export async function generateLearningPlanQuestions(
         }
     `;
 
-    const params: any = {
-        model: deploymentName,
-        messages: [
-            {
-                role: "system",
-                content: "You are an educational AI that creates programming practice questions. Return only valid JSON with realistic, practical coding problems."
-            },
-            { role: "user", content: prompt }
-        ],
-        response_format: { type: "json_object" }
-    };
+  const params: any = {
+    model: deploymentName,
+    messages: [
+      {
+        role: "system",
+        content:
+          "You are an educational AI that creates programming practice questions. Return only valid JSON with realistic, practical coding problems.",
+      },
+      { role: "user", content: prompt },
+    ],
+    response_format: { type: "json_object" },
+  };
 
-    if (!isDeterministicModel) {
-        params.temperature = 0.8;
-        params.top_p = 0.95;
-    }
+  if (!isDeterministicModel) {
+    params.temperature = 0.8;
+    params.top_p = 0.95;
+  }
 
-    try {
-        const result = await client.chat.completions.create(params);
-        const content = result.choices[0]?.message?.content?.trim() || "{}";
-        const data = JSON.parse(content);
+  try {
+    const result = await getClient().chat.completions.create(params);
+    const content = result.choices[0]?.message?.content?.trim() || "{}";
+    const data = JSON.parse(content);
 
-        return data.questions || [];
-    } catch (error: any) {
-        console.error("Question generation error:", error.message);
-        return [];
-    }
+    return data.questions || [];
+  } catch (error: any) {
+    console.error("Question generation error:", error.message);
+    return [];
+  }
 }
 
 export async function explainFeedbackFurther(
-    questionText: string,
-    studentAnswer: string,
-    originalFeedback: string,
-    specificQuery?: string
+  questionText: string,
+  studentAnswer: string,
+  originalFeedback: string,
+  specificQuery?: string
 ): Promise<string> {
-    const isDeterministicModel = /(mini|instruct)/i.test(deploymentName);
+  const isDeterministicModel = /(mini|instruct)/i.test(deploymentName);
 
-    const prompt = `
+  const prompt = `
         Question: ${questionText.replace(/<[^>]*>/g, "")}
         
         Student's Answer: ${studentAnswer}
         
         Original Feedback: ${originalFeedback}
         
-        ${specificQuery ? `Student asks: ${specificQuery}` : 'Provide a more detailed explanation of the feedback, breaking down the concepts and offering concrete examples.'}
+        ${
+          specificQuery
+            ? `Student asks: ${specificQuery}`
+            : "Provide a more detailed explanation of the feedback, breaking down the concepts and offering concrete examples."
+        }
         
         Be clear, educational, and encouraging. Use examples where helpful.
     `;
 
-    const params: any = {
-        model: deploymentName,
-        messages: [
-            { role: "system", content: "You are a patient tutor who explains concepts clearly with examples. Be encouraging and constructive." },
-            { role: "user", content: prompt }
-        ],
-        // response_format: { type: "json_object" }
-    };
+  const params: any = {
+    model: deploymentName,
+    messages: [
+      {
+        role: "system",
+        content:
+          "You are a patient tutor who explains concepts clearly with examples. Be encouraging and constructive.",
+      },
+      { role: "user", content: prompt },
+    ],
+    // response_format: { type: "json_object" }
+  };
 
-    if (!isDeterministicModel) {
-        params.temperature = 0.7;
-    }
+  if (!isDeterministicModel) {
+    params.temperature = 0.7;
+  }
 
-    try {
-        const result = await client.chat.completions.create(params);
-        return result.choices[0]?.message?.content?.trim() || "Unable to generate explanation";
-    } catch (error) {
-        console.error("Explain feedback error:", error);
-        return "Unable to generate explanation at this time.";
-    }
+  try {
+    const result = await getClient().chat.completions.create(params);
+    return (
+      result.choices[0]?.message?.content?.trim() ||
+      "Unable to generate explanation"
+    );
+  } catch (error) {
+    console.error("Explain feedback error:", error);
+    return "Unable to generate explanation at this time.";
+  }
 }
 
 export async function generateAlternativeSolutions(
-    questionText: string,
-    studentAnswer: string,
-    questionType: string,
-    language?: string
+  questionText: string,
+  studentAnswer: string,
+  questionType: string,
+  language?: string
 ): Promise<{
-    approaches: Array<{ title: string; description: string; code?: string }>;
-    comparison: string;
+  approaches: Array<{ title: string; description: string; code?: string }>;
+  comparison: string;
 }> {
-    const isDeterministicModel = /(mini|instruct)/i.test(deploymentName);
+  const isDeterministicModel = /(mini|instruct)/i.test(deploymentName);
 
-    const prompt = `
+  const prompt = `
         Question: ${questionText.replace(/<[^>]*>/g, "")}
         Type: ${questionType}
-        ${language ? `Language: ${language}` : ''}
+        ${language ? `Language: ${language}` : ""}
         
         Student's Answer: ${studentAnswer}
         
@@ -658,46 +759,50 @@ export async function generateAlternativeSolutions(
         }
     `;
 
-    const params: any = {
-        model: deploymentName,
-        messages: [
-            { role: "system", content: "You are an expert programmer who teaches multiple ways to solve problems. Return only valid JSON." },
-            { role: "user", content: prompt }
-        ],
-        response_format: { type: "json_object" }
-    };
+  const params: any = {
+    model: deploymentName,
+    messages: [
+      {
+        role: "system",
+        content:
+          "You are an expert programmer who teaches multiple ways to solve problems. Return only valid JSON.",
+      },
+      { role: "user", content: prompt },
+    ],
+    response_format: { type: "json_object" },
+  };
 
-    if (!isDeterministicModel) {
-        params.temperature = 0.8;
-    }
+  if (!isDeterministicModel) {
+    params.temperature = 0.8;
+  }
 
-    try {
-        const result = await client.chat.completions.create(params);
-        return JSON.parse(result.choices[0]?.message?.content || "{}");
-    } catch (error) {
-        console.error("Alternative solutions error:", error);
-        return { approaches: [], comparison: "" };
-    }
+  try {
+    const result = await getClient().chat.completions.create(params);
+    return JSON.parse(result.choices[0]?.message?.content || "{}");
+  } catch (error) {
+    console.error("Alternative solutions error:", error);
+    return { approaches: [], comparison: "" };
+  }
 }
 
 export async function reviewCode(
-    code: string,
-    language: string,
-    questionContext?: string
+  code: string,
+  language: string,
+  questionContext?: string
 ): Promise<{
-    overallQuality: number;
-    strengths: string[];
-    improvements: string[];
-    bugs: Array<{ line: string; issue: string; fix: string }>;
-    bestPractices: string[];
-    optimizations: string[];
+  overallQuality: number;
+  strengths: string[];
+  improvements: string[];
+  bugs: Array<{ line: string; issue: string; fix: string }>;
+  bestPractices: string[];
+  optimizations: string[];
 }> {
-    const isDeterministicModel = /(mini|instruct)/i.test(deploymentName);
+  const isDeterministicModel = /(mini|instruct)/i.test(deploymentName);
 
-    const prompt = `
+  const prompt = `
         Review this ${language} code:
         
-        ${questionContext ? `Context: ${questionContext}` : ''}
+        ${questionContext ? `Context: ${questionContext}` : ""}
         
         \`\`\`${language}
         ${code}
@@ -722,48 +827,52 @@ export async function reviewCode(
         }
     `;
 
-    const params: any = {
-        model: deploymentName,
-        messages: [
-            { role: "system", content: "You are an expert code reviewer. Be constructive and specific. Return only valid JSON." },
-            { role: "user", content: prompt }
-        ],
-        response_format: { type: "json_object" }
+  const params: any = {
+    model: deploymentName,
+    messages: [
+      {
+        role: "system",
+        content:
+          "You are an expert code reviewer. Be constructive and specific. Return only valid JSON.",
+      },
+      { role: "user", content: prompt },
+    ],
+    response_format: { type: "json_object" },
+  };
+
+  if (!isDeterministicModel) {
+    params.temperature = 0.4;
+  }
+
+  try {
+    const result = await getClient().chat.completions.create(params);
+    return JSON.parse(result.choices[0]?.message?.content || "{}");
+  } catch (error) {
+    console.error("Code review error:", error);
+    return {
+      overallQuality: 0,
+      strengths: [],
+      improvements: [],
+      bugs: [],
+      bestPractices: [],
+      optimizations: [],
     };
-
-    if (!isDeterministicModel) {
-        params.temperature = 0.4;
-    }
-
-    try {
-        const result = await client.chat.completions.create(params);
-        return JSON.parse(result.choices[0]?.message?.content || "{}");
-    } catch (error) {
-        console.error("Code review error:", error);
-        return {
-            overallQuality: 0,
-            strengths: [],
-            improvements: [],
-            bugs: [],
-            bestPractices: [],
-            optimizations: []
-        };
-    }
+  }
 }
 
 export async function conversationalTutor(
-    conversationHistory: Array<{ role: 'user' | 'assistant'; content: string }>,
-    examContext: {
-        questionText: string;
-        studentAnswer: string;
-        feedback: string;
-        marks: number;
-        maxMarks: number;
-    }
+  conversationHistory: Array<{ role: "user" | "assistant"; content: string }>,
+  examContext: {
+    questionText: string;
+    studentAnswer: string;
+    feedback: string;
+    marks: number;
+    maxMarks: number;
+  }
 ): Promise<string> {
-    const isDeterministicModel = /(mini|instruct)/i.test(deploymentName);
+  const isDeterministicModel = /(mini|instruct)/i.test(deploymentName);
 
-    const systemPrompt = `You are a helpful AI tutor helping a student understand their exam results.
+  const systemPrompt = `You are a helpful AI tutor helping a student understand their exam results.
 
 Context:
 Question: ${examContext.questionText.replace(/<[^>]*>/g, "")}
@@ -773,72 +882,98 @@ Feedback: ${examContext.feedback}
 
 Be encouraging, patient, and explain concepts clearly. Use examples when helpful. Keep responses concise (2-3 paragraphs max).`;
 
-    const messages: any[] = [
-        { role: "system", content: systemPrompt },
-        ...conversationHistory
-    ];
+  const messages: any[] = [
+    { role: "system", content: systemPrompt },
+    ...conversationHistory,
+  ];
 
-    const params: any = {
-        model: deploymentName,
-        messages,
-        // max_tokens: 400,
-    };
+  const params: any = {
+    model: deploymentName,
+    messages,
+    // max_tokens: 400,
+  };
 
-    if (!isDeterministicModel) {
-        params.temperature = 0.7;
-    }
+  if (!isDeterministicModel) {
+    params.temperature = 0.7;
+  }
 
-    try {
-        const result = await client.chat.completions.create(params);
-        return result.choices[0]?.message?.content?.trim() || "I'm having trouble responding right now.";
-    } catch (error) {
-        console.error("Conversational tutor error:", error);
-        return "I'm having trouble responding right now. Please try again.";
-    }
+  try {
+    const result = await getClient().chat.completions.create(params);
+    return (
+      result.choices[0]?.message?.content?.trim() ||
+      "I'm having trouble responding right now."
+    );
+  } catch (error) {
+    console.error("Conversational tutor error:", error);
+    return "I'm having trouble responding right now. Please try again.";
+  }
 }
 
-export async function generateQuestionsForExam(
-    config: {
-        language: string;
-        questionType: 'coding' | 'mcq' | 'both';
-        difficulty: 'easy' | 'medium' | 'hard';
-        count: number;
-        topics?: string[];
-        marks?: number; // marks per question or total
-    }
-): Promise<Array<{
+export async function generateQuestionsForExam(config: {
+  language: string;
+  questionType: "coding" | "mcq" | "both";
+  difficulty: "easy" | "medium" | "hard";
+  count: number;
+  topics?: string[];
+  marks?: number; // marks per question or total
+}): Promise<
+  Array<{
     questionText: string;
     difficulty: string;
     marks: number;
-    type: 'coding' | 'mcq';
+    type: "coding" | "mcq";
     expectedOutput?: string;
-    testCases?: Array<{ input: string; expectedOutput: string; isHidden: boolean }>;
+    testCases?: Array<{
+      input: string;
+      expectedOutput: string;
+      isHidden: boolean;
+    }>;
     starterCode?: string;
     solution: string;
     hints?: string[];
     options?: Array<{ id: number; text: string; isCorrect: boolean }>;
     tags: string[];
-}>> {
-    const isDeterministicModel = /(mini|instruct)/i.test(deploymentName);
+  }>
+> {
+  const isDeterministicModel = /(mini|instruct)/i.test(deploymentName);
 
-    const topicsText = config.topics && config.topics.length > 0
-        ? `Focus on these topics: ${config.topics.join(', ')}`
-        : '';
+  const topicsText =
+    config.topics && config.topics.length > 0
+      ? `Focus on these topics: ${config.topics.join(", ")}`
+      : "";
 
-    const prompt = `Generate ${config.count} ${config.difficulty} ${config.questionType === 'both' ? 'coding and MCQ' : config.questionType} questions for ${config.language}.
+  const prompt = `Generate ${config.count} ${config.difficulty} ${
+    config.questionType === "both" ? "coding and MCQ" : config.questionType
+  } questions for ${config.language}.
 
 ${topicsText}
 
 Requirements:
 - Each question should be ${config.difficulty} difficulty
-- ${config.questionType === 'coding' ? 'Include test cases, starter code, and solution' : ''}
-- ${config.questionType === 'mcq' ? 'Include 4 options with one correct answer' : ''}
-- Assign appropriate marks (${config.marks ? config.marks + ' marks each' : '5-20 based on complexity'})
+- ${
+    config.questionType === "coding"
+      ? "Include test cases, starter code, and solution"
+      : ""
+  }
+- ${
+    config.questionType === "mcq"
+      ? "Include 4 options with one correct answer"
+      : ""
+  }
+- Assign appropriate marks (${
+    config.marks ? config.marks + " marks each" : "5-20 based on complexity"
+  })
 - Add 1-3 relevant tags
-- ${config.questionType === 'coding' ? 'Include 3-4 test cases (mix visible and hidden)' : ''}
+- ${
+    config.questionType === "coding"
+      ? "Include 3-4 test cases (mix visible and hidden)"
+      : ""
+  }
 - Make questions practical and realistic
 
-${config.questionType === 'coding' ? `
+${
+  config.questionType === "coding"
+    ? `
 For CODING questions return:
 {
   "questions": [
@@ -859,9 +994,13 @@ For CODING questions return:
     }
   ]
 }
-` : ''}
+`
+    : ""
+}
 
-${config.questionType === 'mcq' ? `
+${
+  config.questionType === "mcq"
+    ? `
 For MCQ questions return:
 {
   "questions": [
@@ -881,91 +1020,122 @@ For MCQ questions return:
     }
   ]
 }
-` : ''}
+`
+    : ""
+}
 
-${config.questionType === 'both' ? 'Generate a mix of coding and MCQ questions.' : ''}
+${
+  config.questionType === "both"
+    ? "Generate a mix of coding and MCQ questions."
+    : ""
+}
 
 Return ONLY valid JSON, no markdown or extra text.`;
 
-    const params: any = {
-        model: deploymentName,
-        messages: [
-            {
-                role: "system",
-                content: `You are an expert ${config.language} instructor creating exam questions. Generate realistic, practical problems that test real understanding. Return only valid JSON.`
-            },
-            { role: "user", content: prompt }
-        ],
-        response_format: { type: "json_object" }
-    };
+  const params: any = {
+    model: deploymentName,
+    messages: [
+      {
+        role: "system",
+        content: `You are an expert ${config.language} instructor creating exam questions. Generate realistic, practical problems that test real understanding. Return only valid JSON.`,
+      },
+      { role: "user", content: prompt },
+    ],
+    response_format: { type: "json_object" },
+  };
 
-    if (!isDeterministicModel) {
-        params.temperature = 0.8;
-        params.top_p = 0.95;
-    }
+  if (!isDeterministicModel) {
+    params.temperature = 0.8;
+    params.top_p = 0.95;
+  }
 
-    try {
-        const result = await client.chat.completions.create(params);
-        const content = result.choices[0]?.message?.content?.trim() || "{}";
-        const data = JSON.parse(content);
+  try {
+    const result = await getClient().chat.completions.create(params);
+    const content = result.choices[0]?.message?.content?.trim() || "{}";
+    const data = JSON.parse(content);
 
-        console.log(data);
+    console.log(data);
 
-        return data.questions || [];
-    } catch (error: any) {
-        console.error("AI Question Generation Error:", error.message);
-        throw new Error("Failed to generate questions with AI");
-    }
+    return data.questions || [];
+  } catch (error: any) {
+    console.error("AI Question Generation Error:", error.message);
+    throw new Error("Failed to generate questions with AI");
+  }
 }
 
 export async function validateQuestion(
-    questionText: string,
-    questionType: 'coding' | 'mcq',
-    language?: string,
-    expectedOutput?: string,
-    options?: Array<{ text: string; isCorrect: boolean }>,
-    testCases?: Array<{ input: string; expectedOutput: string }>,
-    marks?: number
+  questionText: string,
+  questionType: "coding" | "mcq",
+  language?: string,
+  expectedOutput?: string,
+  options?: Array<{ text: string; isCorrect: boolean }>,
+  testCases?: Array<{ input: string; expectedOutput: string }>,
+  marks?: number
 ): Promise<{
-    isValid: boolean;
-    overallScore: number; // 0-100
-    issues: Array<{
-        severity: 'critical' | 'warning' | 'suggestion';
-        category: 'clarity' | 'grammar' | 'completeness' | 'difficulty' | 'technical';
-        message: string;
-        suggestion?: string;
-    }>;
-    suggestions: string[];
-    estimatedDifficulty?: 'easy' | 'medium' | 'hard';
+  isValid: boolean;
+  overallScore: number; // 0-100
+  issues: Array<{
+    severity: "critical" | "warning" | "suggestion";
+    category:
+      | "clarity"
+      | "grammar"
+      | "completeness"
+      | "difficulty"
+      | "technical";
+    message: string;
+    suggestion?: string;
+  }>;
+  suggestions: string[];
+  estimatedDifficulty?: "easy" | "medium" | "hard";
 }> {
-    const isDeterministicModel = /(mini|instruct)/i.test(deploymentName);
+  const isDeterministicModel = /(mini|instruct)/i.test(deploymentName);
 
-    const prompt = `Analyze this ${questionType} question and provide detailed validation feedback.
+  const prompt = `Analyze this ${questionType} question and provide detailed validation feedback.
 
 Question Text: ${questionText}
 Type: ${questionType}
-Language: ${language || 'N/A'}
-${expectedOutput ? `Expected Output: ${expectedOutput}` : ''}
-${marks ? `Marks: ${marks}` : ''}
+Language: ${language || "N/A"}
+${expectedOutput ? `Expected Output: ${expectedOutput}` : ""}
+${marks ? `Marks: ${marks}` : ""}
 
-${questionType === 'mcq' && options ? `
+${
+  questionType === "mcq" && options
+    ? `
 Options:
-${options.map((opt, i) => `${i + 1}. ${opt.text} ${opt.isCorrect ? '(Correct)' : ''}`).join('\n')}
-Correct answers count: ${options.filter(o => o.isCorrect).length}
-` : ''}
+${options
+  .map((opt, i) => `${i + 1}. ${opt.text} ${opt.isCorrect ? "(Correct)" : ""}`)
+  .join("\n")}
+Correct answers count: ${options.filter((o) => o.isCorrect).length}
+`
+    : ""
+}
 
-${questionType === 'coding' && testCases ? `
+${
+  questionType === "coding" && testCases
+    ? `
 Test Cases: ${testCases.length} provided
-` : ''}
+`
+    : ""
+}
 
 Validate the question for:
 1. **Clarity**: Is it clear, unambiguous, and easy to understand?
 2. **Grammar**: Any spelling or grammar issues?
 3. **Completeness**: Missing information, test cases, or details?
 4. **Technical Accuracy**: Any technical errors or impossibilities?
-5. **Difficulty Alignment**: Does it match typical ${marks ? marks + '-mark' : ''} questions?
-${questionType === 'mcq' ? '6. **MCQ Quality**: Are options distinct, is there exactly one correct answer?' : ''}
-${questionType === 'coding' ? '6. **Coding Quality**: Are requirements clear, is expected output reasonable?' : ''}
+5. **Difficulty Alignment**: Does it match typical ${
+    marks ? marks + "-mark" : ""
+  } questions?
+${
+  questionType === "mcq"
+    ? "6. **MCQ Quality**: Are options distinct, is there exactly one correct answer?"
+    : ""
+}
+${
+  questionType === "coding"
+    ? "6. **Coding Quality**: Are requirements clear, is expected output reasonable?"
+    : ""
+}
 
 Return JSON:
 {
@@ -987,86 +1157,101 @@ Critical issues: Must fix before exam creation
 Warnings: Should fix but not blocking
 Suggestions: Nice to have improvements`;
 
-    const params: any = {
-        model: deploymentName,
-        messages: [
-            {
-                role: "system",
-                content: "You are an expert educational content validator. Be thorough but constructive. Return only valid JSON."
-            },
-            { role: "user", content: prompt }
-        ],
-        response_format: { type: "json_object" }
+  const params: any = {
+    model: deploymentName,
+    messages: [
+      {
+        role: "system",
+        content:
+          "You are an expert educational content validator. Be thorough but constructive. Return only valid JSON.",
+      },
+      { role: "user", content: prompt },
+    ],
+    response_format: { type: "json_object" },
+  };
+
+  if (!isDeterministicModel) {
+    params.temperature = 0.3;
+  }
+
+  try {
+    const result = await getClient().chat.completions.create(params);
+    const validation = JSON.parse(result.choices[0]?.message?.content || "{}");
+
+    return {
+      isValid: validation.isValid ?? true,
+      overallScore: validation.overallScore ?? 100,
+      issues: validation.issues ?? [],
+      suggestions: validation.suggestions ?? [],
+      estimatedDifficulty: validation.estimatedDifficulty,
     };
-
-    if (!isDeterministicModel) {
-        params.temperature = 0.3;
-    }
-
-    try {
-        const result = await client.chat.completions.create(params);
-        const validation = JSON.parse(result.choices[0]?.message?.content || "{}");
-
-        return {
-            isValid: validation.isValid ?? true,
-            overallScore: validation.overallScore ?? 100,
-            issues: validation.issues ?? [],
-            suggestions: validation.suggestions ?? [],
-            estimatedDifficulty: validation.estimatedDifficulty
-        };
-    } catch (error) {
-        console.error("Question validation error:", error);
-        return {
-            isValid: true,
-            overallScore: 0,
-            issues: [{
-                severity: 'warning',
-                category: 'technical',
-                message: 'Unable to validate question automatically',
-                suggestion: 'Please review manually'
-            }],
-            suggestions: []
-        };
-    }
+  } catch (error) {
+    console.error("Question validation error:", error);
+    return {
+      isValid: true,
+      overallScore: 0,
+      issues: [
+        {
+          severity: "warning",
+          category: "technical",
+          message: "Unable to validate question automatically",
+          suggestion: "Please review manually",
+        },
+      ],
+      suggestions: [],
+    };
+  }
 }
 
 export async function generatePracticeQuestionsFromWeakAreas(
-    userEmail: string,
-    weakAreas: Array<{
-        topic: string;
-        language: string;
-        score: number;
-        description: string;
-    }>,
-    count: number = 5
-): Promise<Array<{
+  userEmail: string,
+  weakAreas: Array<{
+    topic: string;
+    language: string;
+    score: number;
+    description: string;
+  }>,
+  count: number = 5
+): Promise<
+  Array<{
     questionTitle: string;
     questionDescription: string;
     language: string;
-    difficulty: 'Easy' | 'Medium' | 'Hard';
+    difficulty: "Easy" | "Medium" | "Hard";
     topic: string;
     starterCode: string;
-    testCases: Array<{ input: string; expectedOutput: string; isHidden: boolean }>;
+    testCases: Array<{
+      input: string;
+      expectedOutput: string;
+      isHidden: boolean;
+    }>;
     solutionCode: string;
     solutionExplanation: string;
     hints: string[];
     weakArea: string;
-}>> {
-    const isDeterministicModel = /(mini|instruct)/i.test(deploymentName);
+  }>
+> {
+  const isDeterministicModel = /(mini|instruct)/i.test(deploymentName);
 
-    // Determine difficulty based on average score
-    const avgScore = weakAreas.reduce((sum, area) => sum + area.score, 0) / weakAreas.length;
-    const baseDifficulty = avgScore < 40 ? 'Easy' : avgScore < 70 ? 'Medium' : 'Hard';
+  // Determine difficulty based on average score
+  const avgScore =
+    weakAreas.reduce((sum, area) => sum + area.score, 0) / weakAreas.length;
+  const baseDifficulty =
+    avgScore < 40 ? "Easy" : avgScore < 70 ? "Medium" : "Hard";
 
-const prompt = `You are generating personalized coding practice questions to help a student improve their weak areas.
+  const prompt = `You are generating personalized coding practice questions to help a student improve their weak areas.
 
 Weak Areas Analysis:
-${weakAreas.map((area, i) => `
+${weakAreas
+  .map(
+    (area, i) => `
 ${i + 1}. Topic: ${area.topic}
    Language: ${area.language}
    Current Score: ${area.score}%
    Issue: ${area.description}
-`).join('\n')}
+`
+  )
+  .join("\n")}
 
 Generate ${count} practice coding questions that specifically target these weaknesses.
 
@@ -1214,31 +1399,32 @@ IMPORTANT: The input field must be valid JSON that represents the SINGLE argumen
 
 Return ONLY valid JSON, no markdown formatting or extra text.`;
 
-    const params: any = {
-        model: deploymentName,
-        messages: [
-            {
-                role: "system",
-                content: "You are an expert programming instructor creating personalized practice questions. Focus on helping students overcome specific weaknesses. Return only valid JSON."
-            },
-            { role: "user", content: prompt }
-        ],
-        response_format: { type: "json_object" }
-    };
+  const params: any = {
+    model: deploymentName,
+    messages: [
+      {
+        role: "system",
+        content:
+          "You are an expert programming instructor creating personalized practice questions. Focus on helping students overcome specific weaknesses. Return only valid JSON.",
+      },
+      { role: "user", content: prompt },
+    ],
+    response_format: { type: "json_object" },
+  };
 
-    if (!isDeterministicModel) {
-        params.temperature = 0.8;
-        params.top_p = 0.95;
-    }
+  if (!isDeterministicModel) {
+    params.temperature = 0.8;
+    params.top_p = 0.95;
+  }
 
-    try {
-        const result = await client.chat.completions.create(params);
-        const content = result.choices[0]?.message?.content?.trim() || "{}";
-        const data = JSON.parse(content);
+  try {
+    const result = await getClient().chat.completions.create(params);
+    const content = result.choices[0]?.message?.content?.trim() || "{}";
+    const data = JSON.parse(content);
 
-        return data.questions || [];
-    } catch (error: any) {
-        console.error("Practice Question Generation Error:", error.message);
-        throw new Error("Failed to generate practice questions");
-    }
+    return data.questions || [];
+  } catch (error: any) {
+    console.error("Practice Question Generation Error:", error.message);
+    throw new Error("Failed to generate practice questions");
+  }
 }

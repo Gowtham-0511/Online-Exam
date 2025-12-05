@@ -1,18 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
 import { AzureOpenAI } from "openai";
 
-const endpoint = process.env.AZURE_OAI_ENDPOINT!.replace(/^['"]|['"]$/g, "");
-const apiKey = process.env.AZURE_OAI_API_KEY!;
-const deploymentName = process.env.AZURE_OAI_DEPLOY!;
-const apiVersion = process.env.AZURE_OAI_API_VER!;
-
-const client = new AzureOpenAI({
-  endpoint,
-  apiKey,
-  apiVersion,
-});
-
 export async function POST(request: NextRequest) {
+  const endpoint = (process.env.AZURE_OAI_ENDPOINT || "").replace(
+    /^['"]|['"]$/g,
+    ""
+  );
+  const apiKey = process.env.AZURE_OAI_API_KEY || "";
+  const deploymentName = process.env.AZURE_OAI_DEPLOY || "";
+  const apiVersion = process.env.AZURE_OAI_API_VER || "";
+
+  const client = new AzureOpenAI({
+    endpoint,
+    apiKey,
+    apiVersion,
+  });
+
   try {
     const body = await request.json();
     const { questionText, language } = body;

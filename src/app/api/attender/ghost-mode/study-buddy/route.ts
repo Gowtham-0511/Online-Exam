@@ -1,17 +1,20 @@
 import { AzureOpenAI } from "openai";
 
-const endpoint = process.env.AZURE_OAI_ENDPOINT!.replace(/^['"]|['"]$/g, "");
-const apiKey = process.env.AZURE_OAI_API_KEY!;
-const deploymentName = process.env.AZURE_OAI_DEPLOY!;
-const apiVersion = process.env.AZURE_OAI_API_VER!;
-
-const client = new AzureOpenAI({
-  endpoint,
-  apiKey,
-  apiVersion,
-});
-
 export async function POST(req: Request) {
+  const endpoint = (process.env.AZURE_OAI_ENDPOINT || "").replace(
+    /^['"]|['"]$/g,
+    ""
+  );
+  const apiKey = process.env.AZURE_OAI_API_KEY || "";
+  const deploymentName = process.env.AZURE_OAI_DEPLOY || "";
+  const apiVersion = process.env.AZURE_OAI_API_VER || "";
+
+  const client = new AzureOpenAI({
+    endpoint,
+    apiKey,
+    apiVersion,
+  });
+
   try {
     const { messages } = await req.json();
 

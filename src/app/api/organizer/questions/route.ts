@@ -23,8 +23,6 @@ export async function GET(request: NextRequest) {
         WHERE 1=1
     `;
 
-    console.log(query);
-
     const params: any[] = [];
     let idx = 1;
 
@@ -60,6 +58,8 @@ export async function GET(request: NextRequest) {
 
     query += ` ORDER BY q."createdAt" DESC`;
 
+    // console.log(query);
+
     const result = await pool.query(query, params);
 
     const grouped = result.rows.reduce((acc: any, row: any) => {
@@ -90,6 +90,8 @@ export async function GET(request: NextRequest) {
       }
       return acc;
     }, {});
+
+    // console.log(Object.values(grouped));
 
     return NextResponse.json(Object.values(grouped), { status: 200 });
   } catch (error) {

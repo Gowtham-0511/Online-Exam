@@ -5,12 +5,21 @@ export async function POST(request: Request) {
   const body = await request.json();
   const { assessmentId, batchSchedules, userSchedules } = body;
 
-  if (!assessmentId || !batchSchedules || !userSchedules) {
+  if (!assessmentId) {
     return NextResponse.json(
       {
-        error:
-          "Missing required fields: assessmentId, batchIds, userIds, startTime, endTime",
+        error: "Missing required fields: assessmentId",
       },
+      { status: 400 }
+    );
+  }
+
+  if (
+    (!batchSchedules || batchSchedules.length === 0) &&
+    (!userSchedules || userSchedules.length === 0)
+  ) {
+    return NextResponse.json(
+      { error: "No schedules provided" },
       { status: 400 }
     );
   }
@@ -23,11 +32,11 @@ export async function POST(request: Request) {
       );
 
       const batchInsertQuery = `
-                INSERT INTO "AssessmentBatchMapping" (
-                    "assessmentId", "batchId", "startTime", "endTime"
-                )
-                VALUES ($1, $2, $3, $4)
-            `;
+        INSERT INTO "AssessmentBatchMapping" (
+            "assessmentId", "batchId", "startTime", "endTime"
+        )
+        VALUES ($1, $2, $3, $4)
+      `;
 
       for (const schedule of batchSchedules) {
         await pool.query(batchInsertQuery, [
@@ -48,20 +57,21 @@ export async function POST(request: Request) {
       );
 
       const userInsertQuery = `
-                INSERT INTO "AssessmentUserMapping" (
-                    "assessmentId", "userId", "startTime", "endTime"
-                )
-                VALUES ($1, $2, $3, $4)
-            `;
+        INSERT INTO "AssessmentUserMapping" (
+            "assessmentId", "userEmail", startTime, endTime, "createdAt"
+        )
+        VALUES ($1, $2, $3, $4, $5)
+      `;
 
       for (const schedule of userSchedules) {
         await pool.query(userInsertQuery, [
           assessmentId,
-          schedule.userId,
+          schedule.userEmail,
           schedule.startTime
             ? new Date(schedule.startTime).toISOString()
             : null,
           schedule.endTime ? new Date(schedule.endTime).toISOString() : null,
+          new Date().toISOString(),
         ]);
       }
     }

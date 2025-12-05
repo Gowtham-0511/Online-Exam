@@ -1,0 +1,42 @@
+services:
+  exam-web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: sysrank-exam-web
+    ports:
+      - "3000:3000"
+    env_file:
+      - .env
+    environment:
+      - PYTHON_SERVICE_URL=http://host.docker.internal:5000
+      - SQL_SERVICE_URL=http://host.docker.internal:5001
+      - JAVASCRIPT_SERVICE_URL=http://host.docker.internal:5002
+      - JAVA_SERVICE_URL=http://host.docker.internal:5003
+      - PYSPARK_SERVICE_URL=http://host.docker.internal:5005
+      - DAX_SERVICE_URL=http://host.docker.internal:5006
+      - DBT_SERVICE_URL=http://host.docker.internal:5004
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: always
+  nginx:
+    image: nginx:latest
+    container_name: nginx-proxy
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./nginx/certs:/etc/nginx/certs:ro
+    depends_on:
+      - exam-web
+
+  redis:
+    image: redis:latest
+    container_name: redis
+    ports:
+      - "6380:6379"
+    restart: always

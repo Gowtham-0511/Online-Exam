@@ -1,9 +1,9 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import useSWR from 'swr';
 import { useSession } from "next-auth/react";
-// import { useRouter } from 'next/router';
+import { useRouter } from 'next/navigation';
 import { UpcomingExamsSection } from '@/components/attender/dashboard/UpcomingExamsSection';
 import { CompletedExamsSection } from '@/components/attender/dashboard/CompletedExamsSection';
 import { AIInsightsCard } from '@/components/attender/AIInsightsCard';
@@ -24,21 +24,26 @@ import {
     CheckCircle2,
     TrendingUp,
     Sparkles,
-    Code2
+    Code2,
+    RefreshCw,
+    Activity,
+    BrainCircuit
 } from 'lucide-react';
 import GhostModeCard from '@/components/attender/dashboard/GhostModeCard';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import * as Icons from 'lucide-react';
-import { useRouter } from 'next/navigation';
+import { Separator } from '@/components/ui/separator';
+import gsap from 'gsap';
+import { useGSAP } from '@gsap/react';
 
 const fetcher = (url: string) => fetch(url).then(res => res.json());
 
 const AttenderDashboard = () => {
     const { data: session, status } = useSession();
     const router = useRouter();
+    const containerRef = useRef(null);
 
     // Modal states
     const [selectedExamForInsights, setSelectedExamForInsights] = useState<{
@@ -150,6 +155,47 @@ const AttenderDashboard = () => {
         skillRating: userStats?.skillRating || 1000
     };
 
+    // GSAP Animation
+    useGSAP(() => {
+        if (status === 'loading') return;
+
+        const tl = gsap.timeline();
+
+        // Ensure starting state
+        gsap.set(".animate-header", { autoAlpha: 0, y: -20 });
+        gsap.set(".animate-stat-card", { autoAlpha: 0, y: 20 });
+        gsap.set(".animate-main-section", { autoAlpha: 0, y: 30 });
+        gsap.set(".animate-sidebar-item", { autoAlpha: 0, x: 20 });
+
+        tl.to(".animate-header", {
+            y: 0,
+            autoAlpha: 1,
+            duration: 0.6,
+            ease: "power2.out"
+        })
+            .to(".animate-stat-card", {
+                y: 0,
+                autoAlpha: 1,
+                duration: 0.5,
+                stagger: 0.1,
+                ease: "back.out(1.5)"
+            }, "-=0.3")
+            .to(".animate-main-section", {
+                y: 0,
+                autoAlpha: 1,
+                duration: 0.8,
+                ease: "power2.out"
+            }, "-=0.2")
+            .to(".animate-sidebar-item", {
+                x: 0,
+                autoAlpha: 1,
+                duration: 0.6,
+                stagger: 0.15,
+                ease: "power2.out"
+            }, "-=0.6");
+
+    }, { scope: containerRef, dependencies: [status] });
+
     // Handlers
     const handleRefreshInsights = async () => {
         if (!session?.user?.email) return;
@@ -215,16 +261,10 @@ const AttenderDashboard = () => {
 
     if (status === 'loading') {
         return (
-            <div className="p-6 space-y-6 animate-pulse">
-                <div className="h-12 w-1/3 bg-muted rounded-md" />
-                <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-                    <div className="lg:col-span-8 space-y-6">
-                        <div className="h-40 bg-muted rounded-xl" />
-                        <div className="h-64 bg-muted rounded-xl" />
-                    </div>
-                    <div className="lg:col-span-4 space-y-6">
-                        <div className="h-64 bg-muted rounded-xl" />
-                    </div>
+            <div className="flex items-center justify-center min-h-[60vh]">
+                <div className="flex flex-col items-center gap-4">
+                    <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+                    <p className="text-muted-foreground animate-pulse">Loading Dashboard...</p>
                 </div>
             </div>
         );
@@ -233,92 +273,151 @@ const AttenderDashboard = () => {
     if (hasError) {
         return (
             <div className="flex flex-col items-center justify-center min-h-[60vh] text-center p-6">
-                <div className="bg-destructive/10 p-4 rounded-full mb-4">
+                <div className="bg-destructive/10 p-6 rounded-full mb-6">
                     <Ghost className="w-12 h-12 text-destructive" />
                 </div>
-                <h2 className="text-2xl font-bold text-foreground mb-2">Oops! Something went wrong</h2>
-                <p className="text-muted-foreground mb-6">We couldn't load your dashboard data.</p>
-                <Button onClick={() => window.location.reload()}>Try Again</Button>
+                <h2 className="text-3xl font-bold text-foreground mb-4">Something went wrong</h2>
+                <p className="text-muted-foreground mb-8 max-w-md">We encountered an issue while loading your personal dashboard. Please try refreshing the page.</p>
+                <Button size="lg" onClick={() => window.location.reload()}>Reload Dashboard</Button>
             </div>
         );
     }
 
     return (
-        <>
-            <div className="max-w-7xl mx-auto space-y-8 pb-12 animate-fade-in-up">
+        <div ref={containerRef} className="min-h-screen bg-background">
+            <div className="max-w-[1400px] mx-auto p-6 lg:p-10 space-y-10 pb-20">
+
                 {/* Header Section */}
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div className="flex flex-col md:flex-row md:items-start justify-between gap-6 animate-header">
                     <div>
-                        <h1 className="text-3xl font-bold tracking-tight text-foreground">
-                            Welcome back, {session?.user?.name?.split(' ')[0]}! 👋
+                        <h1 className="text-4xl font-extrabold tracking-tight text-foreground">
+                            Dashboard
                         </h1>
-                        <p className="text-muted-foreground mt-1">
-                            You've got some exciting challenges waiting for you today.
+                        <p className="text-lg text-muted-foreground mt-2">
+                            Welcome back, <span className="text-primary font-semibold">{session?.user?.name?.split(' ')[0]}</span>. Ready to code?
                         </p>
                     </div>
+
                     <div className="flex items-center gap-3">
+                        <div className="hidden md:flex items-center gap-2 px-3 py-1 rounded-full bg-muted/50 border border-border text-xs text-muted-foreground font-mono">
+                            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                            System Status: Online
+                        </div>
                         <Button
                             variant="outline"
                             onClick={handleRefreshInsights}
                             disabled={isRefreshing}
-                            className={isRefreshing ? "animate-spin" : ""}
+                            className={`${isRefreshing ? "opacity-80" : ""} border-zinc-200 dark:border-zinc-800`}
                         >
-                            <Icons.RefreshCw className={`w-4 h-4 mr-2 ${isRefreshing ? "animate-spin" : ""}`} />
-                            {isRefreshing ? "Refreshing..." : "Refresh Insights"}
+                            <RefreshCw className={`w-4 h-4 mr-2 ${isRefreshing ? "animate-spin" : ""}`} />
+                            {isRefreshing ? "Syncing..." : "Sync Data"}
                         </Button>
                     </div>
                 </div>
 
-                <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-                    {/* Left Column (Main Content) */}
-                    <div className="lg:col-span-8 space-y-8">
+                {/* Stats Grid */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+                    <StatsItem
+                        icon={Calendar}
+                        label="Upcoming Exams"
+                        value={stats.totalExams}
+                        subValue="scheduled"
+                        trend="Neutral"
+                        color="text-blue-500"
+                        bg="bg-blue-500/10"
+                        delay={0}
+                    />
+                    <StatsItem
+                        icon={CheckCircle2}
+                        label="Completed"
+                        value={stats.completedExams}
+                        subValue="challenges solved"
+                        trend="Up"
+                        color="text-emerald-500"
+                        bg="bg-emerald-500/10"
+                        delay={0.1}
+                    />
+                    <StatsItem
+                        icon={Target}
+                        label="Average Score"
+                        value={`${stats.averageScore}%`}
+                        subValue="performance"
+                        trend="Up"
+                        color="text-amber-500"
+                        bg="bg-amber-500/10"
+                        delay={0.2}
+                    />
+                    <StatsItem
+                        icon={Zap}
+                        label="Skill Rating"
+                        value={stats.skillRating}
+                        subValue="global rank"
+                        trend="Up"
+                        color="text-purple-500"
+                        bg="bg-purple-500/10"
+                        delay={0.3}
+                    />
+                </div>
 
-                        {/* Stats Strip */}
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                            <StatsItem
-                                icon={Calendar}
-                                label="Upcoming"
-                                value={stats.totalExams}
-                                color="text-blue-500"
-                                bg="bg-blue-500/10"
-                            />
-                            <StatsItem
-                                icon={CheckCircle2}
-                                label="Completed"
-                                value={stats.completedExams}
-                                color="text-emerald-500"
-                                bg="bg-emerald-500/10"
-                            />
-                            <StatsItem
-                                icon={Target}
-                                label="Avg. Score"
-                                value={`${stats.averageScore}%`}
-                                color="text-amber-500"
-                                bg="bg-amber-500/10"
-                            />
-                            <StatsItem
-                                icon={Zap}
-                                label="Skill Rating"
-                                value={stats.skillRating}
-                                color="text-purple-500"
-                                bg="bg-purple-500/10"
-                            />
+                <div className="grid grid-cols-1 xl:grid-cols-12 gap-8">
+                    {/* Main Content Column */}
+                    <div className="xl:col-span-8 space-y-10">
+                        {/* Ghost Mode - Top Priority */}
+                        <div className="animate-main-section">
+                            <GhostModeCard />
                         </div>
 
-                        {/* Upcoming Exams */}
-                        <section className="space-y-4">
+                        {/* Practice Zone - Main Emphasis */}
+                        <section className="animate-main-section">
+                            <Card className="bg-gradient-to-br from-primary/10 via-background to-background border-primary/20 shadow-lg relative overflow-hidden group">
+                                <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3 group-hover:bg-primary/10 transition-colors duration-500"></div>
+                                <CardContent className="p-8 flex flex-col md:flex-row items-center justify-between gap-6 relative z-10">
+                                    <div className="space-y-4 max-w-2xl">
+                                        <div className="flex items-center gap-3">
+                                            <div className="p-2.5 rounded-xl bg-primary/20 text-primary ring-1 ring-primary/30">
+                                                <Code2 className="w-6 h-6" />
+                                            </div>
+                                            <Badge variant="secondary" className="bg-primary/10 text-primary border-primary/20">Recommended</Badge>
+                                        </div>
+                                        <div>
+                                            <h2 className="text-2xl font-bold tracking-tight mb-2">Ready to level up your skills?</h2>
+                                            <p className="text-muted-foreground text-base leading-relaxed">
+                                                Dive into the Practice Zone to solve AI-curated challenges tailored to your performance.
+                                                Consistency is key to mastering system design and algorithms.
+                                            </p>
+                                        </div>
+                                        <Button size="lg" className="mt-2 font-medium shadow-md shadow-primary/20 hover:shadow-primary/30 transition-all" onClick={() => router.push('/attender/practice')}>
+                                            <Sparkles className="w-4 h-4 mr-2" />
+                                            Start Practice Session
+                                        </Button>
+                                    </div>
+                                    <div className="hidden md:flex flex-col items-center justify-center space-y-2 opacity-50">
+                                        <div className="flex gap-1">
+                                            <div className="w-2 h-8 bg-primary/20 rounded-full"></div>
+                                            <div className="w-2 h-12 bg-primary/40 rounded-full"></div>
+                                            <div className="w-2 h-6 bg-primary/30 rounded-full"></div>
+                                            <div className="w-2 h-10 bg-primary/60 rounded-full"></div>
+                                        </div>
+                                        <span className="text-[10px] font-mono text-muted-foreground">ACTIVITY</span>
+                                    </div>
+                                </CardContent>
+                            </Card>
+                        </section>
+
+                        {/* Upcoming Exams Section */}
+                        <section className="space-y-5 animate-main-section">
                             <div className="flex items-center justify-between">
-                                <h2 className="text-xl font-semibold tracking-tight flex items-center gap-2">
-                                    <Calendar className="w-5 h-5 text-primary" />
-                                    Upcoming Exams
+                                <h2 className="text-2xl font-bold tracking-tight flex items-center gap-3">
+                                    <div className="p-2 rounded-lg bg-primary/10 text-primary">
+                                        <Calendar className="w-5 h-5" />
+                                    </div>
+                                    Scheduled Exams
                                 </h2>
-                                {/* <Button variant="ghost" size="sm" onClick={() => router.push('/attender/view-exams')} className="text-primary hover:text-primary/80">
-                                    View All <ChevronRight className="w-4 h-4 ml-1" />
-                                </Button> */}
                             </div>
+
                             {upcomingLoading ? (
                                 <div className="space-y-4">
-                                    {[1, 2].map(i => <Skeleton key={i} className="h-32 w-full rounded-xl" />)}
+                                    {[1, 2].map(i => <div key={i} className="h-40 w-full bg-muted/30 rounded-xl animate-pulse" />)}
                                 </div>
                             ) : (
                                 <UpcomingExamsSection
@@ -331,24 +430,31 @@ const AttenderDashboard = () => {
                             )}
                         </section>
 
-                        {/* Adaptive Learning Path */}
+                        {/* Learning Path */}
                         {completedExams.length > 0 && (
-                            <section className="space-y-4">
-                                <h2 className="text-xl font-semibold tracking-tight flex items-center gap-2">
-                                    <TrendingUp className="w-5 h-5 text-primary" />
-                                    Your Learning Path
-                                </h2>
+                            <section className="space-y-5 animate-main-section">
+                                <div className="flex items-center gap-3">
+                                    <div className="p-2 rounded-lg bg-indigo-500/10 text-indigo-500">
+                                        <BrainCircuit className="w-5 h-5" />
+                                    </div>
+                                    <h2 className="text-2xl font-bold tracking-tight">Adaptive Learning Path</h2>
+                                </div>
                                 <AdaptiveLearningPath email={session?.user?.email || ''} />
                             </section>
                         )}
 
-                        {/* Recent Activity / Completed */}
-                        <section className="space-y-4">
+                        {/* Recent Activity */}
+                        <section className="space-y-5 animate-main-section">
                             <div className="flex items-center justify-between">
-                                <h2 className="text-xl font-semibold tracking-tight flex items-center gap-2">
-                                    <CheckCircle2 className="w-5 h-5 text-primary" />
-                                    Recent Activity
-                                </h2>
+                                <div className="flex items-center gap-3">
+                                    <div className="p-2 rounded-lg bg-emerald-500/10 text-emerald-500">
+                                        <Activity className="w-5 h-5" />
+                                    </div>
+                                    <h2 className="text-2xl font-bold tracking-tight">Recent Activity</h2>
+                                </div>
+                                <Button variant="ghost" className="text-sm font-medium hover:text-primary" onClick={() => router.push('/attender/view-exams')}>
+                                    View All History <ChevronRight className="w-4 h-4 ml-1" />
+                                </Button>
                             </div>
                             <CompletedExamsSection
                                 exams={completedExams.slice(0, 5)}
@@ -360,95 +466,81 @@ const AttenderDashboard = () => {
                         </section>
                     </div>
 
-                    {/* Right Column (Sidebar) */}
-                    <div className="lg:col-span-4 space-y-6">
+                    {/* Sidebar Column */}
+                    <div className="xl:col-span-4 space-y-6">
 
-                        {/* Profile / Rank Card */}
-                        <Card className="border-border/50 shadow-sm overflow-hidden">
-                            <div className="h-24 bg-gradient-to-r from-primary/20 to-secondary/20" />
-                            <CardContent className="pt-0 relative">
-                                <div className="absolute -top-12 left-6">
-                                    <div className="w-24 h-24 rounded-full border-4 border-background bg-muted flex items-center justify-center text-3xl font-bold text-muted-foreground shadow-md">
+                        {/* User Profile Card */}
+                        <Card className="animate-sidebar-item border-zinc-200 dark:border-zinc-800 shadow-lg overflow-hidden group">
+                            <div className="h-32 bg-gradient-to-br from-primary/80 via-primary to-emerald-600/80 relative overflow-hidden">
+                                <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.1)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.1)_1px,transparent_1px)] bg-[size:20px_20px] opacity-30"></div>
+                            </div>
+                            <CardContent className="pt-0 relative px-6 pb-6">
+                                <div className="flex justify-between items-end -mt-12 mb-4">
+                                    <div className="w-24 h-24 rounded-2xl border-4 border-background bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-4xl font-bold text-foreground shadow-xl">
                                         {session?.user?.name?.charAt(0) || 'U'}
                                     </div>
-                                </div>
-                                <div className="mt-14 space-y-4">
-                                    <div>
-                                        <h3 className="text-xl font-bold">{session?.user?.name}</h3>
-                                        <p className="text-sm text-muted-foreground">{session?.user?.email}</p>
-                                    </div>
-
-                                    <div className="grid grid-cols-2 gap-4 py-4 border-y border-border/50">
-                                        <div>
-                                            <p className="text-xs text-muted-foreground uppercase font-medium">Rank</p>
-                                            <p className="text-lg font-bold flex items-center gap-1">
-                                                <Trophy className="w-4 h-4 text-amber-500" />
-                                                {stats.bestRank}
-                                            </p>
-                                        </div>
-                                        <div>
-                                            <p className="text-xs text-muted-foreground uppercase font-medium">Rating</p>
-                                            <p className="text-lg font-bold flex items-center gap-1">
-                                                <Zap className="w-4 h-4 text-purple-500" />
-                                                {stats.skillRating}
-                                            </p>
-                                        </div>
-                                    </div>
-
-                                    <Button className="w-full" variant="outline" onClick={() => router.push('/attender/profile')}>
-                                        View Full Profile
+                                    <Button variant="outline" size="sm" onClick={() => router.push('/attender/profile')}>
+                                        View Profile
                                     </Button>
                                 </div>
-                            </CardContent>
-                        </Card>
 
-                        {/* Practice Zone CTA */}
-                        <Card className="bg-primary/5 border-primary/20 shadow-sm">
-                            <CardContent className="p-6 space-y-4">
-                                <div className="flex items-center gap-3">
-                                    <div className="p-2 rounded-lg bg-primary/10 text-primary">
-                                        <Code2 className="w-6 h-6" />
-                                    </div>
-                                    <h3 className="font-semibold">Practice Zone</h3>
+                                <div className="space-y-1 mb-6">
+                                    <h3 className="text-2xl font-bold tracking-tight">{session?.user?.name}</h3>
+                                    <p className="text-sm text-muted-foreground break-all">{session?.user?.email}</p>
                                 </div>
-                                <p className="text-sm text-muted-foreground">
-                                    Sharpen your skills with AI-generated problems tailored to your weak areas.
-                                </p>
-                                <Button className="w-full gap-2" onClick={() => router.push('/attender/practice')}>
-                                    <Sparkles className="w-4 h-4" />
-                                    Start Practicing
-                                </Button>
+
+                                <div className="grid grid-cols-2 gap-4 py-5 border-y border-border/50">
+                                    <div className="space-y-1">
+                                        <p className="text-xs text-muted-foreground uppercase font-semibold tracking-wider">Global Rank</p>
+                                        <p className="text-2xl font-mono font-bold flex items-center gap-2">
+                                            <Trophy className="w-4 h-4 text-amber-500" />
+                                            {stats.bestRank}
+                                        </p>
+                                    </div>
+                                    <div className="space-y-1 text-right">
+                                        <p className="text-xs text-muted-foreground uppercase font-semibold tracking-wider">Rating</p>
+                                        <div className="flex items-center justify-end gap-2">
+                                            <Zap className="w-4 h-4 text-purple-500 fill-purple-500" />
+                                            <p className="text-2xl font-mono font-bold">{stats.skillRating}</p>
+                                        </div>
+                                    </div>
+                                </div>
                             </CardContent>
                         </Card>
 
-                        {/* Ghost Mode */}
-                        <GhostModeCard />
 
-                        {/* AI Insights (Compact) */}
-                        {completedExams.length > 0 && (
-                            <div className="space-y-4">
-                                <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wider">AI Insights</h3>
-                                <AIInsightsCard
-                                    insights={aiInsights}
-                                    isLoading={aiLoading}
-                                    error={aiError}
-                                />
-                            </div>
-                        )}
 
-                        {/* Predictions */}
-                        {completedExams.length >= 2 && (
-                            <div className="space-y-4">
-                                <PerformancePredictionCard
-                                    prediction={performancePrediction}
-                                    isLoading={predictionLoading}
-                                />
-                                <AchievementPredictionsCard
-                                    achievements={achievementPredictions}
-                                    isLoading={achievementLoading}
-                                />
-                            </div>
-                        )}
+
+
+                        {/* AI Insights & Predictions */}
+                        <div className="animate-sidebar-item space-y-6">
+                            {completedExams.length > 0 && (
+                                <div className="space-y-3">
+                                    <div className="flex items-center justify-between">
+                                        <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wider">Analysis</h3>
+                                        <Badge variant="outline" className="text-[10px] px-2 py-0 h-5">AI POWERED</Badge>
+                                    </div>
+                                    <AIInsightsCard
+                                        insights={aiInsights}
+                                        isLoading={aiLoading}
+                                        error={aiError}
+                                    />
+                                </div>
+                            )}
+
+                            {completedExams.length >= 2 && (
+                                <div className="space-y-4">
+                                    <PerformancePredictionCard
+                                        prediction={performancePrediction}
+                                        isLoading={predictionLoading}
+                                    />
+                                    <AchievementPredictionsCard
+                                        achievements={achievementPredictions}
+                                        isLoading={achievementLoading}
+                                    />
+                                </div>
+                            )}
+                        </div>
                     </div>
                 </div>
             </div>
@@ -480,20 +572,23 @@ const AttenderDashboard = () => {
                     onProceed={handleProceedToExam}
                 />
             )}
-        </>
+        </div>
     );
 };
 
-// Helper Component for Stats
-const StatsItem = ({ icon: Icon, label, value, color, bg }: any) => (
-    <Card className="border-border/50 shadow-sm hover:shadow-md transition-shadow">
-        <CardContent className="p-4 flex items-center gap-4">
-            <div className={`p-3 rounded-xl ${bg} ${color}`}>
-                <Icon className="w-5 h-5" />
+// Modern Stats Component
+const StatsItem = ({ icon: Icon, label, value, subValue, trend, color, bg, delay }: any) => (
+    <Card className="animate-stat-card border-l-4 border-l-transparent hover:border-l-primary transition-all duration-300 shadow-sm hover:shadow-md bg-card dark:bg-zinc-900/50">
+        <CardContent className="p-5 flex items-start justify-between">
+            <div className="space-y-1">
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">{label}</p>
+                <div className="flex items-baseline gap-2">
+                    <h3 className="text-3xl font-extrabold tracking-tight tabular-nums">{value}</h3>
+                </div>
+                <p className="text-xs text-muted-foreground">{subValue}</p>
             </div>
-            <div>
-                <p className="text-xs text-muted-foreground font-medium uppercase">{label}</p>
-                <p className="text-xl font-bold tracking-tight">{value}</p>
+            <div className={`p-3 rounded-xl ${bg} ${color} ring-1 ring-inset ring-black/5 dark:ring-white/10`}>
+                <Icon className="w-5 h-5" />
             </div>
         </CardContent>
     </Card>

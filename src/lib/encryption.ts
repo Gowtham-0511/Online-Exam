@@ -3,11 +3,14 @@ import crypto from 'crypto';
 const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY || '';
 const IV_LENGTH = 16;
 
-if (!ENCRYPTION_KEY || ENCRYPTION_KEY.length !== 64) {
-    throw new Error('ENCRYPTION_KEY must be a 64-character hex string');
+function validateKey() {
+    if (!ENCRYPTION_KEY || ENCRYPTION_KEY.length !== 64) {
+        throw new Error('ENCRYPTION_KEY must be a 64-character hex string');
+    }
 }
 
 export function encrypt(text: string): string {
+    validateKey();
     const iv = crypto.randomBytes(IV_LENGTH);
     const cipher = crypto.createCipheriv(
         'aes-256-cbc',
@@ -20,6 +23,7 @@ export function encrypt(text: string): string {
 }
 
 export function decrypt(text: string): string {
+    validateKey();
     const textParts = text.split(':');
     const iv = Buffer.from(textParts.shift()!, 'hex');
     const encryptedText = Buffer.from(textParts.join(':'), 'hex');

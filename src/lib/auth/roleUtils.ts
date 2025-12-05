@@ -1,13 +1,5 @@
 export type UserRole = "admin" | "organizer" | "attender";
 
-// Super admin email - has unrestricted access to all routes
-export const SUPER_ADMIN_EMAIL = "gowthamr@systechusa.com";
-
-// Check if user is super admin
-export const isSuperAdmin = (email: string | null | undefined): boolean => {
-  return email === SUPER_ADMIN_EMAIL;
-};
-
 // Role hierarchy for route access
 const ROLE_HIERARCHY: Record<UserRole, UserRole[]> = {
   admin: ["admin", "organizer", "attender"],
@@ -23,14 +15,8 @@ export const getAccessibleRoles = (role: UserRole): UserRole[] => {
 // Check if a role can access a specific route
 export const canAccessRoute = (
   userRole: UserRole | null | undefined,
-  userEmail: string | null | undefined,
   pathname: string
 ): boolean => {
-  // Super admin can access everything
-  if (isSuperAdmin(userEmail)) {
-    return true;
-  }
-
   // Not authenticated
   if (!userRole) {
     return false;

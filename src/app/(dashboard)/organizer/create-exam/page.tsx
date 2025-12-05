@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useCallback, useState } from "react";
 import { useSession } from "next-auth/react";
@@ -56,6 +56,12 @@ interface Question {
     options?: QuestionOption[];
     correctAnswer?: number;
     tags?: string[];
+    testCases?: {
+        input: string;
+        expectedOutput: string;
+        isHidden?: boolean;
+        description?: string;
+    }[];
 }
 
 interface SqlCredential {
@@ -336,6 +342,9 @@ export default function CreateExam() {
             const codingQuestions = await codingRes.json();
             const mcqQuestions = await mcqRes.json();
 
+            console.log(codingQuestions);
+            console.log(mcqQuestions);
+
             const selectQuestionsByMarks = (questions: any[], targetMarks: number, difficulty: string) => {
                 const filtered = questions.filter(q => q.difficulty?.toLowerCase() === difficulty.toLowerCase());
                 const shuffled = filtered.sort(() => Math.random() - 0.5);
@@ -378,7 +387,8 @@ export default function CreateExam() {
                 type: 'coding',
                 options: [],
                 correctAnswer: undefined,
-                tags: q.tags || []
+                tags: q.tags || [],
+                testCases: q.testCases || []
             }));
 
             const mappedMcq = [...selectedMcqEasy, ...selectedMcqMedium, ...selectedMcqHard].map((q, index) => ({
@@ -433,6 +443,9 @@ export default function CreateExam() {
                 if (!codingRes.ok) throw new Error('Failed to fetch coding questions');
 
                 const codingQuestions = await codingRes.json();
+
+                console.log(codingQuestions);
+
                 const codingBeginner = codingQuestions.filter((q: any) => q.difficulty?.toLowerCase() === "easy").slice(0, beginnerCount);
                 const codingIntermediate = codingQuestions.filter((q: any) => q.difficulty?.toLowerCase() === "medium").slice(0, intermediateCount);
                 const codingExpert = codingQuestions.filter((q: any) => q.difficulty?.toLowerCase() === "hard").slice(0, expertCount);
@@ -447,7 +460,8 @@ export default function CreateExam() {
                     type: 'coding',
                     options: [],
                     correctAnswer: undefined,
-                    tags: q.tags || []
+                    tags: q.tags || [],
+                    testCases: q.testCases || []
                 }));
 
                 allFetchedQuestions = [...allFetchedQuestions, ...mappedCoding];
@@ -483,6 +497,7 @@ export default function CreateExam() {
             }
 
             setQuestions(allFetchedQuestions);
+            console.log(questions)
             toast.success(`Fetched ${allFetchedQuestions.length} questions successfully`);
 
         } catch (err) {
@@ -494,8 +509,8 @@ export default function CreateExam() {
     };
 
     const languageOptions = [
-        { value: "python", label: "Python", icon: "🐍" },
-        { value: "sql", label: "SQL", icon: "🗄️" },
+        { value: "python", label: "Python", icon: "ðŸ" },
+        { value: "sql", label: "SQL", icon: "ðŸ—„ï¸" },
     ];
 
     const clearQuestions = () => {
@@ -746,13 +761,13 @@ export default function CreateExam() {
                                                     <SelectContent>
                                                         <SelectItem value="ssms">
                                                             <div className="flex items-center gap-2">
-                                                                <span>🗄️</span>
+                                                                <span>ðŸ—„ï¸</span>
                                                                 <span>SQL Server (SSMS)</span>
                                                             </div>
                                                         </SelectItem>
                                                         <SelectItem value="postgres">
                                                             <div className="flex items-center gap-2">
-                                                                <span>🐘</span>
+                                                                <span>ðŸ˜</span>
                                                                 <span>PostgreSQL</span>
                                                             </div>
                                                         </SelectItem>
@@ -881,7 +896,7 @@ export default function CreateExam() {
                                                                                 type="password"
                                                                                 value={sqlCredentials.password}
                                                                                 onChange={(e) => setSqlCredentials(prev => ({ ...prev, password: e.target.value }))}
-                                                                                placeholder="••••••••"
+                                                                                placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢"
                                                                             />
                                                                         </div>
                                                                     </div>
@@ -1403,9 +1418,9 @@ export default function CreateExam() {
                                                 <AlertDescription>
                                                     <p className="font-medium mb-2">Distribution Preview</p>
                                                     <div className="text-xs space-y-1">
-                                                        <p>• Coding: ~{Math.round((totalMarks * marksDistribution.coding) / 100)} marks ({marksDistribution.coding}%)</p>
-                                                        <p>• MCQ: ~{Math.round((totalMarks * marksDistribution.mcq) / 100)} marks ({marksDistribution.mcq}%)</p>
-                                                        <p className="mt-2 pt-2 border-t">• Easy: {difficultyDistribution.easy}% | Medium: {difficultyDistribution.medium}% | Hard: {difficultyDistribution.hard}%</p>
+                                                        <p>â€¢ Coding: ~{Math.round((totalMarks * marksDistribution.coding) / 100)} marks ({marksDistribution.coding}%)</p>
+                                                        <p>â€¢ MCQ: ~{Math.round((totalMarks * marksDistribution.mcq) / 100)} marks ({marksDistribution.mcq}%)</p>
+                                                        <p className="mt-2 pt-2 border-t">â€¢ Easy: {difficultyDistribution.easy}% | Medium: {difficultyDistribution.medium}% | Hard: {difficultyDistribution.hard}%</p>
                                                     </div>
                                                 </AlertDescription>
                                             </Alert>
@@ -1505,6 +1520,31 @@ export default function CreateExam() {
                                                                 </code>
                                                             </div>
                                                         )}
+
+                                                        {q.testCases && q.testCases.length > 0 && (
+                                                            <div>
+                                                                <Label className="text-xs text-muted-foreground mb-1 block">Test Cases:</Label>
+                                                                <div className="space-y-2">
+                                                                    {q.testCases.map((tc, i) => (
+                                                                        <div key={i} className="text-sm p-3 bg-background rounded-md border border-border font-mono">
+                                                                            <div className="grid grid-cols-1 gap-1">
+                                                                                <div>
+                                                                                    <span className="text-xs text-muted-foreground font-sans">Input:</span>
+                                                                                    <span className="ml-2">{tc.input}</span>
+                                                                                </div>
+                                                                                <div>
+                                                                                    <span className="text-xs text-muted-foreground font-sans">Expected Output:</span>
+                                                                                    <span className="ml-2">{tc.expectedOutput}</span>
+                                                                                </div>
+                                                                                {tc.isHidden && (
+                                                                                    <Badge variant="secondary" className="w-fit text-[10px] h-5">Hidden Case</Badge>
+                                                                                )}
+                                                                            </div>
+                                                                        </div>
+                                                                    ))}
+                                                                </div>
+                                                            </div>
+                                                        )}
                                                     </CardContent>
                                                 </Card>
                                             ))}
@@ -1545,7 +1585,7 @@ export default function CreateExam() {
                                             <div className="space-y-1">
                                                 <Label className="text-xs text-muted-foreground">Language</Label>
                                                 <div className="flex items-center gap-2">
-                                                    <span>{languageOptions.find(l => l.value === language)?.icon}</span>
+                                                    {/* <span>{languageOptions.find(l => l.value === language)?.icon}</span> */}
                                                     <span className="font-semibold">{languageOptions.find(l => l.value === language)?.label}</span>
                                                 </div>
                                             </div>
@@ -1572,7 +1612,8 @@ export default function CreateExam() {
                                                     <Shield className="w-4 h-4" />
                                                     <span className="font-semibold">{isExamProctored ? 'Proctored' : 'Non-Proctored'}</span>
                                                 </div>
-                                            </div>                                        </div>
+                                            </div>
+                                        </div>
                                     </CardContent>
                                 </Card>
 

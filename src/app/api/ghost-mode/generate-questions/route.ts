@@ -18,14 +18,13 @@ import {
   CodingQuestion,
 } from "@/lib/ai/question-generation";
 
-const endpoint = process.env.AZURE_OAI_ENDPOINT
-  ? process.env.AZURE_OAI_ENDPOINT.replace(/^['"]|['"]$/g, "")
-  : "";
-const apiKey = process.env.AZURE_OAI_API_KEY || "";
-const deploymentName = process.env.AZURE_OAI_DEPLOY || "";
-const apiVersion = process.env.AZURE_OAI_API_VER || "";
-
 export async function POST(req: Request) {
+  const endpoint = process.env.AZURE_OAI_ENDPOINT
+    ? process.env.AZURE_OAI_ENDPOINT.replace(/^['"]|['"]$/g, "")
+    : "";
+  const apiKey = process.env.AZURE_OAI_API_KEY || "";
+  const deploymentName = process.env.AZURE_OAI_DEPLOY || "";
+  const apiVersion = process.env.AZURE_OAI_API_VER || "";
   if (!endpoint || !apiKey || !deploymentName || !apiVersion) {
     console.error("Azure OpenAI configuration missing");
     return NextResponse.json(

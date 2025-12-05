@@ -231,11 +231,10 @@ const Layout = ({ children }: UnifiedDashboardLayoutProps) => {
         }
 
         const userRole = (session?.user as any)?.role as UserRole;
-        const userEmail = session?.user?.email;
 
         // Import and use the canAccessRoute function
         import('@/lib/auth/roleUtils').then(({ canAccessRoute, getDefaultDashboard }) => {
-            const hasAccess = canAccessRoute(userRole, userEmail, pathname);
+            const hasAccess = canAccessRoute(userRole, pathname);
 
             if (!hasAccess) {
                 const defaultDashboard = getDefaultDashboard(userRole);
