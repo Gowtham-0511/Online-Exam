@@ -5,14 +5,14 @@ import {
     XCircle,
     Target,
     Code2,
-    Clock,
-    Timer,
+    Calendar,
     ChevronRight,
     Trophy,
-    Calendar
+    AlertTriangle
 } from 'lucide-react';
 import { CompletedExam } from '@/types/attender';
 import { cn } from '@/lib/utils';
+import { formatDistanceToNow } from 'date-fns';
 
 interface CompletedExamCardProps {
     exam: CompletedExam;
@@ -24,102 +24,78 @@ export const CompletedExamCard: React.FC<CompletedExamCardProps> = ({
     onClick
 }) => {
     const isDisqualified = exam.disqualified;
-    const score = exam.percentage || 0;
-    const isPassed = score >= 60; // Assuming 60 is pass, can be adjusted
-    const isHighScorer = score >= 80;
+    const score = (() => {
+        const parsed = parseFloat(String(exam.percentage));
+        return isNaN(parsed) ? 0 : parsed;
+    })();
 
-    const getStatusColor = () => {
-        if (isDisqualified) return 'text-rose-600 dark:text-rose-400 bg-rose-500/10 border-rose-500/20';
-        if (isHighScorer) return 'text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border-emerald-500/20';
-        if (isPassed) return 'text-amber-600 dark:text-amber-400 bg-amber-500/10 border-amber-500/20';
-        return 'text-rose-600 dark:text-rose-400 bg-rose-500/10 border-rose-500/20';
+    const isPassed = !isDisqualified && score >= 60;
+    const isHighScorer = !isDisqualified && score >= 90;
+
+    const getStatusConfig = () => {
+        if (isDisqualified) return { color: 'text-rose-500', bg: 'bg-rose-500/10', icon: AlertTriangle };
+        if (isHighScorer) return { color: 'text-emerald-500', bg: 'bg-emerald-500/10', icon: Trophy };
+        if (isPassed) return { color: 'text-blue-500', bg: 'bg-blue-500/10', icon: CheckCircle2 };
+        return { color: 'text-amber-500', bg: 'bg-amber-500/10', icon: Target };
     };
 
-    const getStatusIcon = () => {
-        if (isDisqualified) return <XCircle className="h-5 w-5" />;
-        if (isHighScorer) return <Trophy className="h-5 w-5" />;
-        if (isPassed) return <CheckCircle2 className="h-5 w-5" />;
-        return <Target className="h-5 w-5" />;
-    };
+    const status = getStatusConfig();
+    const StatusIcon = status.icon;
 
     return (
         <div
             onClick={onClick}
-            className="group relative p-4 rounded-xl border border-border/50 bg-card hover:bg-accent/5 hover:border-primary/20 hover:shadow-sm transition-all duration-300 cursor-pointer overflow-hidden"
+            className="group relative p-3 rounded-lg border border-transparent hover:border-border/60 hover:bg-muted/40 transition-all duration-200 cursor-pointer flex items-center gap-3"
         >
-            <div className="flex items-center gap-4 relative z-10">
-                {/* Status Icon */}
-                <div className={cn("p-3 rounded-xl shrink-0 transition-colors", getStatusColor())}>
-                    {getStatusIcon()}
-                </div>
+            {/* Left Status Indicator */}
+            <div className={cn(
+                "w-10 h-10 rounded-lg flex items-center justify-center shrink-0 border border-transparent",
+                status.bg, status.color,
+                "group-hover:border-current/10 transition-colors"
+            )}>
+                <StatusIcon className="w-5 h-5" />
+            </div>
 
-                {/* Main Content */}
-                <div className="flex-1 min-w-0">
-                    <div className="flex items-start justify-between gap-4 mb-2">
-                        <div>
-                            <h3 className="font-semibold text-base text-foreground truncate group-hover:text-primary transition-colors">
-                                {exam.title}
-                            </h3>
-                            <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
-                                <div className="flex items-center gap-1">
-                                    <Code2 className="h-3 w-3" />
-                                    <span>{exam.language}</span>
-                                </div>
-                                <span className="w-1 h-1 rounded-full bg-border" />
-                                <div className="flex items-center gap-1">
-                                    <Calendar className="h-3 w-3" />
-                                    <span>
-                                        {new Date(exam.submittedAt).toLocaleDateString('en-US', {
-                                            month: 'short',
-                                            day: 'numeric'
-                                        })}
-                                    </span>
-                                </div>
-                            </div>
-                        </div>
+            {/* Main Info */}
+            <div className="flex-1 min-w-0">
+                <div className="flex justify-between items-start">
+                    <h4 className="font-semibold text-sm text-foreground truncate pr-2 group-hover:text-primary transition-colors">
+                        {exam.title}
+                    </h4>
 
-                        {/* Score Section */}
-                        {!isDisqualified && (
-                            <div className="text-right shrink-0">
-                                <div className={cn("text-xl font-bold tabular-nums",
-                                    isHighScorer ? "text-emerald-600 dark:text-emerald-400" :
-                                        isPassed ? "text-amber-600 dark:text-amber-400" :
-                                            "text-rose-600 dark:text-rose-400"
-                                )}>
-                                    {score}%
-                                </div>
-                                <div className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">
-                                    Score
-                                </div>
-                            </div>
-                        )}
-                    </div>
-
-                    {/* Footer Metadata */}
-                    <div className="flex items-center gap-2 mt-3">
-                        <Badge variant="secondary" className="text-xs bg-muted/50 text-muted-foreground border-border/50 font-normal">
-                            <Timer className="h-3 w-3 mr-1" />
-                            {exam.duration} min
-                        </Badge>
-
-                        {isDisqualified && (
-                            <Badge variant="destructive" className="text-xs">
-                                Disqualified
-                            </Badge>
+                    {/* Score or Status Badge */}
+                    <div className="shrink-0 flex items-center gap-2">
+                        {isDisqualified ? (
+                            <Badge variant="destructive" className="h-5 text-[10px] px-1.5 uppercase">DQ</Badge>
+                        ) : (
+                            <span className={cn(
+                                "text-sm font-bold font-mono tabular-nums",
+                                status.color
+                            )}>
+                                {score}%
+                            </span>
                         )}
                     </div>
                 </div>
 
-                {/* Arrow Action */}
-                <div className="pl-2">
-                    <div className="p-2 rounded-full bg-muted/30 text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary transition-colors">
-                        <ChevronRight className="h-4 w-4" />
+                <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
+                    <div className="flex items-center gap-1">
+                        <Code2 className="w-3 h-3 opacity-70" />
+                        <span>{exam.language}</span>
+                    </div>
+                    <span className="w-0.5 h-0.5 rounded-full bg-border" />
+                    <div className="flex items-center gap-1">
+                        <Calendar className="w-3 h-3 opacity-70" />
+                        <span>
+                            {formatDistanceToNow(new Date(exam.submittedAt), { addSuffix: true })}
+                        </span>
                     </div>
                 </div>
             </div>
 
-            {/* Hover Gradient */}
-            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-transparent to-primary/5 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
+            {/* Action Icon */}
+            <ChevronRight className="w-4 h-4 text-muted-foreground/30 group-hover:text-foreground group-hover:translate-x-0.5 transition-all" />
+
         </div>
     );
 };

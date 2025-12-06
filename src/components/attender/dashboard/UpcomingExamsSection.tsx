@@ -1,16 +1,26 @@
-import React from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import React, { useState } from 'react';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Badge } from '@/components/ui/badge';
 import {
     Calendar,
     ArrowRight,
     RefreshCw,
     CalendarDays,
-    Clock
+    Timer,
+    Users,
+    Code2,
+    FileText,
+    Play,
+    Lightbulb,
+    Clock,
+    ChevronRight,
+    AlertCircle
 } from 'lucide-react';
-import { UpcomingExamCard } from './UpcomingExamCard';
 import { Exam } from '@/types/attender';
+import { cn } from '@/lib/utils';
+import { format, isToday, isTomorrow, formatDistanceToNow } from 'date-fns';
 
 interface UpcomingExamsSectionProps {
     exams: Exam[];
@@ -28,53 +38,38 @@ export const UpcomingExamsSection: React.FC<UpcomingExamsSectionProps> = ({
     onViewAll
 }) => {
     if (isLoading) {
-        return (
-            <div className="space-y-4">
-                <div className="flex items-center justify-between mb-2">
-                    <Skeleton className="h-8 w-48" />
-                    <Skeleton className="h-9 w-24" />
-                </div>
-                <div className="space-y-4">
-                    {[1, 2, 3].map((i) => (
-                        <div key={i} className="rounded-xl border border-border p-4 bg-card">
-                            <div className="flex gap-4">
-                                <Skeleton className="h-12 w-12 rounded-lg" />
-                                <div className="space-y-2 flex-1">
-                                    <Skeleton className="h-5 w-1/3" />
-                                    <Skeleton className="h-4 w-1/2" />
-                                </div>
-                            </div>
-                        </div>
-                    ))}
-                </div>
-            </div>
-        );
+        return <LoadingState />;
     }
 
+    // Sort exams by start time (soonest first)
+    const sortedExams = [...exams].sort((a, b) => {
+        const timeA = a.startTime ? new Date(a.startTime).getTime() : Infinity;
+        const timeB = b.startTime ? new Date(b.startTime).getTime() : Infinity;
+        return timeA - timeB;
+    });
+
     return (
-        <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-            {/* <div className="flex items-center justify-between">
-                <div>
-                    <h2 className="text-xl font-bold tracking-tight flex items-center gap-2 text-foreground">
-                        <Calendar className="h-5 w-5 text-primary" />
-                        Upcoming Exams
-                    </h2>
-                    <p className="text-sm text-muted-foreground mt-1">
-                        Your scheduled assessments and challenges
-                    </p>
+        <div className="space-y-6">
+            <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                    {/* Header handled by parent now, focusing just on content here */}
                 </div>
-                {exams.length > 0 && (
-                    <Button variant="ghost" className="text-primary hover:text-primary/80 hover:bg-primary/10" onClick={onViewAll}>
-                        View All
-                        <ArrowRight className="ml-2 h-4 w-4" />
+                {exams.length > 3 && (
+                    <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={onViewAll}
+                        className="text-xs font-medium text-muted-foreground hover:text-primary transition-colors"
+                    >
+                        See All <ChevronRight className="w-3 h-3 ml-1" />
                     </Button>
                 )}
-            </div> */}
+            </div>
 
-            {exams.length > 0 ? (
-                <div className="space-y-4">
-                    {exams.slice(0, 3).map((exam) => (
-                        <UpcomingExamCard
+            {sortedExams.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                    {sortedExams.slice(0, 3).map((exam) => (
+                        <ExamCard
                             key={exam.id}
                             exam={exam}
                             onStart={() => onStartExam(exam.title)}
@@ -83,22 +78,139 @@ export const UpcomingExamsSection: React.FC<UpcomingExamsSectionProps> = ({
                     ))}
                 </div>
             ) : (
-                <Card className="border-dashed border-2 border-muted bg-muted/5 shadow-none">
-                    <CardContent className="flex flex-col items-center justify-center py-12 text-center">
-                        <div className="w-16 h-16 mb-4 rounded-2xl bg-muted/50 flex items-center justify-center">
-                            <CalendarDays className="h-8 w-8 text-muted-foreground/50" />
-                        </div>
-                        <h3 className="text-lg font-semibold text-foreground mb-1">No upcoming exams</h3>
-                        <p className="text-sm text-muted-foreground max-w-xs mb-6">
-                            You're all caught up! Check back later for new assignments or explore the practice zone.
-                        </p>
-                        <Button variant="outline" onClick={onViewAll} className="gap-2">
-                            <RefreshCw className="h-4 w-4" />
-                            Refresh List
-                        </Button>
-                    </CardContent>
-                </Card>
+                <EmptyState onViewAll={onViewAll} />
             )}
         </div>
     );
 };
+
+interface ExamCardProps {
+    exam: Exam;
+    onStart: () => void;
+    onViewStrategy: () => void;
+}
+
+const ExamCard: React.FC<ExamCardProps> = ({ exam, onStart, onViewStrategy }) => {
+    const startTime = exam.startTime ? new Date(exam.startTime) : null;
+    const isUrgent = startTime ? (startTime.getTime() - Date.now()) < 1000 * 60 * 60 * 2 : false; // < 2 hours
+
+    return (
+        <Card className={cn(
+            "group relative overflow-hidden transition-all duration-300 hover:shadow-lg border-border/60 bg-card hover:-translate-y-1 h-full flex flex-col",
+            isUrgent && "border-amber-500/50 shadow-amber-500/5"
+        )}>
+            {/* Top decorative bar */}
+            <div className={cn(
+                "absolute top-0 left-0 right-0 h-1 transition-colors duration-300",
+                isUrgent ? "bg-amber-500" : "bg-primary/20 group-hover:bg-primary"
+            )} />
+
+            <CardContent className="p-5 flex flex-col h-full gap-4">
+
+                {/* Header: Title & Urgent Badge */}
+                <div className="flex justify-between items-start gap-3">
+                    <div className="space-y-1.5 flex-1 min-w-0">
+                        {isUrgent && (
+                            <Badge variant="secondary" className="bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-200 dark:border-amber-800 text-[10px] px-1.5 py-0 mb-1 h-5 gap-1">
+                                <Clock className="w-3 h-3 animate-pulse" /> Starting Soon
+                            </Badge>
+                        )}
+                        <h3 className="font-bold text-base leading-snug truncate group-hover:text-primary transition-colors" title={exam.title}>
+                            {exam.title}
+                        </h3>
+                    </div>
+                    <div className="shrink-0 p-2 rounded-lg bg-muted/50 text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary transition-colors">
+                        {exam.assignmentType === 'coding' ? <Code2 className="w-5 h-5" /> : <FileText className="w-5 h-5" />}
+                    </div>
+                </div>
+
+                {/* Metadata Grid */}
+                <div className="grid grid-cols-2 gap-y-3 gap-x-2 text-xs text-muted-foreground flex-1">
+                    <div className="flex items-center gap-2">
+                        <Calendar className="w-3.5 h-3.5 opacity-70" />
+                        <span className="truncate">
+                            {startTime ? (isToday(startTime) ? 'Today' : isTomorrow(startTime) ? 'Tomorrow' : format(startTime, 'MMM d')) : 'TBA'}
+                        </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <Timer className="w-3.5 h-3.5 opacity-70" />
+                        <span>{exam.duration} mins</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <div className="w-3.5 h-3.5 flex items-center justify-center">
+                            <span className="block w-2 h-2 rounded-full border border-current opacity-70" />
+                        </div>
+                        <span className="truncate">{exam.language}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <Users className="w-3.5 h-3.5 opacity-70" />
+                        <span>{exam.participants || 0} enrolled</span>
+                    </div>
+                </div>
+
+                {/* Actions */}
+                <div className="pt-2 flex items-center gap-2 mt-auto">
+                    <Button
+                        size="sm"
+                        className={cn(
+                            "flex-1 font-semibold",
+                            isUrgent ? "bg-amber-500 hover:bg-amber-600 text-white" : "shadow-sm"
+                        )}
+                        onClick={onStart}
+                    >
+                        <Play className="w-3.5 h-3.5 mr-1.5 fill-current" />
+                        Start
+                    </Button>
+                    <Button
+                        size="sm"
+                        variant="ghost"
+                        className="px-2.5 text-muted-foreground hover:text-foreground border border-transparent hover:border-border hover:bg-muted/50"
+                        onClick={onViewStrategy}
+                        title="View AI Strategy"
+                    >
+                        <Lightbulb className="w-4 h-4" />
+                    </Button>
+                </div>
+            </CardContent>
+        </Card>
+    );
+};
+
+const LoadingState = () => (
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+        {[1, 2, 3].map((i) => (
+            <div key={i} className="rounded-xl border border-border p-5 bg-card space-y-4">
+                <div className="flex justify-between items-center">
+                    <Skeleton className="h-5 w-32" />
+                    <Skeleton className="h-8 w-8 rounded-lg" />
+                </div>
+                <div className="space-y-2">
+                    <Skeleton className="h-3 w-full" />
+                    <Skeleton className="h-3 w-2/3" />
+                </div>
+                <div className="pt-2 flex gap-2">
+                    <Skeleton className="h-9 flex-1 rounded-md" />
+                    <Skeleton className="h-9 w-9 rounded-md" />
+                </div>
+            </div>
+        ))}
+    </div>
+);
+
+const EmptyState = ({ onViewAll }: { onViewAll: () => void }) => (
+    <Card className="border-dashed border-2 border-muted bg-muted/5 shadow-none">
+        <CardContent className="flex flex-col items-center justify-center py-10 text-center">
+            <div className="w-12 h-12 mb-3 rounded-xl bg-muted flex items-center justify-center">
+                <CalendarDays className="h-6 w-6 text-muted-foreground" />
+            </div>
+            <h3 className="text-sm font-semibold text-foreground mb-1">No upcoming exams</h3>
+            <p className="text-xs text-muted-foreground max-w-[200px] mb-4 leading-relaxed">
+                You're all caught up! Check back later or practice on your own.
+            </p>
+            <Button variant="outline" size="sm" onClick={onViewAll} className="h-8 text-xs gap-1.5">
+                <RefreshCw className="h-3 w-3" />
+                Reload
+            </Button>
+        </CardContent>
+    </Card>
+);

@@ -8,6 +8,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Input } from "@/components/ui/input";
+import { Separator } from "@/components/ui/separator";
+import { Slider } from "@/components/ui/slider";
 import {
     Code2,
     Sparkles,
@@ -17,102 +20,60 @@ import {
     ArrowLeft,
     Ghost,
     Shield,
+    Zap,
+    Brain,
+    Timer,
+    AlertCircle,
+    Hash
 } from "lucide-react";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { cn } from "@/lib/utils";
 
-export default function LearningPage() {
+export default function DreamExamPage() {
     const router = useRouter();
-    const [isDarkMode, setIsDarkMode] = useState(false);
     const [isGenerating, setIsGenerating] = useState(false);
     const [error, setError] = useState("");
     const [sessionId, setSessionId] = useState("");
-    const [searchQuery, setSearchQuery] = useState("");
     const [showExitWarning, setShowExitWarning] = useState(false);
-
 
     // GSAP Refs
     const containerRef = useRef(null);
-    const heroRef = useRef(null);
-    const tracksRef = useRef(null);
-    const sidebarRef = useRef(null);
-    const generatorRef = useRef(null);
+    const formRef = useRef(null);
+    const configRef = useRef(null);
 
     // Custom exam form state
     const [activeTab, setActiveTab] = useState("mcq");
     const [mcqTopic, setMcqTopic] = useState("");
     const [codingTopic, setCodingTopic] = useState("");
+    const [difficulty, setDifficulty] = useState("medium");
+    const [questionCount, setQuestionCount] = useState([10]);
+    const [duration, setDuration] = useState([30]);
 
-    const [customExam, setCustomExam] = useState({
-        difficulty: "medium",
-        duration: "30",
-        questionCount: "10",
-    });
-
-    // Initialize theme
-    useEffect(() => {
-        const savedTheme = localStorage.getItem("theme");
-        const systemPrefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-
-        if (savedTheme === "dark" || (!savedTheme && systemPrefersDark)) {
-            setIsDarkMode(true);
-            document.documentElement.classList.add("dark");
-        }
-    }, []);
-
-    // Initialize session and fetch stats
+    // Initialize session
     useEffect(() => {
         let guestSessionId = localStorage.getItem("guestSessionId");
         if (!guestSessionId) {
-            guestSessionId = `guest_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+            guestSessionId = `guest_${Date.now()}`;
             localStorage.setItem("guestSessionId", guestSessionId);
         }
         setSessionId(guestSessionId);
     }, []);
 
-    // GSAP Animations
+    // Animations
     useGSAP(() => {
         const tl = gsap.timeline();
 
-        // Hero Animations
-        tl.from(heroRef.current, {
-            y: -20,
-            opacity: 0,
-            duration: 0.8,
-            ease: "power3.out"
-        })
-            .from(".hero-badge", {
-                scale: 0.8,
-                opacity: 0,
-                duration: 0.5,
-                ease: "back.out(1.7)"
-            }, "-=0.6");
+        gsap.set(".animate-enter", { y: 20, autoAlpha: 0 });
 
-        // Tracks Animation
-        tl.from(".track-card", {
-            y: 30,
-            opacity: 0,
-            duration: 0.6,
+        tl.to(".animate-enter", {
+            y: 0,
+            autoAlpha: 1,
             stagger: 0.1,
-            ease: "power2.out"
-        }, "-=0.4");
-
-        // Generator Animation
-        tl.from(generatorRef.current, {
-            y: 20,
-            opacity: 0,
             duration: 0.6,
             ease: "power2.out"
-        }, "-=0.4");
-
-        // Sidebar Animation
-        tl.from(sidebarRef.current, {
-            x: 20,
-            opacity: 0,
-            duration: 0.8,
-            ease: "power3.out"
-        }, "-=0.6");
+        });
 
     }, { scope: containerRef });
 
@@ -121,7 +82,7 @@ export default function LearningPage() {
         const questionType = activeTab === "mcq" ? "mcq" : "coding";
 
         if (!topic) {
-            setError("Please select or enter a topic first");
+            setError("Please define a topic for the AI.");
             return;
         }
 
@@ -134,8 +95,8 @@ export default function LearningPage() {
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                     topic: topic,
-                    difficulty: customExam.difficulty,
-                    questionCount: parseInt(customExam.questionCount),
+                    difficulty: difficulty,
+                    questionCount: questionCount[0], // Slider returns array
                     questionType: questionType,
                 }),
             });
@@ -150,7 +111,9 @@ export default function LearningPage() {
             // Store questions and session info
             sessionStorage.setItem("practiceQuestions", JSON.stringify(data.questions));
             sessionStorage.setItem("anonymousExam", JSON.stringify({
-                ...customExam,
+                difficulty,
+                duration: duration[0],
+                questionCount: questionCount[0],
                 topic,
                 questionType
             }));
@@ -160,7 +123,7 @@ export default function LearningPage() {
             router.push(`/ghost-mode/exam/practice?topic=${encodeURIComponent(topic)}&ai=true`);
         } catch (error: any) {
             console.error("Error generating questions:", error);
-            setError(error.message || "Failed to generate questions. Please try again.");
+            setError(error.message || "Failed to generate session. Please try again.");
         } finally {
             setIsGenerating(false);
         }
@@ -171,235 +134,230 @@ export default function LearningPage() {
     };
 
     return (
-        <div ref={containerRef} className="min-h-screen bg-background flex flex-col font-sans selection:bg-primary/20">
+        <div ref={containerRef} className="min-h-screen bg-background relative overflow-hidden font-sans flex flex-col">
+            {/* Background Effects */}
+            <div className="fixed inset-0 pointer-events-none">
+                <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] bg-violet-500/5 rounded-full blur-[120px]" />
+                <div className="absolute bottom-[-20%] right-[-10%] w-[50%] h-[50%] bg-indigo-500/5 rounded-full blur-[120px]" />
+                <div className="absolute inset-0 bg-[linear-gradient(rgba(0,0,0,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(0,0,0,0.02)_1px,transparent_1px)] dark:bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:48px_48px] [mask-image:radial-gradient(ellipse_at_center,black_60%,transparent_100%)]" />
+            </div>
+
             {/* Header */}
-            <div className="sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="flex h-16 items-center justify-between">
-                        <div className="flex items-center gap-3">
-                            <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400">
-                                <Sparkles className="w-5 h-5" />
-                            </div>
-                            <div>
-                                <h1 className="text-lg font-semibold text-foreground">
-                                    Dream Exam Builder
-                                </h1>
-                            </div>
+            <header className="sticky top-0 z-50 border-b border-border/40 bg-background/80 backdrop-blur-md animate-enter">
+                <div className="max-w-5xl mx-auto px-6 h-16 flex items-center justify-between">
+                    <div className="flex items-center gap-2 text-foreground/80 hover:text-foreground transition-colors cursor-pointer group" onClick={() => setShowExitWarning(true)}>
+                        <div className="p-1 rounded-md bg-muted group-hover:bg-muted/80">
+                            <ArrowLeft className="w-4 h-4" />
                         </div>
-
-                        <Button
-                            onClick={() => setShowExitWarning(true)}
-                            variant="ghost"
-                            size="sm"
-                            className="text-muted-foreground hover:text-destructive hover:bg-destructive/10"
-                        >
-                            <ArrowLeft className="w-4 h-4 mr-2" />
-                            Exit
-                        </Button>
+                        <span className="text-sm font-medium">Ghost Protocol</span>
                     </div>
-                </div>
-            </div>
 
-            {/* Warning Banner */}
-            <div className="bg-amber-50 dark:bg-amber-950/30 border-b border-amber-100 dark:border-amber-900/50 px-4 py-2">
-                <div className="max-w-7xl mx-auto flex items-center justify-center gap-2 text-sm text-amber-700 dark:text-amber-400">
-                    <Shield className="w-4 h-4" />
-                    <span className="font-medium">Ghost Mode Active:</span>
-                    <span>Exams created here are temporary and won't be saved.</span>
+                    <div className="flex items-center gap-2">
+                        <Sparkles className="w-4 h-4 text-amber-500" />
+                        <span className="font-semibold text-lg tracking-tight">Dream Exam</span>
+                    </div>
+
+                    <div className="w-24"></div> {/* Spacer for centering */}
                 </div>
-            </div>
+            </header>
 
             {/* Main Content */}
-            <div className="flex-1 container mx-auto px-4 sm:px-6 py-12">
-                <div className="grid lg:grid-cols-12 gap-8">
+            <main className="flex-1 flex items-center justify-center p-6 relative z-10">
+                <div className="w-full max-w-2xl space-y-8">
 
-                    {/* Left Column - Tracks & Generator */}
-                    <div className="lg:col-span-8 space-y-10">
+                    {/* Intro */}
+                    <div className="text-center space-y-2 animate-enter">
+                        <h1 className="text-3xl font-bold tracking-tight text-foreground">Design Your Challenge</h1>
+                        <p className="text-muted-foreground">Configure the parameters for your AI-generated exam session.</p>
+                    </div>
 
-                        {/* Custom Practice Generator */}
-                        <div id="custom-generator" ref={generatorRef} className="pt-4">
-                            <Card className="border-primary/20 bg-gradient-to-br from-primary/5 via-card to-card overflow-hidden shadow-lg">
-                                <CardHeader>
-                                    <CardTitle className="flex items-center gap-2 text-xl">
-                                        <Rocket className="w-5 h-5 text-primary" />
-                                        Custom Practice Session
-                                    </CardTitle>
-                                    <CardDescription>
-                                        Configure your own practice environment. Choose your mode, topic, and difficulty.
-                                    </CardDescription>
-                                </CardHeader>
-                                <CardContent className="space-y-6 relative">
-                                    {error && (
-                                        <Alert variant="destructive" className="animate-in fade-in slide-in-from-top-2">
-                                            <AlertDescription>{error}</AlertDescription>
-                                        </Alert>
-                                    )}
+                    <div className="grid gap-6 animate-enter" ref={formRef}>
+                        {error && (
+                            <Alert variant="destructive" className="animate-in fade-in slide-in-from-top-2">
+                                <AlertCircle className="h-4 w-4" />
+                                <AlertDescription>{error}</AlertDescription>
+                            </Alert>
+                        )}
 
-                                    <Tabs defaultValue="mcq" value={activeTab} onValueChange={setActiveTab} className="w-full">
-                                        <TabsList className="grid w-full grid-cols-2 mb-6">
-                                            <TabsTrigger value="mcq" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-                                                <CheckCircle2 className="w-4 h-4 mr-2" />
-                                                MCQ Practice
-                                            </TabsTrigger>
-                                            <TabsTrigger value="coding" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-                                                <Code2 className="w-4 h-4 mr-2" />
-                                                Coding Challenges
-                                            </TabsTrigger>
-                                        </TabsList>
+                        <Card className="border-border bg-card/60 backdrop-blur-sm shadow-xl">
+                            <CardContent className="p-6 pt-6 space-y-8">
 
-                                        <TabsContent value="mcq" className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
+                                {/* Tabs */}
+                                <Tabs defaultValue="mcq" value={activeTab} onValueChange={setActiveTab} className="w-full">
+                                    <TabsList className="grid w-full grid-cols-2 h-12 bg-muted/50 p-1 rounded-xl">
+                                        <TabsTrigger value="mcq" className="rounded-lg data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm transition-all">
+                                            <Brain className="w-4 h-4 mr-2 text-violet-500" />
+                                            Concept / MCQ
+                                        </TabsTrigger>
+                                        <TabsTrigger value="coding" className="rounded-lg data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm transition-all">
+                                            <Code2 className="w-4 h-4 mr-2 text-indigo-500" />
+                                            Coding Problem
+                                        </TabsTrigger>
+                                    </TabsList>
+
+                                    <div className="mt-8 space-y-4">
+                                        <TabsContent value="mcq" className="space-y-4 focus-visible:outline-none animate-in fade-in slide-in-from-left-2">
                                             <div className="space-y-2">
-                                                <Label>Topic</Label>
-                                                <input
-                                                    type="text"
-                                                    placeholder="Enter any topic (e.g., React Hooks, History of Rome, Quantum Physics)"
-                                                    className="flex h-11 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                                                <Label className="text-sm font-medium ml-1">Topic or Concept</Label>
+                                                <Input
+                                                    placeholder="Quantum Computing, React Hooks, History of Rome..."
+                                                    className="h-12 bg-background border-input focus-visible:ring-violet-500/30"
                                                     value={mcqTopic}
                                                     onChange={(e) => setMcqTopic(e.target.value)}
                                                 />
-                                                <p className="text-xs text-muted-foreground">
-                                                    Type anything! Our AI will generate relevant multiple-choice questions.
-                                                </p>
                                             </div>
                                         </TabsContent>
 
-                                        <TabsContent value="coding" className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
+                                        <TabsContent value="coding" className="space-y-4 focus-visible:outline-none animate-in fade-in slide-in-from-right-2">
                                             <div className="space-y-2">
-                                                <Label>Programming Language / Skill</Label>
-                                                <Select
-                                                    value={codingTopic}
-                                                    onValueChange={setCodingTopic}
-                                                >
-                                                    <SelectTrigger className="bg-background h-11 font-mono">
-                                                        <SelectValue placeholder="Select a language..." />
+                                                <Label className="text-sm font-medium ml-1">Programming Language</Label>
+                                                <Select value={codingTopic} onValueChange={setCodingTopic}>
+                                                    <SelectTrigger className="h-12 bg-background border-input">
+                                                        <SelectValue placeholder="Select language..." />
                                                     </SelectTrigger>
                                                     <SelectContent>
-                                                        <SelectItem value="SQL">SQL</SelectItem>
                                                         <SelectItem value="Python">Python</SelectItem>
                                                         <SelectItem value="JavaScript">JavaScript</SelectItem>
                                                         <SelectItem value="Java">Java</SelectItem>
-                                                        <SelectItem value="PySpark">PySpark (Databricks)</SelectItem>
-                                                        <SelectItem value="PowerBI">Power BI (DAX)</SelectItem>
-                                                        <SelectItem value="DBT">DBT (Analytics Engineering)</SelectItem>
+                                                        <SelectItem value="SQL">SQL</SelectItem>
+                                                        <SelectItem value="Go">Go</SelectItem>
+                                                        <SelectItem value="Rust">Rust</SelectItem>
                                                     </SelectContent>
                                                 </Select>
-                                                <p className="text-xs text-muted-foreground">
-                                                    Select a supported language for hands-on coding challenges.
-                                                </p>
                                             </div>
                                         </TabsContent>
+                                    </div>
+                                </Tabs>
 
-                                        <div className="grid md:grid-cols-3 gap-6 mt-6">
-                                            <div className="space-y-2">
-                                                <Label>Difficulty</Label>
-                                                <Select
-                                                    value={customExam.difficulty}
-                                                    onValueChange={(value) => setCustomExam({ ...customExam, difficulty: value })}
-                                                >
-                                                    <SelectTrigger className="bg-background h-11">
-                                                        <SelectValue />
-                                                    </SelectTrigger>
-                                                    <SelectContent>
-                                                        <SelectItem value="easy">Easy</SelectItem>
-                                                        <SelectItem value="medium">Medium</SelectItem>
-                                                        <SelectItem value="hard">Hard</SelectItem>
-                                                    </SelectContent>
-                                                </Select>
-                                            </div>
+                                <Separator className="bg-border/50" />
 
-                                            <div className="space-y-2">
-                                                <Label>Questions</Label>
-                                                <Select
-                                                    value={customExam.questionCount}
-                                                    onValueChange={(value) => setCustomExam({ ...customExam, questionCount: value })}
-                                                >
-                                                    <SelectTrigger className="bg-background h-11">
-                                                        <SelectValue />
-                                                    </SelectTrigger>
-                                                    <SelectContent>
-                                                        <SelectItem value="5">5 Questions</SelectItem>
-                                                        <SelectItem value="10">10 Questions</SelectItem>
-                                                        <SelectItem value="15">15 Questions</SelectItem>
-                                                        <SelectItem value="20">20 Questions</SelectItem>
-                                                    </SelectContent>
-                                                </Select>
-                                            </div>
+                                {/* Configuration Grid */}
+                                <div className="grid md:grid-cols-2 gap-8" ref={configRef}>
 
-                                            <div className="space-y-2">
-                                                <Label>Duration</Label>
-                                                <Select
-                                                    value={customExam.duration}
-                                                    onValueChange={(value) => setCustomExam({ ...customExam, duration: value })}
-                                                >
-                                                    <SelectTrigger className="bg-background h-11">
-                                                        <SelectValue />
-                                                    </SelectTrigger>
-                                                    <SelectContent>
-                                                        <SelectItem value="15">15 minutes</SelectItem>
-                                                        <SelectItem value="30">30 minutes</SelectItem>
-                                                        <SelectItem value="45">45 minutes</SelectItem>
-                                                        <SelectItem value="60">60 minutes</SelectItem>
-                                                    </SelectContent>
-                                                </Select>
+                                    {/* Left Col: Sliders */}
+                                    <div className="space-y-6">
+                                        <div className="space-y-3">
+                                            <div className="flex justify-between items-center">
+                                                <Label className="flex items-center gap-2"><Hash className="w-4 h-4 text-muted-foreground" /> Questions</Label>
+                                                <span className="text-xs font-mono bg-muted px-2 py-0.5 rounded">{questionCount[0]}</span>
                                             </div>
+                                            <Slider
+                                                value={questionCount}
+                                                onValueChange={setQuestionCount}
+                                                max={30}
+                                                min={5}
+                                                step={5}
+                                                className="py-2"
+                                            />
                                         </div>
 
-                                        <Button
-                                            onClick={handleGenerateQuestions}
-                                            disabled={isGenerating || (activeTab === "mcq" ? !mcqTopic : !codingTopic)}
-                                            className="w-full h-12 text-base font-semibold shadow-lg hover:shadow-primary/25 transition-all mt-8"
-                                            size="lg"
-                                        >
-                                            {isGenerating ? (
-                                                <>
-                                                    <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                                                    Generating {activeTab === "mcq" ? "MCQ" : "Coding"} Session...
-                                                </>
-                                            ) : (
-                                                <>
-                                                    <Sparkles className="w-5 h-5 mr-2" />
-                                                    Start {activeTab === "mcq" ? "MCQ" : "Coding"} Session
-                                                </>
-                                            )}
-                                        </Button>
-                                    </Tabs>
-                                </CardContent>
-                            </Card>
+                                        <div className="space-y-3">
+                                            <div className="flex justify-between items-center">
+                                                <Label className="flex items-center gap-2"><Timer className="w-4 h-4 text-muted-foreground" /> Duration</Label>
+                                                <span className="text-xs font-mono bg-muted px-2 py-0.5 rounded">{duration[0]} min</span>
+                                            </div>
+                                            <Slider
+                                                value={duration}
+                                                onValueChange={setDuration}
+                                                max={120}
+                                                min={10}
+                                                step={5}
+                                                className="py-2"
+                                            />
+                                        </div>
+                                    </div>
+
+                                    {/* Right Col: Difficulty Select */}
+                                    <div className="space-y-4">
+                                        <Label className="flex items-center gap-2"><Zap className="w-4 h-4 text-muted-foreground" /> Difficulty</Label>
+                                        <div className="grid grid-cols-3 gap-2">
+                                            {['easy', 'medium', 'hard'].map((level) => (
+                                                <div
+                                                    key={level}
+                                                    onClick={() => setDifficulty(level)}
+                                                    className={cn(
+                                                        "cursor-pointer rounded-lg border p-3 text-center transition-all hover:bg-muted/50",
+                                                        difficulty === level
+                                                            ? "bg-primary/5 border-primary text-primary shadow-sm ring-1 ring-primary/20"
+                                                            : "border-border bg-background text-muted-foreground hover:border-primary/30"
+                                                    )}
+                                                >
+                                                    <div className="capitalize font-medium text-sm">{level}</div>
+                                                    <div className="flex justify-center gap-0.5 mt-1.5 h-1">
+                                                        <div className={cn("w-full rounded-full", level === 'easy' ? "bg-emerald-500" : (level === 'medium' ? "bg-yellow-500" : "bg-red-500"))} />
+                                                        <div className={cn("w-full rounded-full", level === 'easy' ? "bg-emerald-500/20" : (level === 'medium' ? "bg-yellow-500" : "bg-red-500"))} />
+                                                        <div className={cn("w-full rounded-full", level === 'easy' ? "bg-emerald-500/20" : (level === 'medium' ? "bg-yellow-500/20" : "bg-red-500"))} />
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                        <p className="text-xs text-muted-foreground mt-2 leading-relaxed">
+                                            AI attempts to calibrate questions to roughly a {difficulty} skill level based on standard interview benchmarks.
+                                        </p>
+                                    </div>
+
+                                </div>
+
+                                <Button
+                                    size="lg"
+                                    onClick={handleGenerateQuestions}
+                                    disabled={isGenerating || (activeTab === 'mcq' ? !mcqTopic : !codingTopic)}
+                                    className="w-full text-base font-semibold h-14 shadow-lg hover:shadow-primary/20 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 border-0 transition-all duration-300"
+                                >
+                                    {isGenerating ? (
+                                        <>
+                                            <Loader2 className="w-5 h-5 mr-3 animate-spin" />
+                                            Architecting Exam...
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Sparkles className="w-5 h-5 mr-3 fill-white/20" />
+                                            Generate Dream Exam
+                                        </>
+                                    )}
+                                </Button>
+
+                            </CardContent>
+                        </Card>
+                    </div>
+
+                    <div className="flex justify-center text-xs text-muted-foreground gap-4 animate-enter">
+                        <div className="flex items-center gap-1.5">
+                            <Ghost className="w-3.5 h-3.5" />
+                            <span>Incognito Mode</span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                            <Shield className="w-3.5 h-3.5" />
+                            <span>No Data Persisted</span>
                         </div>
                     </div>
-                </div>
-            </div>
 
-            {/* Exit Warning Dialog */}
+                </div>
+            </main>
+
+            {/* Exit Dialog */}
             <Dialog open={showExitWarning} onOpenChange={setShowExitWarning}>
-                <DialogContent className="sm:max-w-md">
+                <DialogContent className="sm:max-w-[400px]">
                     <DialogHeader>
-                        <div className="w-12 h-12 rounded-full bg-destructive/10 flex items-center justify-center mx-auto mb-4">
-                            <Ghost className="w-6 h-6 text-destructive" />
+                        <div className="mx-auto w-12 h-12 rounded-full bg-destructive/10 items-center justify-center flex mb-3">
+                            <ArrowLeft className="w-6 h-6 text-destructive" />
                         </div>
-                        <DialogTitle className="text-center">Exit Dream Exam?</DialogTitle>
+                        <DialogTitle className="text-center text-xl">Abandon Configuration?</DialogTitle>
                         <DialogDescription className="text-center">
-                            Any unsaved configuration or progress will be lost.
+                            Your configured exam settings will be discarded.
                         </DialogDescription>
                     </DialogHeader>
-                    <DialogFooter className="flex-col sm:flex-row gap-3">
-                        <Button
-                            variant="outline"
-                            onClick={() => setShowExitWarning(false)}
-                            className="flex-1"
-                        >
-                            Stay Here
+                    <DialogFooter className="grid grid-cols-2 gap-3 sm:space-x-0 mt-4">
+                        <Button variant="outline" onClick={() => setShowExitWarning(false)}>
+                            Stay
                         </Button>
-                        <Button
-                            variant="destructive"
-                            onClick={confirmExit}
-                            className="flex-1"
-                        >
-                            Yes, Exit
+                        <Button variant="destructive" onClick={confirmExit}>
+                            Exit
                         </Button>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
+
         </div>
     );
 }

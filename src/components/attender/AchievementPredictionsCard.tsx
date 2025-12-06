@@ -1,5 +1,5 @@
 import React from 'react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -12,9 +12,11 @@ import {
     Award,
     Crown,
     Medal,
-    ArrowUpRight
+    Sparkles,
+    Timer
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 type AchievementProps = {
     achievements: {
@@ -37,146 +39,140 @@ type AchievementProps = {
 };
 
 export const AchievementPredictionsCard: React.FC<AchievementProps> = ({ achievements, isLoading }) => {
-    const getIcon = (iconName: string) => {
-        switch (iconName) {
-            case 'trophy': return <Trophy className="h-4 w-4" />;
-            case 'target': return <Target className="h-4 w-4" />;
-            case 'trending-up': return <TrendingUp className="h-4 w-4" />;
-            case 'crown': return <Crown className="h-4 w-4" />;
-            case 'medal': return <Medal className="h-4 w-4" />;
-            default: return <Star className="h-4 w-4" />;
-        }
-    };
 
     if (isLoading) {
-        return (
-            <Card className="border-border/50 shadow-sm bg-card/50 backdrop-blur-sm">
-                <CardHeader className="pb-3">
-                    <Skeleton className="h-6 w-48 mb-2" />
-                    <Skeleton className="h-4 w-64" />
-                </CardHeader>
-                <CardContent className="space-y-6">
-                    <div className="space-y-4">
-                        <Skeleton className="h-12 w-full rounded-lg" />
-                        <Skeleton className="h-12 w-full rounded-lg" />
-                    </div>
-                    <Skeleton className="h-24 w-full rounded-xl" />
-                </CardContent>
-            </Card>
-        );
+        return <LoadingSkeleton />;
     }
 
     if (!achievements?.hasData) {
-        return null;
+        return <EmptyState />;
     }
 
+    const { nextMilestones, predictions } = achievements;
+    const primaryMilestone = nextMilestones[0];
+
+    const getIcon = (iconName: string) => {
+        const iconProps = { className: "h-3.5 w-3.5" };
+        switch (iconName) {
+            case 'trophy': return <Trophy {...iconProps} />;
+            case 'target': return <Target {...iconProps} />;
+            case 'trending-up': return <TrendingUp {...iconProps} />;
+            case 'crown': return <Crown {...iconProps} />;
+            case 'medal': return <Medal {...iconProps} />;
+            default: return <Star {...iconProps} />;
+        }
+    };
+
     return (
-        <Card className="border-border/50 shadow-sm hover:shadow-md transition-all duration-300 animate-in fade-in slide-in-from-bottom-4 bg-card/50 backdrop-blur-sm overflow-hidden group h-full">
-            <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
-                <Trophy className="w-32 h-32 text-amber-500 -rotate-12 translate-x-8 -translate-y-8" />
+        <Card className="border-border/60 bg-gradient-to-b from-card/80 to-card/40 backdrop-blur-md overflow-hidden shadow-sm flex flex-col h-full">
+
+            {/* Header */}
+            <div className="p-4 border-b border-border/40 bg-muted/20 flex items-center justify-between shrink-0">
+                <div className="flex items-center gap-2">
+                    <div className="p-1.5 rounded-md bg-amber-500/10 text-amber-500">
+                        <Trophy className="h-4 w-4" />
+                    </div>
+                    <span className="text-xs font-bold text-foreground">Next Milestones</span>
+                </div>
+                <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground bg-background/50 px-2 py-0.5 rounded-full border border-border/50">
+                    <Sparkles className="w-3 h-3 text-amber-500" />
+                    <span>Level Up Soon</span>
+                </div>
             </div>
 
-            <CardHeader className="pb-2 relative z-10">
-                <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                        <div className="p-2.5 bg-amber-500/10 rounded-xl ring-1 ring-amber-500/20">
-                            <Award className="h-5 w-5 text-amber-600 dark:text-amber-400" />
-                        </div>
-                        <div>
-                            <CardTitle className="text-lg font-bold">Achievement Tracker</CardTitle>
-                            <CardDescription className="text-xs font-medium mt-0.5">
-                                Progress towards next milestones
-                            </CardDescription>
-                        </div>
-                    </div>
-                    <Badge variant="outline" className="bg-background/50 backdrop-blur-sm">
-                        Beta
-                    </Badge>
-                </div>
-            </CardHeader>
+            <CardContent className="p-4 flex flex-col gap-4 h-full">
 
-            <CardContent className="space-y-6 relative z-10 pt-4">
-                {/* Milestones */}
-                <div className="space-y-3">
-                    <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
-                        <Target className="w-3 h-3" />
-                        Next Goals
-                    </h4>
-                    <div className="space-y-3">
-                        {achievements.nextMilestones.slice(0, 3).map((milestone, idx) => (
-                            <div key={idx} className="group/milestone p-3 rounded-xl border border-border/50 bg-card hover:bg-accent/5 transition-all duration-300">
-                                <div className="flex items-center justify-between mb-2">
-                                    <div className="flex items-center gap-3">
-                                        <div className="p-2 bg-primary/10 rounded-lg text-primary group-hover/milestone:scale-110 transition-transform">
-                                            {getIcon(milestone.icon)}
-                                        </div>
-                                        <div>
-                                            <span className="text-sm font-semibold text-foreground block">
-                                                {milestone.label}
-                                            </span>
-                                            <span className="text-xs text-muted-foreground">
-                                                {milestone.current.toFixed(0)} / {milestone.target.toFixed(0)}
-                                            </span>
-                                        </div>
-                                    </div>
-                                    <Badge variant="secondary" className="text-xs font-bold">
-                                        {milestone.progress.toFixed(0)}%
-                                    </Badge>
-                                </div>
-                                <Progress
-                                    value={milestone.progress}
-                                    className="h-1.5 bg-muted"
-                                    indicatorClassName="bg-gradient-to-r from-primary to-primary/80"
-                                />
-                            </div>
-                        ))}
-                    </div>
-                </div>
-
-                {/* Predictions Grid */}
-                <div className="grid grid-cols-2 gap-3 pt-2">
-                    <div className="p-4 rounded-xl bg-gradient-to-br from-amber-500/10 to-orange-500/5 border border-amber-500/20 relative overflow-hidden group/pred">
-                        <div className="absolute top-2 right-2 opacity-20 group-hover/pred:opacity-40 transition-opacity">
-                            <Crown className="w-8 h-8 text-amber-500 -rotate-12" />
+                {/* Primary Goal Target */}
+                {primaryMilestone && (
+                    <div className="relative overflow-hidden group">
+                        <div className="flex items-center justify-between mb-2">
+                            <span className="text-xs font-semibold text-foreground flex items-center gap-2">
+                                <span className="p-1 rounded-md bg-primary/10 text-primary">
+                                    {getIcon(primaryMilestone.icon)}
+                                </span>
+                                {primaryMilestone.label}
+                            </span>
+                            <span className="text-[10px] font-mono font-bold text-primary">
+                                {primaryMilestone.current}/{primaryMilestone.target}
+                            </span>
                         </div>
-                        <p className="text-xs font-medium text-amber-600 dark:text-amber-400 mb-1">Next High Score</p>
-                        <div className="flex items-baseline gap-1">
-                            <p className="text-2xl font-bold text-foreground">
-                                {achievements.predictions.nextHighScore.toFixed(0)}%
-                            </p>
-                            <ArrowUpRight className="w-3 h-3 text-emerald-500" />
-                        </div>
-                        <p className="text-[10px] text-muted-foreground mt-1">Estimated potential</p>
-                    </div>
-
-                    <div className="p-4 rounded-xl bg-gradient-to-br from-blue-500/10 to-indigo-500/5 border border-blue-500/20 relative overflow-hidden group/pred">
-                        <div className="absolute top-2 right-2 opacity-20 group-hover/pred:opacity-40 transition-opacity">
-                            <Zap className="w-8 h-8 text-blue-500 -rotate-12" />
-                        </div>
-                        <p className="text-xs font-medium text-blue-600 dark:text-blue-400 mb-1">Days to Goal</p>
-                        <div className="flex items-baseline gap-1">
-                            <p className="text-2xl font-bold text-foreground">
-                                ~{achievements.predictions.daysToNextMilestone}
-                            </p>
-                            <span className="text-xs text-muted-foreground">days</span>
-                        </div>
-                        <p className="text-[10px] text-muted-foreground mt-1">Based on current pace</p>
-                    </div>
-                </div>
-
-                {/* Improvement Rate */}
-                <div className="flex items-center gap-3 p-3 rounded-lg bg-emerald-500/5 border border-emerald-500/10">
-                    <div className="p-1.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
-                        <TrendingUp className="w-4 h-4" />
-                    </div>
-                    <div>
-                        <p className="text-xs text-muted-foreground">Improvement Rate</p>
-                        <p className="text-sm font-semibold text-emerald-600 dark:text-emerald-400">
-                            +{achievements.predictions.improvementRate}% per exam
+                        <Progress value={primaryMilestone.progress} className="h-2 mb-1" />
+                        <p className="text-[10px] text-muted-foreground text-right">
+                            {primaryMilestone.progress}% completed
                         </p>
                     </div>
+                )}
+
+                {/* Secondary Goals (Compact List) */}
+                <div className="space-y-2 flex-1">
+                    {nextMilestones.slice(1, 3).map((milestone, idx) => (
+                        <div key={idx} className="flex items-center justify-between p-2 rounded-lg bg-muted/30 border border-border/50">
+                            <div className="flex items-center gap-2">
+                                <div className="text-muted-foreground opacity-70">
+                                    {getIcon(milestone.icon)}
+                                </div>
+                                <span className="text-[11px] font-medium text-foreground">{milestone.label}</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <div className="w-12 h-1 bg-muted rounded-full overflow-hidden">
+                                    <div className="h-full bg-foreground/30 rounded-full" style={{ width: `${milestone.progress}%` }} />
+                                </div>
+                            </div>
+                        </div>
+                    ))}
                 </div>
+
+                {/* Predictions Footer */}
+                <div className="grid grid-cols-2 gap-3 pt-2 mt-auto border-t border-border/40">
+                    <div className="space-y-0.5">
+                        <span className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold flex items-center gap-1">
+                            <Timer className="w-3 h-3" /> Est. Time
+                        </span>
+                        <div className="font-semibold text-sm">~{predictions.daysToNextMilestone} Days</div>
+                    </div>
+                    <div className="space-y-0.5">
+                        <span className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold flex items-center gap-1">
+                            <TrendingUp className="w-3 h-3" /> Pace
+                        </span>
+                        <div className="font-semibold text-sm text-emerald-500">+{predictions.improvementRate}%</div>
+                    </div>
+                </div>
+
             </CardContent>
         </Card>
     );
 };
+
+const LoadingSkeleton = () => (
+    <Card className="border-border/50 shadow-sm">
+        <div className="p-4 border-b border-border/40 flex justify-between items-center">
+            <Skeleton className="h-6 w-32" />
+            <Skeleton className="h-4 w-16" />
+        </div>
+        <CardContent className="p-4 space-y-4">
+            <Skeleton className="h-10 w-full rounded-lg" />
+            <div className="space-y-2">
+                <Skeleton className="h-8 w-full rounded-md" />
+                <Skeleton className="h-8 w-full rounded-md" />
+            </div>
+            <div className="flex gap-4">
+                <Skeleton className="h-8 w-1/2" />
+                <Skeleton className="h-8 w-1/2" />
+            </div>
+        </CardContent>
+    </Card>
+);
+
+const EmptyState = () => (
+    <Card className="border-dashed border-2 border-muted bg-muted/5 shadow-none h-full flex flex-col justify-center min-h-[180px]">
+        <div className="flex flex-col items-center justify-center p-4 text-center space-y-2">
+            <div className="w-10 h-10 rounded-full bg-muted/50 flex items-center justify-center">
+                <Medal className="h-5 w-5 text-muted-foreground/50" />
+            </div>
+            <p className="text-xs font-medium text-foreground">No milestones yet</p>
+            <p className="text-[10px] text-muted-foreground max-w-[150px]">
+                Start your journey to unlock achievements.
+            </p>
+        </div>
+    </Card>
+);

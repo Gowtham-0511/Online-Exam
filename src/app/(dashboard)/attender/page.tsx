@@ -452,9 +452,9 @@ const AttenderDashboard = () => {
                                     </div>
                                     <h2 className="text-2xl font-bold tracking-tight">Recent Activity</h2>
                                 </div>
-                                <Button variant="ghost" className="text-sm font-medium hover:text-primary" onClick={() => router.push('/attender/view-exams')}>
+                                {/* <Button variant="ghost" className="text-sm font-medium hover:text-primary" onClick={() => router.push('/attender/view-exams')}>
                                     View All History <ChevronRight className="w-4 h-4 ml-1" />
-                                </Button>
+                                </Button> */}
                             </div>
                             <CompletedExamsSection
                                 exams={completedExams.slice(0, 5)}
@@ -507,9 +507,6 @@ const AttenderDashboard = () => {
                                 </div>
                             </CardContent>
                         </Card>
-
-
-
 
 
                         {/* AI Insights & Predictions */}

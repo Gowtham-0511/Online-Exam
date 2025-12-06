@@ -3,7 +3,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
-import Head from 'next/head';
 import {
     Ghost,
     ArrowLeft,
@@ -17,9 +16,9 @@ import {
     RotateCcw,
     Copy,
     Check,
-    Shield
+    Terminal,
+    MessageSquare
 } from 'lucide-react';
-import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -31,6 +30,11 @@ import {
     DialogHeader,
     DialogTitle,
 } from '@/components/ui/dialog';
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import gsap from 'gsap';
+import { useGSAP } from '@gsap/react';
 
 interface Message {
     id: string;
@@ -57,11 +61,26 @@ const AIStudyBuddy = () => {
     const [copiedId, setCopiedId] = useState<string | null>(null);
     const scrollRef = useRef<HTMLDivElement>(null);
     const textareaRef = useRef<HTMLTextAreaElement>(null);
+    const containerRef = useRef<HTMLDivElement>(null);
+
+    // Initial Animation
+    useGSAP(() => {
+        gsap.from(".chat-ui-element", {
+            y: 20,
+            opacity: 0,
+            stagger: 0.1,
+            duration: 0.6,
+            ease: "power2.out"
+        });
+    }, { scope: containerRef });
 
     // Auto-scroll to bottom
     useEffect(() => {
         if (scrollRef.current) {
-            scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+            const scrollElement = scrollRef.current.querySelector('[data-radix-scroll-area-viewport]');
+            if (scrollElement) {
+                scrollElement.scrollTop = scrollElement.scrollHeight;
+            }
         }
     }, [messages]);
 
@@ -69,31 +88,31 @@ const AIStudyBuddy = () => {
     const quickPrompts: QuickPrompt[] = [
         {
             icon: Lightbulb,
-            label: "Explain a Concept",
+            label: "Explain Concept",
             prompt: "Can you explain the concept of ",
-            color: "text-amber-600 dark:text-amber-400",
-            bgColor: "bg-amber-50 dark:bg-amber-900/20"
+            color: "text-amber-500",
+            bgColor: "bg-amber-500/10"
         },
         {
             icon: Code,
-            label: "Debug My Code",
+            label: "Debug Code",
             prompt: "Help me debug this code: ",
-            color: "text-blue-600 dark:text-blue-400",
-            bgColor: "bg-blue-50 dark:bg-blue-900/20"
+            color: "text-blue-500",
+            bgColor: "bg-blue-500/10"
         },
         {
             icon: BookOpen,
             label: "Practice Problems",
             prompt: "Give me practice problems on ",
-            color: "text-violet-600 dark:text-violet-400",
-            bgColor: "bg-violet-50 dark:bg-violet-900/20"
+            color: "text-violet-500",
+            bgColor: "bg-violet-500/10"
         },
         {
             icon: Brain,
             label: "Quiz Me",
             prompt: "Quiz me on ",
-            color: "text-emerald-600 dark:text-emerald-400",
-            bgColor: "bg-emerald-50 dark:bg-emerald-900/20"
+            color: "text-emerald-500",
+            bgColor: "bg-emerald-500/10"
         }
     ];
 
@@ -130,7 +149,7 @@ const AIStudyBuddy = () => {
             const aiMessage: Message = {
                 id: (Date.now() + 1).toString(),
                 role: 'assistant',
-                content: data.response,
+                content: data.response || "I'm processing that information...",
                 timestamp: new Date()
             };
 
@@ -140,7 +159,7 @@ const AIStudyBuddy = () => {
             const errorMessage: Message = {
                 id: (Date.now() + 1).toString(),
                 role: 'assistant',
-                content: 'Sorry, I encountered an error. Please try again.',
+                content: 'Sorry, connection lost in the void. Please try again.',
                 timestamp: new Date()
             };
             setMessages(prev => [...prev, errorMessage]);
@@ -165,7 +184,7 @@ const AIStudyBuddy = () => {
         setTimeout(() => setCopiedId(null), 2000);
     };
 
-    const handleKeyPress = (e: React.KeyboardEvent) => {
+    const handleKeyDown = (e: React.KeyboardEvent) => {
         if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault();
             handleSendMessage();
@@ -177,258 +196,209 @@ const AIStudyBuddy = () => {
     };
 
     return (
-        <>
-            <Head>
-                <title>AI Study Buddy - Ghost Mode</title>
-                <link rel="icon" href="/logo3.png" />
-            </Head>
+        <div ref={containerRef} className="h-screen bg-background flex flex-col font-sans overflow-hidden relative">
 
-            <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col">
-                {/* Header */}
-                <div className="sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-                    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                        <div className="flex h-16 items-center justify-between">
-                            <div className="flex items-center gap-3">
-                                <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-violet-100 text-violet-600 dark:bg-violet-900/30 dark:text-violet-400">
-                                    <Brain className="w-5 h-5" />
-                                </div>
-                                <div>
-                                    <h1 className="text-lg font-semibold text-foreground">
-                                        AI Study Buddy
-                                    </h1>
-                                </div>
-                            </div>
+            {/* Ambient Background */}
+            <div className="fixed inset-0 pointer-events-none z-0">
+                <div className="absolute top-0 left-0 w-full h-[300px] bg-gradient-to-b from-violet-500/5 to-transparent" />
+                <div className="absolute inset-0 bg-[linear-gradient(rgba(0,0,0,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(0,0,0,0.02)_1px,transparent_1px)] dark:bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:32px_32px] [mask-image:radial-gradient(ellipse_at_center,black_70%,transparent_100%)]" />
+            </div>
 
-                            <div className="flex items-center gap-2">
-                                <Button
-                                    onClick={handleReset}
-                                    variant="ghost"
-                                    size="sm"
-                                    disabled={messages.length === 0}
-                                    className="text-muted-foreground hover:text-primary"
-                                >
-                                    <RotateCcw className="w-4 h-4 mr-2" />
-                                    Reset
-                                </Button>
-                                <Button
-                                    onClick={() => setShowExitWarning(true)}
-                                    variant="ghost"
-                                    size="sm"
-                                    className="text-muted-foreground hover:text-destructive hover:bg-destructive/10"
-                                >
-                                    <ArrowLeft className="w-4 h-4 mr-2" />
-                                    Exit
-                                </Button>
+            {/* Header */}
+            <header className="flex-none h-16 border-b border-border/40 bg-background/80 backdrop-blur-md z-20 chat-ui-element">
+                <div className="max-w-7xl mx-auto px-4 h-full flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                        <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-violet-500/10 ring-1 ring-violet-500/20">
+                            <Brain className="w-5 h-5 text-violet-500" />
+                        </div>
+                        <div className="flex flex-col">
+                            <h1 className="text-sm font-semibold tracking-tight text-foreground">AI Study Buddy</h1>
+                            <div className="flex items-center gap-1.5">
+                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                                <span className="text-[10px] text-muted-foreground font-mono uppercase">Online</span>
                             </div>
                         </div>
                     </div>
-                </div>
 
-                {/* Warning Banner */}
-                <div className="bg-amber-50 dark:bg-amber-950/30 border-b border-amber-100 dark:border-amber-900/50 px-4 py-2">
-                    <div className="max-w-7xl mx-auto flex items-center justify-center gap-2 text-sm text-amber-700 dark:text-amber-400">
-                        <Shield className="w-4 h-4" />
-                        <span className="font-medium">Ghost Mode Active:</span>
-                        <span>This conversation will not be saved.</span>
+                    <div className="flex items-center gap-2">
+                        <TooltipProvider>
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <Button onClick={handleReset} variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground">
+                                        <RotateCcw className="w-4 h-4" />
+                                    </Button>
+                                </TooltipTrigger>
+                                <TooltipContent><p>Reset Chat</p></TooltipContent>
+                            </Tooltip>
+                        </TooltipProvider>
+
+                        <Button
+                            onClick={() => setShowExitWarning(true)}
+                            variant="destructive"
+                            size="sm"
+                            className="h-8 text-xs font-medium px-3 shadow-none bg-destructive/10 text-destructive hover:bg-destructive hover:text-destructive-foreground border border-destructive/20"
+                        >
+                            <ArrowLeft className="w-3.5 h-3.5 mr-1.5" />
+                            Exit
+                        </Button>
                     </div>
                 </div>
+            </header>
 
-                {/* Main Content */}
-                <div className="flex-1 max-w-5xl mx-auto w-full px-4 sm:px-6 py-6 flex flex-col">
-                    {/* Chat Area */}
-                    <Card className="flex-1 flex flex-col border-border/50 shadow-sm overflow-hidden bg-card">
-                        <CardContent className="flex-1 flex flex-col p-0">
-                            {/* Messages */}
-                            <ScrollArea
-                                ref={scrollRef}
-                                className="flex-1 p-6"
-                            >
-                                {messages.length === 0 ? (
-                                    <div className="h-full flex flex-col items-center justify-center text-center space-y-8 py-12">
-                                        <div className="w-16 h-16 rounded-2xl bg-violet-100 dark:bg-violet-900/20 flex items-center justify-center">
-                                            <Sparkles className="w-8 h-8 text-violet-600 dark:text-violet-400" />
-                                        </div>
-                                        <div className="max-w-md space-y-2">
-                                            <h3 className="text-xl font-semibold text-foreground">
-                                                How can I help you learn today?
-                                            </h3>
-                                            <p className="text-muted-foreground">
-                                                I can explain complex topics, debug your code, create practice problems,
-                                                or quiz you on any subject.
-                                            </p>
-                                        </div>
-
-                                        {/* Quick Prompts */}
-                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full max-w-2xl px-4">
-                                            {quickPrompts.map((prompt, idx) => {
-                                                const Icon = prompt.icon;
-                                                return (
-                                                    <button
-                                                        key={idx}
-                                                        onClick={() => handleQuickPrompt(prompt.prompt)}
-                                                        className="flex items-center gap-3 p-4 rounded-xl border border-border/50 hover:border-primary/50 hover:bg-accent/50 transition-all duration-200 text-left group"
-                                                    >
-                                                        <div className={`w-10 h-10 rounded-lg ${prompt.bgColor} ${prompt.color} flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition-transform`}>
-                                                            <Icon className="w-5 h-5" />
-                                                        </div>
-                                                        <div>
-                                                            <p className="text-sm font-medium text-foreground group-hover:text-primary transition-colors">
-                                                                {prompt.label}
-                                                            </p>
-                                                            <p className="text-xs text-muted-foreground line-clamp-1">
-                                                                "{prompt.prompt}..."
-                                                            </p>
-                                                        </div>
-                                                    </button>
-                                                );
-                                            })}
-                                        </div>
+            {/* Chat Area */}
+            <main className="flex-1 flex flex-col relative z-10 max-w-4xl mx-auto w-full p-4 overflow-hidden">
+                <ScrollArea ref={scrollRef} className="flex-1 pr-4 -mr-4 chat-ui-element">
+                    <div className="min-h-full flex flex-col justify-end space-y-6 pb-4">
+                        {messages.length === 0 ? (
+                            <div className="flex flex-col items-center justify-center h-full min-h-[400px] text-center space-y-8 animate-in fade-in duration-500 slide-in-from-bottom-5">
+                                <div className="space-y-4">
+                                    <div className="w-20 h-20 mx-auto rounded-3xl bg-gradient-to-br from-violet-500/20 to-indigo-500/20 flex items-center justify-center shadow-lg shadow-violet-500/5 ring-1 ring-white/10">
+                                        <Sparkles className="w-10 h-10 text-violet-500" />
                                     </div>
-                                ) : (
-                                    <div className="space-y-6">
-                                        {messages.map((message) => (
-                                            <div
-                                                key={message.id}
-                                                className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
-                                            >
-                                                <div className={`flex gap-3 max-w-[85%] md:max-w-[75%] ${message.role === 'user' ? 'flex-row-reverse' : 'flex-row'}`}>
-                                                    {/* Avatar */}
-                                                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 mt-1 ${message.role === 'user'
-                                                        ? 'bg-primary text-primary-foreground'
-                                                        : 'bg-violet-100 text-violet-600 dark:bg-violet-900/30 dark:text-violet-400'
-                                                        }`}>
-                                                        {message.role === 'user' ? (
-                                                            <span className="text-xs font-bold">
-                                                                {session?.user?.name?.[0] || 'U'}
-                                                            </span>
-                                                        ) : (
-                                                            <Brain className="w-4 h-4" />
-                                                        )}
-                                                    </div>
-
-                                                    {/* Message Content */}
-                                                    <div className={`flex flex-col ${message.role === 'user' ? 'items-end' : 'items-start'}`}>
-                                                        <div className={`rounded-2xl px-5 py-3.5 shadow-sm ${message.role === 'user'
-                                                            ? 'bg-primary text-primary-foreground'
-                                                            : 'bg-muted/50 border border-border/50'
-                                                            }`}>
-                                                            <p className="text-sm whitespace-pre-wrap break-words leading-relaxed">
-                                                                {message.content}
-                                                            </p>
-                                                        </div>
-
-                                                        {/* Actions */}
-                                                        <div className="flex items-center gap-2 mt-1 px-1">
-                                                            <span className="text-[10px] text-muted-foreground/70 uppercase tracking-wider font-medium">
-                                                                {message.timestamp.toLocaleTimeString([], {
-                                                                    hour: '2-digit',
-                                                                    minute: '2-digit'
-                                                                })}
-                                                            </span>
-                                                            {message.role === 'assistant' && (
-                                                                <Button
-                                                                    variant="ghost"
-                                                                    size="icon"
-                                                                    className="h-5 w-5 text-muted-foreground hover:text-foreground"
-                                                                    onClick={() => handleCopy(message.content, message.id)}
-                                                                >
-                                                                    {copiedId === message.id ? (
-                                                                        <Check className="w-3 h-3 text-emerald-500" />
-                                                                    ) : (
-                                                                        <Copy className="w-3 h-3" />
-                                                                    )}
-                                                                </Button>
-                                                            )}
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        ))}
-
-                                        {/* Loading indicator */}
-                                        {isLoading && (
-                                            <div className="flex justify-start">
-                                                <div className="flex gap-3">
-                                                    <div className="w-8 h-8 rounded-lg bg-violet-100 text-violet-600 dark:bg-violet-900/30 dark:text-violet-400 flex items-center justify-center mt-1">
-                                                        <Brain className="w-4 h-4" />
-                                                    </div>
-                                                    <div className="bg-muted/50 border border-border/50 rounded-2xl px-4 py-3 flex items-center gap-2">
-                                                        <Loader2 className="w-4 h-4 animate-spin text-primary" />
-                                                        <span className="text-xs text-muted-foreground">Thinking...</span>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        )}
-                                    </div>
-                                )}
-                            </ScrollArea>
-
-                            {/* Input Area */}
-                            <div className="border-t border-border/50 p-4 bg-background/50 backdrop-blur-sm">
-                                <div className="relative flex gap-2 max-w-4xl mx-auto">
-                                    <Textarea
-                                        ref={textareaRef}
-                                        value={input}
-                                        onChange={(e) => setInput(e.target.value)}
-                                        onKeyDown={handleKeyPress}
-                                        placeholder="Ask anything... (Shift+Enter for new line)"
-                                        className="min-h-[50px] max-h-[200px] resize-none pr-12 py-3 bg-background border-border/60 focus-visible:ring-primary/20"
-                                        disabled={isLoading}
-                                    />
-                                    <Button
-                                        onClick={handleSendMessage}
-                                        disabled={!input.trim() || isLoading}
-                                        className="absolute right-2 bottom-2 h-8 w-8 p-0 rounded-lg"
-                                        size="sm"
-                                    >
-                                        {isLoading ? (
-                                            <Loader2 className="w-4 h-4 animate-spin" />
-                                        ) : (
-                                            <Send className="w-4 h-4" />
-                                        )}
-                                    </Button>
+                                    <h2 className="text-2xl font-bold tracking-tight text-foreground">
+                                        How can I assist you?
+                                    </h2>
+                                    <p className="text-muted-foreground max-w-md mx-auto">
+                                        I'm your ephemeral study companion. Ask me to explain concepts, debug code, or simulate an interview.
+                                    </p>
                                 </div>
-                                <p className="text-[10px] text-center text-muted-foreground mt-2">
-                                    AI can make mistakes. Verify important information.
-                                </p>
-                            </div>
-                        </CardContent>
-                    </Card>
-                </div>
 
-                {/* Exit Warning Dialog */}
-                <Dialog open={showExitWarning} onOpenChange={setShowExitWarning}>
-                    <DialogContent className="sm:max-w-md">
-                        <DialogHeader>
-                            <div className="w-12 h-12 rounded-full bg-destructive/10 flex items-center justify-center mx-auto mb-4">
-                                <Ghost className="w-6 h-6 text-destructive" />
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full max-w-lg">
+                                    {quickPrompts.map((p, i) => (
+                                        <button
+                                            key={i}
+                                            onClick={() => handleQuickPrompt(p.prompt)}
+                                            className="flex items-center gap-3 p-3 rounded-xl border border-border/60 bg-card/50 hover:bg-accent hover:border-accent-foreground/20 transition-all text-left group"
+                                        >
+                                            <div className={`p-2 rounded-lg ${p.bgColor} ${p.color} ring-1 ring-black/5 dark:ring-white/5`}>
+                                                <p.icon className="w-4 h-4" />
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                                <div className="font-medium text-sm text-foreground group-hover:text-primary transition-colors">{p.label}</div>
+                                                <div className="text-xs text-muted-foreground truncate opacity-70">"{p.prompt}..."</div>
+                                            </div>
+                                        </button>
+                                    ))}
+                                </div>
                             </div>
-                            <DialogTitle className="text-center">Exit Study Buddy?</DialogTitle>
-                            <DialogDescription className="text-center">
-                                Your entire conversation will be permanently deleted.
-                                This cannot be undone!
-                            </DialogDescription>
-                        </DialogHeader>
-                        <DialogFooter className="flex-col sm:flex-row gap-3">
-                            <Button
-                                variant="outline"
-                                onClick={() => setShowExitWarning(false)}
-                                className="flex-1"
-                            >
-                                Keep Chatting
-                            </Button>
-                            <Button
-                                variant="destructive"
-                                onClick={confirmExit}
-                                className="flex-1"
-                            >
-                                Yes, Exit
-                            </Button>
-                        </DialogFooter>
-                    </DialogContent>
-                </Dialog>
+                        ) : (
+                            messages.map((m) => (
+                                <div key={m.id} className={`flex gap-4 ${m.role === 'user' ? 'flex-row-reverse' : 'flex-row'}`}>
+                                    <Avatar className="h-8 w-8 mt-1 border border-border">
+                                        {m.role === 'user' ? (
+                                            <AvatarFallback className="bg-primary text-primary-foreground text-xs">{session?.user?.name?.[0] || 'U'}</AvatarFallback>
+                                        ) : (
+                                            <AvatarFallback className="bg-violet-500/10 text-violet-600 dark:text-violet-400">
+                                                <Brain className="w-4 h-4" />
+                                            </AvatarFallback>
+                                        )}
+                                    </Avatar>
+
+                                    <div className={`flex flex-col gap-1 max-w-[80%] ${m.role === 'user' ? 'items-end' : 'items-start'}`}>
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-xs font-medium text-foreground">
+                                                {m.role === 'user' ? 'You' : 'Study Buddy'}
+                                            </span>
+                                            <span className="text-[10px] text-muted-foreground">
+                                                {m.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                            </span>
+                                        </div>
+
+                                        <div className={`relative group px-4 py-3 rounded-2xl text-sm leading-relaxed shadow-sm ${m.role === 'user'
+                                                ? 'bg-primary text-primary-foreground rounded-tr-sm'
+                                                : 'bg-card border border-border rounded-tl-sm'
+                                            }`}>
+                                            <p className="whitespace-pre-wrap">{m.content}</p>
+                                            {m.role === 'assistant' && (
+                                                <Button
+                                                    size="icon"
+                                                    variant="ghost"
+                                                    className="absolute -right-8 top-0 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground"
+                                                    onClick={() => handleCopy(m.content, m.id)}
+                                                >
+                                                    {copiedId === m.id ? <Check className="w-3 h-3 text-emerald-500" /> : <Copy className="w-3 h-3" />}
+                                                </Button>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+                            ))
+                        )}
+
+                        {isLoading && (
+                            <div className="flex gap-4">
+                                <Avatar className="h-8 w-8 border border-border bg-violet-500/10">
+                                    <AvatarFallback><Brain className="w-4 h-4 text-violet-500" /></AvatarFallback>
+                                </Avatar>
+                                <div className="bg-card border border-border px-4 py-3 rounded-2xl rounded-tl-sm flex items-center gap-3">
+                                    <div className="flex space-x-1">
+                                        <div className="w-2 h-2 bg-violet-500 rounded-full animate-bounce [animation-delay:-0.3s]"></div>
+                                        <div className="w-2 h-2 bg-violet-500 rounded-full animate-bounce [animation-delay:-0.15s]"></div>
+                                        <div className="w-2 h-2 bg-violet-500 rounded-full animate-bounce"></div>
+                                    </div>
+                                    <span className="text-xs text-muted-foreground font-medium animate-pulse">Thinking...</span>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                </ScrollArea>
+
+                {/* Visual fading for scroll area */}
+                <div className="absolute top-0 left-0 right-0 h-4 bg-gradient-to-b from-background to-transparent z-10 pointer-events-none" />
+            </main>
+
+            {/* Input Area */}
+            <div className="p-4 border-t border-border/40 bg-background/80 backdrop-blur-md z-20 chat-ui-element">
+                <div className="max-w-4xl mx-auto relative bg-muted/50 rounded-xl border border-border/50 focus-within:ring-2 focus-within:ring-violet-500/20 focus-within:border-violet-500/50 transition-all">
+                    <Textarea
+                        ref={textareaRef}
+                        value={input}
+                        onChange={(e) => setInput(e.target.value)}
+                        onKeyDown={handleKeyDown}
+                        placeholder="Type a message..."
+                        className="min-h-[50px] max-h-[160px] resize-none bg-transparent border-none focus-visible:ring-0 px-4 py-3 pr-12 text-base"
+                    />
+                    <Button
+                        onClick={handleSendMessage}
+                        disabled={!input.trim() || isLoading}
+                        size="icon"
+                        className="absolute right-2 bottom-2 h-8 w-8 rounded-lg bg-violet-600 hover:bg-violet-500 text-white shadow-md disabled:opacity-50"
+                    >
+                        {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                    </Button>
+                </div>
+                <div className="text-center mt-2">
+                    <p className="text-[10px] text-muted-foreground flex items-center justify-center gap-1.5 opacity-70">
+                        <Terminal className="w-3 h-3" />
+                        <span>Ghost Mode active. Chats are not persisted.</span>
+                    </p>
+                </div>
             </div>
-        </>
+
+            {/* Exit Dialog */}
+            <Dialog open={showExitWarning} onOpenChange={setShowExitWarning}>
+                <DialogContent className="sm:max-w-[400px]">
+                    <DialogHeader>
+                        <div className="mx-auto w-12 h-12 rounded-full bg-destructive/10 items-center justify-center flex mb-3">
+                            <Ghost className="w-6 h-6 text-destructive" />
+                        </div>
+                        <DialogTitle className="text-center text-xl">Terminate Session?</DialogTitle>
+                        <DialogDescription className="text-center">
+                            Closing this chat will permanently erase the conversation history using secure deletion.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter className="grid grid-cols-2 gap-3 sm:space-x-0 mt-4">
+                        <Button variant="outline" onClick={() => setShowExitWarning(false)}>
+                            Cancel
+                        </Button>
+                        <Button variant="destructive" onClick={confirmExit}>
+                            Terminate
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+        </div>
     );
 };
 
