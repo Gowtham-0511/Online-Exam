@@ -96,7 +96,7 @@ export default function DreamExamPage() {
                 body: JSON.stringify({
                     topic: topic,
                     difficulty: difficulty,
-                    questionCount: questionCount[0], // Slider returns array
+                    questionCount: questionCount[0],
                     questionType: questionType,
                 }),
             });
@@ -217,11 +217,12 @@ export default function DreamExamPage() {
                                                     </SelectTrigger>
                                                     <SelectContent>
                                                         <SelectItem value="Python">Python</SelectItem>
-                                                        <SelectItem value="JavaScript">JavaScript</SelectItem>
-                                                        <SelectItem value="Java">Java</SelectItem>
+                                                        {/* <SelectItem value="JavaScript">JavaScript</SelectItem>
+                                                        <SelectItem value="Java">Java</SelectItem> */}
+                                                        <SelectItem value="PySpark">PySpark (Data Bricks)</SelectItem>
                                                         <SelectItem value="SQL">SQL</SelectItem>
-                                                        <SelectItem value="Go">Go</SelectItem>
-                                                        <SelectItem value="Rust">Rust</SelectItem>
+                                                        <SelectItem value="Snowflake">Snowflake</SelectItem>
+                                                        {/* <SelectItem value="SQL">SQL</SelectItem> */}
                                                     </SelectContent>
                                                 </Select>
                                             </div>

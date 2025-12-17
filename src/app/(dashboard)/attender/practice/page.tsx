@@ -489,9 +489,9 @@ const PracticePage = () => {
                                             </SelectTrigger>
                                             <SelectContent>
                                                 <SelectItem value="Python">Python</SelectItem>
-                                                <SelectItem value="JavaScript">JavaScript</SelectItem>
-                                                <SelectItem value="Java">Java</SelectItem>
-                                                <SelectItem value="PySpark">PySpark</SelectItem>
+                                                {/* <SelectItem value="JavaScript">JavaScript</SelectItem>
+                                                <SelectItem value="Java">Java</SelectItem> */}
+                                                <SelectItem value="PySpark">PySpark (Data Bricks)</SelectItem>
                                                 <SelectItem value="SQL">SQL</SelectItem>
                                             </SelectContent>
                                         </Select>

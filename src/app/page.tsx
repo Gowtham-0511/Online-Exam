@@ -155,7 +155,7 @@ export default function Home() {
     <>
       <Head>
         <title>SysRank - Login</title>
-        <link rel="icon" href="/logo3.png" />
+        <link rel="icon" href="/syslogo.png" />
       </Head>
 
       <div ref={containerRef} className="h-screen w-full flex bg-background overflow-hidden font-sans">
@@ -181,8 +181,9 @@ export default function Home() {
           <div className="relative z-10 space-y-8 max-w-2xl">
             {/* Logo area */}
             <div className="flex items-center gap-3 animate-text">
-              <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center shadow-lg shadow-primary/20">
-                <Code2 className="h-7 w-7 text-white" />
+              <div className="h-12 w-12 rounded-xl flex items-center justify-center bg-white border border-zinc-800 shadow-lg shadow-primary/20">
+                {/* <Code2 className="h-7 w-7 text-white" /> */}
+                <Image src="/syslogo.png" alt="SysRank" width={50} height={50} className="w-7 h-7 drop-shadow-md" />
               </div>
               <span className="text-2xl font-bold tracking-tight">SysRank</span>
             </div>
@@ -196,7 +197,7 @@ export default function Home() {
                 </span>
               </h1>
               <p className="text-xl text-zinc-400 leading-relaxed max-w-lg animate-text">
-                Join millions of developers. Solve challenges, participate in hackathons, and accelerate your career growth.
+                Solve, Participate, and Grow.
               </p>
             </div>
 
@@ -209,7 +210,7 @@ export default function Home() {
                 <div className="w-3 h-3 rounded-full bg-red-500/80"></div>
                 <div className="w-3 h-3 rounded-full bg-yellow-500/80"></div>
                 <div className="w-3 h-3 rounded-full bg-green-500/80"></div>
-                <span className="ml-2 text-xs text-zinc-500 font-mono">solve_challenge.ts</span>
+                <span className="ml-2 text-xs text-zinc-500 font-mono">solve_challenge.sql</span>
               </div>
               <div className="space-y-2 font-mono text-sm">
                 <div className="flex gap-2">

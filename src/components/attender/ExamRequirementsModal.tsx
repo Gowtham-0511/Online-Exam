@@ -15,19 +15,19 @@ import {
     Monitor,
     Camera,
     Mic,
-    AlertCircle,
     Shield,
     Lock,
     FileText,
     Wifi,
     Timer,
-    UserCheck,
-    XCircle,
-    Loader2
+    Zap,
+    AlertTriangle,
+    Loader2,
+    Play
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-
 import { Exam } from '@/types/attender';
+import { Card } from '@/components/ui/card';
 
 interface ExamRequirementsModalProps {
     isOpen: boolean;
@@ -109,176 +109,171 @@ export const ExamRequirementsModal: React.FC<ExamRequirementsModalProps> = ({
 
     return (
         <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-            <DialogContent className="max-w-2xl bg-background/95 backdrop-blur-xl border-border/50 shadow-2xl p-0 gap-0 overflow-hidden">
-                <DialogHeader className="p-6 pb-4 border-b border-border/50 bg-muted/20">
-                    <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                            <div className="p-2 bg-primary/10 rounded-xl ring-1 ring-primary/20">
-                                <Shield className="w-5 h-5 text-primary" />
+            <DialogContent className="max-w-2xl bg-gradient-to-b from-card/95 to-card/90 backdrop-blur-2xl border-border/40 shadow-2xl p-0 gap-0 overflow-hidden sm:rounded-2xl">
+
+                {/* Header */}
+                <div className="p-6 border-b border-border/40 relative overflow-hidden">
+                    <div className="absolute inset-0 bg-gradient-to-r from-primary/10 via-transparent to-transparent opacity-50" />
+                    <div className="relative z-10 flex items-start justify-between">
+                        <div className="flex items-center gap-4">
+                            <div className="p-3 bg-primary/10 rounded-xl ring-1 ring-primary/20 shadow-sm backdrop-blur-sm">
+                                <Shield className="w-6 h-6 text-primary" />
                             </div>
                             <div>
-                                <DialogTitle className="text-xl font-bold">Exam Requirements</DialogTitle>
-                                <DialogDescription className="text-xs font-medium mt-1">
-                                    Complete the checks to start <strong>{exam.title}</strong>
+                                <DialogTitle className="text-xl font-bold tracking-tight">Pre-Exam Validation</DialogTitle>
+                                <DialogDescription className="text-muted-foreground mt-1 text-sm">
+                                    Complete system checks for <span className="font-semibold text-foreground">{exam.title}</span>
                                 </DialogDescription>
                             </div>
                         </div>
                         {exam.isExamProctored && (
-                            <Badge variant="outline" className="bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20 gap-1.5 py-1.5">
-                                <div className="relative flex h-2 w-2">
+                            <Badge variant="outline" className="bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20 gap-2 py-1.5 px-3">
+                                <span className="relative flex h-2 w-2">
                                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
                                     <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500"></span>
-                                </div>
-                                Proctored
+                                </span>
+                                Proctored Session
                             </Badge>
                         )}
                     </div>
-                </DialogHeader>
+                </div>
 
-                <div className="p-6 space-y-6 max-h-[60vh] overflow-y-auto custom-scrollbar">
+                <div className="p-6 space-y-6 max-h-[60vh] overflow-y-auto scrollbar-thin scrollbar-thumb-border scrollbar-track-transparent">
                     {error && (
-                        <Alert variant="destructive" className="animate-in fade-in slide-in-from-top-2">
-                            <AlertCircle className="h-4 w-4" />
-                            <AlertTitle>Action Required</AlertTitle>
+                        <Alert variant="destructive" className="animate-in fade-in slide-in-from-top-2 border-destructive/20 bg-destructive/5">
+                            <AlertTriangle className="h-4 w-4" />
+                            <AlertTitle>Requirement Not Met</AlertTitle>
                             <AlertDescription>{error}</AlertDescription>
                         </Alert>
                     )}
 
-                    {/* Terms & Conditions */}
-                    <div className="space-y-3">
-                        <div className="flex items-center gap-2 text-primary font-semibold">
-                            <FileText className="w-4 h-4" />
-                            <h3>Terms & Conditions</h3>
-                        </div>
-                        <div className="p-4 rounded-xl bg-card border border-border/50 shadow-sm space-y-3 text-sm text-muted-foreground">
-                            <div className="flex gap-3 items-start">
-                                <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
-                                <p>You must remain in <strong className="text-foreground">full-screen mode</strong> throughout the entire exam duration.</p>
-                            </div>
-                            <div className="flex gap-3 items-start">
-                                <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
-                                <p>All answers must be <strong className="text-foreground">your own work</strong>. Plagiarism or cheating will result in disqualification.</p>
-                            </div>
-                            <div className="flex gap-3 items-start">
-                                <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
-                                <p>Once started, the <strong className="text-foreground">timer cannot be paused</strong>. Ensure you have adequate time before beginning.</p>
-                            </div>
-                            <div className="flex gap-3 items-start">
-                                <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
-                                <p>Make sure you have a <strong className="text-foreground">stable internet connection</strong> to avoid submission issues.</p>
-                            </div>
-                            <div className="flex gap-3 items-start">
-                                <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
-                                <p>By proceeding, you agree to complete the exam <strong className="text-foreground">honestly and independently</strong>.</p>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* System Checks */}
-                    <div className="space-y-3">
-                        <div className="flex items-center gap-2 text-primary font-semibold">
-                            <Monitor className="w-4 h-4" />
-                            <h3>System Check</h3>
-                        </div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            {/* Full Screen Check */}
-                            <div className={cn(
-                                "p-4 rounded-xl border transition-all duration-300 flex flex-col justify-between gap-4",
-                                isFullScreen
-                                    ? "bg-emerald-500/5 border-emerald-500/20"
-                                    : "bg-muted/30 border-border hover:border-primary/30"
-                            )}>
-                                <div className="flex items-start justify-between">
-                                    <div className="flex items-center gap-3">
-                                        <div className={cn("p-2 rounded-lg", isFullScreen ? "bg-emerald-500/10 text-emerald-600" : "bg-muted text-muted-foreground")}>
-                                            <Monitor className="w-5 h-5" />
-                                        </div>
-                                        <div>
-                                            <p className="font-semibold text-sm">Full Screen</p>
-                                            <p className="text-xs text-muted-foreground">Required</p>
-                                        </div>
+                    {/* System Checks Grid */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {/* Full Screen Check */}
+                        <div className={cn(
+                            "relative group p-4 rounded-xl border transition-all duration-300 flex flex-col justify-between gap-4 overflow-hidden",
+                            isFullScreen
+                                ? "bg-emerald-500/5 border-emerald-500/20 shadow-[0_0_20px_-12px_rgba(16,185,129,0.3)]"
+                                : "bg-card border-border hover:border-primary/40 hover:shadow-lg hover:shadow-primary/5"
+                        )}>
+                            <div className="flex items-start justify-between relative z-10">
+                                <div className="flex items-center gap-3">
+                                    <div className={cn("p-2 rounded-lg transition-colors", isFullScreen ? "bg-emerald-500/10 text-emerald-600" : "bg-muted text-muted-foreground")}>
+                                        <Monitor className="w-5 h-5" />
                                     </div>
-                                    {isFullScreen && <CheckCircle2 className="w-5 h-5 text-emerald-500" />}
+                                    <div>
+                                        <p className="font-semibold text-sm">Full Screen Mode</p>
+                                        <p className="text-[11px] text-muted-foreground">Anti-cheat requirement</p>
+                                    </div>
                                 </div>
-                                {!isFullScreen && (
-                                    <Button size="sm" variant="outline" onClick={requestFullScreen} className="w-full">
-                                        Enable Full Screen
-                                    </Button>
-                                )}
+                                {isFullScreen && <CheckCircle2 className="w-5 h-5 text-emerald-500 animate-in zoom-in spin-in-45 duration-300" />}
                             </div>
 
-                            {/* Media Check (if proctored) */}
-                            {exam.isExamProctored && (
-                                <div className={cn(
-                                    "p-4 rounded-xl border transition-all duration-300 flex flex-col justify-between gap-4",
-                                    isMediaAllowed
-                                        ? "bg-emerald-500/5 border-emerald-500/20"
-                                        : "bg-muted/30 border-border hover:border-primary/30"
-                                )}>
-                                    <div className="flex items-start justify-between">
-                                        <div className="flex items-center gap-3">
-                                            <div className={cn("p-2 rounded-lg", isMediaAllowed ? "bg-emerald-500/10 text-emerald-600" : "bg-muted text-muted-foreground")}>
-                                                <div className="flex gap-1">
-                                                    <Camera className="w-3 h-3" />
-                                                    <Mic className="w-3 h-3" />
-                                                </div>
-                                            </div>
-                                            <div>
-                                                <p className="font-semibold text-sm">Camera & Mic</p>
-                                                <p className="text-xs text-muted-foreground">Proctoring Active</p>
-                                            </div>
-                                        </div>
-                                        {isMediaAllowed && <CheckCircle2 className="w-5 h-5 text-emerald-500" />}
-                                    </div>
-                                    {!isMediaAllowed && (
-                                        <Button
-                                            size="sm"
-                                            variant="outline"
-                                            onClick={requestMediaPermissions}
-                                            className="w-full"
-                                            disabled={checkingMedia}
-                                        >
-                                            {checkingMedia ? (
-                                                <>
-                                                    <Loader2 className="w-3 h-3 mr-2 animate-spin" />
-                                                    Checking...
-                                                </>
-                                            ) : (
-                                                "Allow Access"
-                                            )}
-                                        </Button>
-                                    )}
+                            {!isFullScreen ? (
+                                <Button size="sm" variant="outline" onClick={requestFullScreen} className="w-full mt-2 bg-background/50 hover:bg-primary hover:text-primary-foreground border-border hover:border-primary transition-all">
+                                    Enable Full Screen
+                                </Button>
+                            ) : (
+                                <div className="h-9 flex items-center gap-2 text-xs font-medium text-emerald-600 dark:text-emerald-500 bg-emerald-500/10 rounded-md px-3 mt-2">
+                                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                                    Active & Verified
                                 </div>
                             )}
                         </div>
+
+                        {/* Media Check */}
+                        {exam.isExamProctored && (
+                            <div className={cn(
+                                "relative group p-4 rounded-xl border transition-all duration-300 flex flex-col justify-between gap-4 overflow-hidden",
+                                isMediaAllowed
+                                    ? "bg-emerald-500/5 border-emerald-500/20 shadow-[0_0_20px_-12px_rgba(16,185,129,0.3)]"
+                                    : "bg-card border-border hover:border-primary/40 hover:shadow-lg hover:shadow-primary/5"
+                            )}>
+                                <div className="flex items-start justify-between relative z-10">
+                                    <div className="flex items-center gap-3">
+                                        <div className={cn("p-2 rounded-lg transition-colors", isMediaAllowed ? "bg-emerald-500/10 text-emerald-600" : "bg-muted text-muted-foreground")}>
+                                            <div className="flex gap-1">
+                                                <Camera className="w-3 h-3" />
+                                                <Mic className="w-3 h-3" />
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <p className="font-semibold text-sm">Device Permissions</p>
+                                            <p className="text-[11px] text-muted-foreground">Camera & Mic Check</p>
+                                        </div>
+                                    </div>
+                                    {isMediaAllowed && <CheckCircle2 className="w-5 h-5 text-emerald-500 animate-in zoom-in spin-in-45 duration-300" />}
+                                </div>
+
+                                {!isMediaAllowed ? (
+                                    <Button
+                                        size="sm"
+                                        variant="outline"
+                                        onClick={requestMediaPermissions}
+                                        className="w-full mt-2 bg-background/50 hover:bg-primary hover:text-primary-foreground border-border hover:border-primary transition-all"
+                                        disabled={checkingMedia}
+                                    >
+                                        {checkingMedia ? <Loader2 className="w-3 h-3 mr-2 animate-spin" /> : <Zap className="w-3 h-3 mr-2" />}
+                                        {checkingMedia ? "Validating..." : "Grant Access"}
+                                    </Button>
+                                ) : (
+                                    <div className="h-9 flex items-center gap-2 text-xs font-medium text-emerald-600 dark:text-emerald-500 bg-emerald-500/10 rounded-md px-3 mt-2">
+                                        <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                                        Connected
+                                    </div>
+                                )}
+                            </div>
+                        )}
                     </div>
+
+                    {/* Guidelines Card */}
+                    <Card className="border-border/50 bg-muted/20 overflow-hidden">
+                        <div className="p-4 border-b border-border/40 bg-muted/40 flex items-center gap-2">
+                            <FileText className="w-4 h-4 text-primary" />
+                            <span className="text-sm font-semibold">Rules of Engagement</span>
+                        </div>
+                        <div className="p-4 space-y-3">
+                            {[
+                                { icon: Shield, text: "Anti-plagiarism algorithms are active." },
+                                { icon: Timer, text: "Timer cannot be paused once started." },
+                                { icon: Wifi, text: "Ensure a stable internet connection." },
+                                { icon: Lock, text: "Browser tab switching is monitored." }
+                            ].map((rule, idx) => (
+                                <div key={idx} className="flex items-center gap-3 text-sm text-muted-foreground">
+                                    <rule.icon className="w-4 h-4 text-muted-foreground/60 shrink-0" />
+                                    <span>{rule.text}</span>
+                                </div>
+                            ))}
+                        </div>
+                    </Card>
                 </div>
 
-                <DialogFooter className="p-6 pt-4 border-t border-border/50 bg-muted/20 sm:justify-between gap-3">
-                    <Button variant="ghost" onClick={onClose} className="text-muted-foreground hover:text-foreground">
-                        Cancel
+                {/* Footer Actions */}
+                <div className="p-6 border-t border-border/40 bg-muted/10 flex flex-col sm:flex-row items-center justify-between gap-4">
+                    <Button variant="ghost" onClick={onClose} className="w-full sm:w-auto text-muted-foreground hover:text-foreground hover:bg-muted/50">
+                        Cancel check
                     </Button>
                     <Button
                         onClick={handleStart}
                         disabled={!allRequirementsMet}
                         className={cn(
-                            "gap-2 transition-all duration-300",
+                            "w-full sm:w-auto min-w-[200px] gap-2 font-semibold transition-all duration-500",
                             allRequirementsMet
-                                ? "bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg shadow-emerald-500/20"
+                                ? "bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-500 hover:to-emerald-400 text-white shadow-lg shadow-emerald-500/20"
                                 : "bg-muted text-muted-foreground"
                         )}
                     >
                         {allRequirementsMet ? (
                             <>
-                                Start Exam <Lock className="w-4 h-4" />
+                                Start Assessment <Play className="w-4 h-4 fill-current" />
                             </>
                         ) : (
                             <>
-                                Complete Requirements <AlertCircle className="w-4 h-4" />
+                                Pending Checks ({[isFullScreen, (exam.isExamProctored ? isMediaAllowed : null)].filter(x => x === false).length})
                             </>
                         )}
                     </Button>
-                </DialogFooter>
+                </div>
             </DialogContent>
         </Dialog>
     );

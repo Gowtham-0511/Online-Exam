@@ -479,9 +479,6 @@ const AttenderDashboard = () => {
                                     <div className="w-24 h-24 rounded-2xl border-4 border-background bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-4xl font-bold text-foreground shadow-xl">
                                         {session?.user?.name?.charAt(0) || 'U'}
                                     </div>
-                                    <Button variant="outline" size="sm" onClick={() => router.push('/attender/profile')}>
-                                        View Profile
-                                    </Button>
                                 </div>
 
                                 <div className="space-y-1 mb-6">

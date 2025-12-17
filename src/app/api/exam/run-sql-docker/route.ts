@@ -9,7 +9,9 @@ const credentialsCache = new Map<
 const CRED_CACHE_TTL = 10 * 60 * 1000;
 
 const SQL_EXECUTOR_URL =
-  process.env.SQL_EXECUTOR_URL || "http://localhost:5001";
+  process.env.SQL_SERVICE_URL ||
+  process.env.SQL_EXECUTOR_URL ||
+  "http://localhost:5001";
 
 export async function POST(req: Request) {
   const { query, examId, userEmail = "anonymous" } = await req.json();
@@ -36,6 +38,10 @@ export async function POST(req: Request) {
       );
     }
 
+    console.log("SQL Credential:", credential);
+    console.log("SQL Executor URL:", SQL_EXECUTOR_URL);
+    console.log("Attempting to connect to SQL executor...");
+
     const response = await fetch(`${SQL_EXECUTOR_URL}/execute`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -53,6 +59,22 @@ export async function POST(req: Request) {
         userEmail,
       }),
     });
+
+    console.log(
+      JSON.stringify({
+        query,
+        serverType: credential.server_type,
+        credentials: {
+          host: credential.host,
+          port: credential.port,
+          username: credential.username,
+          password: password,
+          database: credential.database_name,
+        },
+        examId,
+        userEmail,
+      })
+    );
 
     const result = await response.json();
     const totalTime = Date.now() - startTime;

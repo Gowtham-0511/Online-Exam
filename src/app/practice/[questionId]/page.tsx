@@ -46,8 +46,13 @@ const PracticeQuestionPage = () => {
         fetcher
     );
 
+    // console.log(questionData);
+
     const question = questionData?.questions?.find((q: any) => q.id === parseInt(questionId));
-    const isMcqQuestion = question?.language === 'mcq';
+
+    console.log(question);
+
+    const isMcqQuestion = question?.type === 'mcq';
     const mcqOptions = question?.mcqOptions ? (typeof question.mcqOptions === 'string' ? JSON.parse(question.mcqOptions) : question.mcqOptions) : null;
 
     React.useEffect(() => {

@@ -1,15 +1,30 @@
 import { cn } from '@/lib/utils';
 import { ScrollArea } from '../ui/scroll-area';
-import { ClipboardCheck, ClipboardList, Clock, FilePlus2, HelpCircle, KeyRound, Layers, LayoutDashboard, LineChart, ListChecks, LogOut, MonitorPlay, ScrollText, Settings, ShieldCheck, Target, Trophy, Users, UserCircle, Users2, ChevronDown } from 'lucide-react';
+import {
+    ClipboardCheck, ClipboardList, Clock, FilePlus2, HelpCircle, KeyRound,
+    Layers, LayoutDashboard, LineChart, ListChecks, LogOut, MonitorPlay,
+    ScrollText, Settings, ShieldCheck, Target, Trophy, Users, UserCircle,
+    Users2, ChevronDown, Command, Check
+} from 'lucide-react';
 import Image from 'next/image';
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useRef, useState, useEffect } from 'react';
 import { Skeleton } from '../ui/skeleton';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '../ui/dropdown-menu';
+import {
+    DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
+    DropdownMenuSeparator, DropdownMenuTrigger, DropdownMenuGroup
+} from '../ui/dropdown-menu';
 import { Button } from '../ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 import { signOut, useSession } from 'next-auth/react';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
+import gsap from 'gsap';
+import { useGSAP } from '@gsap/react';
+
+// Register GSAP plugin
+if (typeof window !== 'undefined') {
+    gsap.registerPlugin(useGSAP);
+}
 
 interface MenuItem {
     id: string;
@@ -24,143 +39,27 @@ export type UserRole = 'admin' | 'organizer' | 'attender';
 
 const ROLE_MENUS: Record<UserRole, MenuItem[]> = {
     admin: [
-        {
-            id: 'overview',
-            navigation: 'index',
-            label: 'Overview',
-            icon: LayoutDashboard,
-            description: 'Dashboard overview'
-        },
-        {
-            id: 'candidate-management',
-            navigation: 'user-management',
-            label: 'Candidates',
-            icon: Users,
-            description: 'Manage Candidates',
-        },
-        {
-            id: 'system-user-management',
-            navigation: 'system-user-management',
-            label: 'System Users',
-            icon: ShieldCheck,
-            description: 'Manage System Users',
-        },
-        {
-            id: 'questions',
-            navigation: 'question-bank',
-            label: 'Question Bank',
-            icon: HelpCircle,
-            description: 'Manage questions'
-        },
-        {
-            id: 'batchManagement',
-            navigation: 'batch-management',
-            label: 'Batches',
-            icon: Layers,
-            description: 'Manage batch'
-        },
-        {
-            id: 'assessmentManagement',
-            navigation: 'assessment-management',
-            label: 'Assessments',
-            icon: ClipboardCheck,
-            description: 'Create and Manage Assessment'
-        },
-        {
-            id: 'credentialManagement',
-            navigation: 'credential-management',
-            label: 'Credentials',
-            icon: KeyRound,
-            description: 'Manage all Credentials'
-        },
-        // {
-        //     id: 'exam-monitoring',
-        //     navigation: 'exam-monitoring',
-        //     label: 'Monitoring',
-        //     icon: MonitorPlay,
-        //     description: 'Real-time exam monitoring',
-        // },
-        {
-            id: 'view-results',
-            navigation: 'view-results',
-            label: 'Results',
-            icon: ScrollText,
-            description: 'View Results',
-        },
+        { id: 'overview', navigation: 'index', label: 'Overview', icon: LayoutDashboard, description: 'Dashboard overview' },
+        { id: 'candidate-management', navigation: 'user-management', label: 'Candidates', icon: Users, description: 'Manage Candidates' },
+        { id: 'system-user-management', navigation: 'system-user-management', label: 'System Users', icon: ShieldCheck, description: 'Manage System Users' },
+        { id: 'questions', navigation: 'question-bank', label: 'Question Bank', icon: HelpCircle, description: 'Manage questions' },
+        { id: 'batchManagement', navigation: 'batch-management', label: 'Batches', icon: Layers, description: 'Manage batch' },
+        { id: 'assessmentManagement', navigation: 'assessment-management', label: 'Assessments', icon: ClipboardCheck, description: 'Create and Manage Assessment' },
+        { id: 'credentialManagement', navigation: 'credential-management', label: 'Credentials', icon: KeyRound, description: 'Manage all Credentials' },
+        { id: 'view-results', navigation: 'view-results', label: 'Results', icon: ScrollText, description: 'View Results' },
     ],
     organizer: [
-        {
-            id: 'Home',
-            navigation: 'index',
-            label: 'Home',
-            icon: LayoutDashboard,
-            description: 'Home',
-        },
-        {
-            id: 'CreateExam',
-            navigation: 'create-exam',
-            label: 'Create Exam',
-            icon: FilePlus2,
-            description: 'Create a new exam',
-        },
-        {
-            id: 'schedule',
-            navigation: 'schedule',
-            label: 'Schedule',
-            icon: Clock,
-            description: 'Schedule a new exam',
-        },
-        {
-            id: 'ViewExams',
-            navigation: 'view-exams',
-            label: 'My Exams',
-            icon: ClipboardList,
-            description: 'View all exams',
-        },
-        {
-            id: 'viewResults',
-            navigation: 'organizer-submissions',
-            label: 'Submissions',
-            icon: ScrollText,
-            description: 'View exam results',
-        },
-        {
-            id: 'ExamAnalytics',
-            navigation: 'ExamAnalytics',
-            label: 'Analytics',
-            icon: LineChart,
-            description: 'Analyze exam results',
-        }
+        { id: 'Home', navigation: 'index', label: 'Home', icon: LayoutDashboard, description: 'Home' },
+        { id: 'CreateExam', navigation: 'create-exam', label: 'Create Exam', icon: FilePlus2, description: 'Create a new exam' },
+        { id: 'schedule', navigation: 'schedule', label: 'Schedule', icon: Clock, description: 'Schedule a new exam' },
+        { id: 'ViewExams', navigation: 'view-exams', label: 'My Exams', icon: ClipboardList, description: 'View all exams' },
+        { id: 'viewResults', navigation: 'organizer-submissions', label: 'Submissions', icon: ScrollText, description: 'View exam results' },
+        { id: 'ExamAnalytics', navigation: 'ExamAnalytics', label: 'Analytics', icon: LineChart, description: 'Analyze exam results' }
     ],
     attender: [
-        {
-            id: 'Home',
-            navigation: 'index',
-            label: 'Home',
-            icon: LayoutDashboard,
-            description: '',
-        },
-        // {
-        //     id: 'ViewExams',
-        //     navigation: 'view-exams',
-        //     label: 'Assessments',
-        //     icon: ListChecks,
-        //     description: 'View all exams',
-        // },
-        {
-            id: 'ExamResults',
-            navigation: 'exam-results',
-            label: 'My Results',
-            icon: Trophy,
-            description: 'View all results',
-        },
-        {
-            id: 'practice',
-            navigation: 'practice',
-            label: 'Practice',
-            icon: Target,
-            description: 'Practice your personalized questions',
-        },
+        { id: 'Home', navigation: 'index', label: 'Home', icon: LayoutDashboard, description: '' },
+        { id: 'ExamResults', navigation: 'exam-results', label: 'My Results', icon: Trophy, description: 'View all results' },
+        { id: 'practice', navigation: 'practice', label: 'Practice', icon: Target, description: 'Practice your personalized questions' },
     ]
 };
 
@@ -179,71 +78,34 @@ interface SidebarProps {
 const Sidebar = ({ isCollapsed = false, setDesktopSidebarCollapsed, setSidebarOpen }: SidebarProps) => {
     const { data: session, status } = useSession();
     const pathname = usePathname();
-    const [hoveredItem, setHoveredItem] = useState<string | null>(null);
+    const router = useRouter();
+    const containerRef = useRef<HTMLDivElement>(null);
+    const navItemsRef = useRef<(HTMLDivElement | null)[]>([]); // Ref array for menu items
 
-    // Determine role from URL path first, fallback to session role
-    const role = useMemo(() => {
-        if (pathname) {
-            const segments = pathname.split('/').filter(Boolean);
-            const pathRole = segments[0] as UserRole;
-            if (pathRole === 'admin' || pathRole === 'organizer' || pathRole === 'attender') {
-                return pathRole;
-            }
-        }
-        return (session?.user as any)?.role as UserRole || 'attender';
-    }, [pathname, session]);
+    const [mounted, setMounted] = useState(false);
 
-    const userData = useMemo(() => ({
-        userName: session?.user?.name || 'User',
-        userEmail: session?.user?.email || '',
-        userImage: session?.user?.image || '',
-        userInitials: session?.user?.name
-            ? session.user.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
-            : 'U'
-    }), [session]);
-
-    const menuItems = useMemo(() => ROLE_MENUS[role] || [], [role]);
-    const defaultPageId = useMemo(() => ROLE_DEFAULT_PAGES[role] || '', [role]);
-
-    const currentPageId = useMemo(() => {
-        if (!pathname) return defaultPageId;
-
-        const segments = pathname.split('/');
-        const lastSegment = segments[segments.length - 1];
-
-        if (lastSegment === role || lastSegment === 'index' || lastSegment === '') {
-            return defaultPageId;
-        }
-
-        const currentItem = menuItems.find(item => item.navigation === lastSegment);
-        return currentItem ? currentItem.id : defaultPageId;
-    }, [pathname, role, menuItems, defaultPageId]);
-
-    const closeMobileSidebar = useCallback(() => {
-        if (setSidebarOpen) {
-            setSidebarOpen(false);
-        }
-    }, [setSidebarOpen]);
-
-    const getHref = useCallback((item: MenuItem) => {
-        return item.navigation === 'index'
-            ? `/${role}`
-            : `/${role}/${item.navigation}`;
-    }, [role]);
-
-    const handleSignOut = useCallback(async () => {
-        await signOut({
-            callbackUrl: '/',
-            redirect: true
-        });
+    useEffect(() => {
+        setMounted(true);
     }, []);
 
-    // Get user's actual role from session (not the current path role)
-    const userSessionRole = useMemo(() => {
-        return (session?.user as any)?.role as UserRole || 'attender';
-    }, [session]);
+    // Helper to determine active role based on URL
+    const getCurrentRoleFromPath = useCallback(() => {
+        if (!pathname) return null;
+        const segments = pathname.split('/').filter(Boolean);
+        const pathRole = segments[0] as UserRole;
+        if (['admin', 'organizer', 'attender'].includes(pathRole)) {
+            return pathRole;
+        }
+        return null;
+    }, [pathname]);
 
-    // Determine which roles the user can access based on their session role
+    const activeRole = useMemo(() => {
+        return getCurrentRoleFromPath() || (session?.user as any)?.role as UserRole || 'attender';
+    }, [getCurrentRoleFromPath, session]);
+
+    const userSessionRole = (session?.user as any)?.role as UserRole || 'attender';
+
+    // Determine accessible roles based on hierarchy
     const accessibleRoles = useMemo(() => {
         const roleHierarchy: Record<UserRole, UserRole[]> = {
             admin: ['admin', 'organizer', 'attender'],
@@ -253,242 +115,184 @@ const Sidebar = ({ isCollapsed = false, setDesktopSidebarCollapsed, setSidebarOp
         return roleHierarchy[userSessionRole] || ['attender'];
     }, [userSessionRole]);
 
-    // Helper to get role display info
-    const getRoleInfo = useCallback((roleType: UserRole) => {
-        const roleConfig = {
-            admin: {
-                label: 'Admin',
-                icon: ShieldCheck,
-                color: 'text-red-500',
-                bgColor: 'bg-red-500/10',
-                description: 'Full system access'
-            },
-            organizer: {
-                label: 'Organizer',
-                icon: Users2,
-                color: 'text-blue-500',
-                bgColor: 'bg-blue-500/10',
-                description: 'Manage exams & results'
-            },
-            attender: {
-                label: 'Attender',
-                icon: UserCircle,
-                color: 'text-green-500',
-                bgColor: 'bg-green-500/10',
-                description: 'Take exams & view results'
-            }
-        };
-        return roleConfig[roleType];
-    }, []);
+    const menuItems = useMemo(() => ROLE_MENUS[activeRole] || [], [activeRole]);
+    const defaultPageId = useMemo(() => ROLE_DEFAULT_PAGES[activeRole] || '', [activeRole]);
+
+    // Active item logic
+    const currentPageId = useMemo(() => {
+        if (!pathname) return defaultPageId;
+        const segments = pathname.split('/');
+        const lastSegment = segments[segments.length - 1];
+        if (lastSegment === activeRole || lastSegment === 'index' || lastSegment === '') return defaultPageId;
+        const currentItem = menuItems.find(item => item.navigation === lastSegment);
+        return currentItem ? currentItem.id : defaultPageId;
+    }, [pathname, activeRole, menuItems, defaultPageId]);
+
+    // Role Config for Styles
+    const ROLE_CONFIG = {
+        admin: { label: 'Admin', icon: ShieldCheck, color: 'text-red-500', bg: 'bg-red-500/10', border: 'hover:border-red-500/20' },
+        organizer: { label: 'Organizer', icon: Users2, color: 'text-blue-500', bg: 'bg-blue-500/10', border: 'hover:border-blue-500/20' },
+        attender: { label: 'Candidate', icon: UserCircle, color: 'text-emerald-500', bg: 'bg-emerald-500/10', border: 'hover:border-emerald-500/20' }
+    };
+
+    // GSAP Animations
+    useGSAP(() => {
+        if (!mounted || !containerRef.current) return;
+
+        // Animate Sidebar Container on mount
+        gsap.fromTo(containerRef.current,
+            { opacity: 0, x: -20 },
+            { opacity: 1, x: 0, duration: 0.5, ease: 'power2.out' }
+        );
+
+        // Stagger animate menu items
+        if (navItemsRef.current.length > 0) {
+            gsap.fromTo(navItemsRef.current.filter(Boolean),
+                { opacity: 0, x: -10 },
+                { opacity: 1, x: 0, duration: 0.3, stagger: 0.05, delay: 0.2, ease: 'power2.out' }
+            );
+        }
+    }, [mounted, activeRole]); // Re-run when role changes to animate new menu items
+
+    const handleRoleSwitch = (newRole: UserRole) => {
+        if (setSidebarOpen) setSidebarOpen(false);
+        router.push(`/${newRole}`);
+    };
+
+    const handleSignOut = async () => {
+        await signOut({ callbackUrl: '/', redirect: true });
+    };
+
+    const getHref = (item: MenuItem) => item.navigation === 'index' ? `/${activeRole}` : `/${activeRole}/${item.navigation}`;
+
+    if (!mounted) return <Skeleton className="w-full h-full" />;
 
     return (
-        <div className="flex flex-col h-full bg-gradient-to-b from-background via-background to-muted/20 border-r border-border/40 overflow-hidden relative">
-            {/* Ambient gradient overlay */}
-            <div className="absolute inset-0 bg-gradient-to-br from-primary/[0.03] via-transparent to-transparent pointer-events-none" />
-
-            {/* Logo Section */}
-            <div className={cn(
-                "relative flex items-center h-16 px-4 border-b border-border/40 bg-card/30 backdrop-blur-sm transition-all duration-300",
-                isCollapsed ? "justify-center" : "justify-between"
-            )}>
-                <div className={cn(
-                    "flex items-center gap-3 overflow-hidden transition-all duration-300",
-                    isCollapsed ? "w-10" : "w-full"
-                )}>
-                    <div className="relative flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-primary/70 shadow-lg shadow-primary/20 shrink-0 group-hover:shadow-primary/30 transition-shadow">
-                        <Image
-                            src='/logo3.png'
-                            alt='logo'
-                            width={24}
-                            height={24}
-                            className="w-6 h-6 relative z-10"
-                        />
-                        <div className="absolute inset-0 rounded-xl bg-gradient-to-br from-white/20 to-transparent" />
-                    </div>
-                    {!isCollapsed && (
-                        <div className="flex flex-col">
-                            <span className="text-lg font-bold bg-clip-text text-transparent bg-gradient-to-r from-foreground to-foreground/70 truncate leading-tight">
-                                SysRank
-                            </span>
-                            <span className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">
-                                {role}
-                            </span>
-                        </div>
-                    )}
-                </div>
-            </div>
-
-            {/* Role Switcher - Only show if user has access to multiple roles */}
-            {accessibleRoles.length > 1 && (
-                <div className={cn(
-                    "relative border-b border-border/40 transition-all duration-300",
-                    isCollapsed ? "px-2 py-3" : "px-3 py-3"
-                )}>
-                    <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                            <Button
-                                variant="outline"
-                                className={cn(
-                                    "w-full justify-between h-auto transition-all duration-200 hover:bg-muted/60",
-                                    isCollapsed ? "px-2 py-2" : "px-3 py-2.5"
-                                )}
-                            >
-                                {isCollapsed ? (
-                                    <div className="flex items-center justify-center w-full">
-                                        {React.createElement(getRoleInfo(role).icon, {
-                                            className: cn("w-5 h-5", getRoleInfo(role).color)
-                                        })}
-                                    </div>
-                                ) : (
-                                    <>
-                                        <div className="flex items-center gap-2.5">
-                                            {React.createElement(getRoleInfo(role).icon, {
-                                                className: cn("w-4 h-4", getRoleInfo(role).color)
-                                            })}
-                                            <div className="flex flex-col items-start">
-                                                <span className="text-xs font-medium text-foreground">
-                                                    {getRoleInfo(role).label}
-                                                </span>
-                                                <span className="text-[10px] text-muted-foreground">
-                                                    Switch Dashboard
-                                                </span>
-                                            </div>
-                                        </div>
-                                        <ChevronDown className="w-4 h-4 text-muted-foreground" />
-                                    </>
-                                )}
-                            </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent
-                            align={isCollapsed ? "start" : "center"}
-                            side={isCollapsed ? "right" : "bottom"}
-                            className="w-56"
+        <div
+            ref={containerRef}
+            className="flex flex-col h-full bg-sidebar/95 backdrop-blur-xl border-r border-sidebar-border text-sidebar-foreground relative overflow-hidden"
+        >
+            {/* Logo & Role Switcher Area */}
+            <div className="h-16 flex items-center px-4 border-b border-sidebar-border/50 bg-gradient-to-r from-sidebar-accent/50 to-transparent">
+                <DropdownMenu>
+                    <DropdownMenuTrigger asChild disabled={accessibleRoles.length <= 1}>
+                        <Button
+                            variant="ghost"
+                            className={cn(
+                                "w-full flex items-center gap-3 hover:bg-sidebar-accent/50 transition-all duration-200 px-2",
+                                isCollapsed ? "justify-center" : "justify-start"
+                            )}
                         >
-                            <DropdownMenuLabel className="text-xs text-muted-foreground">
-                                Switch Dashboard
-                            </DropdownMenuLabel>
-                            <DropdownMenuSeparator />
-                            {accessibleRoles.map((roleType) => {
-                                const roleInfo = getRoleInfo(roleType);
-                                const RoleIcon = roleInfo.icon;
-                                const isCurrentRole = roleType === role;
+                            {/* Logo */}
+                            <div className="relative shrink-0 w-8 h-8 rounded-lg bg-white flex items-center justify-center shadow-lg shadow-primary/20">
+                                <Image src="/syslogo.png" alt="SysRank" width={30} height={30} className="w-6 h-6 drop-shadow-md" />
+                            </div>
 
-                                return (
-                                    <DropdownMenuItem
-                                        key={roleType}
-                                        asChild
-                                        className="cursor-pointer"
-                                    >
-                                        <Link
-                                            href={`/${roleType}`}
-                                            onClick={closeMobileSidebar}
+                            {/* Role Label / Switcher Indicator */}
+                            {!isCollapsed && (
+                                <div className="flex flex-col items-start overflow-hidden flex-1">
+                                    <span className="font-bold text-sm tracking-tight">SysRank</span>
+                                    <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">
+                                        <span>{ROLE_CONFIG[activeRole].label}</span>
+                                        {accessibleRoles.length > 1 && <ChevronDown className="w-3 h-3 opacity-70" />}
+                                    </div>
+                                </div>
+                            )}
+                        </Button>
+                    </DropdownMenuTrigger>
+
+                    {/* HackerRank Style Role Switcher Content */}
+                    {accessibleRoles.length > 1 && (
+                        <DropdownMenuContent className="w-60 p-2" align="start" sideOffset={8}>
+                            <DropdownMenuLabel className="text-xs text-muted-foreground font-normal px-2 py-1.5">
+                                Switch Context
+                            </DropdownMenuLabel>
+
+                            <DropdownMenuGroup className="space-y-1">
+                                {accessibleRoles.map((role) => {
+                                    const config = ROLE_CONFIG[role];
+                                    const isActive = activeRole === role;
+                                    return (
+                                        <DropdownMenuItem
+                                            key={role}
+                                            onClick={() => handleRoleSwitch(role)}
                                             className={cn(
-                                                "flex items-center gap-3 py-2.5",
-                                                isCurrentRole && "bg-muted"
+                                                "cursor-pointer p-2 rounded-lg flex items-center gap-3 transition-colors",
+                                                isActive ? "bg-sidebar-accent" : "hover:bg-sidebar-accent/50"
                                             )}
                                         >
-                                            <div className={cn(
-                                                "flex items-center justify-center w-8 h-8 rounded-lg",
-                                                roleInfo.bgColor
-                                            )}>
-                                                <RoleIcon className={cn("w-4 h-4", roleInfo.color)} />
+                                            <div className={cn("p-1.5 rounded-md transition-colors", isActive ? "bg-background shadow-sm" : "bg-muted/50", config.color)}>
+                                                <config.icon className="w-4 h-4" />
                                             </div>
-                                            <div className="flex flex-col flex-1">
-                                                <span className="text-sm font-medium">
-                                                    {roleInfo.label}
-                                                </span>
-                                                <span className="text-xs text-muted-foreground">
-                                                    {roleInfo.description}
-                                                </span>
+                                            <div className="flex-1">
+                                                <div className="text-sm font-medium">{config.label}</div>
+                                                <div className="text-[10px] text-muted-foreground">Access {config.label} Dashboard</div>
                                             </div>
-                                            {isCurrentRole && (
-                                                <div className="w-2 h-2 rounded-full bg-primary" />
-                                            )}
-                                        </Link>
-                                    </DropdownMenuItem>
-                                );
-                            })}
+                                            {isActive && <Check className="w-4 h-4 text-primary ml-auto" />}
+                                        </DropdownMenuItem>
+                                    );
+                                })}
+                            </DropdownMenuGroup>
                         </DropdownMenuContent>
-                    </DropdownMenu>
-                </div>
-            )}
+                    )}
+                </DropdownMenu>
+            </div>
 
-            {/* Navigation */}
-            <ScrollArea className="flex-1 py-6 relative">
-                <nav className={cn("space-y-1.5 transition-all duration-300", isCollapsed ? "px-2" : "px-3")}>
+            {/* Navigation Menu */}
+            <ScrollArea className="flex-1 py-4">
+                <nav className={cn("space-y-1", isCollapsed ? "px-2" : "px-3")}>
                     {menuItems.map((item, index) => {
                         const isActive = currentPageId === item.id;
-                        const isHovered = hoveredItem === item.id;
                         const Icon = item.icon;
-                        const href = getHref(item);
 
                         return (
                             <div
                                 key={item.id}
-                                className="relative group"
-                                onMouseEnter={() => setHoveredItem(item.id)}
-                                onMouseLeave={() => setHoveredItem(null)}
-                                style={{
-                                    animationDelay: `${index * 30}ms`
-                                }}
+                                ref={el => { navItemsRef.current[index] = el }}
+                                className="group relative"
                             >
                                 <Link
-                                    href={href}
-                                    onClick={closeMobileSidebar}
+                                    href={getHref(item)}
+                                    onClick={() => setSidebarOpen?.(false)}
                                     className={cn(
-                                        "relative flex items-center w-full h-11 font-medium transition-all duration-300 rounded-xl overflow-hidden",
-                                        isCollapsed ? "px-0 justify-center" : "px-3.5",
+                                        "flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-300 group-hover:bg-sidebar-accent/50",
                                         isActive
-                                            ? "bg-gradient-to-r from-primary/15 via-primary/10 to-primary/5 text-primary shadow-sm shadow-primary/10"
-                                            : "text-muted-foreground hover:text-foreground hover:bg-muted/60"
+                                            ? "bg-sidebar-accent text-primary shadow-sm ring-1 ring-border/50"
+                                            : "text-muted-foreground hover:text-foreground",
+                                        isCollapsed && "justify-center px-2"
                                     )}
                                 >
-                                    {/* Active indicator bar */}
-                                    {isActive && (
-                                        <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-7 bg-gradient-to-b from-primary via-primary to-primary/50 rounded-r-full shadow-lg shadow-primary/30" />
-                                    )}
-
-                                    {/* Icon container with background effect */}
+                                    {/* Icon */}
                                     <div className={cn(
-                                        "relative flex items-center justify-center rounded-lg transition-all duration-300",
-                                        isCollapsed ? "w-10 h-10" : "w-9 h-9",
-                                        isActive && "bg-primary/10",
-                                        !isActive && isHovered && "bg-muted"
+                                        "relative shrink-0 transition-all duration-300",
+                                        isActive ? "text-primary scale-110 drop-shadow-sm" : "group-hover:text-foreground group-hover:scale-105"
                                     )}>
-                                        <Icon className={cn(
-                                            "w-5 h-5 shrink-0 transition-all duration-300",
-                                            isActive && "text-primary scale-110",
-                                            !isActive && "text-muted-foreground group-hover:text-foreground group-hover:scale-105"
-                                        )} />
+                                        <Icon className="w-5 h-5" />
+                                        {isActive && <div className="absolute inset-0 bg-primary/20 blur-md rounded-full -z-10" />}
                                     </div>
 
+                                    {/* Label */}
                                     {!isCollapsed && (
-                                        <span className="flex-1 text-left text-[13px] font-medium truncate ml-3">
+                                        <span className={cn(
+                                            "font-medium text-sm tracking-tight truncate transition-colors",
+                                            isActive ? "font-semibold" : ""
+                                        )}>
                                             {item.label}
                                         </span>
                                     )}
 
-                                    {/* Hover gradient effect */}
-                                    {!isActive && isHovered && (
-                                        <div className="absolute inset-0 bg-gradient-to-r from-primary/5 to-transparent opacity-50 pointer-events-none" />
+                                    {/* Active Indicators */}
+                                    {isActive && !isCollapsed && (
+                                        <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-3/5 bg-primary rounded-r-md shadow-[0_0_10px_rgba(var(--primary),0.5)]" />
                                     )}
                                 </Link>
 
-                                {/* Enhanced tooltip for collapsed state */}
+                                {/* Collapsed Tooltip */}
                                 {isCollapsed && (
-                                    <div className={cn(
-                                        "absolute left-full top-1/2 -translate-y-1/2 ml-3 px-3 py-2 bg-popover/95 backdrop-blur-sm text-popover-foreground text-xs font-medium rounded-lg border border-border shadow-xl opacity-0 pointer-events-none z-50 whitespace-nowrap transition-all duration-200",
-                                        isHovered && "opacity-100 translate-x-0",
-                                        !isHovered && "-translate-x-1"
-                                    )}>
-                                        <div className="font-semibold">{item.label}</div>
-                                        {item.description && (
-                                            <div className="text-[10px] text-muted-foreground mt-0.5">
-                                                {item.description}
-                                            </div>
-                                        )}
-                                        {/* Tooltip arrow */}
-                                        <div className="absolute right-full top-1/2 -translate-y-1/2 border-4 border-transparent border-r-popover/95" />
+                                    <div className="absolute left-full top-1/2 -translate-y-1/2 ml-4 px-3 py-1.5 bg-popover text-popover-foreground text-xs font-medium rounded-md shadow-lg border opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-50 whitespace-nowrap">
+                                        {item.label}
+                                        {/* Little Arrow */}
+                                        <div className="absolute right-full top-1/2 -translate-y-1/2 border-4 border-transparent border-r-popover" />
                                     </div>
                                 )}
                             </div>
@@ -497,98 +301,51 @@ const Sidebar = ({ isCollapsed = false, setDesktopSidebarCollapsed, setSidebarOp
                 </nav>
             </ScrollArea>
 
-            {/* User Section */}
-            <div className={cn(
-                "relative border-t border-border/40 p-3 bg-card/30 backdrop-blur-sm transition-all duration-300",
-                isCollapsed ? "px-2" : "px-3"
-            )}>
-                {status === 'loading' ? (
-                    <div className={cn(
-                        "flex items-center gap-3",
-                        isCollapsed && "justify-center"
-                    )}>
-                        <Skeleton className="w-10 h-10 rounded-full" />
-                        {!isCollapsed && (
-                            <div className="flex-1 space-y-2">
-                                <Skeleton className="h-3.5 w-28" />
-                                <Skeleton className="h-3 w-36" />
-                            </div>
-                        )}
-                    </div>
-                ) : (
-                    <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                            <Button
-                                variant="ghost"
-                                className={cn(
-                                    "w-full h-auto p-2.5 hover:bg-muted/60 rounded-xl transition-all duration-200 group",
-                                    isCollapsed && "justify-center"
-                                )}
-                            >
-                                <div className={cn(
-                                    "flex items-center gap-3 w-full",
-                                    isCollapsed && "gap-0 justify-center"
-                                )}>
-                                    <div className="relative">
-                                        <Avatar className="w-10 h-10 border-2 border-border/50 ring-2 ring-transparent group-hover:ring-primary/20 transition-all shadow-md">
-                                            <AvatarImage src={userData.userImage || undefined} alt={userData.userName} />
-                                            <AvatarFallback className="bg-gradient-to-br from-primary to-primary/70 text-primary-foreground text-sm font-bold">
-                                                {userData.userInitials}
-                                            </AvatarFallback>
-                                        </Avatar>
-                                        {/* Online status indicator */}
-                                        <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-background rounded-full" />
-                                    </div>
-                                    {!isCollapsed && (
-                                        <div className="flex-1 text-left overflow-hidden">
-                                            <p className="text-sm font-semibold text-foreground truncate leading-tight">
-                                                {userData.userName}
-                                            </p>
-                                            <p className="text-xs text-muted-foreground truncate mt-0.5">
-                                                {userData.userEmail}
-                                            </p>
-                                        </div>
-                                    )}
-                                    {!isCollapsed && (
-                                        <Settings className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
-                                    )}
+            {/* Footer / User Profile */}
+            <div className="p-3 border-t border-sidebar-border bg-sidebar-accent/5 mt-auto">
+                <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                        <Button
+                            variant="ghost"
+                            className={cn(
+                                "w-full h-auto p-2 hover:bg-background/80 hover:shadow-sm border border-transparent hover:border-border transition-all duration-200",
+                                isCollapsed ? "justify-center" : "justify-start gap-3"
+                            )}
+                        >
+                            <Avatar className="w-9 h-9 border border-border bg-background shadow-sm shrink-0">
+                                <AvatarImage src={session?.user?.image || ''} />
+                                <AvatarFallback className="bg-primary/10 text-primary font-bold text-xs">
+                                    {session?.user?.name?.slice(0, 2).toUpperCase() || 'U'}
+                                </AvatarFallback>
+                            </Avatar>
+
+                            {!isCollapsed && (
+                                <div className="flex flex-col items-start overflow-hidden text-left flex-1">
+                                    <span className="text-sm font-semibold truncate w-full">{session?.user?.name}</span>
+                                    <span className="text-[10px] text-muted-foreground truncate w-full">{session?.user?.email}</span>
                                 </div>
-                            </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align={isCollapsed ? "start" : "end"} side={isCollapsed ? "right" : "top"} className="w-64">
-                            <DropdownMenuLabel>
-                                <div className="flex items-center gap-3">
-                                    <Avatar className="w-12 h-12 border-2 border-border">
-                                        <AvatarImage src={userData.userImage || undefined} alt={userData.userName} />
-                                        <AvatarFallback className="bg-gradient-to-br from-primary to-primary/70 text-primary-foreground font-bold">
-                                            {userData.userInitials}
-                                        </AvatarFallback>
-                                    </Avatar>
-                                    <div className="flex flex-col">
-                                        <p className="text-sm font-semibold">{userData.userName}</p>
-                                        <p className="text-xs text-muted-foreground">{userData.userEmail}</p>
-                                        <span className="inline-flex items-center mt-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-primary/10 text-primary w-fit">
-                                            {role.charAt(0).toUpperCase() + role.slice(1)}
-                                        </span>
-                                    </div>
-                                </div>
-                            </DropdownMenuLabel>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem className="cursor-pointer py-2.5">
-                                <Settings className="w-4 h-4 mr-3" />
-                                Settings & Preferences
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem
-                                className="cursor-pointer text-destructive focus:text-destructive focus:bg-destructive/10 py-2.5"
-                                onClick={handleSignOut}
-                            >
-                                <LogOut className="w-4 h-4 mr-3" />
-                                Sign Out
-                            </DropdownMenuItem>
-                        </DropdownMenuContent>
-                    </DropdownMenu>
-                )}
+                            )}
+
+                            {!isCollapsed && <Settings className="w-4 h-4 text-muted-foreground/50 group-hover:text-foreground transition-colors" />}
+                        </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align={isCollapsed ? "start" : "center"} side="top" className="w-56 mb-2">
+                        <DropdownMenuLabel>My Account</DropdownMenuLabel>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem className="cursor-pointer">
+                            <Settings className="w-4 h-4 mr-2" />
+                            Settings
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem
+                            className="cursor-pointer text-destructive focus:text-destructive focus:bg-destructive/10"
+                            onClick={handleSignOut}
+                        >
+                            <LogOut className="w-4 h-4 mr-2" />
+                            Log out
+                        </DropdownMenuItem>
+                    </DropdownMenuContent>
+                </DropdownMenu>
             </div>
         </div>
     );

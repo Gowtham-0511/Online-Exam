@@ -55,8 +55,14 @@ interface MCQQuestion {
 
 interface CodingQuestion {
     type: "coding";
-    language: "python" | "sql" | "javascript" | "java" | "pyspark" | "dax";
-    question: string;
+    language: "python" | "sql" | "javascript" | "java" | "pyspark" | "dax" | "dbt" | "snowflake";
+    topic: string;
+    difficulty: string;
+    questionTitle: string;
+    questionDescription: string;
+    hints: string[];
+    solutionExplanation: string;
+    basedOnExam: string;
     description: string;
     starterCode: string;
     testCases: Array<{
@@ -297,9 +303,15 @@ export default function PracticeExam() {
                         endpoint += "cpp";
                     } else if (language === "sql" || language === "mysql" || language === "postgresql") {
                         endpoint += "sql";
+                    } else if (language === "dbt") {
+                        endpoint += "dbt";
+                    } else if (language === "snowflake") {
+                        endpoint += "snowflake";
                     } else {
                         throw new Error(`Unsupported language: ${question.language}`);
                     }
+
+                    console.log(code);
 
                     const requestBody = language === "sql" || language === "mysql" || language === "postgresql"
                         ? {
@@ -321,8 +333,13 @@ export default function PracticeExam() {
                                     input: testCase.input,
                                     expectedOutput: testCase.expectedOutput
                                 }
-                            }
-                            : {
+                            } : (language === "snowflake") ? {
+                                query: prepareSqlQuery(testCase.input, code),
+                                testCase: {
+                                    input: testCase.input,
+                                    expectedOutput: testCase.expectedOutput
+                                }
+                            } : {
                                 code,
                                 testCase: {
                                     input: testCase.input,
@@ -375,16 +392,21 @@ export default function PracticeExam() {
                 [currentQuestion]: results
             }));
 
-            // Animate test results
+            // Set initial state and animate test results
+            gsap.set(".test-result-item", { x: -20, opacity: 0 });
+
             setTimeout(() => {
-                gsap.from(".test-result-item", {
-                    x: -20,
-                    opacity: 0,
-                    duration: 0.4,
-                    stagger: 0.1,
-                    ease: "power2.out"
-                });
-            }, 100);
+                const elements = document.querySelectorAll(".test-result-item");
+                if (elements.length > 0) {
+                    gsap.to(".test-result-item", {
+                        x: 0,
+                        opacity: 1,
+                        duration: 0.4,
+                        stagger: 0.1,
+                        ease: "power2.out"
+                    });
+                }
+            }, 50);
         } catch (error: any) {
             console.error("Error running code:", error);
         } finally {
@@ -479,7 +501,7 @@ export default function PracticeExam() {
 
         let logoBase64 = '';
         try {
-            logoBase64 = await loadImageAsBase64('/logo3.png');
+            logoBase64 = await loadImageAsBase64('/syslogo.png');
         } catch (error) {
             console.warn('Could not load logo:', error);
         }
@@ -631,7 +653,7 @@ export default function PracticeExam() {
 
                 return [
                     `Q${index + 1}`,
-                    q.question,
+                    q.questionTitle,
                     hasRun ? (isCorrect ? "PASS" : "FAIL") : "NOT ANSWERED",
                     "See Code Submission",
                     statusText
@@ -1015,8 +1037,8 @@ export default function PracticeExam() {
                                                         </h3>
                                                     </div>
 
-                                                    <p className="text-foreground mb-2 font-semibold text-base">{q.question}</p>
-                                                    <p className="text-muted-foreground text-sm mb-5">{q.description}</p>
+                                                    <p className="text-foreground mb-2 font-semibold text-base">{q.questionTitle}</p>
+                                                    <p className="text-muted-foreground text-sm mb-5">{q.questionDescription}</p>
 
                                                     {results && results.length > 0 && (
                                                         <div className="space-y-3 mt-5">
@@ -1191,7 +1213,7 @@ export default function PracticeExam() {
             <header ref={headerRef} className="h-14 border-b border-border bg-card/95 backdrop-blur-sm flex items-center px-4 flex-shrink-0 shadow-sm">
                 <div className="flex items-center justify-between w-full">
                     <div className="flex items-center gap-4">
-                        <Button variant="ghost" size="sm" onClick={() => router.push("/")} className="hover:bg-red-500/10 hover:text-red-600 transition-all">
+                        <Button variant="ghost" size="sm" onClick={() => router.push("/ghost-mode/dream-exam")} className="hover:bg-red-500/10 hover:text-red-600 transition-all">
                             <ArrowLeft className="w-4 h-4 mr-2" />
                             Exit
                         </Button>
@@ -1254,13 +1276,6 @@ export default function PracticeExam() {
                                     <FileText className="w-4 h-4 mr-2" />
                                     Problem
                                 </TabsTrigger>
-                                <TabsTrigger
-                                    value="submission"
-                                    className="data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none px-4 data-[state=active]:text-primary transition-all"
-                                >
-                                    <ListChecks className="w-4 h-4 mr-2" />
-                                    Submissions
-                                </TabsTrigger>
                             </TabsList>
                         </Tabs>
                     </div>
@@ -1275,7 +1290,7 @@ export default function PracticeExam() {
                                         <span className="w-8 h-8 bg-gradient-to-br from-primary to-primary/80 rounded-lg flex items-center justify-center text-primary-foreground text-sm font-bold shadow-md">
                                             {currentQuestion + 1}
                                         </span>
-                                        {currentQ.type === "coding" ? currentQ.question : currentQ.question}
+                                        {currentQ.type === "coding" ? currentQ.questionTitle : currentQ.question}
                                     </h1>
                                 </div>
                                 {currentQ.type === "coding" && (
@@ -1294,7 +1309,7 @@ export default function PracticeExam() {
                                     <div className="prose prose-sm dark:prose-invert max-w-none">
                                         <div
                                             className="text-foreground leading-relaxed"
-                                            dangerouslySetInnerHTML={{ __html: currentQ.description }}
+                                            dangerouslySetInnerHTML={{ __html: currentQ.questionDescription }}
                                         />
                                     </div>
 

@@ -153,7 +153,7 @@ const ExamResultsPage = () => {
         try {
             // Header with Logo
             try {
-                const logo = await loadImage('/logo3.png');
+                const logo = await loadImage('/syslogo.png');
                 doc.addImage(logo, 'PNG', 14, 10, 15, 15);
                 doc.setFontSize(22);
                 doc.setFont("helvetica", "bold");

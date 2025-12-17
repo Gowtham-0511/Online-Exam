@@ -46,7 +46,7 @@ import { Button } from "@/components/ui/button";
 
 // Dynamic imports for performance
 const ProctoringMonitor = dynamic(() => import("@/components/exam/ProctoringMonitor"));
-const ExamTutorial = dynamic(() => import("@/components/exam/ExamTutorial"));
+// const ExamTutorial = dynamic(() => import("@/components/exam/ExamTutorial"));
 const CodeEditor = dynamic(() => import("@/components/exam/CodeEditor"));
 const SubmitSummary = dynamic(() => import("@/components/exam/SubmitSummary"));
 
@@ -1498,7 +1498,7 @@ export default function ExamPage() {
             </header>
 
             {/* Tutorial Modal - keep this if you have it */}
-            {showTutorial && !tutorialCompleted && (
+            {/* {showTutorial && !tutorialCompleted && (
                 <ExamTutorial
                     onComplete={() => {
                         setShowTutorial(false);
@@ -1507,7 +1507,7 @@ export default function ExamPage() {
                     examLanguage={exam?.language || ""}
                     isProctored={exam?.isExamProctored || false}
                 />
-            )}
+            )} */}
 
             {/* MAIN CONTENT - RESIZABLE PANELS */}
             <ResizablePanelGroup

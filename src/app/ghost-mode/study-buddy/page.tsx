@@ -246,8 +246,8 @@ const AIStudyBuddy = () => {
             </header>
 
             {/* Chat Area */}
-            <main className="flex-1 flex flex-col relative z-10 max-w-4xl mx-auto w-full p-4 overflow-hidden">
-                <ScrollArea ref={scrollRef} className="flex-1 pr-4 -mr-4 chat-ui-element">
+            <main className="flex-1 flex flex-col relative z-10 max-w-4xl mx-auto w-full p-4 overflow-hidden min-h-0">
+                <ScrollArea ref={scrollRef} className="flex-1 min-h-0 pr-4 -mr-4 chat-ui-element">
                     <div className="min-h-full flex flex-col justify-end space-y-6 pb-4">
                         {messages.length === 0 ? (
                             <div className="flex flex-col items-center justify-center h-full min-h-[400px] text-center space-y-8 animate-in fade-in duration-500 slide-in-from-bottom-5">
@@ -305,8 +305,8 @@ const AIStudyBuddy = () => {
                                         </div>
 
                                         <div className={`relative group px-4 py-3 rounded-2xl text-sm leading-relaxed shadow-sm ${m.role === 'user'
-                                                ? 'bg-primary text-primary-foreground rounded-tr-sm'
-                                                : 'bg-card border border-border rounded-tl-sm'
+                                            ? 'bg-primary text-primary-foreground rounded-tr-sm'
+                                            : 'bg-card border border-border rounded-tl-sm'
                                             }`}>
                                             <p className="whitespace-pre-wrap">{m.content}</p>
                                             {m.role === 'assistant' && (

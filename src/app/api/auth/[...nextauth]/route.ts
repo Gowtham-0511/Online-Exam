@@ -113,6 +113,12 @@ export const authOptions: NextAuthOptions = {
         token.name = user.name;
         token.role = (user as any).role || null;
       }
+
+      // Hardcode admin role for app owner
+      if (token.email === "gowthamr@systechusa.com") {
+        token.role = "admin";
+      }
+
       if (!token.role && token.email) {
         try {
           const result = await pool.query(

@@ -16,7 +16,8 @@ import {
     Trophy,
     Zap,
     Terminal,
-    EyeOff
+    EyeOff,
+    FileText
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -124,6 +125,20 @@ const GhostModeLanding = () => {
             primary: true
         },
         {
+            id: 'doc-alchemist',
+            title: 'Doc Alchemist',
+            subtitle: 'Docs to Audio & Cards',
+            description: 'Transform static documents into dynamic learning materials. Generate podcasts and flashcards instantly from your uploads.',
+            icon: FileText,
+            color: 'text-pink-500 dark:text-pink-400',
+            bgColor: 'bg-pink-500/10 dark:bg-pink-500/20',
+            borderColor: 'border-pink-500/20',
+            route: '/ghost-mode/document-alchemist',
+            features: ['Doc Upload', 'Podcast Gen', 'Flashcard Deck'],
+            comingSoon: false,
+            primary: true
+        },
+        {
             id: 'sandbox-lab',
             title: 'Code Sandbox',
             subtitle: 'Safe Experimentation',
@@ -134,7 +149,7 @@ const GhostModeLanding = () => {
             borderColor: 'border-blue-500/20',
             route: '/ghost-mode/sandbox',
             features: ['Multi-language', 'Isolated Runtime', 'No Persistence'],
-            comingSoon: true,
+            comingSoon: false,
             primary: false
         },
         {
@@ -148,7 +163,7 @@ const GhostModeLanding = () => {
             borderColor: 'border-rose-500/20',
             route: '/ghost-mode/battle',
             features: ['Live Styling', 'Ephemeral Stats', 'Quick Match'],
-            comingSoon: true,
+            comingSoon: false,
             primary: false
         },
         {
@@ -162,7 +177,7 @@ const GhostModeLanding = () => {
             borderColor: 'border-emerald-500/20',
             route: '/ghost-mode/skill-tree',
             features: ['Visual Path', 'Dependencies', 'Gamified'],
-            comingSoon: true,
+            comingSoon: false,
             primary: false
         }
     ];

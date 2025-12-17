@@ -31,9 +31,8 @@ export async function generateQuestionTags(
   const isDeterministicModel = /(mini|instruct)/i.test(deploymentName);
 
   const basePrompt = `
-        Analyze the following ${questionType} question${
-    language ? ` (${language})` : ""
-  } 
+        Analyze the following ${questionType} question${language ? ` (${language})` : ""
+    } 
         and return 1–3 relevant technical tags describing its key topic or concept.
         Question:
             ${cleanText}
@@ -141,18 +140,18 @@ export async function analyzeStudentPerformance(studentData: {
 
         Performance Data:
         ${studentData.questionDetails
-          .map(
-            (q, i) => `
+      .map(
+        (q, i) => `
         Q${i + 1}: ${q.questionText.replace(/<[^>]*>/g, "").substring(0, 100)}
         Type: ${q.questionType}
         Score: ${q.score}/${q.maxMarks} (${(
-              (q.score / q.maxMarks) *
-              100
-            ).toFixed(0)}%)
+            (q.score / q.maxMarks) *
+            100
+          ).toFixed(0)}%)
         Feedback: ${q.feedback}
         `
-          )
-          .join("\n")}
+      )
+      .join("\n")}
 
         Return JSON in this exact format:
         {
@@ -292,15 +291,15 @@ export async function analyzeCommonMistakes(
 
         Student Responses (${studentAnswers.length} total):
         ${studentAnswers
-          .slice(0, 10)
-          .map(
-            (s, i) => `
+      .slice(0, 10)
+      .map(
+        (s, i) => `
         Student ${i + 1}: ${s.answer.substring(0, 200)}
         Score: ${s.score}/${s.maxMarks}
         Feedback: ${s.feedback}
         `
-          )
-          .join("\n")}
+      )
+      .join("\n")}
 
         Identify:
         1. Top 3-5 common mistakes/misconceptions
@@ -368,13 +367,13 @@ export async function generateStudyPlan(studentData: {
 
         Weak Areas:
         ${studentData.weaknesses
-          .map((w) => `- ${w.topic}: ${w.score}%`)
-          .join("\n")}
+      .map((w) => `- ${w.topic}: ${w.score}%`)
+      .join("\n")}
 
         Strong Areas:
         ${studentData.strengths
-          .map((s) => `- ${s.topic}: ${s.score}%`)
-          .join("\n")}
+      .map((s) => `- ${s.topic}: ${s.score}%`)
+      .join("\n")}
 
         Create a structured weekly study plan focusing on weak areas first.
 
@@ -438,16 +437,16 @@ export async function predictFuturePerformance(
 
         Exam History (${studentHistory.length} exams):
         ${studentHistory
-          .map(
-            (h, i) => `
+      .map(
+        (h, i) => `
         Exam ${i + 1}: ${h.score}/${h.totalPossible} (${(
-              (h.score / h.totalPossible) *
-              100
-            ).toFixed(1)}%)
+            (h.score / h.totalPossible) *
+            100
+          ).toFixed(1)}%)
         Date: ${h.date}
         `
-          )
-          .join("\n")}
+      )
+      .join("\n")}
 
         Predict:
         1. Expected score percentage in next exam
@@ -682,11 +681,10 @@ export async function explainFeedbackFurther(
         
         Original Feedback: ${originalFeedback}
         
-        ${
-          specificQuery
-            ? `Student asks: ${specificQuery}`
-            : "Provide a more detailed explanation of the feedback, breaking down the concepts and offering concrete examples."
-        }
+        ${specificQuery
+      ? `Student asks: ${specificQuery}`
+      : "Provide a more detailed explanation of the feedback, breaking down the concepts and offering concrete examples."
+    }
         
         Be clear, educational, and encouraging. Use examples where helpful.
     `;
@@ -942,38 +940,32 @@ export async function generateQuestionsForExam(config: {
       ? `Focus on these topics: ${config.topics.join(", ")}`
       : "";
 
-  const prompt = `Generate ${config.count} ${config.difficulty} ${
-    config.questionType === "both" ? "coding and MCQ" : config.questionType
-  } questions for ${config.language}.
+  const prompt = `Generate ${config.count} ${config.difficulty} ${config.questionType === "both" ? "coding and MCQ" : config.questionType
+    } questions for ${config.language}.
 
 ${topicsText}
 
 Requirements:
 - Each question should be ${config.difficulty} difficulty
-- ${
-    config.questionType === "coding"
+- ${config.questionType === "coding"
       ? "Include test cases, starter code, and solution"
       : ""
-  }
-- ${
-    config.questionType === "mcq"
+    }
+- ${config.questionType === "mcq"
       ? "Include 4 options with one correct answer"
       : ""
-  }
-- Assign appropriate marks (${
-    config.marks ? config.marks + " marks each" : "5-20 based on complexity"
-  })
+    }
+- Assign appropriate marks (${config.marks ? config.marks + " marks each" : "5-20 based on complexity"
+    })
 - Add 1-3 relevant tags
-- ${
-    config.questionType === "coding"
+- ${config.questionType === "coding"
       ? "Include 3-4 test cases (mix visible and hidden)"
       : ""
-  }
+    }
 - Make questions practical and realistic
 
-${
-  config.questionType === "coding"
-    ? `
+${config.questionType === "coding"
+      ? `
 For CODING questions return:
 {
   "questions": [
@@ -995,12 +987,11 @@ For CODING questions return:
   ]
 }
 `
-    : ""
-}
+      : ""
+    }
 
-${
-  config.questionType === "mcq"
-    ? `
+${config.questionType === "mcq"
+      ? `
 For MCQ questions return:
 {
   "questions": [
@@ -1021,14 +1012,13 @@ For MCQ questions return:
   ]
 }
 `
-    : ""
-}
+      : ""
+    }
 
-${
-  config.questionType === "both"
-    ? "Generate a mix of coding and MCQ questions."
-    : ""
-}
+${config.questionType === "both"
+      ? "Generate a mix of coding and MCQ questions."
+      : ""
+    }
 
 Return ONLY valid JSON, no markdown or extra text.`;
 
@@ -1077,11 +1067,11 @@ export async function validateQuestion(
   issues: Array<{
     severity: "critical" | "warning" | "suggestion";
     category:
-      | "clarity"
-      | "grammar"
-      | "completeness"
-      | "difficulty"
-      | "technical";
+    | "clarity"
+    | "grammar"
+    | "completeness"
+    | "difficulty"
+    | "technical";
     message: string;
     suggestion?: string;
   }>;
@@ -1098,44 +1088,39 @@ Language: ${language || "N/A"}
 ${expectedOutput ? `Expected Output: ${expectedOutput}` : ""}
 ${marks ? `Marks: ${marks}` : ""}
 
-${
-  questionType === "mcq" && options
-    ? `
+${questionType === "mcq" && options
+      ? `
 Options:
 ${options
-  .map((opt, i) => `${i + 1}. ${opt.text} ${opt.isCorrect ? "(Correct)" : ""}`)
-  .join("\n")}
+        .map((opt, i) => `${i + 1}. ${opt.text} ${opt.isCorrect ? "(Correct)" : ""}`)
+        .join("\n")}
 Correct answers count: ${options.filter((o) => o.isCorrect).length}
 `
-    : ""
-}
+      : ""
+    }
 
-${
-  questionType === "coding" && testCases
-    ? `
+${questionType === "coding" && testCases
+      ? `
 Test Cases: ${testCases.length} provided
 `
-    : ""
-}
+      : ""
+    }
 
 Validate the question for:
 1. **Clarity**: Is it clear, unambiguous, and easy to understand?
 2. **Grammar**: Any spelling or grammar issues?
 3. **Completeness**: Missing information, test cases, or details?
 4. **Technical Accuracy**: Any technical errors or impossibilities?
-5. **Difficulty Alignment**: Does it match typical ${
-    marks ? marks + "-mark" : ""
-  } questions?
-${
-  questionType === "mcq"
-    ? "6. **MCQ Quality**: Are options distinct, is there exactly one correct answer?"
-    : ""
-}
-${
-  questionType === "coding"
-    ? "6. **Coding Quality**: Are requirements clear, is expected output reasonable?"
-    : ""
-}
+5. **Difficulty Alignment**: Does it match typical ${marks ? marks + "-mark" : ""
+    } questions?
+${questionType === "mcq"
+      ? "6. **MCQ Quality**: Are options distinct, is there exactly one correct answer?"
+      : ""
+    }
+${questionType === "coding"
+      ? "6. **Coding Quality**: Are requirements clear, is expected output reasonable?"
+      : ""
+    }
 
 Return JSON:
 {
@@ -1243,15 +1228,15 @@ export async function generatePracticeQuestionsFromWeakAreas(
 
 Weak Areas Analysis:
 ${weakAreas
-  .map(
-    (area, i) => `
+      .map(
+        (area, i) => `
 ${i + 1}. Topic: ${area.topic}
    Language: ${area.language}
    Current Score: ${area.score}%
    Issue: ${area.description}
 `
-  )
-  .join("\n")}
+      )
+      .join("\n")}
 
 Generate ${count} practice coding questions that specifically target these weaknesses.
 
@@ -1426,5 +1411,498 @@ Return ONLY valid JSON, no markdown formatting or extra text.`;
   } catch (error: any) {
     console.error("Practice Question Generation Error:", error.message);
     throw new Error("Failed to generate practice questions");
+  }
+}
+
+export async function generatePodcastScript(
+  sourceText: string,
+  hostStyle: string = "Conversational",
+  durationTarget: string = "5 minutes"
+): Promise<{
+  title: string;
+  script: Array<{ speaker: string; text: string }>;
+}> {
+  const isDeterministicModel = /(mini|instruct)/i.test(deploymentName);
+
+  // Calculate target word count (approx 150 words per minute)
+  const durationMatch = durationTarget.match(/(\d+)/);
+  const minutes = durationMatch ? parseInt(durationMatch[1]) : 5;
+  const targetWordCount = minutes * 160; // Slightly higher rate for natural flow
+
+  const prompt = `
+        Create a detailed, deep-dive podcast script based on the following text.
+        
+        SOURCE TEXT:
+        ${sourceText}
+
+        CONFIGURATION:
+        - Host Style: ${hostStyle}
+        - Target Duration: ${durationTarget} (Approx. ${targetWordCount} words)
+        - Format: Dialogue between two hosts (Host A and Host B)
+
+        CRITICAL INSTRUCTIONS:
+        1. **LENGTH**: You MUST generate a script long enough to fill ${durationTarget}. Aim for at least ${targetWordCount} words. Do not shorten it.
+        2. **DEPTH**: Do NOT just summarize. Explain technical concepts in detail, provide examples, and discuss implications.
+        3. **COVERAGE**: Cover ALL sections of the source text comprehensively. Do not skip the middle or end sections.
+        4. **FLOW**: Make it sound like a real deep-dive conversation. Host A presents data/concepts, Host B challenges them, asks for clarification, or provides analogies.
+        5. **STRUCTURE**:
+           - Intro (set the stage)
+           - Deep Dive Part 1, 2, 3... (go through the content systematically)
+           - Key Takeaways
+           - Outro
+
+        Return JSON:
+        {
+          "title": "A Catchy, Descriptive Podcast Title",
+          "script": [
+            { "speaker": "Host A", "text": "..." },
+            { "speaker": "Host B", "text": "..." }
+            ... (continue for ${targetWordCount} words)
+          ]
+        }
+    `;
+
+  const params: any = {
+    model: deploymentName,
+    messages: [
+      {
+        role: "system",
+        content:
+          "You are an expert podcast producer and scriptwriter. Return only valid JSON.",
+      },
+      { role: "user", content: prompt },
+    ],
+    response_format: { type: "json_object" },
+  };
+
+  if (!isDeterministicModel) {
+    params.temperature = 0.7;
+  }
+
+  try {
+    const result = await getClient().chat.completions.create(params);
+    return JSON.parse(result.choices[0]?.message?.content || "{}");
+  } catch (error: any) {
+    console.error("Podcast script generation error:", error);
+    return {
+      title: "Error Generating Script",
+      script: [],
+    };
+  }
+}
+
+export async function executeCodeInSandbox(
+  code: string,
+  language: string,
+  stdin: string = ""
+): Promise<{
+  output: string;
+  error?: string;
+  executionTime?: string;
+  status: "success" | "error" | "timeout";
+  visualization?: {
+    type: "bar" | "line" | "pie" | "area";
+    title: string;
+    data: any[];
+    xKey: string;
+    yKey: string;
+    description: string;
+  };
+}> {
+  const isDeterministicModel = /(mini|instruct)/i.test(deploymentName);
+
+  const prompt = `
+        You are a highly advanced Sandbox Code Executor Environment (Ghost Mode).
+        Your task is to ACCURATELY SIMULATE the execution of the provided code in the specified language.
+        
+        Language: ${language}
+        
+        Input (stdin):
+        ${stdin || "No input provided"}
+        
+        Code:
+        ${code}
+        
+        Instructions:
+        1. Analyze the logic carefully.
+        2. Determine the expected output based on the code and input.
+        3. If there are syntax errors or runtime errors, simulate them accurately.
+        4. If the code is infinite loop or too complex, simulate a timeout or memory error.
+        5. If the code involves plotting, graphing, or analyzing tabular data (especially in SQL/Pandas/PySpark), enable the 'Virtual Visualization Engine'.
+           - Generate a 'visualization' object in the response.
+           - Choose the best chart type (bar, line, pie, area) based on the data.
+           - Format the data for Recharts (array of objects).
+
+        Return JSON:
+        {
+            "output": "The stdout output of the code execution",
+            "error": "Any stderr error message (or null if none)",
+            "executionTime": "Simulated execution time (e.g., '0.042s')",
+            "status": "success" | "error" | "timeout",
+            "visualization": {
+                "type": "bar" | "line" | "pie" | "area",
+                "title": "Chart Title",
+                "data": [{"name": "Category A", "value": 10}, ...],
+                "xKey": "key for x-axis (e.g., 'name')",
+                "yKey": "key for y-axis (e.g., 'value')",
+                "description": "Brief description of the insight"
+            } (optional, only if relevant)
+        }
+        
+        IMPORTANT:
+        - Be strict with syntax.
+        - The output should be exactly what a terminal would show.
+        - Handle edge cases.
+    `;
+
+  const params: any = {
+    model: deploymentName,
+    messages: [
+      {
+        role: "system",
+        content:
+          "You are a code execution engine. Simulate execution accurately without explanation. Return only valid JSON.",
+      },
+      { role: "user", content: prompt },
+    ],
+    response_format: { type: "json_object" },
+  };
+
+  if (!isDeterministicModel) {
+    params.temperature = 0.1; // Low temp for more accurate simulation
+  }
+
+  try {
+    const result = await getClient().chat.completions.create(params);
+    return JSON.parse(result.choices[0]?.message?.content || "{}");
+  } catch (error: any) {
+    console.error("Sandbox execution error:", error.message);
+    return {
+      output: "",
+      error: "System Error: Unable to execute code in sandbox environment.",
+      status: "error",
+      executionTime: "0.000s",
+    };
+  }
+}
+// @ts-ignore
+import { MsEdgeTTS, OUTPUT_FORMAT } from "msedge-tts";
+
+export async function generateSpeech(
+  text: string,
+  voice: "alloy" | "echo" | "fable" | "onyx" | "nova" | "shimmer" = "alloy"
+): Promise<Buffer | null> {
+  try {
+    const tts = new MsEdgeTTS();
+    await tts.setMetadata(
+      // Voice mapping from OpenAI names to Edge Neural voices
+      getEdgeVoice(voice),
+      OUTPUT_FORMAT.AUDIO_24KHZ_48KBITRATE_MONO_MP3
+    );
+
+    // We can collect the stream into a buffer.
+    const { audioStream } = await tts.toStream(text); // Access audioStream property
+
+    const chunks: Uint8Array[] = [];
+    return new Promise((resolve, reject) => {
+      audioStream.on("data", (chunk: any) => chunks.push(chunk));
+      audioStream.on("end", () => resolve(Buffer.concat(chunks)));
+      audioStream.on("error", (err: any) => {
+        console.error("Edge TTS Stream Error:", err);
+        reject(err);
+      });
+    });
+  } catch (error: any) {
+    console.error("Speech generation error (EdgeTTS):", error);
+    // Fallback?
+    return null;
+  }
+}
+
+function getEdgeVoice(openaiVoice: string): string {
+  // Map OpenAI voices to Microsoft Edge Neural Voices
+  // These are free and high quality.
+  switch (openaiVoice) {
+    case "alloy":
+      return "en-US-AndrewNeural"; // Male, Neutral
+    case "echo":
+      return "en-US-BrianNeural"; // Male, Soft
+    case "fable":
+      return "en-GB-RyanNeural"; // British Male
+    case "onyx":
+      return "en-US-EricNeural"; // Deep Male
+    case "nova":
+      return "en-US-MichelleNeural"; // Female
+    case "shimmer":
+      return "en-US-EmmaNeural"; // Female
+    default:
+      return "en-US-AndrewNeural";
+  }
+}
+
+export async function generateSkillTree(
+  topic: string,
+  userLevel: string = "Beginner"
+): Promise<{
+  topic: string;
+  description: string;
+  tiers: Array<{
+    tier: number;
+    title: string;
+    skills: Array<{
+      id: string;
+      name: string;
+      description: string;
+      category: string;
+      status: "locked" | "unlocked" | "completed";
+      prerequisites: string[];
+      resources: Array<{ title: string; url: string; type: "video" | "article" | "course" }>;
+      challenge: {
+        question: string;
+        options?: string[];
+        correctAnswer: string;
+      };
+    }>;
+  }>;
+}> {
+  const isDeterministicModel = /(mini|instruct)/i.test(deploymentName);
+
+  const prompt = `
+        Create a comprehensive learning skill tree for the topic: "${topic}".
+        User Level: ${userLevel}
+        
+        Structure the skills into progressive Tiers (e.g., Tier 1: Fundamentals, Tier 2: Intermediate, Tier 3: Advanced, Tier 4: Mastery).
+        
+        For each skill, provide:
+        1. A unique ID (short snake_case)
+        2. Name and brief description
+        3. Prerequisites (IDs of skills in previous tiers that must be known)
+        4. Learning resources (provide 1-2 HIGH QUALITY, VALID, DIRECT URLs to official documentation, reputable tutorials (e.g. MDN, W3Schools, RealPython), or popular YouTube videos. DO NOT use generic search URLs. Ensure links are likely to exist.)
+        5. A mini-challenge question (multiple choice) to prove knowledge.
+        
+        Return JSON in this format:
+        {
+            "topic": "${topic}",
+            "description": "Overview of the skill path",
+            "tiers": [
+                {
+                    "tier": 1,
+                    "title": "Fundamentals",
+                    "skills": [
+                        {
+                            "id": "skill_id",
+                            "name": "Skill Name",
+                            "description": "...",
+                            "category": "Concept|Syntax|Tool",
+                            "status": "unlocked",
+                            "prerequisites": [],
+                            "resources": [{"title": "Official Docs", "url": "https://react.dev", "type": "article"}],
+                            "challenge": {
+                                "question": "What is...?", 
+                                "options": ["A", "B", "C", "D"],
+                                "correctAnswer": "A"
+                            }
+                        }
+                    ]
+                }
+            ]
+        }
+    `;
+
+  const params: any = {
+    model: deploymentName,
+    messages: [
+      {
+        role: "system",
+        content:
+          "You are an expert curriculum designer creating gamified skill trees. Return valid JSON only.",
+      },
+      { role: "user", content: prompt },
+    ],
+    response_format: { type: "json_object" },
+  };
+
+  if (!isDeterministicModel) {
+    params.temperature = 0.7;
+  }
+
+  try {
+    const result = await getClient().chat.completions.create(params);
+    return JSON.parse(result.choices[0]?.message?.content || "{}");
+  } catch (error) {
+    console.error("Skill tree generation error:", error);
+    return {
+      topic: topic,
+      description: "Failed to generate skill tree.",
+      tiers: [],
+    };
+  }
+}
+
+export async function evaluateBattleSubmission(
+  code: string,
+  language: string,
+  question: string,
+  testCases: Array<{ input: string; expectedOutput: string }>
+): Promise<{
+  passed: boolean;
+  score: number;
+  failedCase?: { input: string; expected: string; actual: string };
+  feedback: string;
+}> {
+  const isDeterministicModel = /(mini|instruct)/i.test(deploymentName);
+
+  const prompt = `
+        Evaluate this code submission for a coding battle.
+        
+        Question: ${question}
+        Language: ${language}
+        
+        Code:
+        ${code}
+        
+        Test Cases:
+        ${testCases.map((tc, i) => `Case ${i + 1}: Input: ${tc.input}, Expected: ${tc.expectedOutput}`).join('\n')}
+        
+        Task:
+        1. Analyze if the code solves the problem correctly.
+        2. Check if it passes ALL provided test cases.
+        3. If it fails a test case, predict what the actual output would be.
+        
+        Return JSON:
+        {
+            "passed": boolean,
+            "score": number (0-100),
+            "failedCase": { "input": "...", "expected": "...", "actual": "..." } (if passed is false),
+            "feedback": "Brief feedback on efficiency or correctness"
+        }
+    `;
+
+  const params: any = {
+    model: deploymentName,
+    messages: [
+      {
+        role: "system",
+        content: "You are a code judge with strict validation criteria. Return only valid JSON."
+      },
+      { role: "user", content: prompt }
+    ],
+    response_format: { type: "json_object" }
+  };
+
+  if (!isDeterministicModel) {
+    params.temperature = 0.1; // Strict evaluation
+  }
+
+  try {
+    const result = await getClient().chat.completions.create(params);
+    return JSON.parse(result.choices[0]?.message?.content || "{}");
+  } catch (error: any) {
+    console.error("Battle evaluation error:", error.message);
+    return {
+      passed: false,
+      score: 0,
+      feedback: "System Error: Unable to evaluate submission."
+    };
+  }
+}
+
+import { toFile } from "openai/uploads";
+
+export async function transcribeAudio(audioBuffer: Buffer): Promise<string> {
+  try {
+    const file = await toFile(audioBuffer, "speech.mp3");
+
+    // Note: Azure OpenAI Whisper deployment might have strict naming
+    // If using standard OpenAI it's 'whisper-1'. For Azure, it depends on deployment name.
+    // We will assume the same deployment name works or fallback to 'whisper'.
+    // If the user's deployment doesn't support whisper, this might fail.
+    // However, for standard OpenAI patterns, we use the specific model name.
+
+    const result = await getClient().audio.transcriptions.create({
+      file: file,
+      model: "whisper", // Azure usually ignores this parameter and uses the deployment model
+    });
+
+    return result.text;
+  } catch (error: any) {
+    console.error("Transcription error:", error);
+    return "";
+  }
+}
+
+export async function generatePodcastInteraction(
+  userText: string,
+  contextText: string,
+  chatHistory: Array<{ role: "user" | "assistant"; content: string }>
+): Promise<{ text: string; audio: Buffer | null }> {
+  const isDeterministicModel = /(mini|instruct)/i.test(deploymentName);
+
+  const prompt = `
+        You are simulating a podcast interaction. You are playing the roles of Host A (The Lead, dynamic) and Host B (The Analyst, thoughtful).
+        
+        CONTEXT OF THE PODCAST:
+        "${contextText.substring(0, 1000)}..." (truncated)
+
+        The listener (User) has just chimed in with a comment or question.
+        
+        USER SAID:
+        "${userText}"
+        
+        INSTRUCTIONS:
+        1. Respond in character as Host A and/or Host B.
+        2. Acknowledge the user's point naturally.
+        3. Answer the question or discuss the comment briefly (2-4 sentences max).
+        4. Keep it lively and conversational.
+        
+        OUTPUT FORMAT:
+        Return ONLY the dialogue text.
+        Example:
+        Host A: That's a great point! I hadn't thought of that.
+        Host B: Exactly, and it ties back to the core concept of...
+    `;
+
+  const params: any = {
+    model: deploymentName,
+    messages: [
+      { role: "system", content: "You are a podcast host duo. Respond to the listener." },
+      ...chatHistory,
+      { role: "user", content: prompt }
+    ],
+  };
+
+  if (!isDeterministicModel) params.temperature = 0.7;
+
+  try {
+    const result = await getClient().chat.completions.create(params);
+    const responseText = result.choices[0]?.message?.content?.trim() || "Host A: generic response.";
+
+    // Generate Audio for the response
+    // We need to parse who is speaking to switch voices, similar to generatePodcastScript
+    // But for a quick interaction, we'll just parse the first speaker or do a quick split.
+    // For simplicity in this interaction mode, we will generate the whole block with one voice or split it.
+    // Let's reuse the logic from generatePodcast if possible, or just simple split.
+
+    const segments = responseText.split("\n").map(line => {
+      const [speaker, ...rest] = line.split(":");
+      return { speaker: speaker?.trim(), text: rest.join(":").trim() };
+    }).filter(s => s.text);
+
+    const audioBuffers: Buffer[] = [];
+    for (const segment of segments) {
+      let voice: "alloy" | "echo" | "fable" | "onyx" | "nova" | "shimmer" = "alloy";
+      if (segment.speaker.includes("A")) voice = "shimmer";
+      if (segment.speaker.includes("B")) voice = "onyx";
+
+      const segmentAudio = await generateSpeech(segment.text, voice);
+      if (segmentAudio) audioBuffers.push(segmentAudio);
+    }
+
+    const finalAudio = Buffer.concat(audioBuffers);
+    return { text: responseText, audio: finalAudio };
+
+  } catch (error: any) {
+    console.error("Podcast interaction error:", error);
+    return { text: "Error interacting.", audio: null };
   }
 }

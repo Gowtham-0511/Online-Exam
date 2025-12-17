@@ -1,6 +1,7 @@
 export interface MCQQuestion {
   type: "mcq";
   question: string;
+  questionTitle?: string;
   options: string[];
   correctAnswer: number;
   explanation: string;
@@ -9,15 +10,18 @@ export interface MCQQuestion {
 export interface CodingQuestion {
   type: "coding";
   language:
-    | "python"
-    | "sql"
-    | "javascript"
-    | "java"
-    | "pyspark"
-    | "dax"
-    | "dbt";
+  | "python"
+  | "sql"
+  | "javascript"
+  | "java"
+  | "pyspark"
+  | "dax"
+  | "dbt"
+  | "snowflake";
   question: string;
+  questionTitle?: string;
   description: string;
+  questionDescription?: string;
   starterCode: string;
   testCases: Array<{
     input: string;
@@ -45,10 +49,19 @@ Return a JSON object with a "questions" array. Each question MUST have type "mcq
   "questions": [
     {
       "type": "mcq",
-      "question": "What is the time complexity of binary search?",
-      "options": ["O(n)", "O(log n)", "O(n^2)", "O(1)"],
-      "correctAnswer": 1,
-      "explanation": "Binary search divides the search space in half each time, resulting in O(log n) complexity."
+      "language": "Language related to ${topic}",
+      "topic": "${topic}",
+      "difficulty": "${difficulty}",
+      "weakArea": "Weak Area related to the Question",
+      "questionTitle": "Title Related to the Question",
+      "questionDescription": "Description Related to the Question",
+      "hints": ["Hint related to the Question"],
+      "solutionExplanation": "Solution Explanation related to the Question",
+      "basedOnExam": "Based on Exam",
+      "question": "Question",
+      "options": ["Option 1", "Option 2", "Option 3", "Option 4"],
+      "correctAnswer": "Correct Answer for the question",
+      "explanation": "Explanation related to the Question"
     }
   ]
 }
@@ -58,13 +71,12 @@ Requirements:
 - Exactly 4 options per question
 - correctAnswer: index (0-3) of correct option
 - Clear, unambiguous questions
-- Difficulty: ${
-    difficulty === "easy"
+- Difficulty: ${difficulty === "easy"
       ? "Basic concepts and definitions"
       : difficulty === "medium"
-      ? "Intermediate application and analysis"
-      : "Advanced problem-solving and complex scenarios"
-  }
+        ? "Intermediate application and analysis"
+        : "Advanced problem-solving and complex scenarios"
+    }
 - Topic: ${topic}
 
 Generate ${count} multiple-choice questions now.`;
@@ -85,10 +97,18 @@ Return a JSON object with a "questions" array where EVERY question has type "cod
   "questions": [
     {
       "type": "coding",
-      "language": "python",
-      "question": "Calculate Factorial",
-      "description": "<p>Write a function that calculates the factorial of a given number n.</p><p><strong>Example:</strong></p><pre>Input: 5\\nOutput: 120\\nExplanation: 5! = 5 × 4 × 3 × 2 × 1 = 120</pre>",
-      "starterCode": "def solution(n):\\n    # Write your code here\\n    pass",
+      "language": "Language related to ${topic}",
+      "topic": "${topic}",
+      "difficulty": "${difficulty}",
+      "weakArea": "Weak Area related to the Question",
+      "questionTitle": "Title Related to the Question",
+      "questionDescription": "Description Related to the Question",
+      "hints": ["Hint related to the Question"],
+      "solutionExplanation": "Solution Explanation related to the Question",
+      "basedOnExam": "Based on Exam",
+      "question": "Question",
+      "description": "Description related to the Question",
+      "starterCode": "starter code for the question always starts with def solution()",
       "testCases": [
         {
           "input": "5",
@@ -106,8 +126,8 @@ Return a JSON object with a "questions" array where EVERY question has type "cod
           "isHidden": true
         }
       ],
-      "solution": "def solution(n):\\n    if n == 0:\\n        return 1\\n    result = 1\\n    for i in range(1, n + 1):\\n        result *= i\\n    return result",
-      "explanation": "The function calculates factorial by iterating from 1 to n and multiplying each number. Base case: 0! = 1."
+      "solution": "Solution related to the Question",
+      "explanation": "Explanation related to the Question"
     }
   ]
 }
@@ -126,13 +146,12 @@ TEST CASE FORMAT RULES:
 - Single list: "[1,2,3]" (the actual list)
 - Multiple args: "[5, 3]" (will be unpacked)
 
-Difficulty: ${
-    difficulty === "easy"
+Difficulty: ${difficulty === "easy"
       ? "Basic loops and conditionals"
       : difficulty === "medium"
-      ? "Array/string manipulation, recursion"
-      : "Complex algorithms, dynamic programming"
-  }
+        ? "Array/string manipulation, recursion"
+        : "Complex algorithms, dynamic programming"
+    }
 Topic: ${topic}
 
 Generate ${count} Python CODING problems now. DO NOT generate MCQ questions.`;
@@ -157,10 +176,18 @@ Return a JSON object with a "questions" array where EVERY question has type "cod
   "questions": [
     {
       "type": "coding",
-      "language": "sql",
-      "question": "Select All Active Users",
-      "description": "<p>Write a SQL query to select all users where the status is 'active'.</p><p><strong>Table Schema:</strong></p><pre>users (id INT, name VARCHAR, status VARCHAR)</pre><p><strong>Example:</strong></p><pre>Input: users table with 3 users, 2 active\\nOutput: 2 rows with active users</pre>",
-      "starterCode": "SELECT * FROM users",
+      "language": "Language related to ${topic}",
+      "question": "Question",
+      "topic": "${topic}",
+      "difficulty": "${difficulty}",
+      "weakArea": "Weak Area related to the Question",
+      "questionTitle": "Title Related to the Question",
+      "questionDescription": "Description Related to the Question",
+      "hints": ["Hint related to the Question"],
+      "solutionExplanation": "Solution Explanation related to the Question",
+      "basedOnExam": "Based on Exam",
+      "description": "Description related to the Question",
+      "starterCode": "starter code for the question always starts with SELECT",
       "testCases": [
         {
           "input": "DROP TABLE IF EXISTS users; CREATE TABLE users (id INT, name VARCHAR(50), status VARCHAR(20)); INSERT INTO users VALUES (1, 'Alice', 'active'), (2, 'Bob', 'inactive'), (3, 'Carol', 'active');",
@@ -173,8 +200,8 @@ Return a JSON object with a "questions" array where EVERY question has type "cod
           "isHidden": false
         }
       ],
-      "solution": "SELECT * FROM users WHERE status = 'active'",
-      "explanation": "Use the WHERE clause to filter rows where status column equals 'active'."
+      "solution": "Solution related to the Question",
+      "explanation": "Explanation related to the Question"
     }
   ]
 }
@@ -188,13 +215,12 @@ REQUIREMENTS:
 6. Provide working solution query
 7. Include explanation
 
-Difficulty: ${
-    difficulty === "easy"
+Difficulty: ${difficulty === "easy"
       ? "Basic SELECT, WHERE, ORDER BY"
       : difficulty === "medium"
-      ? "JOINs, GROUP BY, subqueries"
-      : "Complex queries, window functions, CTEs"
-  }
+        ? "JOINs, GROUP BY, subqueries"
+        : "Complex queries, window functions, CTEs"
+    }
 Topic: ${topic}
 
 Generate ${count} SQL CODING problems now. DO NOT generate MCQ questions.
@@ -216,10 +242,18 @@ Return a JSON object with a "questions" array where EVERY question has type "cod
   "questions": [
     {
       "type": "coding",
-      "language": "javascript",
-      "question": "Calculate Factorial",
-      "description": "<p>Write a function that calculates the factorial of a given number n.</p><p><strong>Example:</strong></p><pre>Input: 5\nOutput: 120\nExplanation: 5! = 5 × 4 × 3 × 2 × 1 = 120</pre>",
-      "starterCode": "function solution(n) {\n  // Write your code here\n}",
+      "language": "Language related to ${topic}",
+      "topic": "${topic}",
+      "difficulty": "${difficulty}",
+      "weakArea": "Weak Area related to the Question",
+      "questionTitle": "Title Related to the Question",
+      "questionDescription": "Description Related to the Question",
+      "hints": ["Hint related to the Question"],
+      "solutionExplanation": "Solution Explanation related to the Question",
+      "basedOnExam": "Based on Exam",
+      "question": "Question",
+      "description": "Description related to the Question",
+      "starterCode": "starter code for the question always starts with function solution()",
       "testCases": [
         {
           "input": "5",
@@ -237,8 +271,8 @@ Return a JSON object with a "questions" array where EVERY question has type "cod
           "isHidden": true
         }
       ],
-      "solution": "function solution(n) {\n  if (n === 0) return 1;\n  let result = 1;\n  for (let i = 1; i <= n; i++) {\n    result *= i;\n  }\n  return result;\n}",
-      "explanation": "The function calculates the factorial by iterating from 1 to n and multiplying each number. Base case: 0! = 1."
+      "solution": "Solution related to the Question",
+      "explanation": "Explanation related to the Question"
     }
   ]
 }
@@ -257,13 +291,12 @@ TEST CASE FORMAT RULES:
 - Single list: "[1,2,3]"
 - Multiple args: "[5, 3]" (will be unpacked)
 
-Difficulty: ${
-    difficulty === "easy"
+Difficulty: ${difficulty === "easy"
       ? "Basic loops and conditionals"
       : difficulty === "medium"
-      ? "Array/string manipulation, recursion"
-      : "Complex algorithms, dynamic programming"
-  }
+        ? "Array/string manipulation, recursion"
+        : "Complex algorithms, dynamic programming"
+    }
 Topic: ${topic}
 
 Generate ${count} JavaScript CODING problems now. DO NOT generate MCQ questions.`;
@@ -274,7 +307,7 @@ export function generateMixedPrompt(
   topic: string,
   difficulty: string,
   count: number,
-  language: "python" | "sql" | "javascript" | "java" | "pyspark" | "dax" | "dbt"
+  language: "python" | "sql" | "javascript" | "java" | "pyspark" | "dax" | "dbt" | "snowflake"
 ): string {
   const mcqCount = Math.ceil(count * 0.6);
   const codingCount = count - mcqCount;
@@ -311,17 +344,26 @@ Return a JSON object with a "questions" array where EVERY question has type "cod
   "questions": [
     {
       "type": "coding",
-      "language": "pyspark",
-      "question": "Brief question title",
-      "description": "Detailed description with requirements",
-      "starterCode": "from pyspark.sql import SparkSession\\nfrom pyspark.sql.functions import *\\n\\n# Your code here\\n",
+      "language": "Language related to ${topic}",
+      "topic": "${topic}",
+      "difficulty": "${difficulty}",
+      "weakArea": "Weak Area related to the Question",
+      "questionTitle": "Title Related to the Question",
+      "questionDescription": "Description Related to the Question",
+      "hints": ["Hint related to the Question"],
+      "solutionExplanation": "Solution Explanation related to the Question",
+      "basedOnExam": "Based on Exam",
+      "description": "Description related to the Question",
+      "starterCode": "starter code for the question always starts with SELECT",
       "testCases": [
         {
           "input": "Sample data or description",
           "expectedOutput": "Expected DataFrame output from show()",
           "isHidden": false
         }
-      ]
+      ],
+      "solution": "Solution related to the Question",
+      "explanation": "Explanation related to the Question"
     }
   ]
 }
@@ -366,17 +408,26 @@ Return a JSON object with a "questions" array where EVERY question has type "cod
   "questions": [
     {
       "type": "coding",
-      "language": "dax",
-      "question": "Brief question title",
-      "description": "Detailed description with business context and sample data",
-      "starterCode": "// Write your DAX expression here\\n",
+      "language": "Language related to ${topic}",
+      "topic": "${topic}",
+      "difficulty": "${difficulty}",
+      "weakArea": "Weak Area related to the Question",
+      "questionTitle": "Title Related to the Question",
+      "questionDescription": "Description Related to the Question",
+      "hints": ["Hint related to the Question"],
+      "solutionExplanation": "Solution Explanation related to the Question",
+      "basedOnExam": "Based on Exam",
+      "description": "Description related to the Question",
+      "starterCode": "starter code for the question always starts with SELECT",
       "testCases": [
         {
           "input": "Context or sample data description",
           "expectedOutput": "Expected result (number or text)",
           "isHidden": false
         }
-      ]
+      ],
+      "solution": "Solution related to the Question",
+      "explanation": "Explanation related to the Question"
     }
   ]
 }
@@ -415,10 +466,17 @@ Return a JSON object with a "questions" array where EVERY question has type "cod
   "questions": [
     {
       "type": "coding",
-      "language": "java",
-      "question": "Calculate Factorial",
-      "description": "<p>Write a method that calculates the factorial of a given number n.</p><p><strong>Example:</strong></p><pre>Input: 5\\nOutput: 120\\nExplanation: 5! = 5 × 4 × 3 × 2 × 1 = 120</pre>",
-      "starterCode": "public class Solution {\\n    public int solution(String input) {\\n        // Write your code here\\n        return 0;\\n    }\\n}",
+      "language": "Language related to ${topic}",
+      "topic": "${topic}",
+      "difficulty": "${difficulty}",
+      "weakArea": "Weak Area related to the Question",
+      "questionTitle": "Title Related to the Question",
+      "questionDescription": "Description Related to the Question",
+      "hints": ["Hint related to the Question"],
+      "solutionExplanation": "Solution Explanation related to the Question",
+      "basedOnExam": "Based on Exam",
+      "description": "Description related to the Question",
+      "starterCode": "starter code for the question always starts with SELECT",
       "testCases": [
         {
           "input": "5",
@@ -436,8 +494,8 @@ Return a JSON object with a "questions" array where EVERY question has type "cod
           "isHidden": true
         }
       ],
-      "solution": "public class Solution {\\n    public int solution(String input) {\\n        int n = Integer.parseInt(input);\\n        if (n == 0) return 1;\\n        int result = 1;\\n        for (int i = 1; i <= n; i++) {\\n            result *= i;\\n        }\\n        return result;\\n    }\\n}",
-      "explanation": "The method calculates factorial by iterating from 1 to n and multiplying each number. Base case: 0! = 1."
+      "solution": "Solution related to the Question",
+      "explanation": "Explanation related to the Question"
     }
   ]
 }
@@ -455,13 +513,12 @@ TEST CASE FORMAT RULES:
 - Single string: "\\"hello\\"" (with escaped quotes)
 - Input is passed as String, parse in solution method
 
-Difficulty: ${
-    difficulty === "easy"
+Difficulty: ${difficulty === "easy"
       ? "Basic loops and conditionals"
       : difficulty === "medium"
-      ? "Array/string manipulation, recursion"
-      : "Complex algorithms, dynamic programming"
-  }
+        ? "Array/string manipulation, recursion"
+        : "Complex algorithms, dynamic programming"
+    }
 Topic: ${topic}
 
 Generate ${count} Java CODING problems now. DO NOT generate MCQ questions.`;
@@ -487,17 +544,26 @@ Return a JSON object with a "questions" array where EVERY question has type "cod
   "questions": [
     {
       "type": "coding",
-      "language": "dbt",
-      "question": "Brief question title",
-      "description": "Detailed description with requirements",
-      "starterCode": "-- Write your DBT model here\\nSELECT * FROM {{ ref('some_table') }}",
+      "language": "Language related to ${topic}",
+      "topic": "${topic}",
+      "difficulty": "${difficulty}",
+      "weakArea": "Weak Area related to the Question",
+      "questionTitle": "Title Related to the Question",
+      "questionDescription": "Description Related to the Question",
+      "hints": ["Hint related to the Question"],
+      "solutionExplanation": "Solution Explanation related to the Question",
+      "basedOnExam": "Based on Exam",
+      "description": "Description related to the Question",
+      "starterCode": "starter code for the question always starts with SELECT",
       "testCases": [
         {
           "input": "Sample data or description",
           "expectedOutput": "Expected query result",
           "isHidden": false
         }
-      ]
+      ],
+      "solution": "Solution related to the Question",
+      "explanation": "Explanation related to the Question"
     }
   ]
 }
@@ -516,9 +582,74 @@ IMPORTANT RULES:
 Generate ${count} questions now.`;
 }
 
+export function generateSnowflakePrompt(
+  topic: string,
+  difficulty: string,
+  count: number
+): string {
+  return `Generate ${count} Snowflake coding questions about ${topic} at ${difficulty} level.
+
+CRITICAL REQUIREMENTS:
+- Focus on Snowflake SQL, stored procedures, functions, and UDFs
+- Include realistic data scenarios
+- Test understanding of DDL, DML, and DCL
+- Provide sample data in test cases (seeds)
+- Expected output should be the result of the SQL query
+
+Return a JSON object with a "questions" array where EVERY question has type "coding" and language "snowflake":
+
+{
+  "questions": [
+    {
+      "type": "coding",
+      "language": "snowflake",
+      "topic": "${topic}",
+      "difficulty": "${difficulty}",
+      "weakArea": "Weak Area related to the Question",
+      "questionTitle": "Title Related to the Question",
+      "questionDescription": "Description Related to the Question",
+      "hints": ["Hint related to the Question"],
+      "solutionExplanation": "Solution Explanation related to the Question",
+      "basedOnExam": "Based on Exam",
+      "description": "Description related to the Question",
+      "starterCode": "starter code for the question always starts with SELECT(not the solution)",
+      "testCases": [
+        {
+          "input": "DROP TABLE IF EXISTS users; CREATE TABLE users (id INT, name VARCHAR(50), status VARCHAR(20)); INSERT INTO users VALUES (1, 'Alice', 'active'), (2, 'Bob', 'inactive'), (3, 'Carol', 'active');",
+          "expectedOutput": "[{\\"id\\":1,\\"name\\":\\"Alice\\",\\"status\\":\\"active\\"},{\\"id\\":3,\\"name\\":\\"Carol\\",\\"status\\":\\"active\\"}]",
+          "isHidden": false
+        },
+        {
+          "input": "DROP TABLE IF EXISTS users; CREATE TABLE users (id INT, name VARCHAR(50), status VARCHAR(20)); INSERT INTO users VALUES (1, 'Dave', 'active'), (2, 'Eve', 'active');",
+          "expectedOutput": "[{\\"id\\":1,\\"name\\":\\"Dave\\",\\"status\\":\\"active\\"},{\\"id\\":2,\\"name\\":\\"Eve\\",\\"status\\":\\"active\\"}]",
+          "isHidden": false
+        }
+      ],
+      "solution": "Solution related to the Question",
+      "explanation": "Explanation related to the Question"
+    }
+  ]
+}
+
+DIFFICULTY GUIDELINES:
+- Easy: Basic SELECT, DDL, DML
+- Medium: Stored procedures, functions, UDFs, complex queries
+- Hard: Complex DDL, DML, DCL, advanced SQL features
+
+IMPORTANT RULES:
+1. EVERY question MUST have "type": "coding" and "language": "snowflake"
+2. StarterCode should be a SQL file content with Snowflake-specific syntax
+3. Focus on Analytics Engineering concepts
+4. Generate valid Snowflake SQL code
+
+Generate ${count} questions now.`;
+}
+
 // Validate MCQ question
 export function validateMCQQuestion(q: any, index: number): MCQQuestion {
-  if (!q.question || !q.options || !q.explanation) {
+  // Handle cases where AI returns questionTitle instead of question
+  const questionText = String(q.question || q.questionTitle || "");
+  if (!questionText || !q.options || !q.explanation) {
     throw new Error(`MCQ question ${index} missing required fields`);
   }
 
@@ -535,7 +666,8 @@ export function validateMCQQuestion(q: any, index: number): MCQQuestion {
 
   return {
     type: "mcq",
-    question: String(q.question),
+    question: questionText,
+    questionTitle: String(q.questionTitle || questionText),
     options: options.map((o: any) => String(o)),
     correctAnswer,
     explanation: String(q.explanation),
@@ -544,7 +676,11 @@ export function validateMCQQuestion(q: any, index: number): MCQQuestion {
 
 // Validate coding question
 export function validateCodingQuestion(q: any, index: number): CodingQuestion {
-  if (!q.question || !q.description) {
+  // Handle cases where AI returns questionTitle/questionDescription instead of question/description
+  const questionText = String(q.question || q.questionTitle || "");
+  const descriptionText = String(q.description || q.questionDescription || "");
+
+  if (!questionText || !descriptionText) {
     throw new Error(`Coding question ${index} missing required fields`);
   }
 
@@ -555,19 +691,22 @@ export function validateCodingQuestion(q: any, index: number): CodingQuestion {
     | "java"
     | "pyspark"
     | "dax"
-    | "dbt" = q.language.includes("sql")
-    ? "sql"
-    : q.language.includes("javascript") || q.language.includes("js")
-    ? "javascript"
-    : q.language.includes("java")
-    ? "java"
-    : q.language.includes("pyspark") || q.language.includes("spark")
-    ? "pyspark"
-    : q.language.includes("dax") || q.language.includes("powerbi")
-    ? "dax"
-    : q.language.includes("dbt")
-    ? "dbt"
-    : "python";
+    | "dbt"
+    | "snowflake" = q.language.includes("sql")
+      ? "sql"
+      : q.language.includes("javascript") || q.language.includes("js")
+        ? "javascript"
+        : q.language.includes("java")
+          ? "java"
+          : q.language.includes("pyspark") || q.language.includes("spark")
+            ? "pyspark"
+            : q.language.includes("dax") || q.language.includes("powerbi")
+              ? "dax"
+              : q.language.includes("dbt")
+                ? "dbt"
+                : q.language.includes("snowflake")
+                  ? "snowflake"
+                  : "python";
 
   // Ensure we have test cases
   let testCases = Array.isArray(q.testCases) ? q.testCases : [];
@@ -585,13 +724,15 @@ export function validateCodingQuestion(q: any, index: number): CodingQuestion {
   return {
     type: "coding",
     language,
-    question: String(q.question),
-    description: String(q.description),
+    question: questionText,
+    questionTitle: String(q.questionTitle || questionText),
+    description: descriptionText,
+    questionDescription: String(q.questionDescription || descriptionText),
     starterCode: String(
       q.starterCode ||
-        (language === "python"
-          ? "def solution():\n    pass"
-          : language === "javascript"
+      (language === "python"
+        ? "def solution():\n    pass"
+        : language === "javascript"
           ? "function solution() {\n    // your code\n}"
           : "SELECT * FROM table")
     ),

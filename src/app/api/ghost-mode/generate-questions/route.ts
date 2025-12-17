@@ -16,6 +16,7 @@ import {
   Question,
   MCQQuestion,
   CodingQuestion,
+  generateSnowflakePrompt,
 } from "@/lib/ai/question-generation";
 
 export async function POST(req: Request) {
@@ -73,16 +74,17 @@ export async function POST(req: Request) {
         topicLower === "sql"
           ? "sql"
           : topicLower === "javascript"
-          ? "javascript"
-          : topicLower === "java"
-          ? "java"
-          : topicLower === "pyspark"
-          ? "pyspark"
-          : topicLower === "powerbi"
-          ? "dax"
-          : topicLower === "dbt"
-          ? "dbt"
-          : "python";
+            ? "javascript"
+            : topicLower === "java"
+              ? "java"
+              : topicLower === "pyspark"
+                ? "pyspark"
+                : topicLower === "powerbi"
+                  ? "dax"
+                  : topicLower === "dbt"
+                    ? "dbt" : topicLower === "snowflake"
+                      ? "snowflake"
+                      : "python";
 
       console.log(language);
 
@@ -121,6 +123,10 @@ export async function POST(req: Request) {
         systemMessage =
           "You are an expert Analytics Engineer and DBT instructor creating DBT coding problems. Always return valid JSON with a 'questions' array. Each question must have type 'coding' and language 'dbt'. NO multiple choice questions. Focus on SQL models, Jinja templating, macros, and tests.";
         prompt = generateDbtPrompt(topic, difficulty, questionCount);
+      } else if (language === "snowflake") {
+        systemMessage =
+          "You are an expert Analytics Engineer and Snowflake instructor creating Snowflake coding problems. Always return valid JSON with a 'questions' array. Each question must have type 'coding' and language 'snowflake'. NO multiple choice questions. Focus on SQL models, Jinja templating, macros, and tests.";
+        prompt = generateSnowflakePrompt(topic, difficulty, questionCount);
       } else {
         prompt = generatePythonCodingPrompt(topic, difficulty, questionCount);
         systemMessage =
@@ -133,14 +139,16 @@ export async function POST(req: Request) {
         topicLower === "sql"
           ? "sql"
           : topicLower === "javascript"
-          ? "javascript"
-          : topicLower === "java"
-          ? "java"
-          : topicLower === "pyspark"
-          ? "pyspark"
-          : topicLower === "dbt"
-          ? "dbt"
-          : "python";
+            ? "javascript"
+            : topicLower === "java"
+              ? "java"
+              : topicLower === "pyspark"
+                ? "pyspark"
+                : topicLower === "dbt"
+                  ? "dbt"
+                  : topicLower === "snowflake"
+                    ? "snowflake"
+                    : "python";
       prompt = generateMixedPrompt(topic, difficulty, questionCount, language);
       systemMessage =
         "You are an expert educator creating mixed practice questions. Return valid JSON with both MCQ and coding questions.";
@@ -268,8 +276,7 @@ export async function POST(req: Request) {
       `Final question types:`,
       validatedQuestions.map(
         (q) =>
-          `${q.type}${
-            q.type === "coding" ? `-${(q as CodingQuestion).language}` : ""
+          `${q.type}${q.type === "coding" ? `-${(q as CodingQuestion).language}` : ""
           }`
       )
     );

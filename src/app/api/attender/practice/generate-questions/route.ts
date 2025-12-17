@@ -154,18 +154,23 @@ export async function POST(request: Request) {
               // Insert MCQ question
               insertQuery = `
                 INSERT INTO "PracticeQuestions" (
+                  type,
                   "generatedFor",
                   "language",
                   difficulty,
                   topic,
+                  "weakArea",
                   "questionTitle",
                   "questionDescription",
                   hints,
                   "solutionExplanation",
+                  "basedOnExam",
                   "mcqOptions",
+                  question,
+                  "solutionCode",
                   "generatedAt",
                   "isActive"
-                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW(), true)
+                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, NOW(), true)
                 RETURNING id, "questionTitle", "questionDescription", "mcqOptions", difficulty, topic;
               `;
 
@@ -175,49 +180,62 @@ export async function POST(request: Request) {
               };
 
               values = [
+                q.type,
                 email,
-                "mcq",
+                q.language,
                 difficulty,
-                topic,
-                q.question || q.questionTitle || "Untitled Question",
-                q.question || q.questionDescription || "",
+                q.topic,
+                q.weakArea,
+                q.questionTitle || "Untitled Question",
+                q.questionDescription || "",
                 JSON.stringify(q.hints || []),
                 q.explanation || q.solutionExplanation || "",
+                q.basedOnExam,
                 JSON.stringify(mcqOptions),
+                q.question,
+                q.solutionCode,
               ];
             } else if (q.type === "coding") {
               // Insert Coding question
               insertQuery = `
                 INSERT INTO "PracticeQuestions" (
+                  type,
                   "generatedFor",
                   "language",
                   difficulty,
+                  "weakArea",
                   topic,
                   "questionTitle",
                   "questionDescription",
                   "starterCode",
                   "testCases",
+                  "expectedOutput",
                   "solutionCode",
                   "solutionExplanation",
                   hints,
+                  "basedOnExam",
                   "generatedAt",
                   "isActive"
-                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NOW(), true)
+                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, NOW(), true)
                 RETURNING id, "questionTitle", "questionDescription", "language", difficulty, topic;
               `;
 
               values = [
+                q.type,
                 email,
                 q.language || language,
-                difficulty,
-                topic,
-                q.question || q.questionTitle || "Untitled Coding Problem",
-                q.description || q.questionDescription || "",
+                q.difficulty,
+                q.topic,
+                q.weakArea,
+                q.questionTitle || "Untitled Coding Problem",
+                q.questionDescription || "",
                 q.starterCode || "",
                 JSON.stringify(q.testCases || []),
-                q.solution || q.solutionCode || "",
-                q.explanation || q.solutionExplanation || "",
+                q.description || "",
+                q.solution || "",
+                q.explanation || "",
                 JSON.stringify(q.hints || []),
+                q.basedOnExam,
               ];
             }
 
@@ -248,10 +266,10 @@ export async function POST(request: Request) {
 
       await pool.query(
         `
-            UPDATE "PracticeProgress"
-            SET "totalPracticeQuestions" = "totalPracticeQuestions" + $1,
-                "updatedAt" = CURRENT_TIMESTAMP
-            WHERE email = $2
+          UPDATE "PracticeProgress"
+          SET "totalPracticeQuestions" = "totalPracticeQuestions" + $1,
+            "updatedAt" = CURRENT_TIMESTAMP
+          WHERE email = $2
         `,
         [questions.length, email]
       );

@@ -16,6 +16,7 @@ services:
       - PYSPARK_SERVICE_URL=http://host.docker.internal:5005
       - DAX_SERVICE_URL=http://host.docker.internal:5006
       - DBT_SERVICE_URL=http://host.docker.internal:5004
+      - SNOWFLAKE_SERVICE_URL=http://host.docker.internal:5007
       - REDIS_HOST=redis
       - REDIS_PORT=6379
     extra_hosts:
