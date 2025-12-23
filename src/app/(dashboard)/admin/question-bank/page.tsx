@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef } from "react";
 import toast from "react-hot-toast";
+import * as XLSX from 'xlsx';
 import { useSession } from "next-auth/react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -32,7 +33,12 @@ import {
     Filter,
     Trash2,
     Edit2,
-    Terminal
+    Terminal,
+    Database,
+    Snowflake,
+    FileCode,
+    Server,
+    Download
 } from 'lucide-react';
 
 interface MCQOption {
@@ -582,8 +588,13 @@ export default function QuestionBankPage() {
     };
 
     const languageConfig = {
-        python: { emoji: '🐍', name: 'Python' },
-        sql: { emoji: '🗄️', name: 'SQL' },
+        python: { icon: FileCode, name: 'Python' },
+        sql: { icon: Database, name: 'SQL' },
+        sqladmin: { icon: Database, name: 'SQL Admin' },
+        databricks: { icon: Server, name: 'Pyspark(Databricks)' },
+        snowsql: { icon: Snowflake, name: 'SnowSQL' },
+        oracle: { icon: Database, name: 'Oracle' },
+        oracleadmin: { icon: Database, name: 'Oracle Admin' },
     };
 
     const handleEdit = (q: QuestionInput) => {
@@ -692,6 +703,51 @@ export default function QuestionBankPage() {
         }
     };
 
+    const handleDownloadExcel = () => {
+        if (filteredQuestions.length === 0) {
+            toast.error("No questions to export");
+            return;
+        }
+
+        const dataToExport = filteredQuestions.map(q => {
+            // Map difficulty to Level and Complexity
+            let level = 1;
+            let complexity = "Beginner";
+            if (q.difficulty === 'medium') {
+                level = 2;
+                complexity = "Intermediate";
+            } else if (q.difficulty === 'hard') {
+                level = 3;
+                complexity = "Advance";
+            }
+
+            // Get correct answer text
+            const correctOption = q.options?.find(o => o.isCorrect);
+            const answer = correctOption ? correctOption.text : (q.correctAnswer || '');
+
+            return {
+                Language: q.language || 'General',
+                Category: "Developer", // Placeholder as mapped data isn't available
+                level: level,
+                Question: q.questionText.replace(/<[^>]*>/g, ''), // Strip HTML
+                option1: q.options?.[0]?.text || '',
+                option2: q.options?.[1]?.text || '',
+                option3: q.options?.[2]?.text || '',
+                option4: q.options?.[3]?.text || '',
+                Answer: answer,
+                Score: q.marks,
+                Time_in_m: 2, // Defaulting based on requirement
+                Complexity: complexity
+            };
+        });
+
+        const worksheet = XLSX.utils.json_to_sheet(dataToExport);
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, "Questions");
+        XLSX.writeFile(workbook, "QuestionBank.xlsx");
+        toast.success("Questions exported successfully!");
+    };
+
     return (
         <div className="space-y-6 animate-in fade-in duration-500">
             {/* Header Section */}
@@ -705,6 +761,14 @@ export default function QuestionBankPage() {
                     </p>
                 </div>
                 <div className="flex items-center gap-2">
+                    <Button
+                        variant="outline"
+                        onClick={handleDownloadExcel}
+                        className="transition-all duration-300 shadow-sm"
+                    >
+                        <Download className="w-4 h-4 mr-2" />
+                        Export to Excel
+                    </Button>
                     <Button
                         onClick={() => setShowForm(!showForm)}
                         className={`${showForm ? 'bg-destructive hover:bg-destructive/90' : 'bg-primary hover:bg-primary/90'} transition-all duration-300 shadow-lg hover:shadow-primary/20`}
@@ -844,9 +908,12 @@ export default function QuestionBankPage() {
                                                 <SelectValue />
                                             </SelectTrigger>
                                             <SelectContent>
-                                                {Object.entries(languageConfig).map(([key, config]) => (
+                                                {Object.entries(languageConfig).sort((a, b) => a[1].name.localeCompare(b[1].name)).map(([key, config]) => (
                                                     <SelectItem key={key} value={key}>
-                                                        <span>{config.emoji} {config.name}</span>
+                                                        <div className="flex items-center gap-2">
+                                                            <config.icon className="h-4 w-4" />
+                                                            <span>{config.name}</span>
+                                                        </div>
                                                     </SelectItem>
                                                 ))}
                                             </SelectContent>
@@ -1021,7 +1088,10 @@ export default function QuestionBankPage() {
                                         <SelectItem value="all">All Languages</SelectItem>
                                         {Object.entries(languageConfig).map(([key, config]) => (
                                             <SelectItem key={key} value={key}>
-                                                {config.emoji} {config.name}
+                                                <div className="flex items-center gap-2">
+                                                    <config.icon className="h-4 w-4" />
+                                                    <span>{config.name}</span>
+                                                </div>
                                             </SelectItem>
                                         ))}
                                     </SelectContent>
@@ -1091,9 +1161,13 @@ export default function QuestionBankPage() {
                                                     <Badge variant="outline" className={`${difficultyConfig[q.difficulty as keyof typeof difficultyConfig]?.bg} ${difficultyConfig[q.difficulty as keyof typeof difficultyConfig]?.color} border-0`}>
                                                         {q.difficulty.toUpperCase()}
                                                     </Badge>
-                                                    {q.language && (
-                                                        <Badge variant="secondary" className="font-normal">
-                                                            {languageConfig[q.language as keyof typeof languageConfig]?.emoji} {languageConfig[q.language as keyof typeof languageConfig]?.name}
+                                                    {q.language && languageConfig[q.language as keyof typeof languageConfig] && (
+                                                        <Badge variant="secondary" className="font-normal gap-1">
+                                                            {(() => {
+                                                                const Icon = languageConfig[q.language as keyof typeof languageConfig].icon;
+                                                                return <Icon className="h-3 w-3" />;
+                                                            })()}
+                                                            {languageConfig[q.language as keyof typeof languageConfig].name}
                                                         </Badge>
                                                     )}
                                                     <span className="text-xs text-muted-foreground font-medium px-2">

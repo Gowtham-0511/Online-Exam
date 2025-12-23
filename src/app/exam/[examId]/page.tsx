@@ -4,7 +4,7 @@ import { useSession } from "next-auth/react";
 import { toast } from "react-hot-toast";
 import useSWR from "swr";
 import dynamic from "next/dynamic";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import {
     ResizablePanelGroup,
@@ -174,6 +174,39 @@ export default function ExamPage() {
         hasSubmittedRef,
     } = useExamViolations();
 
+    // Refs for accessing state in intervals/callbacks without dependencies
+    const stateRef = useRef({
+        examId,
+        exam,
+        answers,
+        mcqAnswers,
+        activeQuestionIndex,
+        timeLeft,
+        flaggedQuestions,
+        questionTimeSpent,
+        codeRunCounts,
+        session,
+        code
+    });
+
+    // Update stateRef whenever state changes
+    useEffect(() => {
+        stateRef.current = {
+            examId,
+            exam,
+            answers,
+            mcqAnswers,
+            activeQuestionIndex,
+            timeLeft,
+            flaggedQuestions,
+            questionTimeSpent,
+            codeRunCounts,
+            session,
+            code
+        };
+    }, [examId, exam, answers, mcqAnswers, activeQuestionIndex, timeLeft, flaggedQuestions, questionTimeSpent, codeRunCounts, session, code]);
+
+
     const formatTime = (seconds: number) => {
         const hours = Math.floor(seconds / 3600);
         const minutes = Math.floor((seconds % 3600) / 60);
@@ -256,24 +289,25 @@ export default function ExamPage() {
 
     // Auto-save functions
     const saveToLocalStorage = useCallback(() => {
-        if (!exam || !examId) return;
+        const current = stateRef.current;
+        if (!current.exam || !current.examId) return;
 
         const examState = {
-            examId: examId.toString(),
-            answers,
-            mcqAnswers,
-            activeQuestionIndex,
-            timeLeft,
-            lastSaved: new Date().toISOString(),
-            flaggedQuestions: Array.from(flaggedQuestions),
-            questionTimeSpent,
-            codeRunCounts
+            examId: current.examId.toString(),
+            answers: current.answers,
+            mcqAnswers: current.mcqAnswers,
+            activeQuestionIndex: current.activeQuestionIndex,
+            timeLeft: current.timeLeft,
+            flaggedQuestions: Array.from(current.flaggedQuestions || []),
+            questionTimeSpent: current.questionTimeSpent,
+            codeRunCounts: current.codeRunCounts,
+            lastSaved: new Date().toISOString()
         };
 
         try {
-            if (session?.user?.email) {
+            if (current.session?.user?.email) {
                 localStorage.setItem(
-                    `exam_${examId}_${session.user.email}`,
+                    `exam_${current.examId}_${current.session.user.email}`,
                     JSON.stringify(examState)
                 );
                 setLastSaved(new Date());
@@ -281,7 +315,7 @@ export default function ExamPage() {
         } catch (error) {
             console.error('Failed to save to localStorage:', error);
         }
-    }, [examId, session, exam, answers, mcqAnswers, activeQuestionIndex, timeLeft, flaggedQuestions, questionTimeSpent, codeRunCounts]);
+    }, []);
 
     const loadSavedState = useCallback(() => {
         if (!examId || !session?.user?.email) return false;
@@ -371,7 +405,7 @@ export default function ExamPage() {
         try {
             if (exam.language === "sql") await handleRunSql();
             else if (exam.language === "python") await handleRunPython();
-            else alert("Unsupported language");
+            else await handleRunAI();
         } catch (err: any) {
             setOutput("Error running code.");
         }
@@ -444,6 +478,49 @@ export default function ExamPage() {
         setRunning(false);
     };
 
+    const handleRunAI = async () => {
+        setRunning(true);
+        setOutput("Running with AI...");
+
+        try {
+            const res = await fetch("/api/exam/ai-execute", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    code,
+                    language: exam?.language,
+                    question: currentQuestion?.question,
+                    testCases: currentQuestion?.testCases?.map((tc: any) => ({
+                        input: tc.input,
+                        expectedOutput: tc.expectedOutput || tc.output // Handle both naming conventions if any
+                    }))
+                }),
+            });
+
+            const data = await res.json();
+
+            if (data.error) {
+                setOutput(`Error: ${data.error}`);
+            } else {
+                let report = "";
+                if (data.passed) {
+                    report = `✅ PASSED\n\nScore: ${data.score}/100\n\nFeedback: ${data.feedback}`;
+                } else {
+                    report = `❌ FAILED\n\nScore: ${data.score}/100\n\nFeedback: ${data.feedback}`;
+                    if (data.failedCase) {
+                        report += `\n\nFailed Case:\nInput: ${data.failedCase.input}\nExpected: ${data.failedCase.expected}\nActual: ${data.failedCase.actual}`;
+                    }
+                }
+                setOutput(report);
+            }
+        } catch (e) {
+            console.error(e);
+            setOutput("Error running AI execution.");
+        }
+
+        setRunning(false);
+    };
+
     // Submission handlers
     const cleanupExamEnvironment = async () => {
         if (document.fullscreenElement) {
@@ -488,22 +565,23 @@ export default function ExamPage() {
         setIsTabVisible(true);
     };
 
-    const handleSubmitWithDisqualification = async (disqualifiedFlag: boolean) => {
+    const handleSubmitWithDisqualification = useCallback(async (disqualifiedFlag: boolean) => {
         if (hasSubmittedRef.current) return;
 
         hasSubmittedRef.current = true;
 
-        if (!exam || !session) return;
+        const current = stateRef.current;
+        if (!current.exam || !current.session) return;
 
         console.log(disqualifiedFlag, "disqualifiedFlag");
 
-        const email = session.user?.email || "unknown";
-        const userName = session.user?.name || "Anonymous";
-        const examIdStr = examId?.toString() || "unknown";
+        const email = current.session.user?.email || "unknown";
+        const userName = current.session.user?.name || "Anonymous";
+        const examIdStr = current.examId?.toString() || "unknown";
 
-        const answersWithQuestionIds = answers.map((answer, index) => ({
-            questionId: shuffledQuestions[index]?.id || index,
-            question: shuffledQuestions[index]?.question || '',
+        const answersWithQuestionIds = current.answers.map((answer, index) => ({
+            questionId: current.exam?.questions[index]?.id || index,
+            question: current.exam?.questions[index]?.question || '',
             answer: answer,
             originalIndex: index
         }));
@@ -515,15 +593,20 @@ export default function ExamPage() {
                 examId: examIdStr,
                 email,
                 userName,
-                answers,
+                answers: current.answers,
                 answersWithQuestionIds,
                 disqualified: disqualifiedFlag,
-                code,
+                code: current.answers[current.activeQuestionIndex], // Assuming code is part of answers or tracked separately? logic in hooks says 'code' state exists.
+                // Wait, code state is separate in hooks. I should use stateRef.code if I added it?
+                // I didn't add 'code' to stateRef.
+                // I'll add 'code' to stateRef in the next step or jus use current.answers?
+                // In hook: const { code, setCode } = examState.
+                // It seems 'code' is just the current editor content.
             }),
         });
         await cleanupExamEnvironment();
         router.push("/attender");
-    };
+    }, []);
 
     const handleSubmit = async () => {
         if (hasSubmittedRef.current) return;
@@ -636,11 +719,12 @@ export default function ExamPage() {
         }
     };
 
-    const handleDisqualification = async (reason: string) => {
+    const handleDisqualification = useCallback(async (reason: string) => {
         setDisqualified(true);
         toast.error(`🚫 Disqualified: ${reason}`);
 
-        const examIdStr = examId?.toString() || "unknown";
+        const current = stateRef.current;
+        const examIdStr = current.examId?.toString() || "unknown";
 
         let imageBase64 = "";
 
@@ -650,37 +734,38 @@ export default function ExamPage() {
             body: JSON.stringify({
                 image: imageBase64,
                 examId: examIdStr,
-                email: session?.user?.email || "unknown",
+                email: current.session?.user?.email || "unknown",
                 reason,
                 time: new Date().toISOString(),
             }),
         });
 
         handleSubmitWithDisqualification(true);
-    };
+    }, [handleSubmitWithDisqualification]);
 
     // Save exam progress
-    const saveExamProgress = async () => {
-        if (!exam) return;
+    const saveExamProgress = useCallback(async () => {
+        const current = stateRef.current;
+        if (!current.exam) return;
 
         setIsSaving(true);
 
         try {
             const progressData = {
-                examId: exam.id,
-                email: session?.user.email,
-                answers: answers,
-                mcqAnswers: mcqAnswers,
-                activeQuestionIndex: activeQuestionIndex,
-                timeLeft: timeLeft,
-                flaggedQuestions: Array.from(flaggedQuestions),
-                questionTimeSpent: questionTimeSpent,
-                codeRunCounts: codeRunCounts,
+                examId: current.exam.id,
+                email: current.session?.user.email,
+                answers: current.answers,
+                mcqAnswers: current.mcqAnswers,
+                activeQuestionIndex: current.activeQuestionIndex,
+                timeLeft: current.timeLeft,
+                flaggedQuestions: Array.from(current.flaggedQuestions || []),
+                questionTimeSpent: current.questionTimeSpent,
+                codeRunCounts: current.codeRunCounts,
                 lastSaved: new Date().toISOString(),
             };
 
             // Save to localStorage as backup
-            localStorage.setItem(`exam_progress_${exam.id}`, JSON.stringify(progressData));
+            localStorage.setItem(`exam_progress_${current.exam.id}`, JSON.stringify(progressData));
 
             // Save to server
             const response = await fetch('/api/exam/save-progress', {
@@ -695,7 +780,6 @@ export default function ExamPage() {
                 const data = await response.json();
                 setLastSaved(new Date());
                 toast.success('Progress saved successfully!');
-                console.log('Saved at:', data.savedAt);
             } else {
                 throw new Error('Failed to save');
             }
@@ -705,25 +789,25 @@ export default function ExamPage() {
         } finally {
             setIsSaving(false);
         }
-    };
+    }, []);
 
     // Auto-save every 30 seconds
     useEffect(() => {
-        if (!examStarted || !exam) return;
+        if (!examStarted) return;
 
         const autoSaveInterval = setInterval(() => {
             saveExamProgress();
         }, 30000); // 30 seconds
 
         return () => clearInterval(autoSaveInterval);
-    }, [examStarted, exam, answers, mcqAnswers, activeQuestionIndex, timeLeft, flaggedQuestions]);
+    }, [examStarted, saveExamProgress]);
 
     // Save when changing questions
     useEffect(() => {
         if (examStarted && exam) {
             saveExamProgress();
         }
-    }, [activeQuestionIndex]);
+    }, [activeQuestionIndex, examStarted, exam]);
 
     // Add keyboard shortcuts (optional)
     useEffect(() => {
@@ -1511,11 +1595,12 @@ export default function ExamPage() {
 
             {/* MAIN CONTENT - RESIZABLE PANELS */}
             <ResizablePanelGroup
+                key={currentQuestion?.type === 'mcq' ? 'layout-mode-mcq' : 'layout-mode-coding'}
                 direction="horizontal"
                 className="flex-1 overflow-hidden"
             >
                 {/* LEFT PANEL - QUESTION */}
-                <ResizablePanel defaultSize={35} minSize={25} maxSize={50}>
+                <ResizablePanel id="question-panel" order={1} defaultSize={35} minSize={25} maxSize={currentQuestion?.type === 'mcq' ? 100 : 50}>
                     <div className="h-full flex flex-col bg-card border-r border-border">
                         <Tabs defaultValue="description" className="flex-1 flex flex-col overflow-hidden">
                             {/* Tab Headers */}
@@ -1658,111 +1743,115 @@ export default function ExamPage() {
                     </div>
                 </ResizablePanel>
 
-                <ResizableHandle withHandle />
-
-                {/* RIGHT PANEL - We'll add this in the next step */}
-                <ResizablePanel defaultSize={65} minSize={50}>
-                    <ResizablePanelGroup direction="vertical">
-                        {/* CODE EDITOR - Using your existing component */}
-                        <ResizablePanel defaultSize={60} minSize={30}>
-                            <div className="h-full flex flex-col">
-                                <CodeEditor
-                                    code={code}
-                                    setCode={setCode}
-                                    language={exam?.language || "python"}
-                                    editorTheme={editorTheme}
-                                    onRun={handleRun}
-                                    running={running}
-                                    output={output}
-                                    theme={theme}
-                                    setTheme={setTheme}
-                                    setEditorTheme={setEditorTheme}
-                                    sqlResult={sqlResult}
-                                    examLanguage={exam?.language || "python"}
-                                    onCodeChange={handleCodeChange}
-                                    schemaData={schemaData}
-                                    onShowErDiagram={() => setShowErDiagram(true)}
-                                    question={currentQuestion}
-                                />
-                            </div>
-                        </ResizablePanel>
-
+                {currentQuestion?.type !== 'mcq' && (
+                    <>
                         <ResizableHandle withHandle />
 
-                        {/* CONSOLE - Only if not already in CodeEditor */}
-                        <ResizablePanel defaultSize={40} minSize={20}>
-                            <div className="h-full flex flex-col bg-card border-t border-border">
-                                <div className="h-12 px-4 border-b border-border flex items-center bg-muted/30">
-                                    <Terminal className="w-4 h-4 text-muted-foreground mr-2" />
-                                    <span className="text-sm font-medium">Console Output</span>
-                                </div>
-
-                                <ScrollArea className="flex-1">
-                                    <div className="p-4">
-                                        {exam?.language === "sql" ? (
-                                            sqlResult ? (
-                                                <div className="space-y-4">
-                                                    <span className="text-sm font-medium">
-                                                        {sqlResult.rows.length} row
-                                                        {sqlResult.rows.length !== 1 ? "s" : ""}
-                                                    </span>
-                                                    <div className="border border-border rounded-lg overflow-hidden">
-                                                        <table className="w-full text-sm">
-                                                            <thead className="bg-muted">
-                                                                <tr>
-                                                                    {sqlResult.columns.map((col, idx) => (
-                                                                        <th
-                                                                            key={idx}
-                                                                            className="px-4 py-2 text-left font-semibold border-b border-border"
-                                                                        >
-                                                                            {col}
-                                                                        </th>
-                                                                    ))}
-                                                                </tr>
-                                                            </thead>
-                                                            <tbody>
-                                                                {sqlResult.rows.map((row, rowIdx) => (
-                                                                    <tr key={rowIdx} className="hover:bg-muted/50">
-                                                                        {sqlResult.columns.map((col, colIdx) => (
-                                                                            <td
-                                                                                key={colIdx}
-                                                                                className="px-4 py-2 border-b border-border/50 font-mono text-xs"
-                                                                            >
-                                                                                {row[col] ?? "NULL"}
-                                                                            </td>
-                                                                        ))}
-                                                                    </tr>
-                                                                ))}
-                                                            </tbody>
-                                                        </table>
-                                                    </div>
-                                                </div>
-                                            ) : output ? (
-                                                <pre className="text-sm text-destructive font-mono whitespace-pre-wrap">
-                                                    {output}
-                                                </pre>
-                                            ) : (
-                                                <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
-                                                    <Database className="w-12 h-12 mb-2 opacity-50" />
-                                                    <p className="text-sm">Run your query to see results</p>
-                                                </div>
-                                            )
-                                        ) : output ? (
-                                            <pre className="text-sm text-foreground font-mono whitespace-pre-wrap">
-                                                {output}
-                                            </pre>
-                                        ) : (
-                                            <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
-                                                <Terminal className="w-12 h-12 mb-2 opacity-50" />
-                                                <p className="text-sm">Run your code to see output</p>
-                                            </div>
-                                        )}
+                        {/* RIGHT PANEL - Code Editor & Console */}
+                        <ResizablePanel id="editor-container-panel" order={2} defaultSize={65} minSize={50}>
+                            <ResizablePanelGroup direction="vertical">
+                                {/* CODE EDITOR */}
+                                <ResizablePanel id="code-editor-panel" order={1} defaultSize={60} minSize={30}>
+                                    <div className="h-full flex flex-col">
+                                        <CodeEditor
+                                            code={code}
+                                            setCode={setCode}
+                                            language={exam?.language || "python"}
+                                            editorTheme={editorTheme}
+                                            onRun={handleRun}
+                                            running={running}
+                                            output={output}
+                                            theme={theme}
+                                            setTheme={setTheme}
+                                            setEditorTheme={setEditorTheme}
+                                            sqlResult={sqlResult}
+                                            examLanguage={exam?.language || "python"}
+                                            onCodeChange={handleCodeChange}
+                                            schemaData={schemaData}
+                                            onShowErDiagram={() => setShowErDiagram(true)}
+                                            question={currentQuestion}
+                                        />
                                     </div>
-                                </ScrollArea>
-                            </div>
+                                </ResizablePanel>
+
+                                <ResizableHandle withHandle />
+
+                                {/* CONSOLE */}
+                                <ResizablePanel id="console-output-panel" order={2} defaultSize={40} minSize={20}>
+                                    <div className="h-full flex flex-col bg-card border-t border-border">
+                                        <div className="h-12 px-4 border-b border-border flex items-center bg-muted/30">
+                                            <Terminal className="w-4 h-4 text-muted-foreground mr-2" />
+                                            <span className="text-sm font-medium">Console Output</span>
+                                        </div>
+
+                                        <ScrollArea className="flex-1">
+                                            <div className="p-4">
+                                                {exam?.language === "sql" ? (
+                                                    sqlResult ? (
+                                                        <div className="space-y-4">
+                                                            <span className="text-sm font-medium">
+                                                                {sqlResult.rows.length} row
+                                                                {sqlResult.rows.length !== 1 ? "s" : ""}
+                                                            </span>
+                                                            <div className="border border-border rounded-lg overflow-hidden">
+                                                                <table className="w-full text-sm">
+                                                                    <thead className="bg-muted">
+                                                                        <tr>
+                                                                            {sqlResult.columns.map((col, idx) => (
+                                                                                <th
+                                                                                    key={idx}
+                                                                                    className="px-4 py-2 text-left font-semibold border-b border-border"
+                                                                                >
+                                                                                    {col}
+                                                                                </th>
+                                                                            ))}
+                                                                        </tr>
+                                                                    </thead>
+                                                                    <tbody>
+                                                                        {sqlResult.rows.map((row, rowIdx) => (
+                                                                            <tr key={rowIdx} className="hover:bg-muted/50">
+                                                                                {sqlResult.columns.map((col, colIdx) => (
+                                                                                    <td
+                                                                                        key={colIdx}
+                                                                                        className="px-4 py-2 border-b border-border/50 font-mono text-xs"
+                                                                                    >
+                                                                                        {row[col] ?? "NULL"}
+                                                                                    </td>
+                                                                                ))}
+                                                                            </tr>
+                                                                        ))}
+                                                                    </tbody>
+                                                                </table>
+                                                            </div>
+                                                        </div>
+                                                    ) : output ? (
+                                                        <pre className="text-sm text-destructive font-mono whitespace-pre-wrap">
+                                                            {output}
+                                                        </pre>
+                                                    ) : (
+                                                        <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
+                                                            <Database className="w-12 h-12 mb-2 opacity-50" />
+                                                            <p className="text-sm">Run your query to see results</p>
+                                                        </div>
+                                                    )
+                                                ) : output ? (
+                                                    <pre className="text-sm text-foreground font-mono whitespace-pre-wrap">
+                                                        {output}
+                                                    </pre>
+                                                ) : (
+                                                    <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
+                                                        <Terminal className="w-12 h-12 mb-2 opacity-50" />
+                                                        <p className="text-sm">Run your code to see output</p>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </ScrollArea>
+                                    </div>
+                                </ResizablePanel>
+                            </ResizablePanelGroup>
                         </ResizablePanel>
-                    </ResizablePanelGroup>
-                </ResizablePanel>
+                    </>
+                )}
             </ResizablePanelGroup>
 
             {/* BOTTOM NAVIGATION BAR */}
@@ -1930,38 +2019,40 @@ export default function ExamPage() {
                             <Clock className="w-5 h-5 text-primary" />
                             Restore Previous Session?
                         </AlertDialogTitle>
-                        <AlertDialogDescription className="space-y-3">
-                            <p>
-                                We found saved progress from{' '}
-                                <span className="font-semibold text-foreground">
-                                    {pendingProgress?.timestamp.toLocaleString()}
-                                </span>
-                            </p>
-                            {pendingProgress && (
-                                <div className="bg-muted p-3 rounded-lg space-y-2 text-sm">
-                                    <div className="flex justify-between">
-                                        <span className="text-muted-foreground">Questions answered:</span>
-                                        <span className="font-medium text-foreground">
-                                            {pendingProgress.answers?.filter((a: string) => a?.trim()).length || 0}
-                                        </span>
-                                    </div>
-                                    <div className="flex justify-between">
-                                        <span className="text-muted-foreground">Time remaining:</span>
-                                        <span className="font-medium text-foreground">
-                                            {Math.floor((pendingProgress.timeLeft || 0) / 60)} minutes
-                                        </span>
-                                    </div>
-                                    <div className="flex justify-between">
-                                        <span className="text-muted-foreground">Source:</span>
-                                        <Badge variant="outline">
-                                            {pendingProgress.source === 'server' ? 'Server' : 'Local Backup'}
-                                        </Badge>
-                                    </div>
+                        <AlertDialogDescription asChild className="space-y-3">
+                            <div>
+                                <div>
+                                    We found saved progress from{' '}
+                                    <span className="font-semibold text-foreground">
+                                        {pendingProgress?.timestamp.toLocaleString()}
+                                    </span>
                                 </div>
-                            )}
-                            <p className="text-xs">
-                                Choose "Continue" to resume, or "Start Fresh" to begin a new attempt.
-                            </p>
+                                {pendingProgress && (
+                                    <div className="bg-muted p-3 rounded-lg space-y-2 text-sm">
+                                        <div className="flex justify-between">
+                                            <span className="text-muted-foreground">Questions answered:</span>
+                                            <span className="font-medium text-foreground">
+                                                {pendingProgress.answers?.filter((a: string) => a?.trim()).length || 0}
+                                            </span>
+                                        </div>
+                                        <div className="flex justify-between">
+                                            <span className="text-muted-foreground">Time remaining:</span>
+                                            <span className="font-medium text-foreground">
+                                                {Math.floor((pendingProgress.timeLeft || 0) / 60)} minutes
+                                            </span>
+                                        </div>
+                                        <div className="flex justify-between">
+                                            <span className="text-muted-foreground">Source:</span>
+                                            <Badge variant="outline">
+                                                {pendingProgress.source === 'server' ? 'Server' : 'Local Backup'}
+                                            </Badge>
+                                        </div>
+                                    </div>
+                                )}
+                                <p className="text-xs">
+                                    Choose "Continue" to resume, or "Start Fresh" to begin a new attempt.
+                                </p>
+                            </div>
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>

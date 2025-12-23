@@ -17,8 +17,7 @@ services:
       - DAX_SERVICE_URL=http://host.docker.internal:5006
       - DBT_SERVICE_URL=http://host.docker.internal:5004
       - SNOWFLAKE_SERVICE_URL=http://host.docker.internal:5007
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
+      - NODE_ENV=production
     extra_hosts:
       - "host.docker.internal:host-gateway"
     restart: always
@@ -34,10 +33,3 @@ services:
       - ./nginx/certs:/etc/nginx/certs:ro
     depends_on:
       - exam-web
-
-  redis:
-    image: redis:latest
-    container_name: redis
-    ports:
-      - "6380:6379"
-    restart: always

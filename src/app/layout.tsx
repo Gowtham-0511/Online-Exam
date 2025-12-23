@@ -14,9 +14,9 @@ export const metadata: Metadata = {
   title: "SysRank - Advanced Assessment Platform",
   description: "SysRank is a comprehensive platform for creating, managing, and taking technical assessments and coding challenges.",
   icons: {
-    icon: "/syslogo.png",
-    shortcut: "/syslogo.png",
-    apple: "/syslogo.png",
+    icon: "/logo3.png",
+    shortcut: "/logo3.png",
+    apple: "/logo3.png",
   },
 };
 

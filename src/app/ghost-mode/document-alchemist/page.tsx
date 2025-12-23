@@ -17,7 +17,9 @@ import {
     Plus,
     X,
     Settings2,
-    MessageSquare
+    MessageSquare,
+    Ghost,
+    Terminal
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -30,6 +32,7 @@ import { useGSAP } from '@gsap/react';
 import gsap from 'gsap';
 import { cn } from '@/lib/utils';
 import { Toaster, toast } from 'react-hot-toast';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 // Types
 type ProcessingStep = 'upload' | 'config' | 'processing' | 'result';
@@ -316,58 +319,101 @@ const DocumentAlchemist = () => {
     };
 
     return (
-        <div ref={containerRef} className="min-h-screen bg-muted/20 font-sans text-foreground">
-            <Toaster position="bottom-center" />
+        <div ref={containerRef} className="h-screen bg-background flex flex-col font-sans overflow-hidden relative selection:bg-pink-500/30">
+            <Toaster position="bottom-center" toastOptions={{
+                style: {
+                    background: '#18181b',
+                    color: '#fff',
+                    border: '1px solid #3f3f46'
+                }
+            }} />
+
+            {/* Ambient Background */}
+            <div className="fixed inset-0 pointer-events-none z-0">
+                <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-pink-500/5 rounded-full blur-[120px]" />
+                <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-rose-500/5 rounded-full blur-[100px]" />
+                <div className="absolute inset-0 bg-[linear-gradient(rgba(0,0,0,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(0,0,0,0.02)_1px,transparent_1px)] dark:bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:48px_48px] [mask-image:radial-gradient(ellipse_at_center,black_70%,transparent_100%)]" />
+            </div>
 
             {/* Top Navigation */}
-            <header className="sticky top-0 z-50 w-full border-b bg-background/80 backdrop-blur-md supports-[backdrop-filter]:bg-background/60">
-                <div className="flex h-16 items-center px-6 gap-4">
-                    <Button variant="ghost" size="icon" onClick={() => router.push('/ghost-mode')} className="hover:bg-muted text-muted-foreground hover:text-foreground">
-                        <ArrowLeft className="w-5 h-5" />
-                    </Button>
-                    <div className="flex items-center gap-2">
-                        <div className="h-6 w-6 rounded bg-gradient-to-br from-primary to-accent flex items-center justify-center">
-                            <Headphones className="h-3.5 w-3.5 text-primary-foreground" />
+            <header className="flex-none h-16 border-b border-border/40 bg-background/80 backdrop-blur-md z-20">
+                <div className="flex h-full items-center px-6 gap-4 justify-between max-w-[1920px] mx-auto w-full">
+                    <div className="flex items-center gap-4">
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => router.push('/ghost-mode')}
+                            className="hover:bg-muted text-muted-foreground hover:text-foreground"
+                        >
+                            <ArrowLeft className="w-5 h-5" />
+                        </Button>
+                        <div className="flex items-center gap-3">
+                            <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-pink-500/10 ring-1 ring-pink-500/20">
+                                <Headphones className="w-4 h-4 text-pink-500" />
+                            </div>
+                            <div className="flex flex-col">
+                                <h1 className="text-sm font-semibold tracking-tight text-foreground">Doc Alchemist</h1>
+                                <div className="flex items-center gap-1.5">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                                    <span className="text-[10px] text-muted-foreground font-mono uppercase">System Active</span>
+                                </div>
+                            </div>
                         </div>
-                        <span className="font-semibold text-lg tracking-tight">Audio Notebook</span>
                     </div>
-                    <div className="ml-auto flex items-center gap-2">
-                        <Badge variant="secondary" className="hidden md:flex gap-1">
-                            <Sparkles className="w-3 h-3 text-primary" />
-                            <span>Ghost Mode AI</span>
-                        </Badge>
+
+                    <div className="flex items-center gap-2">
+                        <div className="hidden md:flex items-center gap-2 mr-4">
+                            <Badge variant="outline" className="border-pink-500/20 bg-pink-500/5 text-pink-500 hover:bg-pink-500/10 transition-colors cursor-default">
+                                <Sparkles className="w-3 h-3 mr-1.5" />
+                                Ghost Mode AI
+                            </Badge>
+                        </div>
                     </div>
                 </div>
             </header>
 
-            <div className="flex h-[calc(100vh-64px)] overflow-hidden">
+            <div className="flex flex-1 overflow-hidden relative z-10">
                 {/* Left Sidebar - Sources */}
                 <aside className={cn(
-                    "w-80 border-r bg-card h-full flex flex-col transition-all duration-300 ease-in-out relative z-10",
+                    "w-80 border-r border-border/40 bg-card/30 backdrop-blur-sm h-full flex flex-col transition-all duration-300 ease-in-out relative z-10",
                     !isSidebarOpen && "-ml-80"
                 )}>
-                    <div className="p-4 border-b flex items-center justify-between">
-                        <h3 className="font-medium text-sm text-muted-foreground uppercase tracking-wider">Sources</h3>
-                        <Button variant="ghost" size="icon" className="hover:bg-muted text-muted-foreground hover:text-foreground" onClick={() => {
-                            setFile(null);
-                            setStep('upload');
-                            setAudioSrc(null);
-                        }}>
-                            <Plus className="w-4 h-4" />
-                        </Button>
+                    <div className="p-4 border-b border-border/40 flex items-center justify-between">
+                        <h3 className="font-medium text-xs text-muted-foreground uppercase tracking-wider flex items-center gap-2">
+                            <FileText className="w-3.5 h-3.5" />
+                            Data Sources
+                        </h3>
+                        <TooltipProvider>
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-pink-500/10 hover:text-pink-500" onClick={() => {
+                                        setFile(null);
+                                        setStep('upload');
+                                        setAudioSrc(null);
+                                    }}>
+                                        <Plus className="w-4 h-4" />
+                                    </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>Add Source</TooltipContent>
+                            </Tooltip>
+                        </TooltipProvider>
+
                     </div>
                     <ScrollArea className="flex-1 p-4">
                         <div className="space-y-2">
                             {file ? (
-                                <div className="sidebar-item p-3 rounded-lg border bg-accent/10 border-accent/20 flex items-start gap-3 group hover:bg-accent/20 transition-colors cursor-pointer">
-                                    <div className="mt-1 p-1.5 rounded bg-background shadow-sm text-primary">
+                                <div className="sidebar-item p-3 rounded-lg border border-pink-500/20 bg-pink-500/5 flex items-start gap-3 group hover:border-pink-500/40 transition-all cursor-pointer">
+                                    <div className="mt-1 p-1.5 rounded-md bg-background shadow-sm text-pink-500 ring-1 ring-pink-500/20">
                                         <FileText className="w-4 h-4" />
                                     </div>
                                     <div className="flex-1 min-w-0">
-                                        <p className="font-medium text-sm truncate leading-none mb-1">{file.name}</p>
-                                        <p className="text-xs text-muted-foreground">{file.type === 'application/pdf' ? 'PDF' : 'DOC'} • {(file.size / 1024 / 1024).toFixed(1)}MB</p>
+                                        <p className="font-medium text-sm truncate leading-none mb-1.5 text-foreground">{file.name}</p>
+                                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                            <Badge variant="secondary" className="text-[10px] h-4 px-1 rounded-sm bg-background border-border">{file.type === 'application/pdf' ? 'PDF' : 'DOC'}</Badge>
+                                            <span>{(file.size / 1024 / 1024).toFixed(1)}MB</span>
+                                        </div>
                                     </div>
-                                    <Button variant="ghost" size="icon" className="h-6 w-6 opacity-0 group-hover:opacity-100" onClick={(e) => {
+                                    <Button variant="ghost" size="icon" className="h-6 w-6 opacity-0 group-hover:opacity-100 hover:text-destructive hover:bg-destructive/10 -mr-1" onClick={(e) => {
                                         e.stopPropagation();
                                         setFile(null);
                                         setStep('upload');
@@ -377,17 +423,26 @@ const DocumentAlchemist = () => {
                                     </Button>
                                 </div>
                             ) : (
-                                <div className="text-center py-8 text-muted-foreground text-sm border-2 border-dashed rounded-lg">
-                                    No sources added
+                                <div className="text-center py-12 text-muted-foreground text-sm border-2 border-dashed border-border/50 rounded-xl bg-muted/5 flex flex-col items-center gap-2">
+                                    <Ghost className="w-8 h-8 opacity-20" />
+                                    <span>No sources added</span>
                                 </div>
                             )}
                         </div>
                     </ScrollArea>
+
+                    {/* Sidebar Footer */}
+                    <div className="p-4 border-t border-border/40 bg-background/20 backdrop-blur-md">
+                        <div className="text-[10px] text-muted-foreground text-center">
+                            <p>Ghost Mode employs ephemeral processing.</p>
+                            <p className="opacity-60">Files are not persisted.</p>
+                        </div>
+                    </div>
                 </aside>
 
                 {/* Main Content Area */}
-                <main className="flex-1 relative flex flex-col min-w-0 bg-background">
-                    {/* Toggle Sidebar Button */}
+                <main className="flex-1 relative flex flex-col min-w-0 bg-transparent overflow-hidden">
+                    {/* Toggle Sidebar Button (Mobile) */}
                     <div className="absolute left-4 top-4 z-20 md:hidden">
                         <Button variant="outline" size="icon" onClick={() => setIsSidebarOpen(!isSidebarOpen)}>
                             <MoreHorizontal className="w-4 h-4" />
@@ -395,13 +450,16 @@ const DocumentAlchemist = () => {
                     </div>
 
                     {step === 'upload' && (
-                        <div className="flex-1 flex flex-col items-center justify-center p-8 animate-in max-w-2xl mx-auto w-full">
-                            <div className="text-center mb-10 space-y-2">
-                                <h1 className="text-4xl font-bold tracking-tight text-foreground">
-                                    Turn documents into <span className="text-primary">Audio</span>
+                        <div className="flex-1 flex flex-col items-center justify-center p-8 animate-in max-w-2xl mx-auto w-full relative z-10">
+                            <div className="text-center mb-10 space-y-4">
+                                <div className="inline-flex items-center justify-center p-3 rounded-2xl bg-gradient-to-br from-pink-500/10 to-rose-500/10 ring-1 ring-pink-500/20 mb-4 shadow-lg shadow-pink-500/5">
+                                    <Sparkles className="w-8 h-8 text-pink-500" />
+                                </div>
+                                <h1 className="text-4xl md:text-5xl font-bold tracking-tight text-foreground">
+                                    Document <span className="text-transparent bg-clip-text bg-gradient-to-r from-pink-500 to-rose-500">Alchemist</span>
                                 </h1>
-                                <p className="text-muted-foreground text-lg">
-                                    Upload a PDF, Word doc, or text file to generate an engaging podcast.
+                                <p className="text-muted-foreground text-lg max-w-lg mx-auto leading-relaxed">
+                                    Transmute static data into liquid knowledge. Upload documents to generate deep-dive podcasts.
                                 </p>
                             </div>
 
@@ -411,17 +469,22 @@ const DocumentAlchemist = () => {
                                 onDrop={handleDrop}
                                 onClick={() => document.getElementById('file-upload')?.click()}
                                 className={cn(
-                                    "w-full aspect-[3/2] max-h-[300px] border-2 border-dashed rounded-xl flex flex-col items-center justify-center cursor-pointer transition-all duration-200 bg-muted/30 hover:bg-muted/50",
-                                    isDragging ? "border-primary bg-primary/5 scale-[1.01]" : "border-muted-foreground/20"
+                                    "w-full aspect-[2.5/1] max-h-[300px] border-2 border-dashed rounded-2xl flex flex-col items-center justify-center cursor-pointer transition-all duration-300 backdrop-blur-sm",
+                                    isDragging
+                                        ? "border-pink-500 bg-pink-500/10 scale-[1.02] shadow-xl shadow-pink-500/10"
+                                        : "border-border/40 bg-card/30 hover:bg-card/50 hover:border-pink-500/30"
                                 )}
                             >
-                                <div className="h-16 w-16 mb-4 rounded-full bg-background shadow-sm flex items-center justify-center text-primary">
-                                    <Upload className="w-8 h-8" />
+                                <div className={cn(
+                                    "h-16 w-16 mb-4 rounded-full bg-background/50 shadow-sm flex items-center justify-center text-pink-500 transition-transform duration-300",
+                                    isDragging && "scale-110"
+                                )}>
+                                    <Upload className="w-7 h-7" />
                                 </div>
-                                <h3 className="text-lg font-medium mb-1">Upload source</h3>
+                                <h3 className="text-lg font-medium mb-1">Initiate Upload</h3>
                                 <p className="text-sm text-muted-foreground text-center px-8">
-                                    Drag & drop or Click to Select <br />
-                                    <span className="text-xs opacity-70">(PDF, DOCX, TXT, MD)</span>
+                                    Drag artifact or <span className="text-pink-500 hover:underline">Select File</span> <br />
+                                    <span className="text-xs opacity-60 font-mono mt-2 block">SUPPORTED: PDF, DOCX, TXT, MD</span>
                                 </p>
                                 <input
                                     id="file-upload"
@@ -435,28 +498,34 @@ const DocumentAlchemist = () => {
                     )}
 
                     {step === 'config' && (
-                        <div className="flex-1 flex flex-col items-center justify-center p-8 animate-in max-w-3xl mx-auto w-full">
-                            <Card className="w-full shadow-lg border-border/50">
-                                <CardHeader>
-                                    <CardTitle className="text-2xl">Audio Configuration</CardTitle>
-                                    <CardDescription>Customize the style and length of your audio summary.</CardDescription>
+                        <div className="flex-1 flex flex-col items-center justify-center p-8 animate-in max-w-4xl mx-auto w-full relative z-10">
+                            <Card className="w-full shadow-2xl border-border/50 bg-card/50 backdrop-blur-md">
+                                <CardHeader className="border-b border-border/40 pb-6">
+                                    <div className="flex items-center gap-3 mb-2">
+                                        <Settings2 className="w-5 h-5 text-pink-500" />
+                                        <CardTitle className="text-2xl">Alchemy Configuration</CardTitle>
+                                    </div>
+                                    <CardDescription>Tune the parameters for your audio transmutation.</CardDescription>
                                 </CardHeader>
-                                <CardContent className="space-y-8">
+                                <CardContent className="space-y-8 pt-8">
                                     <div className="space-y-4">
                                         <div className="flex items-center justify-between">
-                                            <label className="text-sm font-medium">Host Personality</label>
-                                            <Badge variant="outline">{selectedHostStyle}</Badge>
+                                            <label className="text-sm font-medium flex items-center gap-2">
+                                                <Ghost className="w-4 h-4 text-muted-foreground" />
+                                                Host Personality
+                                            </label>
+                                            <Badge variant="outline" className="text-pink-500 border-pink-500/20 bg-pink-500/5">{selectedHostStyle}</Badge>
                                         </div>
-                                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                                             {['Analytical', 'Conversational', 'Storyteller'].map((style) => (
                                                 <div
                                                     key={style}
                                                     onClick={() => setSelectedHostStyle(style)}
                                                     className={cn(
-                                                        "cursor-pointer rounded-lg border p-4 text-center transition-all hover:bg-muted/50",
+                                                        "cursor-pointer rounded-xl border p-4 text-center transition-all hover:shadow-md",
                                                         selectedHostStyle === style
-                                                            ? "border-primary bg-primary/5 text-primary ring-1 ring-primary"
-                                                            : "border-border bg-card"
+                                                            ? "border-pink-500 bg-pink-500/10 text-pink-500 ring-1 ring-pink-500/50"
+                                                            : "border-border/40 bg-background/40 hover:bg-accent/40"
                                                     )}
                                                 >
                                                     <span className="text-sm font-medium">{style}</span>
@@ -465,10 +534,10 @@ const DocumentAlchemist = () => {
                                         </div>
                                     </div>
 
-                                    <div className="space-y-4">
+                                    <div className="space-y-6">
                                         <div className="flex items-center justify-between">
-                                            <label className="text-sm font-medium">Target Duration</label>
-                                            <span className="text-sm text-muted-foreground">{selectedDuration} min</span>
+                                            <label className="text-sm font-medium">Duration Target</label>
+                                            <span className="text-sm font-mono text-muted-foreground bg-muted px-2 py-0.5 rounded">{selectedDuration} min</span>
                                         </div>
                                         <Slider
                                             value={[selectedDuration]}
@@ -476,17 +545,22 @@ const DocumentAlchemist = () => {
                                             min={5}
                                             max={45}
                                             step={5}
-                                            className="py-2"
+                                            className="py-2 [&>.relative>.absolute]:bg-pink-500"
                                         />
+                                        <div className="flex justify-between text-xs text-muted-foreground font-mono opacity-70">
+                                            <span>5m</span>
+                                            <span>25m</span>
+                                            <span>45m</span>
+                                        </div>
                                     </div>
 
                                     <Button
                                         onClick={startAlchemy}
                                         size="lg"
-                                        className="w-full text-md font-semibold bg-primary hover:bg-primary/90 shadow-lg shadow-primary/20"
+                                        className="w-full text-md font-semibold bg-gradient-to-r from-pink-600 to-rose-600 hover:from-pink-500 hover:to-rose-500 shadow-lg shadow-pink-500/20 border-0 h-12"
                                     >
-                                        <Sparkles className="w-5 h-5 mr-2" />
-                                        Generate Audio Overview
+                                        <Sparkles className="w-5 h-5 mr-2 animate-pulse" />
+                                        Transmute to Audio
                                     </Button>
                                 </CardContent>
                             </Card>
@@ -494,50 +568,56 @@ const DocumentAlchemist = () => {
                     )}
 
                     {step === 'processing' && (
-                        <div className="flex-1 flex flex-col items-center justify-center p-8 animate-in text-center">
-                            <div className="relative w-24 h-24 mb-6">
-                                <div className="absolute inset-0 border-4 border-muted rounded-full" />
+                        <div className="flex-1 flex flex-col items-center justify-center p-8 animate-in text-center relative z-10">
+                            <div className="relative w-32 h-32 mb-8">
+                                <div className="absolute inset-0 border-4 border-muted rounded-full opacity-20" />
                                 <div
-                                    className="absolute inset-0 border-4 border-primary rounded-full border-t-transparent animate-spin"
-                                    style={{ animationDuration: '1.5s' }}
+                                    className="absolute inset-0 border-4 border-pink-500 rounded-full border-t-transparent animate-spin"
+                                    style={{ animationDuration: '2s' }}
+                                />
+                                <div className="absolute inset-2 border-4 border-rose-400 rounded-full border-b-transparent animate-spin opacity-60"
+                                    style={{ animationDuration: '3s', animationDirection: 'reverse' }}
                                 />
                                 <div className="absolute inset-0 flex items-center justify-center">
-                                    <Headphones className="w-8 h-8 text-primary animate-pulse" />
+                                    <div className="p-4 rounded-full bg-pink-500/10 animate-pulse">
+                                        <Headphones className="w-10 h-10 text-pink-500" />
+                                    </div>
                                 </div>
                             </div>
-                            <h2 className="text-2xl font-bold mb-2">Analyzing Source...</h2>
-                            <p className="text-muted-foreground max-w-sm mx-auto">{statusText}</p>
-                            <div className="mt-8 w-64 h-1.5 bg-muted rounded-full overflow-hidden">
+                            <h2 className="text-3xl font-bold mb-3 tracking-tight">Synthesizing...</h2>
+                            <p className="text-muted-foreground max-w-sm mx-auto mb-8 font-light">{statusText}</p>
+
+                            <div className="w-full max-w-sm h-1.5 bg-muted/30 rounded-full overflow-hidden backdrop-blur-sm">
                                 <div
-                                    className="h-full bg-primary transition-all duration-300 ease-out"
+                                    className="h-full bg-gradient-to-r from-pink-500 to-rose-500 transition-all duration-300 ease-out box-shadow-glow"
                                     style={{ width: `${progress}%` }}
                                 />
                             </div>
+                            <p className="mt-4 font-mono text-xs text-muted-foreground/60">{Math.round(progress)}% COMPLETE</p>
                         </div>
                     )}
 
                     {step === 'result' && (
-                        <div className="flex-1 flex flex-col h-full animate-in">
+                        <div className="flex-1 flex flex-col h-full animate-in overflow-hidden">
                             {/* Main Player Display */}
-                            <div className="flex-1 flex flex-col items-center justify-center p-6 md:p-12 relative overflow-hidden">
-                                {/* Background Ambient */}
-                                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-primary/5 rounded-full blur-[100px] pointer-events-none" />
+                            <div className="flex-1 flex flex-col items-center justify-center p-6 md:p-12 relative overflow-y-auto">
 
-                                <Card className="w-full max-w-3xl border-none shadow-2xl bg-card relative z-10 overflow-hidden">
+                                <Card className="w-full max-w-3xl border-0 shadow-2xl bg-card/60 backdrop-blur-xl relative z-10 ring-1 ring-white/10">
                                     {/* Audio Visualizer Header */}
-                                    <div className="h-40 bg-gradient-to-br from-primary/10 to-accent/5 flex items-center justify-center relative border-b">
-                                        <div className="flex items-end gap-1.5 h-16 opacity-80">
+                                    <div className="h-48 bg-gradient-to-br from-pink-500/10 via-background/40 to-rose-500/10 flex items-center justify-center relative border-b border-border/40 rounded-t-xl overflow-hidden">
+                                        <div className="absolute inset-0 bg-grid-white/[0.02]" />
+                                        <div className="flex items-end gap-1.5 h-20 opacity-90 z-10">
                                             {[...Array(40)].map((_, i) => (
                                                 <div
                                                     key={i}
                                                     className={cn(
-                                                        "w-1.5 rounded-full transition-all duration-150 ease-in-out",
-                                                        isRecording ? "bg-destructive/80" : "bg-primary",
-                                                        isPlaying || isRecording ? "animate-pulse" : "h-2 bg-primary/30"
+                                                        "w-1.5 rounded-full transition-all duration-150 ease-in-out shadow-[0_0_10px_rgba(236,72,153,0.3)]",
+                                                        isRecording ? "bg-red-500/80" : "bg-pink-500",
+                                                        isPlaying || isRecording ? "animate-pulse" : "h-2 bg-pink-500/30"
                                                     )}
                                                     style={{
                                                         height: isPlaying || isRecording ? `${Math.max(15, Math.random() * 80)}%` : '8px',
-                                                        animationDelay: `${i * 0.05}s`
+                                                        transitionDelay: `${i * 0.01}s`
                                                     }}
                                                 />
                                             ))}
@@ -547,25 +627,38 @@ const DocumentAlchemist = () => {
                                     <CardContent className="p-8 space-y-8">
                                         <div className="flex justify-between items-start">
                                             <div>
-                                                <h1 className="text-2xl font-bold mb-1 line-clamp-1">{podcastTitle}</h1>
-                                                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                                                    <Badge variant="secondary" className="font-normal border-transparent bg-secondary/50 text-secondary-foreground">
-                                                        {isInteracting ? "Interaction" : "Overview"}
+                                                <h1 className="text-2xl font-bold mb-2 line-clamp-1 text-foreground">{podcastTitle}</h1>
+                                                <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                                                    <Badge variant="secondary" className={cn(
+                                                        "font-normal border bg-secondary/50 backdrop-blur-md",
+                                                        isInteracting ? "border-pink-500/30 text-pink-500" : "border-transparent"
+                                                    )}>
+                                                        {isInteracting ? "Interactive Mode" : "Overview Mode"}
                                                     </Badge>
-                                                    <span>•</span>
-                                                    <span>{file?.name}</span>
+                                                    <span className="w-1 h-1 rounded-full bg-muted-foreground/30" />
+                                                    <span className="flex items-center gap-1.5">
+                                                        <FileText className="w-3.5 h-3.5" />
+                                                        {file?.name}
+                                                    </span>
                                                 </div>
                                             </div>
-                                            <Button variant="outline" size="icon" onClick={() => {
-                                                if (audioSrc) {
-                                                    const a = document.createElement("a");
-                                                    a.href = audioSrc;
-                                                    a.download = `${podcastTitle}.mp3`;
-                                                    a.click();
-                                                }
-                                            }}>
-                                                <Download className="w-4 h-4" />
-                                            </Button>
+                                            <TooltipProvider>
+                                                <Tooltip>
+                                                    <TooltipTrigger asChild>
+                                                        <Button variant="outline" size="icon" className="hover:bg-pink-500/10 hover:text-pink-500 hover:border-pink-500/30" onClick={() => {
+                                                            if (audioSrc) {
+                                                                const a = document.createElement("a");
+                                                                a.href = audioSrc;
+                                                                a.download = `${podcastTitle}.mp3`;
+                                                                a.click();
+                                                            }
+                                                        }}>
+                                                            <Download className="w-4 h-4" />
+                                                        </Button>
+                                                    </TooltipTrigger>
+                                                    <TooltipContent>Download Audio</TooltipContent>
+                                                </Tooltip>
+                                            </TooltipProvider>
                                         </div>
 
                                         <div className="space-y-4">
@@ -579,19 +672,19 @@ const DocumentAlchemist = () => {
                                                         setCurrentTime(val[0]);
                                                     }
                                                 }}
-                                                className={cn("cursor-pointer", isInteracting && "opacity-50")}
+                                                className={cn("cursor-pointer [&>.relative>.absolute]:bg-pink-500", isInteracting && "opacity-50")}
                                             />
                                             <div className="flex justify-between text-xs font-mono text-muted-foreground">
                                                 <span>{formatTime(currentTime)}</span>
-                                                <span>{formatTime(isInteracting ? duration : duration)}</span>
+                                                <span>{formatTime(duration)}</span>
                                             </div>
                                         </div>
 
-                                        <div className="flex items-center justify-center gap-8">
+                                        <div className="flex items-center justify-center gap-8 pb-2">
                                             <Button
                                                 variant="ghost"
                                                 size="icon"
-                                                className="h-12 w-12 rounded-full text-muted-foreground hover:bg-muted"
+                                                className="h-12 w-12 rounded-full text-muted-foreground hover:bg-pink-500/10 hover:text-pink-500 transition-colors"
                                                 onClick={() => { if (audioRef.current) audioRef.current.currentTime -= 10; }}
                                                 disabled={isInteracting}
                                             >
@@ -602,7 +695,7 @@ const DocumentAlchemist = () => {
 
                                             <Button
                                                 size="icon"
-                                                className="h-16 w-16 rounded-full shadow-xl bg-primary text-primary-foreground hover:bg-primary/90 transition-transform hover:scale-105"
+                                                className="h-20 w-20 p-4 rounded-full shadow-[0_0_30px_rgba(236,72,153,0.3)] bg-gradient-to-br from-pink-500 to-rose-600 hover:from-pink-400 hover:to-rose-500 text-white transition-all transform hover:scale-105 active:scale-95 border-4 border-background/20"
                                                 onClick={togglePlay}
                                                 disabled={isRecording || isProcessingInteraction}
                                             >
@@ -612,7 +705,7 @@ const DocumentAlchemist = () => {
                                             <Button
                                                 variant="ghost"
                                                 size="icon"
-                                                className="h-12 w-12 rounded-full text-muted-foreground hover:bg-muted"
+                                                className="h-12 w-12 rounded-full text-muted-foreground hover:bg-pink-500/10 hover:text-pink-500 transition-colors"
                                                 onClick={() => { if (audioRef.current) audioRef.current.currentTime += 10; }}
                                             >
                                                 <div className="flex flex-col items-center">
@@ -625,27 +718,29 @@ const DocumentAlchemist = () => {
                             </div>
 
                             {/* Interaction Bar (NotebookLM style bottom bar) */}
-                            <div className="border-t bg-card p-6 pb-8 z-20 shadow-[0_-5px_20px_rgba(0,0,0,0.05)]">
+                            <div className="border-t border-border/40 bg-background/80 backdrop-blur-md p-6 pb-8 z-20 shadow-[0_-10px_40px_rgba(0,0,0,0.1)]">
                                 <div className="max-w-3xl mx-auto flex items-center gap-4">
                                     <div className="flex-1 relative">
                                         <div className={cn(
-                                            "absolute inset-0 rounded-full border-2 border-primary/20 bg-muted/20 flex items-center px-4 text-muted-foreground transition-all",
-                                            isRecording && "border-destructive/50 bg-destructive/5 text-destructive"
+                                            "absolute inset-0 rounded-full border border-pink-500/20 bg-muted/40 flex items-center px-6 text-muted-foreground transition-all backdrop-blur-sm",
+                                            isRecording && "border-red-500/50 bg-red-500/5 text-red-500 animate-pulse"
                                         )}>
                                             {isRecording
-                                                ? "Listening... Release to send question."
+                                                ? <span className="flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" /> Listening... Release to send.</span>
                                                 : isProcessingInteraction
-                                                    ? "Hosts are thinking..."
-                                                    : "Hold mic to ask a question or add a comment..."}
+                                                    ? <span className="flex items-center gap-2"><RefreshCw className="w-3 h-3 animate-spin" /> Consulting the ghost in the machine...</span>
+                                                    : <span className="flex items-center gap-2"><Mic className="w-4 h-4 opacity-50" /> Hold to interrupt and ask a question...</span>}
                                         </div>
-                                        <div className="h-12 w-full" /> {/* Spacer for absolute overlay */}
+                                        <div className="h-14 w-full" /> {/* Spacer for absolute overlay */}
                                     </div>
 
                                     <Button
                                         size="icon"
                                         className={cn(
-                                            "h-14 w-14 rounded-full shadow-lg transition-all duration-200 border-4 border-background",
-                                            isRecording ? "bg-destructive hover:bg-destructive text-white scale-110" : "bg-primary hover:bg-primary/90 text-primary-foreground"
+                                            "h-14 w-14 rounded-full shadow-lg transition-all duration-300 border-4 border-background",
+                                            isRecording
+                                                ? "bg-red-500 hover:bg-red-600 text-white scale-110 shadow-[0_0_20px_rgba(239,68,68,0.5)]"
+                                                : "bg-pink-500 hover:bg-pink-600 text-white shadow-[0_0_20px_rgba(236,72,153,0.3)]"
                                         )}
                                         onMouseDown={startRecording}
                                         onMouseUp={stopRecording}
@@ -656,6 +751,9 @@ const DocumentAlchemist = () => {
                                     >
                                         {isProcessingInteraction ? <RefreshCw className="h-6 w-6 animate-spin" /> : <Mic className="h-6 w-6" />}
                                     </Button>
+                                </div>
+                                <div className="text-center mt-3">
+                                    <p className="text-[10px] text-muted-foreground/60 font-mono tracking-wider">GHOST MODE INTERACTION // AUDIO IS EPHEMERAL</p>
                                 </div>
                             </div>
                         </div>

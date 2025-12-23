@@ -27,10 +27,14 @@ import {
     Info,
     Loader2,
     Sparkles,
-    Plus
+    Plus,
+    Database,
+    Snowflake,
+    Terminal
 } from "lucide-react";
 import useSWR from 'swr';
 import { useRouter } from "next/navigation";
+import { Value } from "@radix-ui/react-select";
 
 const fetcher = async (url: string): Promise<any> => {
     const res = await fetch(url);
@@ -509,8 +513,13 @@ export default function CreateExam() {
     };
 
     const languageOptions = [
-        { value: "python", label: "Python", icon: "ðŸ" },
-        { value: "sql", label: "SQL", icon: "ðŸ—„ï¸" },
+        { value: "python", label: "Python", icon: <Terminal className="w-4 h-4" /> },
+        { value: "sql", label: "SQL", icon: <Database className="w-4 h-4" /> },
+        { value: "sqladmin", label: "SQL Admin", icon: <Shield className="w-4 h-4" /> },
+        { value: "oracle", label: "Oracle", icon: <Database className="w-4 h-4" /> },
+        { value: "oracleadmin", label: "Oracle Admin", icon: <Shield className="w-4 h-4" /> },
+        { value: "databricks", label: "Databricks(Pyspark)", icon: <Sparkles className="w-4 h-4" /> },
+        { value: "snowsql", label: "Snowsql", icon: <Snowflake className="w-4 h-4" /> },
     ];
 
     const clearQuestions = () => {

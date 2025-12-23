@@ -117,6 +117,10 @@ export async function POST(req: NextRequest) {
         "alloy";
       if (segment.speaker.includes("A")) voice = "shimmer";
       if (segment.speaker.includes("B")) voice = "onyx";
+      if (!segment.text || !segment.text.trim()) {
+        console.warn(`Skipping empty segment for speaker ${segment.speaker}`);
+        continue;
+      }
       const segmentAudio = await generateSpeech(segment.text, voice);
       if (segmentAudio) {
         audioBuffers.push(segmentAudio);

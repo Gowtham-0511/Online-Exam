@@ -38,11 +38,21 @@ export async function GET(req: Request) {
 
     const progress = result.rows[0];
 
-    progress.answers = JSON.parse(progress.answers || "[]");
-    progress.mcqAnswers = JSON.parse(progress.mcqAnswers || "{}");
-    progress.flaggedQuestions = JSON.parse(progress.flaggedQuestions || "[]");
-    progress.questionTimeSpent = JSON.parse(progress.questionTimeSpent || "{}");
-    progress.codeRunCounts = JSON.parse(progress.codeRunCounts || "{}");
+    const safeJSONParse = (data: any, fallback: any) => {
+      try {
+        if (!data) return fallback;
+        return JSON.parse(data);
+      } catch (e) {
+        console.error("Failed to parse JSON property:", e);
+        return fallback;
+      }
+    };
+
+    progress.answers = safeJSONParse(progress.answers, []);
+    progress.mcqAnswers = safeJSONParse(progress.mcqAnswers, {});
+    progress.flaggedQuestions = safeJSONParse(progress.flaggedQuestions, []);
+    progress.questionTimeSpent = safeJSONParse(progress.questionTimeSpent, {});
+    progress.codeRunCounts = safeJSONParse(progress.codeRunCounts, {});
 
     return NextResponse.json(
       {

@@ -1592,31 +1592,51 @@ export async function generateSpeech(
   text: string,
   voice: "alloy" | "echo" | "fable" | "onyx" | "nova" | "shimmer" = "alloy"
 ): Promise<Buffer | null> {
-  try {
-    const tts = new MsEdgeTTS();
-    await tts.setMetadata(
-      // Voice mapping from OpenAI names to Edge Neural voices
-      getEdgeVoice(voice),
-      OUTPUT_FORMAT.AUDIO_24KHZ_48KBITRATE_MONO_MP3
-    );
+  if (!text || !text.trim()) return null;
 
-    // We can collect the stream into a buffer.
-    const { audioStream } = await tts.toStream(text); // Access audioStream property
+  const maxRetries = 3;
+  let attempt = 0;
 
-    const chunks: Uint8Array[] = [];
-    return new Promise((resolve, reject) => {
-      audioStream.on("data", (chunk: any) => chunks.push(chunk));
-      audioStream.on("end", () => resolve(Buffer.concat(chunks)));
-      audioStream.on("error", (err: any) => {
-        console.error("Edge TTS Stream Error:", err);
-        reject(err);
+  while (attempt < maxRetries) {
+    try {
+      const tts = new MsEdgeTTS();
+      await tts.setMetadata(
+        // Voice mapping from OpenAI names to Edge Neural voices
+        getEdgeVoice(voice),
+        OUTPUT_FORMAT.AUDIO_24KHZ_48KBITRATE_MONO_MP3
+      );
+
+      // We can collect the stream into a buffer.
+      const { audioStream } = await tts.toStream(text); // Access audioStream property
+
+      const chunks: Uint8Array[] = [];
+      const buffer = await new Promise<Buffer>((resolve, reject) => {
+        const timeout = setTimeout(() => reject(new Error("Stream timeout")), 15000);
+
+        audioStream.on("data", (chunk: any) => chunks.push(chunk));
+        audioStream.on("end", () => {
+          clearTimeout(timeout);
+          resolve(Buffer.concat(chunks));
+        });
+        audioStream.on("error", (err: any) => {
+          clearTimeout(timeout);
+          reject(err);
+        });
       });
-    });
-  } catch (error: any) {
-    console.error("Speech generation error (EdgeTTS):", error);
-    // Fallback?
-    return null;
+
+      return buffer;
+    } catch (error: any) {
+      console.error(`Speech generation error (Attempt ${attempt + 1}/${maxRetries}):`, error.message || error);
+      attempt++;
+      if (attempt >= maxRetries) {
+        console.error("Max retries reached. Speech generation failed.");
+        return null;
+      }
+      // Linear backoff: 1s, 2s, 3s...
+      await new Promise(r => setTimeout(r, 1000 * attempt));
+    }
   }
+  return null;
 }
 
 function getEdgeVoice(openaiVoice: string): string {
