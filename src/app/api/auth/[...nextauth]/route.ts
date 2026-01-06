@@ -83,82 +83,81 @@ export const authOptions: NextAuthOptions = {
             name: user.name,
             role: user.role,
           };
-        };
-      } catch(error) {
-        logger.error("Auth error:", error);
-        throw new Error("Authentication failed");
-      }
-    },
+        } catch (error) {
+          logger.error("Auth error:", error);
+          throw new Error("Authentication failed");
+        }
+      },
     }),
   ],
-session: {
-  strategy: "jwt",
+  session: {
+    strategy: "jwt",
     maxAge: 30 * 24 * 60 * 60,
   },
-pages: {
-  signIn: "/",
+  pages: {
+    signIn: "/",
   },
-secret: process.env.NEXTAUTH_SECRET,
+  secret: process.env.NEXTAUTH_SECRET,
   events: {
     async signOut({ token }) {
-    logger.info("User signed out: %s", token?.email);
+      logger.info("User signed out: %s", token?.email);
+    },
   },
-},
-callbacks: {
+  callbacks: {
     async signIn({ user, account, profile }) {
-    logger.info("User signing in: %s, Provider: %s", user.email, account?.provider);
-    return true;
-  },
+      logger.info("User signing in: %s, Provider: %s", user.email, account?.provider);
+      return true;
+    },
     async jwt({ token, user }) {
-    if (user) {
-      token.id = user.id;
-      token.email = user.email;
-      token.name = user.name;
-      token.role = (user as any).role || null;
-    }
-
-    // Hardcode admin role for app owner
-    if (token.email === "gowthamr@systechusa.com") {
-      token.role = "admin";
-    }
-
-    if (!token.role && token.email) {
-      try {
-        const result = await pool.query(
-          `SELECT role FROM users WHERE email = $1`,
-          [token.email]
-        );
-        if (result.rows.length > 0) {
-          token.role = result.rows[0].role;
-        }
-      } catch (err) {
-        logger.error("Error fetching role for %s: %o", token.email, err);
+      if (user) {
+        token.id = user.id;
+        token.email = user.email;
+        token.name = user.name;
+        token.role = (user as any).role || null;
       }
-    }
-    return token;
-  },
-    async session({ session, token }) {
-    if (session.user && token.id) {
-      session.user.id = token.id as string;
-      session.user.email = token.email as string;
-      session.user.name = token.name as string;
-      session.user.role = token.role as string;
-    }
-    return session;
-  },
-},
 
-cookies: {
-  sessionToken: {
-    name: `next-auth.session-token`,
-      options: {
-      httpOnly: true,
-        sameSite: "lax",
-          path: "/",
-            secure: process.env.NODE_ENV === "production",
-      },
+      // Hardcode admin role for app owner
+      if (token.email === "gowthamr@systechusa.com") {
+        token.role = "admin";
+      }
+
+      if (!token.role && token.email) {
+        try {
+          const result = await pool.query(
+            `SELECT role FROM users WHERE email = $1`,
+            [token.email]
+          );
+          if (result.rows.length > 0) {
+            token.role = result.rows[0].role;
+          }
+        } catch (err) {
+          logger.error("Error fetching role for %s: %o", token.email, err);
+        }
+      }
+      return token;
+    },
+    async session({ session, token }) {
+      if (session.user && token.id) {
+        session.user.id = token.id as string;
+        session.user.email = token.email as string;
+        session.user.name = token.name as string;
+        session.user.role = token.role as string;
+      }
+      return session;
+    },
   },
-},
+
+  cookies: {
+    sessionToken: {
+      name: `next-auth.session-token`,
+      options: {
+        httpOnly: true,
+        sameSite: "lax",
+        path: "/",
+        secure: process.env.NODE_ENV === "production",
+      },
+    },
+  },
 };
 
 const handler = NextAuth(authOptions);
