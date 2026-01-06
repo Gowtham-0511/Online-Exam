@@ -97,66 +97,64 @@ export async function POST(req: Request) {
 async function getCredentials(examId: string) {
   const cached = credentialsCache.get(examId);
   if (cached && Date.now() - cached.timestamp < CRED_CACHE_TTL) {
-    const cached = credentialsCache.get(examId);
-    if (cached && Date.now() - cached.timestamp < CRED_CACHE_TTL) {
-      logger.debug(`Using cached credentials for exam ${examId}`);
-      return { credential: cached.credential, password: cached.password };
+    logger.debug(`Using cached credentials for exam ${examId}`);
+    return { credential: cached.credential, password: cached.password };
+  }
+
+  logger.info(`Fetching credentials for exam ${examId}`);
+  const client = await pool.connect();
+
+  try {
+    const assessmentResult = await client.query(
+      'SELECT "sqlCredentialId" FROM "Assessment" WHERE title = $1',
+      [examId]
+    );
+
+    if (assessmentResult.rows.length === 0) {
+      throw new Error("Assessment not found");
     }
 
-    logger.info(`Fetching credentials for exam ${examId}`);
-    const client = await pool.connect();
+    const sqlCredentialId = assessmentResult.rows[0].sqlCredentialId;
+    if (!sqlCredentialId) {
+      throw new Error("No SQL credentials configured for this exam");
+    }
 
-    try {
-      const assessmentResult = await client.query(
-        'SELECT "sqlCredentialId" FROM "Assessment" WHERE title = $1',
-        [examId]
-      );
+    const credentialResult = await client.query(
+      "SELECT * FROM sql_credentials WHERE id = $1",
+      [sqlCredentialId]
+    );
 
-      if (assessmentResult.rows.length === 0) {
-        throw new Error("Assessment not found");
-      }
+    if (credentialResult.rows.length === 0) {
+      throw new Error("SQL credentials not found");
+    }
 
-      const sqlCredentialId = assessmentResult.rows[0].sqlCredentialId;
-      if (!sqlCredentialId) {
-        throw new Error("No SQL credentials configured for this exam");
-      }
+    const credential = credentialResult.rows[0];
+    const password = decrypt(credential.password);
 
-      const credentialResult = await client.query(
-        "SELECT * FROM sql_credentials WHERE id = $1",
-        [sqlCredentialId]
-      );
+    credentialsCache.set(examId, {
+      credential,
+      password,
+      timestamp: Date.now(),
+    });
 
-      if (credentialResult.rows.length === 0) {
-        throw new Error("SQL credentials not found");
-      }
+    return { credential, password };
+  } finally {
+    client.release();
+  }
+}
 
-      const credential = credentialResult.rows[0];
-      const password = decrypt(credential.password);
+setInterval(() => {
+  const now = Date.now();
+  let cleaned = 0;
 
-      credentialsCache.set(examId, {
-        credential,
-        password,
-        timestamp: Date.now(),
-      });
-
-      return { credential, password };
-    } finally {
-      client.release();
+  for (const [key, value] of credentialsCache.entries()) {
+    if (now - value.timestamp > CRED_CACHE_TTL) {
+      credentialsCache.delete(key);
+      cleaned++;
     }
   }
 
-  setInterval(() => {
-    const now = Date.now();
-    let cleaned = 0;
-
-    for (const [key, value] of credentialsCache.entries()) {
-      if (now - value.timestamp > CRED_CACHE_TTL) {
-        credentialsCache.delete(key);
-        cleaned++;
-      }
-    }
-
-    if (cleaned > 0) {
-      logger.info(`Cleaned ${cleaned} expired SQL credential cache entries`);
-    }
-  }, CRED_CACHE_TTL);
+  if (cleaned > 0) {
+    logger.info(`Cleaned ${cleaned} expired SQL credential cache entries`);
+  }
+}, CRED_CACHE_TTL);
