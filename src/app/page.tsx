@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 import { signIn, useSession } from "next-auth/react";
 import { useEffect, useState, useRef } from "react";
@@ -9,15 +9,13 @@ import Image from "next/image";
 import {
   Moon,
   Sun,
+  ShieldCheck,
   Code2,
-  Terminal,
   Cpu,
-  Globe,
-  CheckCircle2,
-  ChevronRight
 } from "lucide-react";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
+import anime from "animejs";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -30,6 +28,9 @@ import {
 } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 
+// Import the 3D Scene
+import ThreeScene from "@/components/landing/ThreeScene";
+
 export default function Home() {
   const { data: session } = useSession();
   const router = useRouter();
@@ -38,26 +39,30 @@ export default function Home() {
 
   // Refs for GSAP
   const containerRef = useRef(null);
-  const leftPanelRef = useRef(null);
-  const rightPanelRef = useRef(null);
-  const codeBlockRef = useRef(null);
+  const heroTextRef = useRef(null);
+  const loginCardRef = useRef(null);
+  const logoRef = useRef(null);
+  const decorativeLineRef = useRef(null);
 
-  // Dark mode initialization
+  // Dark mode init
   useEffect(() => {
     const savedTheme = localStorage.getItem("theme");
-    const systemPrefersDark = window.matchMedia(
-      "(prefers-color-scheme: dark)"
-    ).matches;
+    const systemPrefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
 
+    // Default to what the user had or system preference
     if (savedTheme === "dark" || (!savedTheme && systemPrefersDark)) {
       setIsDarkMode(true);
       document.documentElement.classList.add("dark");
+    } else {
+      setIsDarkMode(false);
+      document.documentElement.classList.remove("dark");
     }
   }, []);
 
   const toggleDarkMode = () => {
-    setIsDarkMode(!isDarkMode);
-    if (!isDarkMode) {
+    const newMode = !isDarkMode;
+    setIsDarkMode(newMode);
+    if (newMode) {
       document.documentElement.classList.add("dark");
       localStorage.setItem("theme", "dark");
     } else {
@@ -70,14 +75,17 @@ export default function Home() {
   useEffect(() => {
     const redirectByRole = async () => {
       if (session?.user?.email) {
-        const user = await createOrFetchUser(
-          session.user.email,
-          session.user.name || ""
-        );
-        router.push(`/${user.role}`);
+        try {
+          const user = await createOrFetchUser(
+            session.user.email,
+            session.user.name || ""
+          );
+          router.push(`/${user.role}`);
+        } catch (e) {
+          console.error("Auth redirect error", e);
+        }
       }
     };
-
     redirectByRole();
   }, [session, router]);
 
@@ -94,61 +102,25 @@ export default function Home() {
 
   // GSAP Animations
   useGSAP(() => {
-    const tl = gsap.timeline();
+    const tl = gsap.timeline({ defaults: { ease: "power3.out" } });
 
-    // Initial state
-    gsap.set(".animate-text", { y: 20, opacity: 0 });
-    gsap.set(".animate-card", { y: 30, opacity: 0 });
-    gsap.set(".code-line", { width: 0, opacity: 0 });
+    // Initial setup
+    gsap.set(heroTextRef.current, { x: -30, opacity: 0 });
+    gsap.set(loginCardRef.current, { y: 30, opacity: 0 });
+    gsap.set(logoRef.current, { y: -20, opacity: 0 });
 
-    // Left Panel Animation sequence
-    tl.from(leftPanelRef.current, {
-      xPercent: -5,
-      opacity: 0,
-      duration: 1,
-      ease: "power3.out"
-    })
-      .to(".animate-text", {
-        y: 0,
-        opacity: 1,
-        stagger: 0.1,
-        duration: 0.8,
-        ease: "back.out(1.7)"
-      }, "-=0.5")
+    // Sequence
+    tl.to(logoRef.current, { y: 0, opacity: 1, duration: 0.8 })
+      .to(heroTextRef.current, { x: 0, opacity: 1, duration: 1 }, "-=0.6")
+      .to(loginCardRef.current, { y: 0, opacity: 1, duration: 1 }, "-=0.8");
 
-      // Code typing effect simulation
-      .to(".code-line", {
-        width: "100%",
-        opacity: 1,
-        stagger: 0.15,
-        duration: 0.8,
-        ease: "power1.inOut"
-      }, "-=1")
-
-      // Right Panel Animation
-      .from(rightPanelRef.current, {
-        xPercent: 5,
-        opacity: 0,
-        duration: 1,
-        ease: "power3.out"
-      }, "-=1.5")
-      .to(".animate-card", {
-        y: 0,
-        opacity: 1,
-        duration: 0.8,
-        ease: "power2.out"
-      }, "-=0.5");
-
-    // Floating effect for background elements
-    gsap.to(".floating-shape", {
-      y: -20,
-      duration: 3,
-      repeat: -1,
-      yoyo: true,
-      ease: "sine.inOut",
-      stagger: 0.5
-    });
-
+    // Decorative Line Animation
+    if (decorativeLineRef.current) {
+      gsap.fromTo(decorativeLineRef.current,
+        { width: 0, opacity: 0 },
+        { width: 96, opacity: 1, duration: 1.5, ease: "power2.out", delay: 0.5 }
+      );
+    }
   }, { scope: containerRef });
 
   return (
@@ -158,110 +130,25 @@ export default function Home() {
         <link rel="icon" href="/syslogo.png" />
       </Head>
 
-      <div ref={containerRef} className="h-screen w-full flex bg-background overflow-hidden font-sans">
+      <div
+        ref={containerRef}
+        className="relative min-h-screen w-full flex bg-background/95 transition-colors duration-500 overflow-hidden font-sans"
+      >
 
-        {/* Left Side - HackerRank Inspired Hero */}
-        <div
-          ref={leftPanelRef}
-          className="hidden lg:flex lg:w-[55%] relative flex-col justify-center p-8 lg:p-12 xl:p-20 overflow-hidden bg-zinc-950 text-white"
-        >
-          {/* Abstract Tech Background */}
-          <div className="absolute inset-0 z-0">
-            <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-emerald-900/40 via-zinc-950 to-zinc-950"></div>
-            <div className="absolute bottom-0 left-0 w-full h-[500px] bg-[radial-gradient(circle_at_bottom_left,_var(--tw-gradient-stops))] from-blue-900/20 via-zinc-950 to-zinc-950"></div>
-
-            {/* Grid Pattern */}
-            <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.03)_1px,transparent_1px)] bg-[size:64px_64px] [mask-image:radial-gradient(ellipse_at_center,black_40%,transparent_90%)]"></div>
-
-            {/* Floating Shapes */}
-            <div className="floating-shape absolute top-20 right-20 w-32 h-32 rounded-full blur-[80px] bg-primary/30"></div>
-            <div className="floating-shape absolute bottom-40 left-20 w-64 h-64 rounded-full blur-[100px] bg-blue-500/20"></div>
+        {/* Top Header Area */}
+        <div className="absolute top-0 w-full p-6 flex justify-between items-center z-50">
+          {/* Logo - Visible here on Mobile, hidden on desktop if part of Hero */}
+          <div className="lg:hidden">
+            <span className="font-bold text-xl">SysRank</span>
           </div>
 
-          <div className="relative z-10 space-y-8 max-w-2xl">
-            {/* Logo area */}
-            <div className="flex items-center gap-3 animate-text">
-              <div className="h-12 w-12 rounded-xl flex items-center justify-center bg-white border border-zinc-800 shadow-lg shadow-primary/20">
-                {/* <Code2 className="h-7 w-7 text-white" /> */}
-                <Image src="/syslogo.png" alt="SysRank" width={50} height={50} className="w-7 h-7 drop-shadow-md" />
-              </div>
-              <span className="text-2xl font-bold tracking-tight">SysRank</span>
-            </div>
-
-            {/* Hero Text */}
-            <div className="space-y-4">
-              <h1 className="text-5xl md:text-6xl font-extrabold tracking-tight leading-[1.1] animate-text">
-                Code your way to <br />
-                <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary via-emerald-400 to-sky-400">
-                  excellence
-                </span>
-              </h1>
-              <p className="text-xl text-zinc-400 leading-relaxed max-w-lg animate-text">
-                Solve, Participate, and Grow.
-              </p>
-            </div>
-
-            {/* Code Snippet Visual */}
-            <div
-              ref={codeBlockRef}
-              className="mt-12 p-6 rounded-2xl bg-zinc-900/80 border border-zinc-800/50 backdrop-blur-sm shadow-2xl animate-text group hover:border-primary/30 transition-colors duration-500"
-            >
-              <div className="flex items-center gap-2 mb-4 border-b border-zinc-800 pb-4">
-                <div className="w-3 h-3 rounded-full bg-red-500/80"></div>
-                <div className="w-3 h-3 rounded-full bg-yellow-500/80"></div>
-                <div className="w-3 h-3 rounded-full bg-green-500/80"></div>
-                <span className="ml-2 text-xs text-zinc-500 font-mono">solve_challenge.sql</span>
-              </div>
-              <div className="space-y-2 font-mono text-sm">
-                <div className="flex gap-2">
-                  <span className="text-zinc-600 select-none">1</span>
-                  <div className="code-line h-5 bg-zinc-800/50 rounded w-1/3"></div>
-                </div>
-                <div className="flex gap-2">
-                  <span className="text-zinc-600 select-none">2</span>
-                  <div className="code-line h-5 bg-primary/20 rounded w-3/4"></div>
-                </div>
-                <div className="flex gap-2">
-                  <span className="text-zinc-600 select-none">3</span>
-                  <div className="code-line h-5 bg-zinc-800/50 rounded w-1/2"></div>
-                </div>
-                <div className="flex gap-2">
-                  <span className="text-zinc-600 select-none">4</span>
-                  <div className="code-line h-5 bg-zinc-800/50 rounded w-2/3"></div>
-                </div>
-              </div>
-            </div>
-
-            {/* Feature Pills */}
-            {/* <div className="flex flex-wrap gap-4 pt-4 animate-text">
-              <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-zinc-900/50 border border-zinc-800 text-sm text-zinc-300">
-                <Terminal className="w-4 h-4 text-emerald-500" />
-                <span>500+ Challenges</span>
-              </div>
-              <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-zinc-900/50 border border-zinc-800 text-sm text-zinc-300">
-                <Cpu className="w-4 h-4 text-sky-500" />
-                <span>System Design</span>
-              </div>
-              <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-zinc-900/50 border border-zinc-800 text-sm text-zinc-300">
-                <Globe className="w-4 h-4 text-purple-500" />
-                <span>Global Rank</span>
-              </div>
-            </div> */}
-          </div>
-        </div>
-
-        {/* Right Side - Login Form */}
-        <div
-          ref={rightPanelRef}
-          className="flex-1 flex flex-col items-center justify-center p-6 relative bg-background"
-        >
-          {/* Theme Toggle */}
-          <div className="absolute top-6 right-6">
+          <div className="flex items-center gap-4 ml-auto">
+            <span className="text-sm font-medium text-muted-foreground hidden sm:block">Need Help?</span>
             <Button
               variant="ghost"
               size="icon"
               onClick={toggleDarkMode}
-              className="rounded-full hover:bg-muted"
+              className="rounded-full bg-background/50 border border-border/50 hover:bg-muted/50 transition-colors"
             >
               {isDarkMode ? (
                 <Sun className="h-5 w-5 text-yellow-500" />
@@ -270,84 +157,126 @@ export default function Home() {
               )}
             </Button>
           </div>
+        </div>
 
-          <div className="w-full max-w-sm animate-card">
-            {/* Mobile Header */}
-            <div className="lg:hidden text-center mb-8 space-y-2">
-              <div className="mx-auto w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
-                <Code2 className="w-7 h-7 text-primary" />
+        {/* 3D Background Layer */}
+        <div className="absolute inset-0 z-0 pointer-events-none opacity-80 dark:opacity-60">
+          <ThreeScene />
+        </div>
+
+        {/* Main Content Container - Split Layout */}
+        <div className="relative z-10 w-full max-w-7xl mx-auto flex flex-col lg:flex-row h-screen items-center px-6 lg:px-12 pt-20 lg:pt-0">
+
+          {/* Left Side: Hero Text */}
+          <div className="flex-1 flex flex-col justify-center items-start w-full max-w-2xl lg:pr-12 mb-12 lg:mb-0">
+            <div ref={logoRef} className="hidden lg:flex items-center gap-3 mb-8">
+              <div className="w-10 h-10 rounded-md bg-transparent dark:bg-white/95 flex items-center justify-center transition-colors">
+                <Image src="/syslogo.png" alt="SysRank" width={32} height={32} className="w-8 h-8 object-contain" />
               </div>
-              <h1 className="text-2xl font-bold">SysRank</h1>
+              <span className="text-2xl font-bold tracking-tight text-foreground">SysRank</span>
             </div>
 
-            <Card className="border-border/50 shadow-xl bg-card">
-              <CardHeader className="space-y-1 text-center pb-2">
-                <CardTitle className="text-2xl font-bold tracking-tight">Welcome back</CardTitle>
-                <CardDescription>
-                  Sign in to continue your progress
-                </CardDescription>
-              </CardHeader>
+            <div ref={heroTextRef} className="space-y-6">
+              <h1 className="text-5xl lg:text-7xl font-extrabold tracking-tight text-foreground leading-[1.1]">
+                Code your <br />
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#00A4EF] to-[#0078D4] dark:from-[#00F0FF] dark:to-[#00A4EF]">
+                  way to
+                </span> <br />
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#0078D4] to-[#2B5C95] dark:from-[#00A4EF] dark:to-[#00F0FF]">
+                  excellence
+                </span>
+              </h1>
 
-              <CardContent className="grid gap-6 pt-6">
-                <div className="grid gap-2">
+              {/* Decorative Line under text */}
+              <div className="h-1 bg-gradient-to-r from-[#00A4EF] to-transparent rounded-full" ref={decorativeLineRef}></div>
+
+              <p className="text-xl text-muted-foreground font-medium max-w-lg">
+                Solve, Participate, and Grow.
+              </p>
+
+              <div className="flex flex-wrap gap-4 pt-4">
+                <div className="flex items-center gap-2 px-4 py-2 bg-background/40 backdrop-blur-md border border-border/50 rounded-full text-sm font-medium shadow-sm">
+                  <Code2 className="w-4 h-4 text-[#00A4EF]" />
+                  <span>Coding Challenges</span>
+                </div>
+                <div className="flex items-center gap-2 px-4 py-2 bg-background/40 backdrop-blur-md border border-border/50 rounded-full text-sm font-medium shadow-sm">
+                  <Cpu className="w-4 h-4 text-purple-500" />
+                  <span>System Design</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Right Side: Login Card */}
+          <div className="flex-1 flex items-center justify-center lg:justify-end w-full">
+            <div ref={loginCardRef} className="w-full max-w-md">
+              <Card className="border-0 shadow-2xl bg-white/90 dark:bg-[#0f172a]/90 backdrop-blur-xl">
+                <CardHeader className="text-center space-y-2 pb-6 pt-8">
+                  <CardTitle className="text-3xl font-bold">Welcome back</CardTitle>
+                  <CardDescription className="text-base text-muted-foreground">
+                    Sign in to continue your progress
+                  </CardDescription>
+                </CardHeader>
+
+                <CardContent className="space-y-6 pb-8">
                   <Button
                     onClick={() => handleSocialSignIn("azure-ad")}
                     disabled={isLoading}
-                    variant="outline"
-                    className="h-12 border-zinc-200 dark:border-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-900 relative overflow-hidden group transition-all"
+                    className="w-full h-14 text-base font-semibold bg-[#002D56] hover:bg-[#002D56]/90 text-white relative overflow-hidden transition-all shadow-md group dark:border dark:border-white/10"
                   >
-                    <div className="absolute inset-0 w-1 bg-primary/50 -translate-x-full group-hover:translate-x-0 transition-transform duration-300"></div>
-                    <svg
-                      className="w-5 h-5 mr-3"
-                      viewBox="0 0 23 23"
-                      fill="none"
-                    >
-                      <path d="M0 0h10.377v10.377H0z" fill="#f25022" />
-                      <path d="M12.623 0H23v10.377H12.623z" fill="#7fba00" />
-                      <path d="M0 12.623h10.377V23H0z" fill="#00a4ef" />
-                      <path d="M12.623 12.623H23V23H12.623z" fill="#ffb900" />
-                    </svg>
-                    <span>Continue with Microsoft Outlook</span>
+                    <div className="flex items-center justify-center gap-3">
+                      {/* Microsoft Logo constructed with divs for perfect vector crispness */}
+                      <div className="grid grid-cols-2 gap-0.5 mr-1">
+                        <div className="w-2 h-2 bg-[#f25022]" />
+                        <div className="w-2 h-2 bg-[#7fba00]" />
+                        <div className="w-2 h-2 bg-[#00a4ef]" />
+                        <div className="w-2 h-2 bg-[#ffb900]" />
+                      </div>
+                      <span>Continue with Microsoft Outlook</span>
+                    </div>
                     {isLoading && (
-                      <div className="absolute right-4 animate-spin rounded-full h-4 w-4 border-2 border-primary border-t-transparent"></div>
+                      <div className="absolute right-4 top-1/2 -translate-y-1/2">
+                        <div className="animate-spin rounded-full h-4 w-4 border-2 border-white/50 border-t-white"></div>
+                      </div>
                     )}
                   </Button>
-                </div>
 
-                <div className="relative">
-                  <div className="absolute inset-0 flex items-center">
-                    <span className="w-full border-t" />
+                  <div className="relative my-6">
+                    <div className="absolute inset-0 flex items-center">
+                      <Separator className="w-full" />
+                    </div>
+                    <div className="relative flex justify-center text-xs uppercase">
+                      <span className="bg-white dark:bg-[#0f172a] px-2 text-muted-foreground font-semibold tracking-wider">
+                        Secure Access
+                      </span>
+                    </div>
                   </div>
-                  <div className="relative flex justify-center text-xs uppercase">
-                    <span className="bg-card px-2 text-muted-foreground">
-                      Secure Access
-                    </span>
-                  </div>
-                </div>
 
-                <div className="text-center text-xs text-muted-foreground">
-                  <p className="flex items-center justify-center gap-2">
-                    <CheckCircle2 className="w-3 h-3 text-emerald-500" />
-                    <span>Enterprise Grade Security</span>
+                  <div className="flex justify-center">
+                    <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20 px-4 py-2 rounded-full text-sm font-medium">
+                      <ShieldCheck className="w-4 h-4" />
+                      <span>Enterprise Grade Security</span>
+                    </div>
+                  </div>
+                </CardContent>
+
+                <CardFooter className="flex flex-col gap-4 text-center text-xs text-muted-foreground pt-6 pb-6 bg-slate-50 dark:bg-slate-900/50 rounded-b-xl border-t">
+                  <p>
+                    By clicking continue, you agree to our{" "}
+                    <a href="#" className="underline hover:text-primary transition-colors">Terms of Service</a>
+                    {" "}and{" "}
+                    <a href="#" className="underline hover:text-primary transition-colors">Privacy Policy</a>.
                   </p>
-                </div>
-              </CardContent>
-
-              <CardFooter className="flex flex-col gap-2 border-t bg-muted/20 p-6">
-                <p className="text-center text-xs text-muted-foreground">
-                  By clicking continue, you agree to our{" "}
-                  <a href="#" className="underline hover:text-primary transition-colors">Terms of Service</a>
-                  {" "}and{" "}
-                  <a href="#" className="underline hover:text-primary transition-colors">Privacy Policy</a>.
-                </p>
-              </CardFooter>
-            </Card>
-
-            <div className="mt-8 text-center animate-card">
-              <p className="text-sm text-muted-foreground">
-                Don't have an account?{" "}
-                <span className="text-foreground font-semibold">Contact Administrator</span>
-              </p>
+                  <div className="w-full pt-2">
+                    <p>
+                      Don&apos;t have an account?{" "}
+                      <span className="font-bold text-foreground cursor-pointer hover:text-primary transition-colors">
+                        Contact Administrator
+                      </span>
+                    </p>
+                  </div>
+                </CardFooter>
+              </Card>
             </div>
           </div>
         </div>
