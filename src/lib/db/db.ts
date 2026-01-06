@@ -7,13 +7,13 @@ const pool = new Pool({
     password: process.env.PGPASSWORD,
     port: 5432,
 
-    max: 20,
-    min: 5,
-    idleTimeoutMillis: 30000,
-    connectionTimeoutMillis: 5000,
+    max: 10, // Reduced from 20 to prevent excessive resource usage
+    min: 0, // Allow pool to scale down to 0 connections when idle
+    idleTimeoutMillis: 10000, // Close idle connections after 10 seconds
+    connectionTimeoutMillis: 10000, // Wait up to 10s for a new connection
     maxUses: 7500,
     keepAlive: true,
-    keepAliveInitialDelayMillis: 10000,
+    keepAliveInitialDelayMillis: 0,
 
     // ssl: { rejectUnauthorized: false } // Uncomment if needed
 });

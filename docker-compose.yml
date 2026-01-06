@@ -6,6 +6,7 @@ services:
     container_name: sysrank-exam-web
     ports:
       - "3000:3000"
+    restart: unless-stopped
     env_file:
       - .env
     environment:
@@ -17,14 +18,32 @@ services:
       - DAX_SERVICE_URL=http://host.docker.internal:5006
       - DBT_SERVICE_URL=http://host.docker.internal:5004
       - SNOWFLAKE_SERVICE_URL=http://host.docker.internal:5007
+
       - NODE_ENV=production
+      - NODE_OPTIONS=--max-old-space-size=3072
     extra_hosts:
       - "host.docker.internal:host-gateway"
-    restart: always
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 4G
+        reservations:
+          cpus: '0.5'
+          memory: 1G
   nginx:
     image: nginx:latest
     container_name: nginx-proxy
     restart: always
+
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+        reservations:
+          cpus: '0.1'
+          memory: 128M
     ports:
       - "80:80"
       - "443:443"
