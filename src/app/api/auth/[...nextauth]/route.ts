@@ -5,6 +5,7 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import { compare } from "bcryptjs";
 import pool from "@/lib/db/db";
 import { Session, User } from "next-auth";
+import logger from "@/lib/logger";
 
 declare module "next-auth" {
   interface Session {
@@ -82,80 +83,82 @@ export const authOptions: NextAuthOptions = {
             name: user.name,
             role: user.role,
           };
-        } catch (error) {
-          console.error("Auth error:", error);
-          throw new Error("Authentication failed");
-        }
-      },
+        };
+      } catch(error) {
+        logger.error("Auth error:", error);
+        throw new Error("Authentication failed");
+      }
+    },
     }),
   ],
-  session: {
-    strategy: "jwt",
+session: {
+  strategy: "jwt",
     maxAge: 30 * 24 * 60 * 60,
   },
-  pages: {
-    signIn: "/",
+pages: {
+  signIn: "/",
   },
-  secret: process.env.NEXTAUTH_SECRET,
+secret: process.env.NEXTAUTH_SECRET,
   events: {
     async signOut({ token }) {
-      console.log("User signed out:", token?.email);
-    },
+    logger.info("User signed out: %s", token?.email);
   },
-  callbacks: {
+},
+callbacks: {
     async signIn({ user, account, profile }) {
-      return true;
-    },
+    logger.info("User signing in: %s, Provider: %s", user.email, account?.provider);
+    return true;
+  },
     async jwt({ token, user }) {
-      if (user) {
-        token.id = user.id;
-        token.email = user.email;
-        token.name = user.name;
-        token.role = (user as any).role || null;
-      }
+    if (user) {
+      token.id = user.id;
+      token.email = user.email;
+      token.name = user.name;
+      token.role = (user as any).role || null;
+    }
 
-      // Hardcode admin role for app owner
-      if (token.email === "gowthamr@systechusa.com") {
-        token.role = "admin";
-      }
+    // Hardcode admin role for app owner
+    if (token.email === "gowthamr@systechusa.com") {
+      token.role = "admin";
+    }
 
-      if (!token.role && token.email) {
-        try {
-          const result = await pool.query(
-            `SELECT role FROM users WHERE email = $1`,
-            [token.email]
-          );
-          if (result.rows.length > 0) {
-            token.role = result.rows[0].role;
-          }
-        } catch (err) {
-          console.error("Error fetching role:", err);
+    if (!token.role && token.email) {
+      try {
+        const result = await pool.query(
+          `SELECT role FROM users WHERE email = $1`,
+          [token.email]
+        );
+        if (result.rows.length > 0) {
+          token.role = result.rows[0].role;
         }
+      } catch (err) {
+        logger.error("Error fetching role for %s: %o", token.email, err);
       }
-      return token;
-    },
+    }
+    return token;
+  },
     async session({ session, token }) {
-      if (session.user && token.id) {
-        session.user.id = token.id as string;
-        session.user.email = token.email as string;
-        session.user.name = token.name as string;
-        session.user.role = token.role as string;
-      }
-      return session;
-    },
+    if (session.user && token.id) {
+      session.user.id = token.id as string;
+      session.user.email = token.email as string;
+      session.user.name = token.name as string;
+      session.user.role = token.role as string;
+    }
+    return session;
   },
+},
 
-  cookies: {
-    sessionToken: {
-      name: `next-auth.session-token`,
+cookies: {
+  sessionToken: {
+    name: `next-auth.session-token`,
       options: {
-        httpOnly: true,
+      httpOnly: true,
         sameSite: "lax",
-        path: "/",
-        secure: process.env.NODE_ENV === "production",
+          path: "/",
+            secure: process.env.NODE_ENV === "production",
       },
-    },
   },
+},
 };
 
 const handler = NextAuth(authOptions);
