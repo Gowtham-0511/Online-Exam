@@ -1,5 +1,6 @@
 import pool from "@/lib/db/db";
 import { NextResponse } from "next/server";
+import logger from "@/lib/logger";
 
 const submissionQueue: Array<() => Promise<void>> = [];
 let activeSubmissions = 0;
@@ -20,7 +21,7 @@ async function processSubmissionQueue() {
     try {
       await task();
     } catch (error) {
-      console.error("Submission queue error:", error);
+      logger.error("Submission queue error:", error);
     } finally {
       activeSubmissions--;
       processSubmissionQueue();
@@ -94,7 +95,7 @@ export async function POST(req: Request) {
 
       await client.query("COMMIT");
 
-      console.log(`✅ Submission saved: ${submissionId} for ${email}`);
+      logger.info(`Submission saved: ${submissionId} for ${email}`);
 
       if (submissionId && answersWithQuestionIds) {
         fetch("https://wizard-aiautomate.dopplr.ai/webhook/feedback", {
@@ -104,11 +105,11 @@ export async function POST(req: Request) {
             output: answersWithQuestionIds,
             id: submissionId,
           }),
-        }).catch((err) => console.error("Webhook failed:", err));
+        }).catch((err) => logger.error("Webhook failed:", err));
       }
     } catch (error: any) {
       await client.query("ROLLBACK");
-      console.error(`❌ Submission failed for ${email}:`, error);
+      logger.error(`Submission failed for ${email}:`, error);
 
       try {
         await client.query(
@@ -120,7 +121,7 @@ export async function POST(req: Request) {
           [email, examId, JSON.stringify(body), error.message]
         );
       } catch (logError) {
-        console.error("Failed to log submission error:", logError);
+        logger.error("Failed to log submission error:", logError);
       }
     } finally {
       client.release();

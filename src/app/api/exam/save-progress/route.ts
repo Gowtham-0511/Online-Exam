@@ -1,5 +1,6 @@
 import pool from "@/lib/db/db";
 import { NextResponse } from "next/server";
+import logger from "@/lib/logger";
 
 export async function POST(req: Request) {
   const body = await req.json();
@@ -78,7 +79,7 @@ export async function POST(req: Request) {
 
     await client.query("COMMIT");
 
-    console.log(`✅ Progress saved: ${progressId} for ${email}`);
+    logger.info(`Progress saved: ${progressId} for ${email}`);
 
     return NextResponse.json(
       {
@@ -92,7 +93,7 @@ export async function POST(req: Request) {
       }
     );
   } catch (error) {
-    console.error("❌ Error saving progress:", error);
+    logger.error("Error saving progress:", error);
     await client.query("ROLLBACK");
     return NextResponse.json(
       {

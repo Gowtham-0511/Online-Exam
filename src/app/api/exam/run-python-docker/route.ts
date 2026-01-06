@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 // import pool from "@/lib/db/db"; // unused since files weren't being passed
 import { runPythonCode } from "@/lib/executor/python";
+import logger from "@/lib/logger";
 
 // Simple in-memory rate limiter
 const rateLimitMap = new Map<string, { count: number; timestamp: number }>();
@@ -48,9 +49,7 @@ export async function POST(req: Request) {
   }
 
   const startTime = Date.now();
-  console.log(
-    `\n🐍 [${new Date().toISOString()}] Python Execution Request from ${userEmail}`
-  );
+  logger.info(`Python Execution Request from ${userEmail}`);
 
   // Rate Limit: 10 requests per minute
   if (!checkRateLimit(userEmail, 10, 60000)) {
@@ -71,7 +70,7 @@ export async function POST(req: Request) {
     const result = await runPythonCode(code);
     const totalTime = Date.now() - startTime;
 
-    console.log(`✅ Request completed in ${totalTime}ms`);
+    logger.info(`Python execution completed in ${totalTime}ms for ${userEmail}`);
 
     return NextResponse.json(
       {
@@ -84,7 +83,7 @@ export async function POST(req: Request) {
     );
 
   } catch (error: any) {
-    console.error("❌ Error executing code:", error);
+    logger.error("Error executing python code:", error);
     return NextResponse.json(
       {
         success: false,
