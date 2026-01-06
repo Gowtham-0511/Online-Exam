@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import pool from "@/lib/db/db";
+import logger from "@/lib/logger";
 
 export async function GET(
   request: NextRequest,
@@ -35,7 +36,7 @@ export async function GET(
       { status: 200 }
     );
   } catch (error) {
-    console.error("Error fetching batch:", error);
+    logger.error("Error fetching batch %s:", id, error);
     return NextResponse.json(
       { error: "Failed to fetch batch" },
       { status: 500 }
@@ -117,7 +118,7 @@ export async function PUT(
 
     return NextResponse.json(responseData, { status: 200 });
   } catch (error) {
-    console.error("Error updating batch:", error);
+    logger.error("Error updating batch %s:", id, error);
     return NextResponse.json(
       {
         error: "Internal server error",
@@ -155,7 +156,7 @@ export async function DELETE(
       { status: 200 }
     );
   } catch (error) {
-    console.error("Error deleting batch:", error);
+    logger.error("Error deleting batch %s:", id, error);
     return NextResponse.json(
       {
         error: "Internal server error",

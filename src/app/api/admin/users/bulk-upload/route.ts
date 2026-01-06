@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import * as XLSX from "xlsx";
 import { hash } from "bcryptjs";
 import pool from "@/lib/db/db";
+import logger from "@/lib/logger";
 
 export async function POST(request: Request) {
   try {
@@ -81,7 +82,7 @@ export async function POST(request: Request) {
       { status: 200 }
     );
   } catch (error) {
-    console.error("❌ Bulk upload error:", error);
+    logger.error("Bulk upload error:", error);
     const errMsg = error instanceof Error ? error.message : "Unknown error";
     return NextResponse.json(
       {

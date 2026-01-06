@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { AzureOpenAI } from "openai";
+import logger from "@/lib/logger";
 
 export async function POST(request: NextRequest) {
   const endpoint = (process.env.AZURE_OAI_ENDPOINT || "").replace(
@@ -54,9 +55,8 @@ export async function POST(request: NextRequest) {
         ]
     }
 
-    Make sure inputs and outputs are realistic and properly formatted for ${
-      language || "Python"
-    }.
+    Make sure inputs and outputs are realistic and properly formatted for ${language || "Python"
+      }.
 `;
 
     const params: any = {
@@ -104,7 +104,7 @@ export async function POST(request: NextRequest) {
         { status: 200 }
       );
     } catch (parseError) {
-      console.error("Failed to parse AI response:", content);
+      logger.error("Failed to parse AI response: %s", content);
       return NextResponse.json(
         {
           error: "Failed to parse test cases from AI response",
@@ -113,7 +113,7 @@ export async function POST(request: NextRequest) {
       );
     }
   } catch (error) {
-    console.error("Test case generation error:", error);
+    logger.error("Test case generation error:", error);
     const errMsg = error instanceof Error ? error.message : "Unknown error";
     return NextResponse.json(
       {
