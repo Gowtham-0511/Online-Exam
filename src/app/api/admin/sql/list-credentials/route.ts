@@ -1,5 +1,6 @@
 import pool from "@/lib/db/db";
 import { NextResponse } from "next/server";
+import logger from "@/lib/logger";
 
 export async function GET(request: Request) {
   try {
@@ -28,7 +29,7 @@ export async function GET(request: Request) {
       { status: 200 }
     );
   } catch (error) {
-    console.error("Error listing credentials:", error);
+    logger.error("Error listing credentials:", error);
     return NextResponse.json(
       { error: "Failed to list credentials" },
       { status: 500 }

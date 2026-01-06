@@ -3,6 +3,7 @@ import { Pool } from "pg";
 import sql from "mssql";
 import pool from "@/lib/db/db";
 import { encrypt } from "@/lib/encryption";
+import logger from "@/lib/logger";
 
 export async function POST(req: NextRequest) {
   try {
@@ -27,6 +28,9 @@ export async function POST(req: NextRequest) {
       await testPool.end();
       connectionSuccess = true;
     } else if (serverType === "ssms") {
+      // NOTE: Logging connection attempt (no password)
+      logger.info("Testing SQL connection to %s:%s (Type: %s)", credentials.host, credentials.port, serverType);
+
       const config = {
         server: credentials.host,
         port: parseInt(credentials.port),
@@ -89,13 +93,12 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      message: `${
-        serverType === "postgres" ? "PostgreSQL" : "SQL Server"
-      } connection successful`,
+      message: `${serverType === "postgres" ? "PostgreSQL" : "SQL Server"
+        } connection successful`,
       credentialId,
     });
   } catch (error: any) {
-    console.error("Connection test failed:", error);
+    logger.error("Connection test failed:", error);
     return NextResponse.json(
       {
         success: false,

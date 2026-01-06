@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import pool from "@/lib/db/db";
+import logger from "@/lib/logger";
 
 export async function DELETE(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -33,7 +34,7 @@ export async function DELETE(req: NextRequest) {
       message: "Credentials deleted successfully",
     });
   } catch (error: any) {
-    console.error("Error deleting credentials:", error);
+    logger.error("Error deleting credentials:", error);
     return NextResponse.json(
       {
         message: "Failed to delete credentials",

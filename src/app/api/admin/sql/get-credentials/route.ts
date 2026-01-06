@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import pool from "@/lib/db/db";
 import { decrypt } from "@/lib/encryption";
+import logger from "@/lib/logger";
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -47,7 +48,7 @@ export async function GET(req: NextRequest) {
       createdAt: credential.created_at,
     });
   } catch (error: any) {
-    console.error("Error retrieving credentials:", error);
+    logger.error("Error retrieving credentials:", error);
     return NextResponse.json(
       {
         message: "Failed to retrieve credentials",
