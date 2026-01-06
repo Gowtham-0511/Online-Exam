@@ -6,8 +6,11 @@ export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  let id = "unknown";
   try {
-    const { id } = await params;
+    const resolvedParams = await params;
+    id = resolvedParams.id;
+
     if (!id) {
       return NextResponse.json(
         { error: "Batch ID is required" },
@@ -48,8 +51,11 @@ export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  let id = "unknown";
   try {
-    const { id } = await params;
+    const resolvedParams = await params;
+    id = resolvedParams.id;
+
     const body = await request.json();
     const { name, employeeCount, employees } = body;
 
@@ -134,8 +140,10 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  let id = "unknown";
   try {
-    const { id } = await params;
+    const resolvedParams = await params;
+    id = resolvedParams.id;
 
     if (!id) {
       return NextResponse.json(
