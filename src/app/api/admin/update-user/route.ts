@@ -1,5 +1,6 @@
 import pool from "@/lib/db/db";
 import { NextResponse } from "next/server";
+import logger from "@/lib/logger";
 
 export async function PATCH(request: Request) {
   const { email, role } = await request.json();
@@ -22,12 +23,14 @@ export async function PATCH(request: Request) {
 
     await pool.query(query, values);
 
+    logger.info("Updated user role: %s -> %s", email, role);
+
     return NextResponse.json(
       { message: "User role updated successfully" },
       { status: 200 }
     );
   } catch (error) {
-    console.error("Error updating user role:", error);
+    logger.error("Error updating user role:", error);
     return NextResponse.json(
       { error: "Failed to update user role" },
       { status: 500 }
