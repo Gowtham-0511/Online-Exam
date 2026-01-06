@@ -1,8 +1,10 @@
 import pool from "@/lib/db/db";
 import { NextResponse } from "next/server";
+import logger from "@/lib/logger";
 
 export async function GET(request: Request) {
   try {
+    logger.info("Admin dashboard stats requested");
     // Get total users count from users table
     const usersQuery = `SELECT COUNT(*) as count FROM users`;
     const usersResult = await pool.query(usersQuery);
@@ -106,35 +108,35 @@ export async function GET(request: Request) {
       lastMonthUsers > 0
         ? (((totalUsers - lastMonthUsers) / lastMonthUsers) * 100).toFixed(1)
         : totalUsers > 0
-        ? "100.0"
-        : "0.0";
+          ? "100.0"
+          : "0.0";
 
     const examsChange =
       lastMonthExams > 0
         ? (((activeExams - lastMonthExams) / lastMonthExams) * 100).toFixed(1)
         : activeExams > 0
-        ? "100.0"
-        : "0.0";
+          ? "100.0"
+          : "0.0";
 
     const questionsChange =
       lastMonthQuestions > 0
         ? (
-            ((totalQuestions - lastMonthQuestions) / lastMonthQuestions) *
-            100
-          ).toFixed(1)
+          ((totalQuestions - lastMonthQuestions) / lastMonthQuestions) *
+          100
+        ).toFixed(1)
         : totalQuestions > 0
-        ? "100.0"
-        : "0.0";
+          ? "100.0"
+          : "0.0";
 
     const completionChange =
       lastMonthCompletion > 0
         ? (
-            ((avgCompletion - lastMonthCompletion) / lastMonthCompletion) *
-            100
-          ).toFixed(1)
+          ((avgCompletion - lastMonthCompletion) / lastMonthCompletion) *
+          100
+        ).toFixed(1)
         : avgCompletion > 0
-        ? "100.0"
-        : "0.0";
+          ? "100.0"
+          : "0.0";
 
     // Get recent exams with status based on AssessmentBatchMapping and AssessmentUserMapping
     const recentExamsQuery = `
@@ -206,11 +208,15 @@ export async function GET(request: Request) {
               : `${completionChange}%`,
           completionTrend: parseFloat(completionChange) >= 0 ? "up" : "down",
         },
-        recentExams,
       },
-      { status: 200 }
+      recentExams,
+      },
+  { status: 200 }
     );
-  } catch (error) {}
+} catch (error) {
+  logger.error("Error fetching dashboard stats:", error);
+  return NextResponse.json({ error: "Failed to fetch stats" }, { status: 500 });
+}
 }
 
 function getRelativeTime(date: Date): string {

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import pool from "@/lib/db/db";
 import { generateQuestionTags } from "@/lib/ai/azureOpenAI";
+import logger from "@/lib/logger";
 
 export async function GET(request: NextRequest) {
   try {
@@ -23,7 +24,7 @@ export async function GET(request: NextRequest) {
         WHERE 1=1
     `;
 
-    console.log(query);
+    logger.debug("Fetching questions with query: %s", query);
 
     const params: any[] = [];
     let idx = 1;
