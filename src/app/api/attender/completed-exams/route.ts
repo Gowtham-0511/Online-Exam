@@ -1,11 +1,12 @@
 import pool from "@/lib/db/db";
 import { NextResponse } from "next/server";
+import logger from "@/lib/logger";
 
 export async function GET(request: Request) {
-  const { searchParams } = new URL(request.url);
-  const email = searchParams.get("email");
-  try {
-    const query = `
+    const { searchParams } = new URL(request.url);
+    const email = searchParams.get("email");
+    try {
+        const query = `
         SELECT 
             s.id,
             s."examId",
@@ -53,14 +54,14 @@ export async function GET(request: Request) {
         ORDER BY s."submittedAt" DESC;
     `;
 
-    const result = await pool.query(query, [email]);
+        const result = await pool.query(query, [email]);
 
-    return NextResponse.json(result.rows, { status: 200 });
-  } catch (error) {
-    console.error("Error fetching users:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch users" },
-      { status: 500 }
-    );
-  }
+        return NextResponse.json(result.rows, { status: 200 });
+    } catch (error) {
+        logger.error("Error fetching completed exams for %s:", email, error);
+        return NextResponse.json(
+            { error: "Failed to fetch completed exams" },
+            { status: 500 }
+        );
+    }
 }
