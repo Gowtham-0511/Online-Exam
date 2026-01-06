@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { evaluateBattleSubmission } from "@/lib/ai/azureOpenAI";
+import logger from "@/lib/logger";
 
 export async function POST(req: NextRequest) {
     try {
@@ -16,7 +17,7 @@ export async function POST(req: NextRequest) {
 
         return NextResponse.json(result);
     } catch (error: any) {
-        console.error("AI execution error:", error);
+        logger.error("AI execution error:", error);
         return NextResponse.json(
             { error: "Failed to execute code with AI" },
             { status: 500 }

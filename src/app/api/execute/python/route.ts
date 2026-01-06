@@ -1,5 +1,6 @@
 import { runPythonCode } from "@/lib/executor/python";
 import { NextResponse } from "next/server";
+import logger from "@/lib/logger";
 
 export async function POST(req: Request) {
   let body;
@@ -41,7 +42,7 @@ except Exception as e:
 
     return NextResponse.json(result, { status: 200 });
   } catch (error: any) {
-    console.error("Python execution error:", error);
+    logger.error("Python execution error:", error);
     const errMsg =
       error instanceof Error ? error.message : "Unknown error occurred";
     return NextResponse.json(
