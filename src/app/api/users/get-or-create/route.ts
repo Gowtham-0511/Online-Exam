@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createOrFetchUser } from "@/lib/db/userOperations";
+import logger from "@/lib/logger";
 
 export async function POST(request: Request) {
   try {
@@ -10,10 +11,11 @@ export async function POST(request: Request) {
     }
 
     const user = await createOrFetchUser(email, name);
+    logger.info("User get-or-create success: %s", email);
 
     return NextResponse.json({ role: user.role }, { status: 200 });
   } catch (error) {
-    console.error("Error in get-or-create user:", error);
+    logger.error("Error in get-or-create user:", error);
 
     return NextResponse.json(
       { error: "Failed to create or fetch user" },

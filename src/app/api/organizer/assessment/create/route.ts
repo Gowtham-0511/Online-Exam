@@ -1,5 +1,6 @@
 import pool from "@/lib/db/db";
 import { NextResponse } from "next/server";
+import logger from "@/lib/logger";
 
 export async function POST(request: Request) {
   const {
@@ -70,10 +71,11 @@ export async function POST(request: Request) {
     ]);
 
     const assessmentId = result.rows[0].id;
+    logger.info("Assessment created via Organizer: %s by %s", examId, createdBy);
 
     return NextResponse.json({ success: true, assessmentId }, { status: 201 });
   } catch (error) {
-    console.error("Error creating assessment:", error);
+    logger.error("Error creating assessment (Organizer):", error);
     return NextResponse.json(
       { error: "Failed to create assessment" },
       { status: 500 }
