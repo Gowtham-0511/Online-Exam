@@ -4,7 +4,7 @@ import {
     ClipboardCheck, ClipboardList, Clock, FilePlus2, HelpCircle, KeyRound,
     Layers, LayoutDashboard, LineChart, ListChecks, LogOut, MonitorPlay,
     ScrollText, Settings, ShieldCheck, Target, Trophy, Users, UserCircle,
-    Users2, ChevronDown, Command, Check
+    Users2, ChevronDown, Command, Check, FileText
 } from 'lucide-react';
 import Image from 'next/image';
 import React, { useCallback, useMemo, useRef, useState, useEffect } from 'react';
@@ -47,6 +47,7 @@ const ROLE_MENUS: Record<UserRole, MenuItem[]> = {
         { id: 'assessmentManagement', navigation: 'assessment-management', label: 'Assessments', icon: ClipboardCheck, description: 'Create and Manage Assessment' },
         { id: 'credentialManagement', navigation: 'credential-management', label: 'Credentials', icon: KeyRound, description: 'Manage all Credentials' },
         { id: 'view-results', navigation: 'view-results', label: 'Results', icon: ScrollText, description: 'View Results' },
+        { id: 'logs', navigation: 'logs', label: 'System Logs', icon: FileText, description: 'View System Logs' },
     ],
     organizer: [
         { id: 'Home', navigation: 'index', label: 'Home', icon: LayoutDashboard, description: 'Home' },
