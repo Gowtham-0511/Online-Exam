@@ -94,7 +94,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(Object.values(grouped), { status: 200 });
   } catch (error) {
-    console.error("DB Error:", error);
+    logger.error("DB Error in GET /api/admin/questions:", error);
     return NextResponse.json(
       { error: "Internal Server Error" },
       { status: 500 }
@@ -126,7 +126,7 @@ export async function POST(request: NextRequest) {
     try {
       tags = await generateQuestionTags(questionText, questionType, language);
     } catch (error) {
-      console.error("Failed to generate tags:", error);
+      logger.error("Failed to generate tags:", error);
       tags = ["general"];
     }
 
@@ -180,7 +180,7 @@ export async function POST(request: NextRequest) {
       { status: 201 }
     );
   } catch (error) {
-    console.error("DB Error:", error);
+    logger.error("DB Error in POST /api/admin/questions:", error);
     return NextResponse.json(
       { error: "Internal Server Error" },
       { status: 500 }
@@ -209,7 +209,7 @@ export async function PUT(request: NextRequest) {
     try {
       tags = await generateQuestionTags(questionText, questionType, language);
     } catch (error) {
-      console.error("Failed to generate tags:", error);
+      logger.error("Failed to generate tags:", error);
       tags = ["general"];
     }
 
@@ -270,7 +270,7 @@ export async function PUT(request: NextRequest) {
       { status: 200 }
     );
   } catch (error) {
-    console.error("DB Error:", error);
+    logger.error("DB Error in PUT /api/admin/questions:", error);
     return NextResponse.json(
       { error: "Internal Server Error" },
       { status: 500 }
@@ -286,7 +286,7 @@ export async function DELETE(request: NextRequest) {
     await pool.query(`DELETE FROM "Questions" WHERE id = $1`, [id]);
     return NextResponse.json({ success: true }, { status: 200 });
   } catch (error) {
-    console.error("DB Error:", error);
+    logger.error("DB Error in DELETE /api/admin/questions:", error);
     return NextResponse.json(
       { error: "Internal Server Error" },
       { status: 500 }

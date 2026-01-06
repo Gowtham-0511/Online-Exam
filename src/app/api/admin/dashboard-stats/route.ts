@@ -208,15 +208,14 @@ export async function GET(request: Request) {
               : `${completionChange}%`,
           completionTrend: parseFloat(completionChange) >= 0 ? "up" : "down",
         },
+        recentExams,
       },
-      recentExams,
-      },
-  { status: 200 }
+      { status: 200 }
     );
-} catch (error) {
-  logger.error("Error fetching dashboard stats:", error);
-  return NextResponse.json({ error: "Failed to fetch stats" }, { status: 500 });
-}
+  } catch (error) {
+    logger.error("Error fetching dashboard stats:", error);
+    return NextResponse.json({ error: "Failed to fetch stats" }, { status: 500 });
+  }
 }
 
 function getRelativeTime(date: Date): string {
