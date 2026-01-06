@@ -1,5 +1,6 @@
 import pool from "@/lib/db/db";
 import { NextResponse } from "next/server";
+import logger from "@/lib/logger";
 
 export async function GET(req: Request) {
   const url = new URL(req.url);
@@ -44,6 +45,8 @@ export async function GET(req: Request) {
         return JSON.parse(data);
       } catch (e) {
         console.error("Failed to parse JSON property:", e);
+        // Debug level log for bad json
+        logger.debug("Failed to parse JSON for progress property: %s", e);
         return fallback;
       }
     };
@@ -64,7 +67,7 @@ export async function GET(req: Request) {
       }
     );
   } catch (error) {
-    console.error("Error loading progress:", error);
+    logger.error("Error loading progress for user %s on exam %s: %o", email, examId, error);
     return NextResponse.json(
       {
         error: "Failed to load progress",

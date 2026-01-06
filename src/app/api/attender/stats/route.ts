@@ -1,10 +1,12 @@
 import pool from "@/lib/db/db";
 import { NextResponse } from "next/server";
+import logger from "@/lib/logger";
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const email = searchParams.get("email");
   try {
+    logger.info("Fetching stats for user: %s", email);
     // 1. Get User's Total Points and Solved Count
     const userStatsQuery = `
         WITH UserScores AS (
@@ -137,7 +139,7 @@ export async function GET(request: Request) {
       { status: 200 }
     );
   } catch (error) {
-    console.error("Error fetching users:", error);
+    logger.error("Error fetching stats:", error);
     return NextResponse.json(
       { error: "Failed to fetch users" },
       { status: 500 }

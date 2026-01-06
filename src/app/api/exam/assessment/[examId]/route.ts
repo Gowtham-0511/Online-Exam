@@ -1,5 +1,6 @@
 import pool from "@/lib/db/db";
 import { NextResponse } from "next/server";
+import logger from "@/lib/logger";
 
 const examCache = new Map<string, { data: any; timestamp: number }>();
 const CACHE_TTL = 2 * 60 * 1000;
@@ -15,6 +16,7 @@ export async function GET(
 
   const cached = examCache.get(examId);
   if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+    logger.debug("Serving exam details from cache: %s", examId);
     return NextResponse.json(cached.data, {
       status: 200,
       headers: {
@@ -27,6 +29,7 @@ export async function GET(
     const client = await pool.connect();
 
     try {
+      logger.info("Fetching exam details for: %s", examId);
       const query = `SELECT * FROM "Assessment" WHERE "title" = $1`;
       const result = await client.query(query, [examId]);
 
