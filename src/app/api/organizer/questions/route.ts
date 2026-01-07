@@ -191,10 +191,11 @@ export async function POST(request: NextRequest) {
 }
 
 export async function PUT(request: NextRequest) {
+  let id = null;
   try {
     const body = await request.json();
+    id = body.id;
     const {
-      id,
       questionText,
       expectedOutput,
       difficulty,
@@ -281,9 +282,10 @@ export async function PUT(request: NextRequest) {
 }
 
 export async function DELETE(request: NextRequest) {
+  let id = null;
   try {
     const body = await request.json();
-    const { id } = body;
+    id = body.id;
 
     await pool.query(`DELETE FROM "Questions" WHERE id = $1`, [id]);
     return NextResponse.json({ success: true }, { status: 200 });
