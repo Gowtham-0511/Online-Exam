@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import pool from "@/lib/db/db";
+import logger from "@/lib/logger";
 
 export async function POST(request: NextRequest) {
   const body = await request.json();
@@ -63,7 +64,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: true }, { status: 200 });
   } catch (error) {
     await pool.query("ROLLBACK");
-    console.error("Error updating assignments:", error);
+    logger.error("Error updating assignments:", error);
     return NextResponse.json(
       { error: "Failed to update assignments" },
       { status: 500 }

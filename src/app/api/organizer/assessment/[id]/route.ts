@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import pool from "@/lib/db/db";
+import logger from "@/lib/logger";
 
 export async function GET(
   request: NextRequest,
@@ -7,7 +8,7 @@ export async function GET(
 ) {
   const { id } = await params;
 
-  console.log(id);
+  logger.info("Fetching assessment ID: %s", id);
 
   try {
     const query = `

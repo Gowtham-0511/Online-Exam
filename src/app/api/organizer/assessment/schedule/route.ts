@@ -1,5 +1,6 @@
 import pool from "@/lib/db/db";
 import { NextResponse } from "next/server";
+import logger from "@/lib/logger";
 
 export async function POST(request: Request) {
   const body = await request.json();
@@ -77,7 +78,7 @@ export async function POST(request: Request) {
     }
     return NextResponse.json({ status: 201 });
   } catch (error) {
-    console.error("Error scheduling assessment:", error);
+    logger.error("Error scheduling assessment %s:", assessmentId, error);
     return NextResponse.json(
       {
         error: "Internal server error",
