@@ -128,7 +128,7 @@ export async function POST(request: NextRequest) {
     try {
       tags = await generateQuestionTags(questionText, questionType, language);
     } catch (error) {
-      console.error("Failed to generate tags:", error);
+      logger.warn("Failed to generate tags for question:", error);
       tags = ["general"];
     }
 
@@ -212,7 +212,7 @@ export async function PUT(request: NextRequest) {
     try {
       tags = await generateQuestionTags(questionText, questionType, language);
     } catch (error) {
-      console.error("Failed to generate tags:", error);
+      logger.warn("Failed to generate tags for question %s:", id, error);
       tags = ["general"];
     }
 
