@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import pool from "@/lib/db/db";
+import logger from "@/lib/logger";
 
 export async function GET(
   req: NextRequest,
@@ -70,7 +71,7 @@ export async function GET(
       userProgress,
     });
   } catch (error: any) {
-    console.error("Database Error:", error);
+    logger.error("Error fetching learning plan %s:", planId, error);
     return NextResponse.json(
       {
         error: "Failed to fetch learning plan",

@@ -1,4 +1,5 @@
 import { AzureOpenAI } from "openai";
+import logger from "@/lib/logger";
 
 export async function POST(req: Request) {
   const endpoint = (process.env.AZURE_OAI_ENDPOINT || "").replace(
@@ -84,7 +85,7 @@ Remember: This is Ghost Mode - the student is here to learn without pressure. Ma
       headers: { "Content-Type": "application/json" },
     });
   } catch (error: any) {
-    console.error("AI Study Buddy Error:", error);
+    logger.error("AI Study Buddy Error:", error);
 
     // Handle specific Azure OpenAI errors
     if (error.status === 429) {

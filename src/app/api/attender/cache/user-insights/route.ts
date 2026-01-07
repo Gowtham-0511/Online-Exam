@@ -4,6 +4,7 @@ import {
 } from "@/lib/ai/azureOpenAI";
 import pool from "@/lib/db/db";
 import { NextResponse } from "next/server";
+import logger from "@/lib/logger";
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -49,9 +50,9 @@ export async function GET(request: Request) {
       { status: 200 }
     );
   } catch (error) {
-    console.error("Error fetching users:", error);
+    logger.error("Error fetching cached user insights for %s:", email, error);
     return NextResponse.json(
-      { error: "Failed to fetch users" },
+      { error: "Failed to fetch insights" },
       { status: 500 }
     );
   }
@@ -215,9 +216,8 @@ async function regenerateInsights(email: string) {
           current: highScores,
           target: Math.ceil(highScores / 5) * 5 + 5,
           progress: ((highScores % 5) / 5) * 100,
-          label: `Achieve ${
-            Math.ceil(highScores / 5) * 5 + 5
-          } high scores (80%+)`,
+          label: `Achieve ${Math.ceil(highScores / 5) * 5 + 5
+            } high scores (80%+)`,
           icon: "trophy",
         },
         {

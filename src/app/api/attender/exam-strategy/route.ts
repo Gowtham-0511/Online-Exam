@@ -1,6 +1,7 @@
 import { predictQuestionDifficulty } from "@/lib/ai/azureOpenAI";
 import pool from "@/lib/db/db";
 import { NextResponse } from "next/server";
+import logger from "@/lib/logger";
 
 export async function POST(request: Request) {
   const { examId, email } = await request.json();
@@ -130,7 +131,7 @@ export async function POST(request: Request) {
       { status: 200 }
     );
   } catch (error) {
-    console.error("Exam Strategy Error:", error);
+    logger.error("Exam Strategy Error for %s (Exam: %s):", email, examId, error);
     return NextResponse.json(
       { error: "Failed to generate exam strategy" },
       { status: 500 }
@@ -254,15 +255,15 @@ function calculateReadiness(
       readinessScore >= 80
         ? "Excellent"
         : readinessScore >= 60
-        ? "Good"
-        : readinessScore >= 40
-        ? "Fair"
-        : "Needs Preparation",
+          ? "Good"
+          : readinessScore >= 40
+            ? "Fair"
+            : "Needs Preparation",
     recommendation:
       readinessScore >= 70
         ? "You're well prepared! Go for it with confidence."
         : readinessScore >= 50
-        ? "Review weak areas before attempting."
-        : "Consider more practice before taking this exam.",
+          ? "Review weak areas before attempting."
+          : "Consider more practice before taking this exam.",
   };
 }

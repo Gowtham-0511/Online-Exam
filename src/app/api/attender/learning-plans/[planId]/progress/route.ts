@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import pool from "@/lib/db/db";
+import logger from "@/lib/logger";
 
 export async function POST(
   request: Request,
@@ -223,7 +224,7 @@ export async function POST(
       { status: 200 }
     );
   } catch (error: any) {
-    console.error("Progress Update Error:", error);
+    logger.error("Progress Update Error:", error);
     return NextResponse.json(
       {
         error: "Failed to update progress",

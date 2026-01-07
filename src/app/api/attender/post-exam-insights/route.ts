@@ -1,6 +1,7 @@
 import { analyzeCommonMistakes } from "@/lib/ai/azureOpenAI";
 import pool from "@/lib/db/db";
 import { NextResponse } from "next/server";
+import logger from "@/lib/logger";
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -82,8 +83,8 @@ export async function GET(request: Request) {
           percentage >= 90
             ? "correct"
             : percentage >= 40
-            ? "partial"
-            : "incorrect",
+              ? "partial"
+              : "incorrect",
       });
     });
 
@@ -124,9 +125,9 @@ export async function GET(request: Request) {
       { status: 200 }
     );
   } catch (error) {
-    console.error("Post-Exam Insights Error:", error);
+    logger.error("Post-Exam Insights Error for %s (Exam: %s):", email, examId, error);
     return NextResponse.json(
-      { error: "Failed to fetch users" },
+      { error: "Failed to fetch post-exam insights" },
       { status: 500 }
     );
   }
