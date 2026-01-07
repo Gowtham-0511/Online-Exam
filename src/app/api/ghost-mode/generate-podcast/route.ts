@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { generatePodcastScript, generateSpeech } from "@/lib/ai/azureOpenAI";
+import logger from "@/lib/logger";
 // Lazy load pdf-parse inside the function
 
 export async function POST(req: NextRequest) {
@@ -61,7 +62,7 @@ export async function POST(req: NextRequest) {
           pdfParser.parseBuffer(buffer);
         });
       } catch (e: any) {
-        console.error("PDF Parse Error:", e);
+        logger.error("PDF Parse Error:", e);
         return NextResponse.json(
           { error: "Failed to parse PDF: " + e.message },
           { status: 500 }
@@ -77,7 +78,7 @@ export async function POST(req: NextRequest) {
         const result = await mammoth.extractRawText({ buffer: buffer });
         text = result.value;
       } catch (e: any) {
-        console.error("DOCX Parse Error:", e);
+        logger.error("DOCX Parse Error:", e);
         return NextResponse.json(
           { error: "Failed to parse DOCX: " + e.message },
           { status: 500 }
@@ -95,8 +96,8 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    console.log("Extracted Text Length:", text.length);
-    console.log("Extracted Text Preview:", text.substring(0, 500) + "...");
+    logger.info("Extracted Text Length: %d", text.length);
+    logger.debug("Extracted Text Preview: %s", text.substring(0, 500) + "...");
 
     // 2. Generate Script
     const scriptData = await generatePodcastScript(text, hostStyle, duration);
@@ -118,7 +119,7 @@ export async function POST(req: NextRequest) {
       if (segment.speaker.includes("A")) voice = "shimmer";
       if (segment.speaker.includes("B")) voice = "onyx";
       if (!segment.text || !segment.text.trim()) {
-        console.warn(`Skipping empty segment for speaker ${segment.speaker}`);
+        logger.warn(`Skipping empty segment for speaker ${segment.speaker}`);
         continue;
       }
       const segmentAudio = await generateSpeech(segment.text, voice);
@@ -144,7 +145,7 @@ export async function POST(req: NextRequest) {
       },
     });
   } catch (error: any) {
-    console.error("Podcast Gen Error:", error);
+    logger.error("Podcast Gen Error:", error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }

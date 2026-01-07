@@ -18,6 +18,7 @@ import {
   CodingQuestion,
   generateSnowflakePrompt,
 } from "@/lib/ai/question-generation";
+import logger from "@/lib/logger";
 
 export async function POST(req: Request) {
   const endpoint = process.env.AZURE_OAI_ENDPOINT
@@ -27,7 +28,7 @@ export async function POST(req: Request) {
   const deploymentName = process.env.AZURE_OAI_DEPLOY || "";
   const apiVersion = process.env.AZURE_OAI_API_VER || "";
   if (!endpoint || !apiKey || !deploymentName || !apiVersion) {
-    console.error("Azure OpenAI configuration missing");
+    logger.error("Azure OpenAI configuration missing");
     return NextResponse.json(
       {
         message: "Server configuration error: Azure OpenAI credentials missing",
@@ -54,7 +55,7 @@ export async function POST(req: Request) {
     );
   }
 
-  console.log(
+  logger.info(
     `Generating ${questionCount} questions of type: ${questionType} for topic: ${topic}`
   );
 
@@ -219,16 +220,16 @@ export async function POST(req: Request) {
       const keys = Object.keys(parsedData);
       for (const key of keys) {
         if (Array.isArray(parsedData[key]) && parsedData[key].length > 0) {
-          console.log(`Found questions in key: ${key}`);
+          logger.info(`Found questions in key: ${key}`);
           questions = parsedData[key];
           break;
         }
       }
     }
 
-    console.log(`=== Found ${questions.length} questions ===`);
-    console.log(
-      `Question types in response:`,
+    logger.info(`=== Found ${questions.length} questions ===`);
+    logger.info(
+      `Question types in response: %o`,
       questions.map((q) => q.type)
     );
 
@@ -261,7 +262,7 @@ export async function POST(req: Request) {
           }
         }
       } catch (error) {
-        console.error(`Error validating question ${index}:`, error);
+        logger.error(`Error validating question ${index}:`, error);
       }
     });
 
@@ -283,7 +284,7 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ questions: validatedQuestions });
   } catch (error: any) {
-    console.error("Error generating questions:", error);
+    logger.error("Error generating questions:", error);
     return NextResponse.json(
       {
         message: "Failed to generate questions",

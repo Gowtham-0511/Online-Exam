@@ -4,6 +4,7 @@ import {
     transcribeAudio,
     generatePodcastInteraction,
 } from "@/lib/ai/azureOpenAI";
+import logger from "@/lib/logger";
 
 export async function POST(req: NextRequest) {
     try {
@@ -19,7 +20,7 @@ export async function POST(req: NextRequest) {
         let inputText = userText || "";
 
         if (audioFile && audioFile.size > 0) {
-            console.log("Transcribing user audio...");
+            logger.info("Transcribing user audio...");
             const arrayBuffer = await audioFile.arrayBuffer();
             const buffer = Buffer.from(arrayBuffer);
             const transcription = await transcribeAudio(buffer);
@@ -35,7 +36,7 @@ export async function POST(req: NextRequest) {
             );
         }
 
-        console.log("User Input:", inputText);
+        logger.info("User Input: %s", inputText);
 
         const interaction = await generatePodcastInteraction(
             inputText,
@@ -58,7 +59,7 @@ export async function POST(req: NextRequest) {
             },
         });
     } catch (error: any) {
-        console.error("Podcast Interaction Error:", error);
+        logger.error("Podcast Interaction Error:", error);
         return NextResponse.json({ error: error.message }, { status: 500 });
     }
 }
