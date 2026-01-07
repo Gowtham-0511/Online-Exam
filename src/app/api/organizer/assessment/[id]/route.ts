@@ -40,7 +40,7 @@ export async function GET(
 
     return NextResponse.json(exam, { status: 200 });
   } catch (error) {
-    console.error("DB error:", error);
+    logger.error("DB error fetching assessment %s:", id, error);
     return NextResponse.json(
       { error: "Internal Server Error" },
       { status: 500 }
@@ -106,7 +106,7 @@ export async function PUT(
 
     return NextResponse.json(updatedExam, { status: 200 });
   } catch (error) {
-    console.error("DB error:", error);
+    logger.error("DB error updating assessment %s:", id, error);
     return NextResponse.json(
       { error: "Internal Server Error" },
       { status: 500 }

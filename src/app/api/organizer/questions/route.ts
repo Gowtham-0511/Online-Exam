@@ -96,7 +96,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(Object.values(grouped), { status: 200 });
   } catch (error) {
-    console.error("DB Error:", error);
+    logger.error("DB Error fetching organizer questions:", error);
     return NextResponse.json(
       { error: "Internal Server Error" },
       { status: 500 }
@@ -182,7 +182,7 @@ export async function POST(request: NextRequest) {
       { status: 201 }
     );
   } catch (error) {
-    console.error("DB Error:", error);
+    logger.error("DB Error creating question:", error);
     return NextResponse.json(
       { error: "Internal Server Error" },
       { status: 500 }
@@ -272,7 +272,7 @@ export async function PUT(request: NextRequest) {
       { status: 200 }
     );
   } catch (error) {
-    console.error("DB Error:", error);
+    logger.error("DB Error updating question %s:", id, error);
     return NextResponse.json(
       { error: "Internal Server Error" },
       { status: 500 }
@@ -288,7 +288,7 @@ export async function DELETE(request: NextRequest) {
     await pool.query(`DELETE FROM "Questions" WHERE id = $1`, [id]);
     return NextResponse.json({ success: true }, { status: 200 });
   } catch (error) {
-    console.error("DB Error:", error);
+    logger.error("DB Error deleting question %s:", id, error);
     return NextResponse.json(
       { error: "Internal Server Error" },
       { status: 500 }
