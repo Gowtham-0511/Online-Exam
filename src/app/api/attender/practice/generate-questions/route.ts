@@ -27,7 +27,7 @@ export async function POST(request: Request) {
 
     const { email, topic, difficulty, count, questionType } = body;
 
-    console.log(email, topic, difficulty, count, questionType);
+    // console.log(email, topic, difficulty, count, questionType);
     logger.info("Generating practice questions: %s, %s, %s, %s, %s", email, topic, difficulty, count, questionType);
 
     if (!email || !topic || !difficulty || !count || !questionType) {
@@ -63,11 +63,11 @@ export async function POST(request: Request) {
                       ? "dbt"
                       : "python";
 
-        console.log(language);
+        logger.info("Language: %s", language);
 
         if (language === "sql") {
           const schema = await fetchDatabaseSchema();
-          console.log(schema);
+          // logger.debug("Schema: %o", schema);
           prompt = generateSQLCodingPrompt(topic, difficulty, count, schema);
           systemMessage =
             "You are an expert database instructor creating SQL problems. Always return valid JSON with a 'questions' array. Each question must have type 'coding' and language 'sql'. NO multiple choice questions. Use the provided database schema to create realistic problems.";
@@ -104,7 +104,7 @@ export async function POST(request: Request) {
         apiVersion,
       });
 
-      console.log(prompt);
+      logger.debug("Prompt generated");
 
       const params: any = {
         model: deploymentName,
@@ -137,7 +137,7 @@ export async function POST(request: Request) {
         throw new Error("Invalid JSON response from AI");
       }
 
-      console.log(parsedData);
+      logger.debug("Parsed Data: %o", parsedData);
 
       // Insert questions into database
       const questions = parsedData.questions || [];
@@ -244,7 +244,7 @@ export async function POST(request: Request) {
             if (insertQuery) {
               const result = await dbClient.query(insertQuery, values);
               insertedQuestions.push(result.rows[0]);
-              console.log(`Inserted ${q.type} question:`, result.rows[0].id);
+              logger.info(`Inserted ${q.type} question: %s`, result.rows[0].id);
             }
           } catch (insertError) {
             logger.error(`Error inserting question:`, insertError);

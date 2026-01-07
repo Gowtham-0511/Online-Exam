@@ -44,7 +44,6 @@ export async function GET(req: Request) {
         if (!data) return fallback;
         return JSON.parse(data);
       } catch (e) {
-        console.error("Failed to parse JSON property:", e);
         // Debug level log for bad json
         logger.debug("Failed to parse JSON for progress property: %s", e);
         return fallback;

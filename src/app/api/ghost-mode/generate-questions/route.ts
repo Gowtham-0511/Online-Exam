@@ -87,11 +87,11 @@ export async function POST(req: Request) {
                       ? "snowflake"
                       : "python";
 
-      console.log(language);
+      logger.info("Language determined: %s", language);
 
       if (language === "sql") {
         const schema = await fetchDatabaseSchema();
-        console.log(schema);
+        // logger.debug("Schema: %o", schema);
         prompt = generateSQLCodingPrompt(
           topic,
           difficulty,
@@ -204,7 +204,7 @@ export async function POST(req: Request) {
     try {
       parsedData = JSON.parse(content);
     } catch (parseError) {
-      console.error("JSON Parse Error:", parseError);
+      logger.error("JSON Parse Error:", parseError);
       throw new Error("Invalid JSON response from AI");
     }
 
@@ -258,7 +258,7 @@ export async function POST(req: Request) {
             const mcqQ = { ...q, type: "mcq" };
             validatedQuestions.push(validateMCQQuestion(mcqQ, index));
           } else {
-            console.warn(`Question ${index} has ambiguous type, skipping`);
+            logger.warn(`Question ${index} has ambiguous type, skipping`);
           }
         }
       } catch (error) {
