@@ -1,5 +1,6 @@
 import pool from "@/lib/db/db";
 import { NextResponse } from "next/server";
+import logger from "@/lib/logger";
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -84,7 +85,7 @@ export async function GET(request: Request) {
       { status: 200 }
     );
   } catch (error) {
-    console.error("Get Practice Progress Error:", error);
+    logger.error("Get Practice Progress Error:", error);
     return NextResponse.json(
       { error: "Failed to fetch practice progress" },
       { status: 500 }

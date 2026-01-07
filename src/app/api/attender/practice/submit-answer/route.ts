@@ -1,5 +1,6 @@
 import pool from "@/lib/db/db";
 import { NextResponse } from "next/server";
+import logger from "@/lib/logger";
 
 export async function POST(request: Request) {
   const body = await request.json();
@@ -146,7 +147,7 @@ export async function POST(request: Request) {
     );
   } catch (error) {
     await client.query("ROLLBACK");
-    console.error("Error submitting practice question:", error);
+    logger.error("Error submitting practice question:", error);
     return NextResponse.json(
       { error: "Failed to submit practice question" },
       { status: 500 }

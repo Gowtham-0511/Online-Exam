@@ -12,6 +12,7 @@ import { fetchDatabaseSchema } from "@/lib/db/schema";
 import pool from "@/lib/db/db";
 import { NextResponse } from "next/server";
 import { AzureOpenAI } from "openai";
+import logger from "@/lib/logger";
 
 export async function POST(request: Request) {
   const endpoint = process.env.AZURE_OAI_ENDPOINT
@@ -27,6 +28,7 @@ export async function POST(request: Request) {
     const { email, topic, difficulty, count, questionType } = body;
 
     console.log(email, topic, difficulty, count, questionType);
+    logger.info("Generating practice questions: %s, %s, %s, %s, %s", email, topic, difficulty, count, questionType);
 
     if (!email || !topic || !difficulty || !count || !questionType) {
       return NextResponse.json(
@@ -50,16 +52,16 @@ export async function POST(request: Request) {
           topicLower === "sql"
             ? "sql"
             : topicLower === "javascript"
-            ? "javascript"
-            : topicLower === "java"
-            ? "java"
-            : topicLower === "pyspark"
-            ? "pyspark"
-            : topicLower === "powerbi"
-            ? "dax"
-            : topicLower === "dbt"
-            ? "dbt"
-            : "python";
+              ? "javascript"
+              : topicLower === "java"
+                ? "java"
+                : topicLower === "pyspark"
+                  ? "pyspark"
+                  : topicLower === "powerbi"
+                    ? "dax"
+                    : topicLower === "dbt"
+                      ? "dbt"
+                      : "python";
 
         console.log(language);
 
@@ -131,7 +133,7 @@ export async function POST(request: Request) {
       try {
         parsedData = JSON.parse(content);
       } catch (parseError) {
-        console.error("JSON Parse Error:", parseError);
+        logger.error("JSON Parse Error: %s", parseError);
         throw new Error("Invalid JSON response from AI");
       }
 
@@ -245,12 +247,12 @@ export async function POST(request: Request) {
               console.log(`Inserted ${q.type} question:`, result.rows[0].id);
             }
           } catch (insertError) {
-            console.error(`Error inserting question:`, insertError);
+            logger.error(`Error inserting question:`, insertError);
             // Continue with next question even if one fails
           }
         }
       } catch (dbError) {
-        console.error("Database connection error:", dbError);
+        logger.error("Database connection error:", dbError);
         return NextResponse.json(
           {
             error: "Failed to save questions to database",
@@ -283,11 +285,11 @@ export async function POST(request: Request) {
         { status: 200 }
       );
     } catch (error) {
-      console.error("Error in POST:", error);
+      logger.error("Error in POST:", error);
       return NextResponse.json({ error: "Server error" }, { status: 500 });
     }
   } catch (error) {
-    console.error("Error in POST:", error);
+    logger.error("Error in POST:", error);
     return NextResponse.json({ error: "Server error" }, { status: 500 });
   }
 }
