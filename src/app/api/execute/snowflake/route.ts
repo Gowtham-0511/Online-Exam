@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { executeQuery } from "@/lib/executor/snowflake";
+import logger from "@/lib/logger";
 
 export async function POST(request: Request) {
     try {
@@ -20,7 +21,7 @@ export async function POST(request: Request) {
         // Execute the Snowflake query
         const result = await executeQuery(query);
 
-        console.log("Execution result:", result);
+        logger.info("Snowflake execution result: %o", result);
 
         // Return the execution result
         return NextResponse.json(result, {
@@ -28,7 +29,7 @@ export async function POST(request: Request) {
         });
 
     } catch (error: any) {
-        console.error("Error in Snowflake route:", error);
+        logger.error("Error in Snowflake route:", error);
         return NextResponse.json(
             {
                 success: false,

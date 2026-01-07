@@ -1,5 +1,6 @@
 import DockerSqlExecutor from "@/lib/executor/sql";
 import { NextResponse } from "next/server";
+import logger from "@/lib/logger";
 
 export async function POST(req: Request) {
   let body;
@@ -19,18 +20,18 @@ export async function POST(req: Request) {
     const setupQuery = testCase?.input || "";
     const fullQuery = setupQuery ? `${setupQuery};\n${query}` : query;
 
-    console.log("🔍 Validating query...");
+    logger.info("🔍 Validating query...");
     const validation = DockerSqlExecutor.validateQuery(fullQuery);
 
     if (!validation.valid) {
-      console.log("❌ Validation failed:", validation.error);
+      logger.warn("❌ Validation failed: %s", validation.error);
       return NextResponse.json({
         success: false,
         error: validation.error,
       });
     }
 
-    console.log("✅ Validation passed, executing query...");
+    logger.info("✅ Validation passed, executing query...");
 
     const result = await DockerSqlExecutor.execute({
       query: fullQuery,
@@ -56,7 +57,7 @@ export async function POST(req: Request) {
       { status: 200 }
     );
   } catch (error) {
-    console.error("SQL execution error:", error);
+    logger.error("SQL execution error:", error);
     const errMsg =
       error instanceof Error ? error.message : "Unknown error occurred";
     return NextResponse.json(

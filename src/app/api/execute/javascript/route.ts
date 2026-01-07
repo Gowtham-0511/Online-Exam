@@ -1,5 +1,6 @@
 import { runJavaScriptCode } from "@/lib/executor/javascript";
 import { NextResponse } from "next/server";
+import logger from "@/lib/logger";
 
 export async function POST(req: Request) {
   let body;
@@ -48,7 +49,7 @@ try {
 
     return NextResponse.json(result, { status: 200 });
   } catch (error: any) {
-    console.error("JavaScript execution error:", error);
+    logger.error("JavaScript execution error:", error);
     const errMsg =
       error instanceof Error ? error.message : "Unknown error occurred";
     return NextResponse.json(

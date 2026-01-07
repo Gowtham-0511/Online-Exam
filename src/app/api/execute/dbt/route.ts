@@ -4,6 +4,7 @@ import {
   getDbtInfo,
 } from "@/lib/executor/dbt";
 import { NextResponse } from "next/server";
+import logger from "@/lib/logger";
 
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
@@ -48,7 +49,7 @@ export async function POST(req: Request) {
 
     return NextResponse.json(result, { status: 200 });
   } catch (error: any) {
-    console.error("DBT execution error:", error);
+    logger.error("DBT execution error:", error);
     const errMsg =
       error instanceof Error ? error.message : "Unknown error occurred";
     return NextResponse.json(
