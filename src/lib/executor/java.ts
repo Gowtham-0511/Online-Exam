@@ -1,3 +1,5 @@
+import logger from "@/lib/logger";
+
 async function fetchWithRetry(
   url: string,
   options: RequestInit,
@@ -12,7 +14,7 @@ async function fetchWithRetry(
       return response;
     } catch (error: any) {
       lastError = error;
-      console.log(`Fetch attempt ${i + 1} failed:`, error.message);
+      logger.warn(`Fetch attempt ${i + 1} failed: ${error.message}`);
 
       if (error.name === "AbortError") {
         throw error;
@@ -40,11 +42,11 @@ export async function runJavaCode(
   try {
     const javaServiceUrl = process.env.JAVA_SERVICE_URL || "http://java:5003";
 
-    console.log(
+    logger.info(
       `[${new Date().toISOString()}] Executing Java code (${code.length} bytes)`
     );
 
-    console.log(
+    logger.debug(
       JSON.stringify({
         code,
         inputs,

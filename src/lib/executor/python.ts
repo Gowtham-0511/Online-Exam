@@ -1,3 +1,5 @@
+import logger from "@/lib/logger";
+
 async function fetchWithRetry(
   url: string,
   options: RequestInit,
@@ -11,7 +13,7 @@ async function fetchWithRetry(
       return response;
     } catch (error: any) {
       lastError = error;
-      console.log(`Fetch attempt ${i + 1} failed:`, error.message);
+      logger.warn(`Fetch attempt ${i + 1} failed: ${error.message}`);
 
       // Don't retry on abort
       if (error.name === "AbortError") {
@@ -38,10 +40,8 @@ export async function runPythonCode(code: string) {
     const pythonServiceUrl =
       process.env.PYTHON_SERVICE_URL || "http://localhost:5000";
 
-    console.log(
-      `[${new Date().toISOString()}] Executing Python code (${
-        code.length
-      } bytes)`
+    logger.info(
+      `[${new Date().toISOString()}] Executing Python code (${code.length} bytes)`
     );
 
     const response = await fetchWithRetry(
@@ -64,7 +64,7 @@ export async function runPythonCode(code: string) {
     const responseText = await response.text();
 
     if (!response.ok) {
-      console.error(
+      logger.error(
         `[${new Date().toISOString()}] Python service error: ${response.status}`
       );
 
@@ -87,8 +87,8 @@ export async function runPythonCode(code: string) {
     try {
       data = JSON.parse(responseText);
     } catch (parseError) {
-      console.error(
-        "Failed to parse response:",
+      logger.error(
+        "Failed to parse response: %s",
         responseText.substring(0, 200)
       );
       return {
@@ -98,7 +98,7 @@ export async function runPythonCode(code: string) {
       };
     }
 
-    console.log(`[${new Date().toISOString()}] Python execution successful`);
+    logger.info(`[${new Date().toISOString()}] Python execution successful`);
 
     return {
       success: data.success ?? true,
@@ -109,7 +109,7 @@ export async function runPythonCode(code: string) {
     clearTimeout(timeoutId);
 
     if (error.name === "AbortError") {
-      console.error(`[${new Date().toISOString()}] Execution timeout`);
+      logger.error(`[${new Date().toISOString()}] Execution timeout`);
       return {
         success: false,
         output: "",
@@ -117,16 +117,16 @@ export async function runPythonCode(code: string) {
       };
     }
 
-    console.error(`[${new Date().toISOString()}] Python execution error:`, {
+    logger.error(`[${new Date().toISOString()}] Python execution error:`, {
       message: error.message,
       code: error.cause?.code,
       socket: error.cause?.socket
         ? {
-            localPort: error.cause.socket.localPort,
-            remotePort: error.cause.socket.remotePort,
-            bytesWritten: error.cause.socket.bytesWritten,
-            bytesRead: error.cause.socket.bytesRead,
-          }
+          localPort: error.cause.socket.localPort,
+          remotePort: error.cause.socket.remotePort,
+          bytesWritten: error.cause.socket.bytesWritten,
+          bytesRead: error.cause.socket.bytesRead,
+        }
         : undefined,
     });
 

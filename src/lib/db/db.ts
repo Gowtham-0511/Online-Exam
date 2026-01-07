@@ -1,4 +1,5 @@
 import { Pool } from "pg";
+import logger from "@/lib/logger";
 
 const pool = new Pool({
     user: process.env.PGUSER,
@@ -20,19 +21,20 @@ const pool = new Pool({
 
 // Handle pool errors to prevent crashes
 pool.on('error', (err, client) => {
-    console.error('Unexpected error on idle client', err);
+    logger.error('Unexpected error on idle client', err);
 });
 
 // Graceful shutdown
+// Graceful shutdown
 process.on('SIGINT', async () => {
     await pool.end();
-    console.log('Pool has ended');
+    logger.info('Pool has ended');
     process.exit(0);
 });
 
 process.on('SIGTERM', async () => {
     await pool.end();
-    console.log('Pool has ended');
+    logger.info('Pool has ended');
     process.exit(0);
 });
 

@@ -1,4 +1,5 @@
 import { AzureOpenAI } from "openai";
+import logger from "@/lib/logger";
 
 const endpoint = (process.env.AZURE_OAI_ENDPOINT || "").replace(
   /^['"]|['"]$/g,
@@ -65,7 +66,7 @@ export async function generateQuestionTags(
     const result = await getClient().chat.completions.create(params);
 
     const content = result.choices[0]?.message?.content?.trim() || "";
-    console.log("AI raw content:", JSON.stringify(content));
+    logger.debug("AI raw content: %s", JSON.stringify(content));
 
     // Clean up and normalize
     const tags = content
@@ -88,19 +89,19 @@ export async function generateQuestionTags(
 
     // Retry once if empty or failed
     if (tags.length === 0) {
-      console.log("⚠️ Empty result — retrying with fallback prompt...");
+      logger.warn("⚠️ Empty result — retrying with fallback prompt...");
       const fallbackPrompt = `Give 1–3 short technical keywords for this ${questionType} question:\n${cleanText}\nExample: joins, subquery, recursion`;
       tags = await getTagsFromAI(fallbackPrompt);
     }
 
-    console.log("Parsed tags:", tags);
+    logger.info("Parsed tags: %o", tags);
 
     return tags.length > 0 ? tags : ["general"];
   } catch (error: any) {
-    console.error("Azure OpenAI Error:", error.message);
-    console.error("Status:", error.status);
-    console.error("Code:", error.code);
-    console.error("Param:", error.param);
+    logger.error("Azure OpenAI Error:", error.message);
+    logger.error("Status: %s", error.status);
+    logger.error("Code: %s", error.code);
+    logger.error("Param: %s", error.param);
     return ["uncategorized"];
   }
 }
@@ -193,7 +194,7 @@ export async function analyzeStudentPerformance(studentData: {
       recommendations: analysis.recommendations || [],
     };
   } catch (error: any) {
-    console.error("Azure OpenAI Analysis Error:", error.message);
+    logger.error("Azure OpenAI Analysis Error:", error.message);
     return {
       strengths: [],
       weaknesses: [],
@@ -256,7 +257,7 @@ export async function predictQuestionDifficulty(
     const result = await getClient().chat.completions.create(params);
     return JSON.parse(result.choices[0]?.message?.content || "{}");
   } catch (error) {
-    console.error("Difficulty prediction error:", error);
+    logger.error("Difficulty prediction error:", error);
     return {
       predictedDifficulty: "Medium",
       confidence: 0,
@@ -335,7 +336,7 @@ export async function analyzeCommonMistakes(
     const result = await getClient().chat.completions.create(params);
     return JSON.parse(result.choices[0]?.message?.content || "{}");
   } catch (error) {
-    console.error("Common mistakes analysis error:", error);
+    logger.error("Common mistakes analysis error:", error);
     return { commonMistakes: [], insights: [], improvementTips: [] };
   }
 }
@@ -408,7 +409,7 @@ export async function generateStudyPlan(studentData: {
     const result = await getClient().chat.completions.create(params);
     return JSON.parse(result.choices[0]?.message?.content || "{}");
   } catch (error) {
-    console.error("Study plan generation error:", error);
+    logger.error("Study plan generation error:", error);
     return {
       weeklyPlan: [],
       priorityTopics: [],
@@ -486,7 +487,7 @@ export async function predictFuturePerformance(
     const result = await getClient().chat.completions.create(params);
     return JSON.parse(result.choices[0]?.message?.content || "{}");
   } catch (error) {
-    console.error("Performance prediction error:", error);
+    logger.error("Performance prediction error:", error);
     return {
       predictedScore: 50,
       trend: "stable",
@@ -566,7 +567,7 @@ export async function compareStudents(
     const result = await getClient().chat.completions.create(params);
     return JSON.parse(result.choices[0]?.message?.content || "{}");
   } catch (error) {
-    console.error("Student comparison error:", error);
+    logger.error("Student comparison error:", error);
     return {
       comparison: "Unable to compare",
       recommendations: { forStudent1: [], forStudent2: [] },
@@ -661,7 +662,7 @@ export async function generateLearningPlanQuestions(
 
     return data.questions || [];
   } catch (error: any) {
-    console.error("Question generation error:", error.message);
+    logger.error("Question generation error:", error.message);
     return [];
   }
 }
@@ -713,7 +714,7 @@ export async function explainFeedbackFurther(
       "Unable to generate explanation"
     );
   } catch (error) {
-    console.error("Explain feedback error:", error);
+    logger.error("Explain feedback error:", error);
     return "Unable to generate explanation at this time.";
   }
 }
@@ -778,7 +779,7 @@ export async function generateAlternativeSolutions(
     const result = await getClient().chat.completions.create(params);
     return JSON.parse(result.choices[0]?.message?.content || "{}");
   } catch (error) {
-    console.error("Alternative solutions error:", error);
+    logger.error("Alternative solutions error:", error);
     return { approaches: [], comparison: "" };
   }
 }

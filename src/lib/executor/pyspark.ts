@@ -1,3 +1,5 @@
+import logger from "@/lib/logger";
+
 async function fetchWithRetry(
   url: string,
   options: RequestInit,
@@ -11,7 +13,7 @@ async function fetchWithRetry(
       return response;
     } catch (error: any) {
       lastError = error;
-      console.log(`Fetch attempt ${i + 1} failed:`, error.message);
+      logger.warn(`Fetch attempt ${i + 1} failed: ${error.message}`);
 
       if (error.name === "AbortError") {
         throw error;
@@ -36,10 +38,8 @@ export async function runPySparkCode(code: string, inputs?: any) {
     const pysparkServiceUrl =
       process.env.PYSPARK_SERVICE_URL || "http://pyspark:5005";
 
-    console.log(
-      `[${new Date().toISOString()}] Executing PySpark code (${
-        code.length
-      } bytes)`
+    logger.info(
+      `[${new Date().toISOString()}] Executing PySpark code (${code.length} bytes)`
     );
 
     const response = await fetchWithRetry(

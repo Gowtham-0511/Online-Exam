@@ -1,3 +1,5 @@
+import logger from "@/lib/logger";
+
 async function fetchWithRetry(
   url: string,
   options: RequestInit,
@@ -11,7 +13,7 @@ async function fetchWithRetry(
       return response;
     } catch (error: any) {
       lastError = error;
-      console.log(`Fetch attempt ${i + 1} failed:`, error.message);
+      logger.warn(`Fetch attempt ${i + 1} failed: ${error.message}`);
 
       if (error.name === "AbortError") {
         throw error;
@@ -35,7 +37,7 @@ export async function runDaxExpression(expression: string, dataset?: any) {
   try {
     const daxServiceUrl = process.env.DAX_SERVICE_URL || "http://dax:5006";
 
-    console.log(
+    logger.info(
       `[${new Date().toISOString()}] Executing DAX expression: ${expression}`
     );
 

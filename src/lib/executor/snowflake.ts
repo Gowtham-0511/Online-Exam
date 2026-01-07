@@ -1,3 +1,5 @@
+import logger from "@/lib/logger";
+
 async function fetchWithRetry(
     url: string,
     options: RequestInit,
@@ -11,7 +13,7 @@ async function fetchWithRetry(
             return response;
         } catch (error: any) {
             lastError = error;
-            console.log(`Fetch attempt ${i + 1} failed:`, error.message);
+            logger.warn(`Fetch attempt ${i + 1} failed: ${error.message}`);
 
             if (error.name === "AbortError") {
                 throw error;
@@ -35,7 +37,7 @@ export async function executeQuery(query: string) {
 
     try {
         const snowflakeServiceUrl = process.env.SNOWFLAKE_SERVICE_URL || "http://localhost:5007";
-        console.log(`[${new Date().toISOString()}] Executing Snowflake query (${query.length} bytes)`);
+        logger.info(`[${new Date().toISOString()}] Executing Snowflake query (${query.length} bytes)`);
 
         const parms = JSON.stringify({
             "credentials": {
@@ -64,7 +66,7 @@ export async function executeQuery(query: string) {
         clearTimeout(timeoutId);
         const responseText = await response.text();
 
-        console.log("Response from Snowflake service:", responseText);
+        logger.debug("Response from Snowflake service: %s", responseText);
 
         if (!response.ok) {
             let errorData;

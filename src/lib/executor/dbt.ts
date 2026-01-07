@@ -1,3 +1,5 @@
+import logger from "@/lib/logger";
+
 async function fetchWithRetry(
   url: string,
   options: RequestInit,
@@ -11,7 +13,7 @@ async function fetchWithRetry(
       return response;
     } catch (error: any) {
       lastError = error;
-      console.log(`Fetch attempt ${i + 1} failed:`, error.message);
+      logger.warn(`Fetch attempt ${i + 1} failed: ${error.message}`);
 
       if (error.name === "AbortError") {
         throw error;
@@ -41,7 +43,7 @@ export async function runDbtCommand(
   try {
     const dbtServiceUrl = process.env.DBT_SERVICE_URL || "http://dbt:5004";
 
-    console.log(
+    logger.info(
       `[${new Date().toISOString()}] Executing DBT command: ${command}`
     );
 

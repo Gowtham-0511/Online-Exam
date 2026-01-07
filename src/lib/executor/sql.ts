@@ -1,5 +1,6 @@
 import { Pool } from "pg";
 import sql from "mssql";
+import logger from "@/lib/logger";
 
 export interface SqlExecutionOptions {
   query: string;
@@ -53,7 +54,7 @@ export class DockerSqlExecutor {
           "🚫 Permission denied: You cannot perform this operation";
       }
 
-      console.error(`❌ SQL execution failed:`, errorMessage);
+      logger.error(`❌ SQL execution failed:`, errorMessage);
 
       return {
         columns: [],
@@ -87,8 +88,8 @@ export class DockerSqlExecutor {
         statement_timeout: options.timeout || this.DEFAULT_TIMEOUT,
       });
 
-      console.log(`🟢 Executing PostgreSQL query...`);
-      console.log(`Query: ${options.query.substring(0, 200)}...`); // Log first 200 chars
+      logger.info(`🟢 Executing PostgreSQL query...`);
+      logger.debug(`Query: ${options.query.substring(0, 200)}...`); // Log first 200 chars
 
       // Split queries by semicolon
       const queries = options.query
@@ -105,7 +106,7 @@ export class DockerSqlExecutor {
         const query = queries[i];
         const isLast = i === queries.length - 1;
 
-        console.log(
+        logger.debug(
           `  Executing statement ${i + 1}/${queries.length}: ${query.substring(
             0,
             50
@@ -130,7 +131,7 @@ export class DockerSqlExecutor {
       await pool.end();
 
       const executionTime = Date.now() - startTime;
-      console.log(
+      logger.info(
         `✅ PostgreSQL query completed in ${executionTime}ms, ${rows.length} rows`
       );
 
@@ -142,7 +143,7 @@ export class DockerSqlExecutor {
         success: true,
       };
     } catch (error: any) {
-      console.error("PostgreSQL Error Details:", {
+      logger.error("PostgreSQL Error Details:", {
         message: error.message,
         code: error.code,
         detail: error.detail,
@@ -183,7 +184,7 @@ export class DockerSqlExecutor {
         },
       };
 
-      console.log(`🔷 Executing SQL Server query...`);
+      logger.info(`🔷 Executing SQL Server query...`);
 
       sqlPool = await sql.connect(config);
 
@@ -198,7 +199,7 @@ export class DockerSqlExecutor {
         result.recordset.length > 0 ? Object.keys(result.recordset[0]) : [];
       const rows = result.recordset;
 
-      console.log(
+      logger.info(
         `✅ SQL Server query completed in ${executionTime}ms, ${rows.length} rows`
       );
 
@@ -354,7 +355,7 @@ export class DockerSqlExecutor {
         };
       }
     } catch (error) {
-      console.error("Failed to get connection stats:", error);
+      logger.error("Failed to get connection stats:", error);
       return { activeConnections: -1, serverType };
     }
   }
