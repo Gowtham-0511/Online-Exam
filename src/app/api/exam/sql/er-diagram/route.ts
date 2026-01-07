@@ -3,6 +3,7 @@ import { decrypt } from "@/lib/encryption";
 import { NextResponse } from "next/server";
 import { Pool } from "pg";
 import sql from "mssql";
+import logger from "@/lib/logger";
 
 const schemaCache = new Map<string, { data: any; timestamp: number }>();
 const SCHEMA_CACHE_TTL = 10 * 60 * 1000;
@@ -97,7 +98,7 @@ export async function GET(request: Request) {
       },
     });
   } catch (error) {
-    console.error("Error fetching schema:", error);
+    logger.error("Error fetching schema for exam %s:", examId, error);
     return NextResponse.json(
       { error: "Failed to fetch schema" },
       { status: 500 }

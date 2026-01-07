@@ -1,5 +1,6 @@
 import pool from "@/lib/db/db";
 import { NextResponse } from "next/server";
+import logger from "@/lib/logger";
 
 const filesCache = new Map<string, { data: any; timestamp: number }>();
 const CACHE_TTL = 2 * 60 * 1000;
@@ -11,7 +12,7 @@ export async function GET(
   // Await the params object
   const { examId } = await params;
 
-  console.log(typeof examId);
+  // console.log(typeof examId);
 
   const cached = filesCache.get(examId);
   if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
@@ -52,6 +53,7 @@ export async function GET(
       client.release();
     }
   } catch (error) {
+    logger.error("Error fetching exam files for exam %s:", examId, error);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }
