@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import logger from "@/lib/logger";
 
 export async function POST(req: Request) {
   try {
@@ -75,6 +76,7 @@ export async function POST(req: Request) {
     // console.log(report);
     return NextResponse.json({ report }, { status: 200 });
   } catch (error) {
+    logger.error("Failed to generate exam report:", error);
     return NextResponse.json(
       { error: "Failed to generate exam report" },
       { status: 500 }

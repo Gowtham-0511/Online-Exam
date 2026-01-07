@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import pool from "@/lib/db/db";
 import { generateQuestionTags } from "@/lib/ai/azureOpenAI";
+import logger from "@/lib/logger";
 
 export async function GET(request: NextRequest) {
   try {

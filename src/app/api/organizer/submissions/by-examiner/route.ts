@@ -1,5 +1,6 @@
 import pool from "@/lib/db/db";
 import { NextResponse } from "next/server";
+import logger from "@/lib/logger";
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -18,12 +19,12 @@ export async function GET(request: Request) {
 
     const examIds = exams.map((e: any) => e.id);
     const examTitles = exams.map((e: any) => e.title);
-    console.log("Exam Titles:", examTitles);
+    logger.info("Exam Titles: %o", examTitles);
 
     // 2️⃣ Build a dynamic placeholder list ($1, $2, ...)
     const placeholders = examIds.map((_, idx) => `$${idx + 1}`).join(",");
 
-    console.log("Fetching submissions for exam IDs:", examIds);
+    logger.info("Fetching submissions for exam IDs: %o", examIds);
 
     const submissionsResult = await pool.query(
       `SELECT * 
@@ -33,11 +34,11 @@ export async function GET(request: Request) {
       examTitles
     );
 
-    console.log("Submissions found:", submissionsResult.rows.length);
+    logger.info("Submissions found: %d", submissionsResult.rows.length);
 
     return NextResponse.json(submissionsResult.rows, { status: 200 });
   } catch (error) {
-    console.error("Error fetching users:", error);
+    logger.error("Error fetching submissions by examiner %s:", email, error);
     return NextResponse.json(
       { error: "Failed to fetch users" },
       { status: 500 }

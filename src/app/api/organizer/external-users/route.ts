@@ -1,5 +1,6 @@
 import pool from "@/lib/db/db";
 import { NextResponse } from "next/server";
+import logger from "@/lib/logger";
 
 export async function GET(request: Request) {
   try {
@@ -9,7 +10,7 @@ export async function GET(request: Request) {
 
     return NextResponse.json(result.rows, { status: 200 });
   } catch (error) {
-    console.error("Error fetching users:", error);
+    logger.error("Error fetching external users:", error);
     return NextResponse.json(
       { error: "Failed to fetch users" },
       { status: 500 }

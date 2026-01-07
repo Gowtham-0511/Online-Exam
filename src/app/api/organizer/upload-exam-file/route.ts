@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import fs from "fs";
 import path from "path";
+import logger from "@/lib/logger";
 
 export async function POST(request: Request) {
   try {
@@ -41,7 +42,7 @@ export async function POST(request: Request) {
       { status: 200 }
     );
   } catch (error) {
-    console.error("File upload error:", error);
+    logger.error("File upload error:", error);
     return NextResponse.json(
       { message: "File upload failed" },
       { status: 500 }

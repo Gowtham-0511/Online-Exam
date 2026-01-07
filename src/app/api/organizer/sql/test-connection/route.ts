@@ -3,6 +3,7 @@ import { Pool } from "pg";
 import sql from "mssql";
 import pool from "@/lib/db/db";
 import { encrypt } from "@/lib/encryption";
+import logger from "@/lib/logger";
 
 export async function POST(req: NextRequest) {
   try {
@@ -89,13 +90,12 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      message: `${
-        serverType === "postgres" ? "PostgreSQL" : "SQL Server"
-      } connection successful`,
+      message: `${serverType === "postgres" ? "PostgreSQL" : "SQL Server"
+        } connection successful`,
       credentialId,
     });
   } catch (error: any) {
-    console.error("Connection test failed:", error);
+    logger.error("Connection test failed:", error);
     return NextResponse.json(
       {
         success: false,

@@ -1,5 +1,6 @@
 import { analyzeStudentPerformance } from "@/lib/ai/azureOpenAI";
 import { NextResponse } from "next/server";
+import logger from "@/lib/logger";
 
 export async function POST(req: Request) {
   const body = await req.json();
@@ -17,6 +18,7 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ analysis }, { status: 200 });
   } catch (error) {
+    logger.error("Failed to analyze student:", error);
     return NextResponse.json(
       { error: "Failed to analyze student" },
       { status: 500 }
