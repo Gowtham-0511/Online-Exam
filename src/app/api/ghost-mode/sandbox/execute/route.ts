@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { executeCodeInSandbox } from '@/lib/ai/azureOpenAI';
+import logger from '@/lib/logger';
 
 export async function POST(req: Request) {
     try {
@@ -16,7 +17,7 @@ export async function POST(req: Request) {
 
         return NextResponse.json(result);
     } catch (error) {
-        console.error('API Error:', error);
+        logger.error('Sandbox Execute API Error:', error);
         return NextResponse.json(
             { error: 'Internal Server Error' },
             { status: 500 }

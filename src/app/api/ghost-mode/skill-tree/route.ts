@@ -1,6 +1,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { generateSkillTree } from '@/lib/ai/azureOpenAI';
+import logger from '@/lib/logger';
 
 export async function POST(req: NextRequest) {
     try {
@@ -18,7 +19,7 @@ export async function POST(req: NextRequest) {
         return NextResponse.json(skillTree);
 
     } catch (error) {
-        console.error('Skill Tree API Error:', error);
+        logger.error('Skill Tree API Error:', error);
         return NextResponse.json(
             { error: 'Failed to generate skill tree' },
             { status: 500 }

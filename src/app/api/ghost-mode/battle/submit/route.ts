@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { evaluateBattleSubmission } from '@/lib/ai/azureOpenAI';
+import logger from '@/lib/logger';
 
 export async function POST(req: NextRequest) {
     try {
@@ -20,7 +21,7 @@ export async function POST(req: NextRequest) {
         });
 
     } catch (error: any) {
-        console.error("Battle submit error:", error);
+        logger.error("Battle submit error:", error);
         return NextResponse.json({ error: error.message }, { status: 500 });
     }
 }
