@@ -1228,13 +1228,16 @@ export default function QuestionBankPage() {
                                 Previous
                             </Button>
                             <div className="flex items-center gap-1">
-                                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                                    let pageNum = i + 1;
-                                    if (totalPages > 5) {
-                                        if (currentPage > 3) pageNum = currentPage - 2 + i;
-                                        if (pageNum > totalPages) pageNum = totalPages - 4 + i;
+                                {(() => {
+                                    const pageNumbers = [];
+                                    if (totalPages <= 5) {
+                                        for (let i = 1; i <= totalPages; i++) pageNumbers.push(i);
+                                    } else {
+                                        const startPage = Math.max(1, Math.min(currentPage - 2, totalPages - 4));
+                                        for (let i = 0; i < 5; i++) pageNumbers.push(startPage + i);
                                     }
-                                    return (
+
+                                    return pageNumbers.map((pageNum) => (
                                         <Button
                                             key={pageNum}
                                             variant={currentPage === pageNum ? "default" : "ghost"}
@@ -1244,8 +1247,8 @@ export default function QuestionBankPage() {
                                         >
                                             {pageNum}
                                         </Button>
-                                    );
-                                })}
+                                    ));
+                                })()}
                             </div>
                             <Button
                                 variant="outline"
