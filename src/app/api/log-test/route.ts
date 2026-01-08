@@ -1,9 +1,15 @@
 import { NextResponse } from 'next/server';
 import logger from '@/lib/logger';
+import { getClientIp } from '@/lib/ip-helper';
 
 export async function GET() {
-    logger.info('Test log entry generated from /api/log-test');
-    logger.error('Test error entry generated from /api/log-test');
+    const ip = await getClientIp();
 
-    return NextResponse.json({ message: 'Logs generated. Check logs/app.log and logs/error.log' });
+    logger.info('Test log entry generated from /api/log-test', { ip });
+    logger.error('Test error entry generated from /api/log-test', { ip });
+
+    return NextResponse.json({
+        message: 'Logs generated with IP. Check logs/app.log and logs/error.log',
+        ip
+    });
 }

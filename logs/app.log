@@ -278,3 +278,21 @@
 {"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-08 10:46:43"}
 {"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-08 10:46:43"}
 {"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-08 10:46:43"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-08 11:20:32"}
+{"level":"info","message":"Admin dashboard stats requested","service":"sysrank-service","timestamp":"2026-01-08 11:20:32"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-08 11:20:33"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-08 11:20:33"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-08 11:20:33"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-08 11:20:33"}
+{"level":"info","message":"Admin dashboard stats requested","service":"sysrank-service","timestamp":"2026-01-08 11:21:02"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-08 14:00:00"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-08 14:00:00"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-08 14:00:00"}
+{"ip":"::1","level":"info","message":"Test log entry generated from /api/log-test","service":"sysrank-service","timestamp":"2026-01-08 14:01:21"}
+{"ip":"::1","level":"error","message":"Test error entry generated from /api/log-test","service":"sysrank-service","timestamp":"2026-01-08 14:01:21"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-08 14:01:50"}
+{"level":"info","message":"Admin dashboard stats requested","service":"sysrank-service","timestamp":"2026-01-08 14:01:50"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-08 14:01:51"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-08 14:01:51"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-08 14:01:51"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-08 14:01:51"}
