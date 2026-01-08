@@ -2,7 +2,7 @@
 
 import React, { useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { useSession } from 'next-auth/react';
+import { useMsal } from "@azure/msal-react";
 import useSWR from 'swr';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -84,15 +84,16 @@ type ExamResult = {
 
 const ExamResultsPage = () => {
     const router = useRouter();
-    const { data: session } = useSession();
+    const { instance, accounts } = useMsal();
+    const session = accounts[0];
     const [selectedExam, setSelectedExam] = useState<ExamResult | null>(null);
     const [searchQuery, setSearchQuery] = useState("");
     const [isDownloading, setIsDownloading] = useState(false);
     const containerRef = useRef(null);
 
     const { data: completedExams = [], error, isLoading } = useSWR<ExamResult[]>(
-        session?.user?.email
-            ? `/api/attender/completed-exams?email=${encodeURIComponent(session.user.email)}`
+        session?.username
+            ? `/api/attender/completed-exams?email=${encodeURIComponent(session.username)}`
             : null,
         fetcher,
         {
@@ -176,7 +177,7 @@ const ExamResultsPage = () => {
             doc.setFontSize(10);
             doc.setTextColor(100);
             doc.text(`Exam: ${selectedExam.title}`, 14, 48);
-            doc.text(`User: ${selectedExam.userName || session?.user?.name || 'Candidate'}`, 14, 53);
+            doc.text(`User: ${selectedExam.userName || session?.name || 'Candidate'}`, 14, 53);
             doc.text(`Date: ${new Date(selectedExam.submittedAt).toLocaleDateString()}`, 14, 58);
 
             // Score Box

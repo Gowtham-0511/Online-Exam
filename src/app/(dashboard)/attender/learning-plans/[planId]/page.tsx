@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useRef } from 'react';
-import { useSession } from 'next-auth/react';
+import { useState, useRef, useCallback } from 'react';
+import { useMsal } from "@azure/msal-react";
+import { loginRequest } from "@/lib/auth-config";
 import { useParams, useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -20,10 +21,12 @@ import { cn } from '@/lib/utils';
 import gsap from 'gsap';
 import { useGSAP } from '@gsap/react';
 
-const fetcher = (url: string) => fetch(url).then(res => res.json());
+// Fetcher replaced inside component to access auth
+
 
 export default function LearningPlanDetail() {
-    const { data: session } = useSession();
+    const { instance, accounts } = useMsal();
+    const session = accounts[0];
     const router = useRouter();
     const params = useParams<{ planId: string }>();
     const planId = params.planId;
@@ -31,9 +34,28 @@ export default function LearningPlanDetail() {
 
     const [activeWeek, setActiveWeek] = useState(1);
 
+    const fetcher = useCallback(async (url: string) => {
+        if (!session) return null;
+        try {
+            const tokenResponse = await instance.acquireTokenSilent({
+                ...loginRequest,
+                account: session
+            });
+            const res = await fetch(url, {
+                headers: {
+                    Authorization: `Bearer ${tokenResponse.accessToken}`
+                }
+            });
+            return res.json();
+        } catch (e) {
+            console.error(e);
+            throw e;
+        }
+    }, [instance, session]);
+
     // Fetch data
     const { data, error, isLoading, mutate } = useSWR(
-        planId && session?.user?.email ? `/api/attender/learning-plans/${planId}` : null,
+        planId && session ? `/api/attender/learning-plans/${planId}` : null,
         fetcher
     );
 
@@ -58,10 +80,19 @@ export default function LearningPlanDetail() {
 
     const markProgress = async (weekNumber: number, type: 'topic' | 'resource' | 'goal', value: string) => {
         try {
+            if (!session) return;
+            const tokenResponse = await instance.acquireTokenSilent({
+                ...loginRequest,
+                account: session
+            });
+
             // Optimistic update could go here, but strict SWR mutate is safer for consistency
             await fetch(`/api/attender/learning-plans/${planId}/progress`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${tokenResponse.accessToken}`
+                },
                 body: JSON.stringify({ weekNumber, type, value })
             });
             mutate();

@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useSession } from 'next-auth/react';
+import { useMsal } from "@azure/msal-react";
 import {
     Target,
     Zap,
@@ -66,7 +66,8 @@ type SkillTreeData = {
 
 export default function SkillTreePage() {
     const router = useRouter();
-    const { data: session } = useSession();
+    const { instance, accounts } = useMsal();
+    const session = accounts[0];
     const [topic, setTopic] = useState('');
     const [loading, setLoading] = useState(false);
     const [treeData, setTreeData] = useState<SkillTreeData | null>(null);

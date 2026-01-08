@@ -18,7 +18,7 @@ import {
     Key,
     Globe
 } from 'lucide-react';
-import { useSession } from 'next-auth/react';
+import { useMsal } from '@azure/msal-react';
 import Head from 'next/head';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -57,7 +57,8 @@ interface NewCredentialForm {
 }
 
 const CredentialManagement = () => {
-    const { data: session } = useSession();
+    const { instance, accounts } = useMsal();
+    const session = accounts[0];
     const [credentials, setCredentials] = useState<Credential[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
@@ -78,12 +79,12 @@ const CredentialManagement = () => {
         password: '',
         database: '',
         examTitle: '',
-        createdBy: session?.user?.email || ''
+        createdBy: session?.username || ''
     });
 
     useEffect(() => {
-        if (session?.user?.email) {
-            setNewCredential(prev => ({ ...prev, createdBy: session.user?.email || '' }));
+        if (session?.username) {
+            setNewCredential(prev => ({ ...prev, createdBy: session.username || '' }));
         }
         fetchCredentials();
     }, [session]);
@@ -207,7 +208,7 @@ const CredentialManagement = () => {
                     password: '',
                     database: '',
                     examTitle: '',
-                    createdBy: session?.user?.email || ''
+                    createdBy: session?.username || ''
                 });
                 setConnectionTestResult(null);
                 setNotification({ type: 'success', message: 'Credential added successfully' });
@@ -235,7 +236,7 @@ const CredentialManagement = () => {
             password: '',
             database: '',
             examTitle: '',
-            createdBy: session?.user?.email || ''
+            createdBy: session?.username || ''
         });
         setConnectionTestResult(null);
     };

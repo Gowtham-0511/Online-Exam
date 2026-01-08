@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { getUserFromRequest } from "@/lib/auth/verify-token";
 import pool from "@/lib/db/db";
 import logger from "@/lib/logger";
 
@@ -12,7 +11,7 @@ export async function POST(
 
   try {
     // 1. Authenticate user
-    const session = await getServerSession(authOptions);
+    const session = await getUserFromRequest(request as any); // Cast to any or NextRequest
     if (!session?.user?.email) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }

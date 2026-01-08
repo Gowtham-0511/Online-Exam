@@ -1,6 +1,6 @@
 "use client";
 
-import { useSession } from "next-auth/react";
+import { useMsal } from "@azure/msal-react";
 import { toast } from "react-hot-toast";
 import useSWR from "swr";
 import dynamic from "next/dynamic";
@@ -68,7 +68,8 @@ export default function ExamPage() {
     const { examId } = params;
 
     console.log(examId);
-    const { data: session } = useSession();
+    const { instance, accounts } = useMsal();
+    const session = accounts[0];
 
     const [showRestoreDialog, setShowRestoreDialog] = useState(false);
     const [pendingProgress, setPendingProgress] = useState<any>(null);
@@ -305,9 +306,9 @@ export default function ExamPage() {
         };
 
         try {
-            if (current.session?.user?.email) {
+            if (current.session?.username) {
                 localStorage.setItem(
-                    `exam_${current.examId}_${current.session.user.email}`,
+                    `exam_${current.examId}_${current.session.username}`,
                     JSON.stringify(examState)
                 );
                 setLastSaved(new Date());
@@ -318,10 +319,10 @@ export default function ExamPage() {
     }, []);
 
     const loadSavedState = useCallback(() => {
-        if (!examId || !session?.user?.email) return false;
+        if (!examId || !session?.username) return false;
 
         try {
-            const saved = localStorage.getItem(`exam_${examId}_${session.user.email}`);
+            const saved = localStorage.getItem(`exam_${examId}_${session.username}`);
             if (saved) {
                 const state = JSON.parse(saved);
                 if (state.examId === examId.toString()) {
@@ -345,10 +346,10 @@ export default function ExamPage() {
     }, [examId, session, exam]);
 
     const clearSavedState = useCallback(() => {
-        if (!examId || !session?.user?.email) return;
+        if (!examId || !session?.username) return;
 
         try {
-            localStorage.removeItem(`exam_${examId}_${session.user.email}`);
+            localStorage.removeItem(`exam_${examId}_${session.username}`);
             console.log('Saved state cleared');
         } catch (error) {
             console.error('Failed to clear saved state:', error);
@@ -424,7 +425,7 @@ export default function ExamPage() {
                 body: JSON.stringify({
                     code,
                     examId: examId?.toString(),
-                    userEmail: session?.user?.email || 'anonymous'
+                    userEmail: session?.username || 'anonymous'
                 }),
             });
 
@@ -454,7 +455,7 @@ export default function ExamPage() {
                 body: JSON.stringify({
                     query: code,
                     examId: examId,
-                    userEmail: session?.user?.email || 'anonymous'
+                    userEmail: session?.username || 'anonymous'
                 }),
             });
 
@@ -575,8 +576,8 @@ export default function ExamPage() {
 
         console.log(disqualifiedFlag, "disqualifiedFlag");
 
-        const email = current.session.user?.email || "unknown";
-        const userName = current.session.user?.name || "Anonymous";
+        const email = current.session.username || "unknown";
+        const userName = current.session.name || "Anonymous";
         const examIdStr = current.examId?.toString() || "unknown";
 
         const answersWithQuestionIds = current.answers.map((answer, index) => ({
@@ -619,8 +620,8 @@ export default function ExamPage() {
             return;
         }
 
-        const email = session.user?.email || "unknown";
-        const userName = session.user?.name || "Anonymous";
+        const email = session.username || "unknown";
+        const userName = session.name || "Anonymous";
         const examIdStr = examId?.toString() || "unknown";
 
         const answersWithQuestionIds: AnswerWithQuestionId[] = answers.map((answer, index) => {
@@ -734,7 +735,7 @@ export default function ExamPage() {
             body: JSON.stringify({
                 image: imageBase64,
                 examId: examIdStr,
-                email: current.session?.user?.email || "unknown",
+                email: current.session?.username || "unknown",
                 reason,
                 time: new Date().toISOString(),
             }),
@@ -753,7 +754,7 @@ export default function ExamPage() {
         try {
             const progressData = {
                 examId: current.exam.id,
-                email: current.session?.user.email,
+                email: current.session?.username,
                 answers: current.answers,
                 mcqAnswers: current.mcqAnswers,
                 activeQuestionIndex: current.activeQuestionIndex,
@@ -1287,7 +1288,7 @@ export default function ExamPage() {
 
     // Load saved state on mount
     useEffect(() => {
-        if (exam && session?.user?.email) {
+        if (exam && session?.username) {
             const restored = loadSavedState();
             if (restored) {
                 console.log('Exam state restored from previous session');
@@ -1298,13 +1299,13 @@ export default function ExamPage() {
 
     // Load saved progress from server
     useEffect(() => {
-        if (!exam || !session?.user.email) return;
+        if (!exam || !session?.username) return;
 
         const loadProgress = async () => {
             try {
                 // Try to load from server first
                 const response = await fetch(
-                    `/api/exam/load-progress?examId=${exam.id}&email=${session?.user.email}`
+                    `/api/exam/load-progress?examId=${exam.id}&email=${session?.username}`
                 );
 
                 if (response.ok) {
@@ -1339,7 +1340,7 @@ export default function ExamPage() {
         };
 
         loadProgress();
-    }, [exam, session?.user.email]);
+    }, [exam, session?.username]);
 
     const handleRestoreProgress = () => {
         if (!pendingProgress) return;
@@ -1371,8 +1372,8 @@ export default function ExamPage() {
 
     // Tutorial completed check
     useEffect(() => {
-        if (examId && session?.user?.email) {
-            const tutorialKey = `tutorial_completed_${examId}_${session.user.email}`;
+        if (examId && session?.username) {
+            const tutorialKey = `tutorial_completed_${examId}_${session.username}`;
             const completed = localStorage.getItem(tutorialKey);
             if (completed === 'true') {
                 setShowTutorial(false);
@@ -1934,7 +1935,7 @@ export default function ExamPage() {
                     isExamProctored={exam?.isExamProctored || false}
                     examStarted={examStarted}
                     examId={examId?.toString() || ""}
-                    userEmail={session?.user?.email || ""}
+                    userEmail={session?.username || ""}
                     onDisqualification={handleDisqualification}
                 />
             )}

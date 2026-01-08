@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 // import { useRouter } from "next/router";
-import { useSession } from "next-auth/react";
+import { useMsal } from "@azure/msal-react";
 import Head from "next/head";
 import toast from "react-hot-toast";
 import { Button } from "@/components/ui/button";
@@ -54,7 +54,8 @@ interface User {
 
 export default function ScheduleExam() {
     const router = useRouter();
-    const { data: session } = useSession();
+    const { instance, accounts } = useMsal();
+    const session = accounts[0];
 
     const [isLoading, setIsLoading] = useState(false);
     const [showSuccess, setShowSuccess] = useState(false);
@@ -80,7 +81,7 @@ export default function ScheduleExam() {
     );
 
     const { data: availableExams = [], mutate: mutateExams, isLoading: loadingExams } = useSWR<any[]>(
-        session?.user?.email ? `/api/organizer/assessment/by-user?email=${session.user.email}` : null,
+        session?.username ? `/api/organizer/assessment/by-user?email=${session.username}` : null,
         fetcher,
         { revalidateOnFocus: false }
     );

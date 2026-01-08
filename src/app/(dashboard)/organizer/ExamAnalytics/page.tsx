@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo, useRef } from "react";
-import { useSession } from "next-auth/react";
+import { useMsal } from "@azure/msal-react";
 import useSWR from 'swr';
 import {
     BarChart3,
@@ -78,7 +78,8 @@ interface QuestionAnalytics {
 }
 
 export default function ExamAnalytics() {
-    const { data: session } = useSession();
+    const { instance, accounts } = useMsal();
+    const session = accounts[0];
     const containerRef = useRef<HTMLDivElement>(null);
     const [selectedExam, setSelectedExam] = useState("all");
     const [sortBy, setSortBy] = useState<'successRate' | 'avgScore' | 'attempts'>('successRate');
@@ -91,8 +92,8 @@ export default function ExamAnalytics() {
     const [searchTerm, setSearchTerm] = useState("");
 
     const { data: submissions = [], error, isLoading } = useSWR(
-        session?.user?.email
-            ? `/api/organizer/submissions/by-examiner?email=${encodeURIComponent(session.user.email)}`
+        session?.username
+            ? `/api/organizer/submissions/by-examiner?email=${encodeURIComponent(session.username)}`
             : null,
         fetcher,
         { revalidateOnFocus: false }

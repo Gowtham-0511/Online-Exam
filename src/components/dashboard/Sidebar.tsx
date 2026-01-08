@@ -15,7 +15,7 @@ import {
 } from '../ui/dropdown-menu';
 import { Button } from '../ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
-import { signOut, useSession } from 'next-auth/react';
+import { useMsal } from "@azure/msal-react";
 import { usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import gsap from 'gsap';
@@ -77,7 +77,8 @@ interface SidebarProps {
 }
 
 const Sidebar = ({ isCollapsed = false, setDesktopSidebarCollapsed, setSidebarOpen }: SidebarProps) => {
-    const { data: session, status } = useSession();
+    const { instance, accounts } = useMsal();
+    const session = accounts[0];
     const pathname = usePathname();
     const router = useRouter();
     const containerRef = useRef<HTMLDivElement>(null);
@@ -88,6 +89,62 @@ const Sidebar = ({ isCollapsed = false, setDesktopSidebarCollapsed, setSidebarOp
     useEffect(() => {
         setMounted(true);
     }, []);
+
+    const [dbRole, setDbRole] = useState<UserRole | null>(null);
+
+    useEffect(() => {
+        const fetchUserRole = async () => {
+            if (session?.username) {
+                try {
+                    const res = await fetch('/api/users/get-or-create', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            email: session.username,
+                            name: session.name
+                        })
+                    });
+                    if (res.ok) {
+                        const data = await res.json();
+                        setDbRole(data.role as UserRole);
+                    }
+                } catch (error) {
+                    console.error('Failed to fetch user role:', error);
+                }
+            }
+        };
+
+        fetchUserRole();
+    }, [session]);
+
+    const [avatarUrl, setAvatarUrl] = useState<string>('');
+
+    useEffect(() => {
+        const fetchProfilePhoto = async () => {
+            if (!session || !instance) return;
+            try {
+                const request = {
+                    scopes: ["User.Read"],
+                    account: session
+                };
+                const tokenResponse = await instance.acquireTokenSilent(request);
+
+                const graphResponse = await fetch("https://graph.microsoft.com/v1.0/me/photo/$value", {
+                    headers: { Authorization: `Bearer ${tokenResponse.accessToken}` }
+                });
+
+                if (graphResponse.ok) {
+                    const blob = await graphResponse.blob();
+                    const url = URL.createObjectURL(blob);
+                    setAvatarUrl(url);
+                }
+            } catch (err) {
+                console.debug("Could not fetch profile photo:", err);
+            }
+        };
+
+        fetchProfilePhoto();
+    }, [session, instance]);
 
     // Helper to determine active role based on URL
     const getCurrentRoleFromPath = useCallback(() => {
@@ -101,10 +158,18 @@ const Sidebar = ({ isCollapsed = false, setDesktopSidebarCollapsed, setSidebarOp
     }, [pathname]);
 
     const activeRole = useMemo(() => {
-        return getCurrentRoleFromPath() || (session?.user as any)?.role as UserRole || 'attender';
-    }, [getCurrentRoleFromPath, session]);
+        const sessionRole = dbRole || ((session?.username) ? (session as any).idTokenClaims?.roles?.[0] : 'attender');
+        return (getCurrentRoleFromPath() || sessionRole || 'attender') as UserRole;
+    }, [getCurrentRoleFromPath, session, dbRole]);
 
-    const userSessionRole = (session?.user as any)?.role as UserRole || 'attender';
+
+
+    const userSessionRole = useMemo(() => {
+        // Prefer DB role if fetched, otherwise fallback to token claims or default
+        if (dbRole) return dbRole;
+        const role = (session?.username) ? (session as any).idTokenClaims?.roles?.[0] : 'attender';
+        return (role || 'attender') as UserRole;
+    }, [session, dbRole]);
 
     // Determine accessible roles based on hierarchy
     const accessibleRoles = useMemo(() => {
@@ -161,7 +226,7 @@ const Sidebar = ({ isCollapsed = false, setDesktopSidebarCollapsed, setSidebarOp
     };
 
     const handleSignOut = async () => {
-        await signOut({ callbackUrl: '/', redirect: true });
+        await instance.logoutRedirect();
     };
 
     const getHref = (item: MenuItem) => item.navigation === 'index' ? `/${activeRole}` : `/${activeRole}/${item.navigation}`;
@@ -314,16 +379,16 @@ const Sidebar = ({ isCollapsed = false, setDesktopSidebarCollapsed, setSidebarOp
                             )}
                         >
                             <Avatar className="w-9 h-9 border border-border bg-background shadow-sm shrink-0">
-                                <AvatarImage src={session?.user?.image || ''} />
+                                <AvatarImage src={avatarUrl} />
                                 <AvatarFallback className="bg-primary/10 text-primary font-bold text-xs">
-                                    {session?.user?.name?.slice(0, 2).toUpperCase() || 'U'}
+                                    {session?.name?.slice(0, 2).toUpperCase() || 'U'}
                                 </AvatarFallback>
                             </Avatar>
 
                             {!isCollapsed && (
                                 <div className="flex flex-col items-start overflow-hidden text-left flex-1">
-                                    <span className="text-sm font-semibold truncate w-full">{session?.user?.name}</span>
-                                    <span className="text-[10px] text-muted-foreground truncate w-full">{session?.user?.email}</span>
+                                    <span className="text-sm font-semibold truncate w-full">{session?.name}</span>
+                                    <span className="text-[10px] text-muted-foreground truncate w-full">{session?.username}</span>
                                 </div>
                             )}
 

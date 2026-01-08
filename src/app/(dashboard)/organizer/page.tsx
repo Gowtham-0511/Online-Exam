@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { useSession } from "next-auth/react";
+import { useMsal } from "@azure/msal-react";
 import useSWR from 'swr';
 import { useRouter } from "next/navigation";
 import {
@@ -48,22 +48,23 @@ interface Exam {
 const fetcher = (url: string) => fetch(url).then(res => res.json());
 
 export default function ExaminerDashboard() {
-    const { data: session } = useSession();
+    const { instance, accounts } = useMsal();
+    const session = accounts[0];
     const router = useRouter();
     const containerRef = useRef<HTMLDivElement>(null);
     const [activeTab, setActiveTab] = useState("overview");
 
     // --- Data Fetching ---
     const { data: exams = [], isLoading: examsLoading } = useSWR(
-        session?.user?.email
-            ? `/api/organizer/assessment/by-user?email=${encodeURIComponent(session.user.email)}`
+        session?.username
+            ? `/api/organizer/assessment/by-user?email=${encodeURIComponent(session.username)}`
             : null,
         fetcher
     );
 
     const { data: submissions = [], isLoading: submissionsLoading } = useSWR(
-        session?.user?.email
-            ? `/api/organizer/submissions/by-examiner?email=${encodeURIComponent(session.user.email)}`
+        session?.username
+            ? `/api/organizer/submissions/by-examiner?email=${encodeURIComponent(session.username)}`
             : null,
         fetcher
     );
@@ -154,7 +155,7 @@ export default function ExaminerDashboard() {
                             Overview
                         </h1>
                         <p className="text-muted-foreground mt-2 text-lg">
-                            Welcome back, {session?.user?.name?.split(' ')[0] || 'Organizer'}.
+                            Welcome back, {session?.name?.split(' ')[0] || 'Organizer'}.
                         </p>
                     </div>
                     <div className="flex items-center gap-4">

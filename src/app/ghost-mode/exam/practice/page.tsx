@@ -738,8 +738,12 @@ export default function PracticeExam() {
     };
 
     const exitFullscreen = () => {
+        if (!document.fullscreenElement && !(document as any).webkitFullscreenElement && !(document as any).mozFullScreenElement && !(document as any).msFullscreenElement) {
+            return;
+        }
+
         if (document.exitFullscreen) {
-            document.exitFullscreen();
+            document.exitFullscreen().catch(console.error);
         } else if ((document as any).webkitExitFullscreen) {
             (document as any).webkitExitFullscreen();
         } else if ((document as any).mozCancelFullScreen) {

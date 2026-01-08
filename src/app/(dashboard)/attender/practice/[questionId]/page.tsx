@@ -2,7 +2,8 @@
 
 import React, { useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
-import { useSession } from 'next-auth/react';
+import { useMsal } from "@azure/msal-react";
+import { InteractionStatus } from "@azure/msal-browser";
 import useSWR from 'swr';
 import Editor from '@monaco-editor/react';
 import { Button } from '@/components/ui/button';
@@ -26,7 +27,8 @@ const PracticeQuestionPage = () => {
     const router = useRouter();
     const params = useParams();
     const questionId = params?.questionId as string;
-    const { data: session, status } = useSession();
+    const { instance, accounts, inProgress } = useMsal();
+    const session = accounts[0];
 
     const [code, setCode] = useState('');
     const [isRunning, setIsRunning] = useState(false);
@@ -40,8 +42,8 @@ const PracticeQuestionPage = () => {
     const [mcqSubmitted, setMcqSubmitted] = useState(false);
 
     const { data: questionData, isLoading } = useSWR(
-        questionId && session?.user?.email
-            ? `/api/attender/practice/get-questions?email=${encodeURIComponent(session.user.email)}&limit=100`
+        questionId && session?.username
+            ? `/api/attender/practice/get-questions?email=${encodeURIComponent(session.username)}&limit=100`
             : null,
         fetcher
     );
@@ -56,7 +58,7 @@ const PracticeQuestionPage = () => {
         }
     }, [question, isMcqQuestion]);
 
-    if (status === 'loading' || isLoading) {
+    if (isLoading || inProgress === InteractionStatus.Startup) {
         return (
             <div className="h-screen flex items-center justify-center bg-background">
                 <Icons.Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -64,7 +66,7 @@ const PracticeQuestionPage = () => {
         );
     }
 
-    if (!session?.user?.email || !question) {
+    if (!session?.username || !question) {
         return (
             <div className="h-screen flex items-center justify-center bg-background">
                 <div className="text-center">
@@ -248,8 +250,8 @@ const PracticeQuestionPage = () => {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     practiceQuestionId: question.id,
-                    email: session.user.email,
-                    userName: session.user.name,
+                    email: session.username,
+                    userName: session.name,
                     submittedCode: isMcqQuestion ? null : code,
                     selectedMcqAnswer: isMcqQuestion ? selectedMcqAnswer : null,
                     language: question.language,

@@ -50,7 +50,7 @@ export async function POST(req: Request) {
       severity || "medium",
     ];
 
-    const result = await pool.query(query, values);
+    const result = await client.query(query, values);
     logger.info("Violation stored. ID: %s", result.rows[0].id);
 
     return NextResponse.json(

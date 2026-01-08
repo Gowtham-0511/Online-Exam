@@ -43,5 +43,7 @@ export async function GET(request: Request) {
       { error: "Failed to fetch learning plans" },
       { status: 500 }
     );
+  } finally {
+    client.release();
   }
 }

@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useSession } from 'next-auth/react';
+import { useMsal } from "@azure/msal-react";
 import {
     Ghost,
     ArrowLeft,
@@ -53,7 +53,8 @@ interface QuickPrompt {
 
 const AIStudyBuddy = () => {
     const router = useRouter();
-    const { data: session } = useSession();
+    const { instance, accounts } = useMsal();
+    const session = accounts[0];
     const [messages, setMessages] = useState<Message[]>([]);
     const [input, setInput] = useState('');
     const [isLoading, setIsLoading] = useState(false);
@@ -286,7 +287,7 @@ const AIStudyBuddy = () => {
                                 <div key={m.id} className={`flex gap-4 ${m.role === 'user' ? 'flex-row-reverse' : 'flex-row'}`}>
                                     <Avatar className="h-8 w-8 mt-1 border border-border">
                                         {m.role === 'user' ? (
-                                            <AvatarFallback className="bg-primary text-primary-foreground text-xs">{session?.user?.name?.[0] || 'U'}</AvatarFallback>
+                                            <AvatarFallback className="bg-primary text-primary-foreground text-xs">{session?.name?.[0] || 'U'}</AvatarFallback>
                                         ) : (
                                             <AvatarFallback className="bg-violet-500/10 text-violet-600 dark:text-violet-400">
                                                 <Brain className="w-4 h-4" />

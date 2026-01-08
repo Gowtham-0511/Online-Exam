@@ -1,9 +1,11 @@
 "use client";
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import useSWR from 'swr';
-import { useSession } from "next-auth/react";
+import { useMsal } from "@azure/msal-react";
+import { loginRequest } from "@/lib/auth-config";
 import { useRouter } from 'next/navigation';
+import { useCallback } from 'react';
 import { UpcomingExamsSection } from '@/components/attender/dashboard/UpcomingExamsSection';
 import { CompletedExamsSection } from '@/components/attender/dashboard/CompletedExamsSection';
 import { AIInsightsCard } from '@/components/attender/AIInsightsCard';
@@ -38,12 +40,60 @@ import { Separator } from '@/components/ui/separator';
 import gsap from 'gsap';
 import { useGSAP } from '@gsap/react';
 
-const fetcher = (url: string) => fetch(url).then(res => res.json());
-
 const AttenderDashboard = () => {
-    const { data: session, status } = useSession();
+    const { instance, accounts, inProgress } = useMsal();
+    const session = accounts[0];
+    const status = inProgress === "none" ? "authenticated" : "loading";
     const router = useRouter();
     const containerRef = useRef(null);
+    const [avatarUrl, setAvatarUrl] = useState<string>('');
+
+    const fetcher = useCallback(async (url: string) => {
+        if (!session) return null;
+        try {
+            const tokenResponse = await instance.acquireTokenSilent({
+                ...loginRequest,
+                account: session
+            });
+            const res = await fetch(url, {
+                headers: {
+                    Authorization: `Bearer ${tokenResponse.accessToken}`
+                }
+            });
+            return res.json();
+        } catch (e) {
+            console.error(e);
+            throw e;
+        }
+    }, [instance, session]);
+
+    useEffect(() => {
+        const fetchProfilePhoto = async () => {
+            if (!session || !instance) return;
+            try {
+                const request = {
+                    scopes: ["User.Read"],
+                    account: session
+                };
+                const tokenResponse = await instance.acquireTokenSilent(request);
+
+                const graphResponse = await fetch("https://graph.microsoft.com/v1.0/me/photo/$value", {
+                    headers: { Authorization: `Bearer ${tokenResponse.accessToken}` }
+                });
+
+                if (graphResponse.ok) {
+                    const blob = await graphResponse.blob();
+                    const url = URL.createObjectURL(blob);
+                    setAvatarUrl(url);
+                }
+            } catch (err) {
+                console.debug("Could not fetch profile photo:", err);
+            }
+        };
+
+        fetchProfilePhoto();
+    }, [session, instance]);
+
 
     // Modal states
     const [selectedExamForInsights, setSelectedExamForInsights] = useState<{
@@ -67,8 +117,8 @@ const AttenderDashboard = () => {
 
     // Data fetching with SWR
     const { data: upcomingExams = [], error: upcomingError, isLoading: upcomingLoading } = useSWR(
-        session?.user?.email
-            ? `/api/attender/allowed-exam?email=${encodeURIComponent(session.user.email)}`
+        session?.username
+            ? `/api/attender/allowed-exam?email=${encodeURIComponent(session.username)}`
             : null,
         fetcher,
         {
@@ -79,8 +129,8 @@ const AttenderDashboard = () => {
     );
 
     const { data: completedExams = [], error: completedError, isLoading: completedLoading } = useSWR(
-        session?.user?.email
-            ? `/api/attender/completed-exams?email=${encodeURIComponent(session.user.email)}`
+        session?.username
+            ? `/api/attender/completed-exams?email=${encodeURIComponent(session.username)}`
             : null,
         fetcher,
         {
@@ -91,8 +141,8 @@ const AttenderDashboard = () => {
     );
 
     const { data: aiInsights, error: aiError, isLoading: aiLoading } = useSWR(
-        session?.user?.email && completedExams.length > 0
-            ? `/api/attender/ai-insights?email=${encodeURIComponent(session.user.email)}`
+        session?.username && completedExams.length > 0
+            ? `/api/attender/ai-insights?email=${encodeURIComponent(session.username)}`
             : null,
         fetcher,
         {
@@ -103,8 +153,8 @@ const AttenderDashboard = () => {
     );
 
     const { data: performancePrediction, error: predictionError, isLoading: predictionLoading } = useSWR(
-        session?.user?.email && completedExams.length >= 2
-            ? `/api/attender/predict-performance?email=${encodeURIComponent(session.user.email)}`
+        session?.username && completedExams.length >= 2
+            ? `/api/attender/predict-performance?email=${encodeURIComponent(session.username)}`
             : null,
         fetcher,
         {
@@ -115,8 +165,8 @@ const AttenderDashboard = () => {
     );
 
     const { data: achievementPredictions, error: achievementError, isLoading: achievementLoading } = useSWR(
-        session?.user?.email && completedExams.length > 0
-            ? `/api/attender/achievement-predictions?email=${encodeURIComponent(session.user.email)}`
+        session?.username && completedExams.length > 0
+            ? `/api/attender/achievement-predictions?email=${encodeURIComponent(session.username)}`
             : null,
         fetcher,
         {
@@ -127,8 +177,8 @@ const AttenderDashboard = () => {
     );
 
     const { data: userStats, error: statsError, isLoading: statsLoading } = useSWR(
-        session?.user?.email
-            ? `/api/attender/stats?email=${encodeURIComponent(session.user.email)}`
+        session?.username
+            ? `/api/attender/stats?email=${encodeURIComponent(session.username)}`
             : null,
         fetcher,
         {
@@ -198,14 +248,23 @@ const AttenderDashboard = () => {
 
     // Handlers
     const handleRefreshInsights = async () => {
-        if (!session?.user?.email) return;
+        if (!session?.username) return;
 
         setIsRefreshing(true);
         setRefreshMessage(null);
 
         try {
+            const tokenResponse = await instance.acquireTokenSilent({
+                ...loginRequest,
+                account: session
+            });
             const response = await fetch(
-                `/api/attender/cache/user-insights?email=${encodeURIComponent(session.user.email)}&force=true`
+                `/api/attender/cache/user-insights?email=${encodeURIComponent(session.username)}&force=true`,
+                {
+                    headers: {
+                        Authorization: `Bearer ${tokenResponse.accessToken}`
+                    }
+                }
             );
 
             if (!response.ok) {
@@ -247,7 +306,7 @@ const AttenderDashboard = () => {
     const handleViewStrategy = (exam: Exam) => {
         setSelectedExamForStrategy({
             examId: exam.title,
-            email: session?.user?.email || ''
+            email: session?.username || ''
         });
     };
 
@@ -294,7 +353,7 @@ const AttenderDashboard = () => {
                             Dashboard
                         </h1>
                         <p className="text-lg text-muted-foreground mt-2">
-                            Welcome back, <span className="text-primary font-semibold">{session?.user?.name?.split(' ')[0]}</span>. Ready to code?
+                            Welcome back, <span className="text-primary font-semibold">{session?.name?.split(' ')[0]}</span>. Ready to code?
                         </p>
                     </div>
 
@@ -439,7 +498,7 @@ const AttenderDashboard = () => {
                                     </div>
                                     <h2 className="text-2xl font-bold tracking-tight">Adaptive Learning Path</h2>
                                 </div>
-                                <AdaptiveLearningPath email={session?.user?.email || ''} />
+                                <AdaptiveLearningPath email={session?.username || ''} />
                             </section>
                         )}
 
@@ -461,7 +520,7 @@ const AttenderDashboard = () => {
                                 isLoading={completedLoading}
                                 onExamClick={handleExamClick}
                                 onViewAll={() => router.push('/attender/view-exams')}
-                                userEmail={session?.user?.email || ''}
+                                userEmail={session?.username || ''}
                             />
                         </section>
                     </div>
@@ -477,13 +536,21 @@ const AttenderDashboard = () => {
                             <CardContent className="pt-0 relative px-6 pb-6">
                                 <div className="flex justify-between items-end -mt-12 mb-4">
                                     <div className="w-24 h-24 rounded-2xl border-4 border-background bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-4xl font-bold text-foreground shadow-xl">
-                                        {session?.user?.name?.charAt(0) || 'U'}
+                                        {avatarUrl ? (
+                                            <img
+                                                src={avatarUrl}
+                                                alt={session?.name || 'User Avatar'}
+                                                className="w-full h-full object-cover rounded-2xl"
+                                            />
+                                        ) : (
+                                            session?.name?.charAt(0) || 'U'
+                                        )}
                                     </div>
                                 </div>
 
                                 <div className="space-y-1 mb-6">
-                                    <h3 className="text-2xl font-bold tracking-tight">{session?.user?.name}</h3>
-                                    <p className="text-sm text-muted-foreground break-all">{session?.user?.email}</p>
+                                    <h3 className="text-2xl font-bold tracking-tight">{session?.name}</h3>
+                                    <p className="text-sm text-muted-foreground break-all">{session?.username}</p>
                                 </div>
 
                                 <div className="grid grid-cols-2 gap-4 py-5 border-y border-border/50">

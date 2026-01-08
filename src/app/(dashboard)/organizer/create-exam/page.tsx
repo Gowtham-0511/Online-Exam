@@ -1,7 +1,7 @@
 ﻿"use client";
 
 import { useCallback, useState } from "react";
-import { useSession } from "next-auth/react";
+import { useMsal } from "@azure/msal-react";
 // import { useRouter } from "next/router";
 import toast from "react-hot-toast";
 import { Button } from "@/components/ui/button";
@@ -86,7 +86,8 @@ export default function CreateExam() {
     const [duration, setDuration] = useState(10);
     const [isLoading, setIsLoading] = useState(false);
     const [showSuccess, setShowSuccess] = useState(false);
-    const { data: session } = useSession();
+    const { instance, accounts } = useMsal();
+    const session = accounts[0];
     const router = useRouter();
     const [questions, setQuestions] = useState<Question[]>([]);
 
@@ -138,7 +139,7 @@ export default function CreateExam() {
     });
 
     const { data: existingCredentials = [], mutate: mutateCredentials, isLoading: loadingCredentials } = useSWR<SqlCredential[]>(
-        sqlServerType && session?.user?.email ? `/api/organizer/sql/list-credentials?createdBy=${session.user.email}` : null,
+        sqlServerType && session?.username ? `/api/organizer/sql/list-credentials?createdBy=${session.username}` : null,
         async (url: string) => {
             const response = await fetch(url);
             if (!response.ok) throw new Error('Failed to fetch credentials');
@@ -174,7 +175,7 @@ export default function CreateExam() {
                     credentials: sqlCredentials,
                     saveCredentials: showNewCredentialForm,
                     examTitle: title,
-                    createdBy: session?.user?.email
+                    createdBy: session?.username
                 })
             });
 
@@ -269,7 +270,7 @@ export default function CreateExam() {
                 }),
                 requiresFileHandling,
                 duration,
-                createdBy: session?.user?.email,
+                createdBy: session?.username,
                 questions: validQuestions,
                 isExamProctored,
                 // These will be set during scheduling

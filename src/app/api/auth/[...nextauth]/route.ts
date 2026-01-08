@@ -1,8 +1,6 @@
 import NextAuth, { NextAuthOptions } from "next-auth";
 import AzureADProvider from "next-auth/providers/azure-ad";
-import GoogleProvider from "next-auth/providers/google";
-import CredentialsProvider from "next-auth/providers/credentials";
-import { compare } from "bcryptjs";
+
 import pool from "@/lib/db/db";
 import { Session, User } from "next-auth";
 import logger from "@/lib/logger";
@@ -39,56 +37,7 @@ export const authOptions: NextAuthOptions = {
       },
     }),
 
-    GoogleProvider({
-      clientId: process.env.GOOGLE_CLIENT_ID!,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
-    }),
 
-    CredentialsProvider({
-      name: "credentials",
-      credentials: {
-        email: { label: "Email", type: "email" },
-        password: { label: "Password", type: "password" },
-      },
-      async authorize(credentials) {
-        if (!credentials?.email || !credentials?.password) {
-          throw new Error("Invalid credentials");
-        }
-
-        try {
-          const result = await pool.query(
-            `SELECT id, "email", "name", "password", "role"
-                         FROM "ExternalUsers"
-                         WHERE "email" = $1`,
-            [credentials.email]
-          );
-
-          const user = result.rows[0];
-
-          if (!user || !user.password) {
-            throw new Error("Invalid credentials");
-          }
-
-          const isPasswordValid = await compare(
-            credentials.password,
-            user.password
-          );
-          if (!isPasswordValid) {
-            throw new Error("Invalid credentials");
-          }
-
-          return {
-            id: user.id.toString(),
-            email: user.email,
-            name: user.name,
-            role: user.role,
-          };
-        } catch (error) {
-          logger.error("Auth error:", error);
-          throw new Error("Authentication failed");
-        }
-      },
-    }),
   ],
   session: {
     strategy: "jwt",

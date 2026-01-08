@@ -1,6 +1,7 @@
 "use client";
 
-import { signIn, useSession } from "next-auth/react";
+import { useMsal } from "@azure/msal-react";
+import { loginRequest } from "@/lib/auth-config";
 import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { createOrFetchUser } from "@/lib/auth/authUtils";
@@ -32,7 +33,8 @@ import { Separator } from "@/components/ui/separator";
 import ThreeScene from "@/components/landing/ThreeScene";
 
 export default function Home() {
-  const { data: session } = useSession();
+  const { instance, accounts } = useMsal();
+  const session = accounts.length > 0 ? accounts[0] : null;
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(false);
@@ -74,13 +76,14 @@ export default function Home() {
   // Auth Redirect
   useEffect(() => {
     const redirectByRole = async () => {
-      if (session?.user?.email) {
+      if (session?.username) {
         try {
           const user = await createOrFetchUser(
-            session.user.email,
-            session.user.name || ""
+            session.username,
+            session.name || ""
           );
-          router.push(`/${user.role}`);
+          console.log("Redirecting user to:", user.role);
+          router.push(`/${user.role === 'admin' ? 'admin' : user.role === 'organizer' ? 'organizer' : 'attender'}`);
         } catch (e) {
           console.error("Auth redirect error", e);
         }
@@ -89,10 +92,10 @@ export default function Home() {
     redirectByRole();
   }, [session, router]);
 
-  const handleSocialSignIn = async (provider: string) => {
+  const handleSocialSignIn = async () => {
     setIsLoading(true);
     try {
-      await signIn(provider);
+      await instance.loginPopup(loginRequest);
     } catch (error) {
       console.error("Sign in error:", error);
     } finally {
@@ -220,7 +223,7 @@ export default function Home() {
 
                 <CardContent className="space-y-6 pb-8">
                   <Button
-                    onClick={() => handleSocialSignIn("azure-ad")}
+                    onClick={() => handleSocialSignIn()}
                     disabled={isLoading}
                     className="w-full h-14 text-base font-semibold bg-[#002D56] hover:bg-[#002D56]/90 text-white relative overflow-hidden transition-all shadow-md group dark:border dark:border-white/10"
                   >

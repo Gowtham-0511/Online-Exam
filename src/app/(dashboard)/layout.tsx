@@ -34,7 +34,7 @@ import {
 } from 'lucide-react';
 import { usePathname, useRouter } from 'next/navigation';
 import ThemeToggle from '@/components/ThemeToggle';
-import { useSession } from 'next-auth/react';
+import { useMsal } from "@azure/msal-react";
 import { Skeleton } from '@/components/ui/skeleton';
 
 export type UserRole = 'admin' | 'organizer' | 'attender';
@@ -199,19 +199,43 @@ const Layout = ({ children }: UnifiedDashboardLayoutProps) => {
     const [mounted, setMounted] = useState(false);
     const router = useRouter();
     const pathname = usePathname();
-    const { data: session, status } = useSession();
+    const { instance, accounts, inProgress } = useMsal();
+    const session = accounts[0];
+    const status = inProgress === "none" ? "authenticated" : "loading";
 
-    // Determine role from URL path first, fallback to session role
+
+    // State to store the verified role from the backend
+    const [verifiedRole, setVerifiedRole] = useState<UserRole | null>(null);
+
+    // Determine role: Prioritize verified backend role, then path role, then session role
     const role = useMemo(() => {
+        if (verifiedRole) return verifiedRole;
+
         if (pathname) {
             const segments = pathname.split('/').filter(Boolean);
             const pathRole = segments[0] as UserRole;
-            if (pathRole === 'admin' || pathRole === 'organizer' || pathRole === 'attender') {
+            if (['admin', 'organizer', 'attender'].includes(pathRole)) {
                 return pathRole;
             }
         }
-        return (session?.user as any)?.role as UserRole || 'attender';
-    }, [pathname, session]);
+
+        // Fallback (initial load)
+        const sessionRole = (session?.username) ? (session as any).idTokenClaims?.roles?.[0] : 'attender';
+        return (sessionRole || 'attender') as UserRole;
+    }, [pathname, session, verifiedRole]);
+
+    // Fetch the true role from the backend
+    useEffect(() => {
+        if (session?.username && !verifiedRole) {
+            import('@/lib/auth/authUtils').then(({ createOrFetchUser }) => {
+                createOrFetchUser(session.username, session.name || "")
+                    .then((user) => {
+                        if (user.role) setVerifiedRole(user.role);
+                    })
+                    .catch(console.error);
+            });
+        }
+    }, [session, verifiedRole]);
 
     const menuItems = useMemo(() => ROLE_MENUS[role] || [], [role]);
     const defaultPageId = useMemo(() => ROLE_DEFAULT_PAGES[role] || '', [role]);
@@ -224,24 +248,27 @@ const Layout = ({ children }: UnifiedDashboardLayoutProps) => {
         setDesktopSidebarCollapsed(prev => !prev);
     }, []);
 
-    // Client-side route protection (fallback to middleware)
+    // Client-side route protection
     useEffect(() => {
-        if (!mounted || status === 'loading' || !session || !pathname) {
+        if (!mounted || status === 'loading' || !session || !pathname || !verifiedRole) {
+            // Wait for verified role before protecting route
             return;
         }
 
-        const userRole = (session?.user as any)?.role as UserRole;
+        // Use the verified role for protection checks
+        const userRole = verifiedRole;
 
         // Import and use the canAccessRoute function
         import('@/lib/auth/roleUtils').then(({ canAccessRoute, getDefaultDashboard }) => {
             const hasAccess = canAccessRoute(userRole, pathname);
 
             if (!hasAccess) {
+                console.log(`Access denied for ${userRole} at ${pathname}. Redirecting...`);
                 const defaultDashboard = getDefaultDashboard(userRole);
                 router.push(defaultDashboard);
             }
         });
-    }, [mounted, status, session, pathname, router]);
+    }, [mounted, status, session, pathname, router, verifiedRole]);
 
     const currentPageId = useMemo(() => {
         if (!pathname) return defaultPageId;

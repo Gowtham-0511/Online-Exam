@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef } from "react";
 import toast from "react-hot-toast";
 import * as XLSX from 'xlsx';
-import { useSession } from "next-auth/react";
+import { useMsal } from "@azure/msal-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -399,7 +399,8 @@ const MCQOptionsEditor = ({ options, onChange }: { options: MCQOption[]; onChang
 };
 
 export default function QuestionBankPage() {
-    const { data: session } = useSession();
+    const { instance, accounts } = useMsal();
+    const session = accounts[0];
 
     const [question, setQuestion] = useState<QuestionInput>({
         questionText: "",
@@ -552,7 +553,7 @@ export default function QuestionBankPage() {
         const questionData = {
             ...question,
             questionText: content,
-            createdBy: session?.user?.email
+            createdBy: session?.username
         };
 
         const url = "/api/admin/questions";

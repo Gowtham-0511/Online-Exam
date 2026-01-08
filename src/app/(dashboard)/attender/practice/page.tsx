@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useMemo, useRef } from 'react';
-import { useSession } from 'next-auth/react';
+import { useMsal } from "@azure/msal-react";
 import { useRouter } from 'next/navigation';
 import useSWR from 'swr';
 import { Button } from '@/components/ui/button';
@@ -52,7 +52,8 @@ import { cn } from '@/lib/utils';
 const fetcher = (url: string) => fetch(url).then(res => res.json());
 
 const PracticePage = () => {
-    const { data: session, status } = useSession();
+    const { instance, accounts } = useMsal();
+    const session = accounts[0];
     const router = useRouter();
     const containerRef = useRef(null);
 
@@ -74,13 +75,13 @@ const PracticePage = () => {
 
     // Fetch practice questions
     const { data: questionsData, isLoading: questionsLoading, mutate: refetchQuestions } = useSWR(
-        session?.user?.email ? `/api/attender/practice/get-questions?email=${encodeURIComponent(session.user.email)}&limit=100` : null,
+        session?.username ? `/api/attender/practice/get-questions?email=${encodeURIComponent(session.username)}&limit=100` : null,
         fetcher
     );
 
     // Fetch progress
     const { data: progressData, isLoading: progressLoading } = useSWR(
-        session?.user?.email ? `/api/attender/practice/progress?email=${encodeURIComponent(session.user.email)}` : null,
+        session?.username ? `/api/attender/practice/progress?email=${encodeURIComponent(session.username)}` : null,
         fetcher
     );
 
@@ -139,7 +140,7 @@ const PracticePage = () => {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    email: session?.user?.email,
+                    email: session?.username,
                     topic: topic,
                     difficulty: customExam.difficulty,
                     count: parseInt(customExam.questionCount),
@@ -177,7 +178,7 @@ const PracticePage = () => {
         }
     };
 
-    if (status === 'loading' || questionsLoading || progressLoading) {
+    if (questionsLoading || progressLoading) {
         return <LoadingSkeleton />;
     }
 

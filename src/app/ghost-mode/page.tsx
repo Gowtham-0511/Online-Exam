@@ -2,7 +2,7 @@
 
 import React, { useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { useSession } from 'next-auth/react';
+import { useMsal } from "@azure/msal-react";
 import {
     Ghost,
     Brain,
@@ -44,7 +44,8 @@ interface GhostSession {
 
 const GhostModeLanding = () => {
     const router = useRouter();
-    const { data: session } = useSession();
+    const { instance, accounts } = useMsal();
+    const session = accounts[0];
     const [showExitWarning, setShowExitWarning] = useState(false);
     const [ghostSession, setGhostSession] = useState<GhostSession | null>(null);
 
@@ -56,11 +57,11 @@ const GhostModeLanding = () => {
             setGhostSession({
                 sessionId: `ghost_${Date.now()}`,
                 startTime: new Date(),
-                nickname: session?.user?.name || 'Ghost User',
+                nickname: session?.name || 'Ghost User',
                 activeMode: null
             });
         }
-    }, [ghostSession, session?.user?.name]);
+    }, [ghostSession, session?.name]);
 
     // Animations
     useGSAP(() => {

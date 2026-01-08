@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
-import SessionProvider from "@/components/providers/SessionProvider";
+import MsalProviderWrapper from "@/components/providers/MsalProviderWrapper";
 import { ThemeProvider } from "@/components/theme-provider";
 
 const inter = Inter({
@@ -30,7 +30,7 @@ export default function RootLayout({
       <body
         className={`${inter.variable} font-sans antialiased`}
       >
-        <SessionProvider>
+        <MsalProviderWrapper>
           <ThemeProvider
             attribute="class"
             defaultTheme="system"
@@ -39,7 +39,7 @@ export default function RootLayout({
           >
             {children}
           </ThemeProvider>
-        </SessionProvider>
+        </MsalProviderWrapper>
       </body>
     </html>
   );

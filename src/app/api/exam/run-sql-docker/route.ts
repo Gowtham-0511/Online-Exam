@@ -2,6 +2,7 @@ import pool from "@/lib/db/db";
 import { decrypt } from "@/lib/encryption";
 import { NextResponse } from "next/server";
 import logger from "@/lib/logger";
+import { log } from "console";
 
 const credentialsCache = new Map<
   string,
@@ -13,6 +14,8 @@ const SQL_EXECUTOR_URL =
   process.env.SQL_SERVICE_URL ||
   process.env.SQL_EXECUTOR_URL ||
   "http://localhost:5001";
+
+console.log(SQL_EXECUTOR_URL);
 
 export async function POST(req: Request) {
   const { query, examId, userEmail = "anonymous" } = await req.json();

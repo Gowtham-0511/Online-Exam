@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo, useRef, useEffect } from "react";
-import { useSession } from "next-auth/react";
+import { useMsal } from "@azure/msal-react";
 import useSWR, { mutate } from 'swr';
 import { useRouter } from "next/navigation";
 import gsap from "gsap";
@@ -95,7 +95,8 @@ interface Batch {
 }
 
 export default function ViewExamsPage() {
-    const { data: session } = useSession();
+    const { instance, accounts } = useMsal();
+    const session = accounts[0];
     const router = useRouter();
     const containerRef = useRef<HTMLDivElement>(null);
 
@@ -121,8 +122,8 @@ export default function ViewExamsPage() {
 
     // --- Data Fetching ---
     const { data: exams = [], error, isLoading } = useSWR(
-        session?.user?.email
-            ? `/api/organizer/assessment/by-user?email=${encodeURIComponent(session.user.email)}`
+        session?.username
+            ? `/api/organizer/assessment/by-user?email=${encodeURIComponent(session.username)}`
             : null,
         fetcher,
         { revalidateOnFocus: false }
@@ -130,13 +131,13 @@ export default function ViewExamsPage() {
 
     // Fetch Users & Batches
     const { data: batches = [] } = useSWR<Batch[]>(
-        session?.user?.email ? '/api/organizer/batch' : null,
+        session?.username ? '/api/organizer/batch' : null,
         fetcher,
         { revalidateOnFocus: false }
     );
 
     const { data: users = [] } = useSWR<User[]>(
-        session?.user?.email ? ['/api/organizer/employee', '/api/organizer/external-users'] : null,
+        session?.username ? ['/api/organizer/employee', '/api/organizer/external-users'] : null,
         async (urls: string[]) => {
             const [employees, external] = await Promise.all([
                 fetch(urls[0]).then(res => res.ok ? res.json() : []),
@@ -220,7 +221,7 @@ export default function ViewExamsPage() {
         try {
             await fetch(`/api/organizer/assessment/delete/${examId}`, { method: "DELETE" });
             toast.success("Exam deleted");
-            mutate(`/api/organizer/assessment/by-user?email=${encodeURIComponent(session?.user?.email || '')}`);
+            mutate(`/api/organizer/assessment/by-user?email=${encodeURIComponent(session?.username || '')}`);
         } catch (e) {
             toast.error("Failed to delete");
         }
@@ -243,7 +244,7 @@ export default function ViewExamsPage() {
             });
             toast.success("Exam updated");
             setEditDialogOpen(false);
-            mutate(`/api/organizer/assessment/by-user?email=${encodeURIComponent(session?.user?.email || '')}`);
+            mutate(`/api/organizer/assessment/by-user?email=${encodeURIComponent(session?.username || '')}`);
         } catch (e) {
             toast.error("Update failed");
         } finally {
@@ -279,7 +280,7 @@ export default function ViewExamsPage() {
             });
             toast.success("Assignments updated");
             setReassignDialogOpen(false);
-            mutate(`/api/organizer/assessment/by-user?email=${encodeURIComponent(session?.user?.email || '')}`);
+            mutate(`/api/organizer/assessment/by-user?email=${encodeURIComponent(session?.username || '')}`);
         } catch (e) {
             toast.error("Assignment failed");
         } finally {
