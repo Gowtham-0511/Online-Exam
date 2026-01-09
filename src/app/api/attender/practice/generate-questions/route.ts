@@ -27,7 +27,6 @@ export async function POST(request: Request) {
 
     const { email, topic, difficulty, count, questionType } = body;
 
-    // console.log(email, topic, difficulty, count, questionType);
     logger.info("Generating practice questions: %s, %s, %s, %s, %s", email, topic, difficulty, count, questionType);
 
     if (!email || !topic || !difficulty || !count || !questionType) {
@@ -35,6 +34,32 @@ export async function POST(request: Request) {
         { message: "Missing required fields" },
         { status: 400 }
       );
+    }
+
+    // 1. Create Practice Set Container
+    let practiceSetId: number | null = null;
+    let dbClient = await pool.connect();
+
+    try {
+      const setInsertRes = await dbClient.query(`
+        INSERT INTO "PracticeSets" (
+            "userEmail", title, topic, difficulty, "questionType", "totalQuestions", status, "createdAt", "updatedAt"
+        ) VALUES ($1, $2, $3, $4, $5, $6, 'not_started', NOW(), NOW())
+        RETURNING id
+      `, [
+        email,
+        `${topic} ${questionType === 'mcq' ? 'MCQ' : 'Coding'} Session`, // Title
+        topic,
+        difficulty,
+        questionType,
+        count
+      ]);
+      practiceSetId = setInsertRes.rows[0].id;
+    } catch (e) {
+      logger.error("Failed to create practice set", e);
+      return NextResponse.json({ error: "Failed to initialize practice session" }, { status: 500 });
+    } finally {
+      dbClient.release();
     }
 
     try {
@@ -143,10 +168,8 @@ export async function POST(request: Request) {
       const questions = parsedData.questions || [];
       const insertedQuestions = [];
 
-      let dbClient;
-      try {
-        dbClient = await pool.connect();
-
+      dbClient = await pool.connect();
+      try { // Inner try for DB operations
         for (const q of questions) {
           try {
             let insertQuery = "";
@@ -171,8 +194,9 @@ export async function POST(request: Request) {
                   question,
                   "solutionCode",
                   "generatedAt",
-                  "isActive"
-                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, NOW(), true)
+                  "isActive",
+                  "practiceSetId"
+                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, NOW(), true, $15)
                 RETURNING id, "questionTitle", "questionDescription", "mcqOptions", difficulty, topic;
               `;
 
@@ -196,6 +220,7 @@ export async function POST(request: Request) {
                 JSON.stringify(mcqOptions),
                 q.question,
                 q.solutionCode,
+                practiceSetId
               ];
             } else if (q.type === "coding") {
               // Insert Coding question
@@ -217,8 +242,9 @@ export async function POST(request: Request) {
                   hints,
                   "basedOnExam",
                   "generatedAt",
-                  "isActive"
-                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, NOW(), true)
+                  "isActive",
+                  "practiceSetId"
+                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, NOW(), true, $16)
                 RETURNING id, "questionTitle", "questionDescription", "language", difficulty, topic;
               `;
 
@@ -238,6 +264,7 @@ export async function POST(request: Request) {
                 q.explanation || "",
                 JSON.stringify(q.hints || []),
                 q.basedOnExam,
+                practiceSetId
               ];
             }
 
@@ -251,19 +278,8 @@ export async function POST(request: Request) {
             // Continue with next question even if one fails
           }
         }
-      } catch (dbError) {
-        logger.error("Database connection error:", dbError);
-        return NextResponse.json(
-          {
-            error: "Failed to save questions to database",
-            generatedQuestions: parsedData,
-          },
-          { status: 500 }
-        );
       } finally {
-        if (dbClient) {
-          dbClient.release();
-        }
+        dbClient.release();
       }
 
       await pool.query(
@@ -281,6 +297,7 @@ export async function POST(request: Request) {
           message: `Successfully generated and saved ${insertedQuestions.length} questions`,
           questions: insertedQuestions,
           generatedData: parsedData,
+          practiceSetId: practiceSetId
         },
         { status: 200 }
       );

@@ -84,6 +84,66 @@ interface TestResult {
     error?: string;
 }
 
+const isEquivalent = (actual: any, expected: any): boolean => {
+    if (actual === expected) return true;
+
+    if ((typeof actual === 'string' || typeof actual === 'number') &&
+        (typeof expected === 'string' || typeof expected === 'number')) {
+        return String(actual).trim() === String(expected).trim();
+    }
+
+    if (Array.isArray(actual) && Array.isArray(expected)) {
+        if (actual.length !== expected.length) return false;
+        for (let i = 0; i < actual.length; i++) {
+            if (!isEquivalent(actual[i], expected[i])) return false;
+        }
+        return true;
+    }
+
+    if (typeof actual === 'object' && actual !== null && typeof expected === 'object' && expected !== null) {
+        const actualKeys = Object.keys(actual);
+        const expectedKeys = Object.keys(expected);
+        if (actualKeys.length !== expectedKeys.length) return false;
+
+        // Use case-insensitive key comparison for objects (common in SQL practice)
+        const actualNormalized: any = {};
+        for (const k of actualKeys) actualNormalized[k.toLowerCase()] = actual[k];
+
+        const expectedNormalized: any = {};
+        for (const k of expectedKeys) expectedNormalized[k.toLowerCase()] = expected[k];
+
+        const normActualKeys = Object.keys(actualNormalized);
+        if (normActualKeys.length !== actualKeys.length) {
+            // If internal keys are same after lowercasing (rare), fallback to strict
+            for (const key of actualKeys) {
+                if (!isEquivalent(actual[key], expected[key])) return false;
+            }
+            return true;
+        }
+
+        for (const key of normActualKeys) {
+            if (!(key in expectedNormalized)) return false;
+            if (!isEquivalent(actualNormalized[key], expectedNormalized[key])) return false;
+        }
+        return true;
+    }
+
+    return false;
+};
+
+const compareOutputs = (actual: string, expected: string): boolean => {
+    actual = actual.trim();
+    expected = expected.trim();
+    if (actual === expected) return true;
+    try {
+        const actualObj = JSON.parse(actual);
+        const expectedObj = JSON.parse(expected);
+        return isEquivalent(actualObj, expectedObj);
+    } catch (e) {
+        return actual === expected;
+    }
+};
+
 export default function PracticeExam() {
     const router = useRouter();
     const [questions, setQuestions] = useState<Question[]>([]);
@@ -358,7 +418,7 @@ export default function PracticeExam() {
                     if (result.success) {
                         const actualOutput = result.output?.trim() || "";
                         const expectedOutput = testCase.expectedOutput.trim();
-                        const passed = actualOutput === expectedOutput;
+                        const passed = compareOutputs(actualOutput, expectedOutput);
 
                         results.push({
                             passed,
@@ -619,6 +679,21 @@ export default function PracticeExam() {
 
         yPos += 8;
 
+        const cleanContent = (text: string) => {
+            if (!text) return "";
+            // Replace common HTML entities and strip tags
+            return text
+                .replace(/<br\s*\/?>/gi, '\n')
+                .replace(/<\/p>/gi, '\n')
+                .replace(/<[^>]*>?/gm, '')
+                .replace(/&nbsp;/g, ' ')
+                .replace(/&amp;/g, '&')
+                .replace(/&lt;/g, '<')
+                .replace(/&gt;/g, '>')
+                .replace(/&quot;/g, '"')
+                .trim();
+        };
+
         const tableData = questions.map((q, index) => {
             const isCorrect = getQuestionResult(index);
             const hasRun = hasQuestionBeenRun(index);
@@ -629,7 +704,7 @@ export default function PracticeExam() {
 
                 return [
                     `Q${index + 1}`,
-                    q.question,
+                    cleanContent(q.question),
                     hasRun ? (isCorrect ? "PASS" : "FAIL") : "NOT ANSWERED",
                     userAnswer,
                     correctAnswer
@@ -651,11 +726,14 @@ export default function PracticeExam() {
                     }
                 }
 
+                const questionText = `${q.questionTitle}\n\n${cleanContent(q.questionDescription || q.description || "")}`;
+                const userCode = codeAnswers[index] || "No Code Submitted";
+
                 return [
                     `Q${index + 1}`,
-                    q.questionTitle,
+                    questionText,
                     hasRun ? (isCorrect ? "PASS" : "FAIL") : "NOT ANSWERED",
-                    "See Code Submission",
+                    userCode,
                     statusText
                 ];
             }
@@ -675,30 +753,30 @@ export default function PracticeExam() {
             },
             bodyStyles: {
                 fontSize: 8,
-                textColor: [50, 50, 50]
+                textColor: [50, 50, 50],
+                overflow: 'linebreak'
             },
             alternateRowStyles: {
                 fillColor: [245, 245, 245]
             },
             columnStyles: {
-                0: { halign: 'center', cellWidth: 15 },
-                1: { halign: 'left', cellWidth: 50 },
+                0: { halign: 'center', cellWidth: 10 },
+                1: { halign: 'left', cellWidth: 60 },
                 2: { halign: 'center', cellWidth: 25, fontStyle: 'bold' },
-                3: { halign: 'left', cellWidth: 50 },
-                4: { halign: 'left', cellWidth: 50 }
+                3: { halign: 'left', cellWidth: 55, font: 'courier' },
+                4: { halign: 'left', cellWidth: 40 }
             },
             margin: { left: 15, right: 15 },
-            didDrawCell: (data: any) => {
+            didParseCell: (data: any) => {
                 if (data.column.index === 2 && data.section === 'body') {
                     const result = data.cell.text[0];
                     if (result === 'PASS') {
-                        doc.setTextColor(34, 197, 94);
+                        data.cell.styles.textColor = [34, 197, 94];
                     } else if (result === 'FAIL') {
-                        doc.setTextColor(239, 68, 68);
+                        data.cell.styles.textColor = [239, 68, 68];
                     } else {
-                        doc.setTextColor(156, 163, 175);
+                        data.cell.styles.textColor = [156, 163, 175];
                     }
-                    doc.text(result, data.cell.x + data.cell.width / 2, data.cell.y + 6, { align: 'center' } as any);
                 }
             }
         });
@@ -806,7 +884,7 @@ export default function PracticeExam() {
                             </div>
 
                             <Button
-                                onClick={() => console.log("Exit")}
+                                onClick={confirmExit}
                                 variant="ghost"
                                 size="sm"
                                 className="text-muted-foreground hover:text-destructive hover:bg-destructive/10"

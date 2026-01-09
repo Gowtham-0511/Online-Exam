@@ -1,3 +1,4 @@
+
 import pool from "@/lib/db/db";
 import { NextResponse } from "next/server";
 import logger from "@/lib/logger";
@@ -28,6 +29,7 @@ export async function GET(request: Request) {
             pq."generatedAt",
             pq."mcqOptions",
             pq.type,
+            pq."practiceSetId",
             -- Check if user has attempted this question
             (SELECT COUNT(*) FROM "PracticeSubmissions" ps 
                 WHERE ps."practiceQuestionId" = pq.id AND ps.email = $1) as "userAttempts",

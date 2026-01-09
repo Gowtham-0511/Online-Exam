@@ -771,13 +771,13 @@ export default function CreateExam() {
                                                     <SelectContent>
                                                         <SelectItem value="ssms">
                                                             <div className="flex items-center gap-2">
-                                                                <span>ðŸ—„ï¸</span>
+                                                                <Database className="w-4 h-4" />
                                                                 <span>SQL Server (SSMS)</span>
                                                             </div>
                                                         </SelectItem>
                                                         <SelectItem value="postgres">
                                                             <div className="flex items-center gap-2">
-                                                                <span>ðŸ˜</span>
+                                                                <Database className="w-4 h-4" />
                                                                 <span>PostgreSQL</span>
                                                             </div>
                                                         </SelectItem>

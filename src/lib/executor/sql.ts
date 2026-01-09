@@ -1,6 +1,11 @@
-import { Pool } from "pg";
+import { Pool, types } from "pg";
 import sql from "mssql";
 import logger from "@/lib/logger";
+
+// Configure pg to return bigint and numeric as numbers
+// This is safe for most practice scenarios and prevents type mismatch in test cases
+types.setTypeParser(20, (val) => parseInt(val, 10));
+types.setTypeParser(1700, (val) => parseFloat(val));
 
 export interface SqlExecutionOptions {
   query: string;
