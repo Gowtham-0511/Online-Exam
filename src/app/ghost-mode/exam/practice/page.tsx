@@ -87,9 +87,23 @@ interface TestResult {
 const isEquivalent = (actual: any, expected: any): boolean => {
     if (actual === expected) return true;
 
+    // Handle string/number comparison with date normalization
     if ((typeof actual === 'string' || typeof actual === 'number') &&
         (typeof expected === 'string' || typeof expected === 'number')) {
-        return String(actual).trim() === String(expected).trim();
+        const s1 = String(actual).trim();
+        const s2 = String(expected).trim();
+        if (s1 === s2) return true;
+
+        // Try date comparison for strings that look like dates
+        // Matches common formats: '2023-12-05 08:00:00' or '2023-12-05T08:00:00.000Z'
+        if (s1.length >= 10 && s2.length >= 10) {
+            const d1 = new Date(s1).getTime();
+            const d2 = new Date(s2).getTime();
+            if (!isNaN(d1) && !isNaN(d2)) {
+                return d1 === d2;
+            }
+        }
+        return false;
     }
 
     if (Array.isArray(actual) && Array.isArray(expected)) {
@@ -105,25 +119,17 @@ const isEquivalent = (actual: any, expected: any): boolean => {
         const expectedKeys = Object.keys(expected);
         if (actualKeys.length !== expectedKeys.length) return false;
 
-        // Use case-insensitive key comparison for objects (common in SQL practice)
-        const actualNormalized: any = {};
-        for (const k of actualKeys) actualNormalized[k.toLowerCase()] = actual[k];
+        // Normalize keys to lowercase for comparison
+        const actualNorm: any = {};
+        for (const k of actualKeys) actualNorm[k.toLowerCase()] = actual[k];
 
-        const expectedNormalized: any = {};
-        for (const k of expectedKeys) expectedNormalized[k.toLowerCase()] = expected[k];
+        const expectedNorm: any = {};
+        for (const k of expectedKeys) expectedNorm[k.toLowerCase()] = expected[k];
 
-        const normActualKeys = Object.keys(actualNormalized);
-        if (normActualKeys.length !== actualKeys.length) {
-            // If internal keys are same after lowercasing (rare), fallback to strict
-            for (const key of actualKeys) {
-                if (!isEquivalent(actual[key], expected[key])) return false;
-            }
-            return true;
-        }
-
-        for (const key of normActualKeys) {
-            if (!(key in expectedNormalized)) return false;
-            if (!isEquivalent(actualNormalized[key], expectedNormalized[key])) return false;
+        const keys = Object.keys(actualNorm);
+        for (const key of keys) {
+            if (!(key in expectedNorm)) return false;
+            if (!isEquivalent(actualNorm[key], expectedNorm[key])) return false;
         }
         return true;
     }
