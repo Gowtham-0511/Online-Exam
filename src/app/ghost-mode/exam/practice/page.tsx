@@ -168,7 +168,7 @@ export default function PracticeExam() {
     const [showSolution, setShowSolution] = useState(false);
     const [isAnalyzing, setIsAnalyzing] = useState(false);
     const [aiAnalysis, setAiAnalysis] = useState<any>(null);
-    const [executionMode, setExecutionMode] = useState<"docker" | "ai">("docker");
+    const [executionMode, setExecutionMode] = useState<"docker" | "ai">("ai");
 
     const [showExitWarning, setShowExitWarning] = useState(false);
 
