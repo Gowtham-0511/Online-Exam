@@ -185,7 +185,7 @@ Return a JSON object with a "questions" array where EVERY question has type "cod
       "solutionExplanation": "Detailed step-by-step logic",
       "basedOnExam": "Practice Exam",
       "question": "Detailed prompt: What exactly needs to be retrieved? Mention if sorting, grouping, or specific conditions are required.",
-      "description": "Comprehensive HTML-formatted description including table structure and examples.",
+      "description": "Comprehensive HTML-formatted description. **MUST** include a beautifully styled HTML table representing the Table Schema (Columns and Types) for the relevant Northwind tables at the beginning of the description.",
       "starterCode": "SELECT ",
       "testCases": [
         {
@@ -202,12 +202,13 @@ Return a JSON object with a "questions" array where EVERY question has type "cod
 
 REQUIREMENTS:
 1. **Scope**: Cover all relevant SQL topics for the chosen difficulty.
-2. **Detail**: Make the "question" and "description" as detailed as possible. Explain the business context.
+2. **Detail**: Make the "question" and "description" as detailed as possible. Explain the business context. **IMPORTANT**: The "description" MUST include a clear table structure (e.g., an HTML table or formatted list) showing the columns and data types for the tables used in the problem.
 3. **Ordering**: If a specific output order is expected (essential for test case matching), explicitly state it in the question (e.g., "Sort the results by date in descending order").
 4. **Variety**: If multiple questions are requested, ensure they cover different aspects of ${topic} within the Northwind context.
 5. **Schema**: Use ONLY the Northwind schema provided.
 6. **Test Cases**: 2-4 test cases. EVERY test case input MUST start with "DROP TABLE IF EXISTS table_name;" for all tables involved.
 7. **Recursive Queries (Postgres)**: If generating a RECURSIVE query, **CRITICAL**: Ensure the non-recursive term and the recursive term have the EXACT same data types. Use explicit casting (e.g., \`CAST(x AS DATE)\` or \`::DATE\`) if necessary to prevent errors like "non-recursive term has type date but recursive term has type timestamp".
+8. **Test Case Precision**: DOUBLE-CHECK for typos. Ensure every column name in the \`CREATE TABLE\` and \`INSERT INTO\` statements perfectly matches the Northwind schema. The \`expectedOutput\` must be a high-precision JSON representation of the result of the \`solution\` query when run against the \`input\` SQL. Verify that date strings (e.g., '1997-01-01') and numeric precision are consistent throughout.
 
 Difficulty Guidelines:
 - EASY: Focus on Basic SELECT, filtered results (WHERE), basic sorting (ORDER BY), and simple joins.
@@ -345,7 +346,7 @@ Return a JSON object with a "questions" array where EVERY question has type "cod
       "hints": ["Hint related to the Question"],
       "solutionExplanation": "Solution Explanation related to the Question",
       "basedOnExam": "Based on Exam",
-      "description": "Description related to the Question",
+      "description": "Comprehensive HTML-formatted description. **MUST** include an HTML table showing the Schema (Columns/Types) of the dataframes used.",
       "starterCode": "starter code for the question always starts with SELECT",
       "testCases": [
         {
@@ -410,7 +411,7 @@ Return a JSON object with a "questions" array where EVERY question has type "cod
       "hints": ["Hint related to the Question"],
       "solutionExplanation": "Solution Explanation related to the Question",
       "basedOnExam": "Based on Exam",
-      "description": "Description related to the Question",
+      "description": "Comprehensive HTML-formatted description. **MUST** include an HTML table showing the Table Schema (Columns/Types) for Sales, Products, and Customers.",
       "starterCode": "starter code for the question always starts with SELECT",
       "testCases": [
         {
@@ -548,7 +549,7 @@ Return a JSON object with a "questions" array where EVERY question has type "cod
       "hints": ["Hint related to the Question"],
       "solutionExplanation": "Solution Explanation related to the Question",
       "basedOnExam": "Based on Exam",
-      "description": "Description related to the Question",
+      "description": "Comprehensive HTML-formatted description. **MUST** include an HTML table showing the Schema (Columns/Types) of the models involved.",
       "starterCode": "starter code for the question always starts with SELECT",
       "testCases": [
         {
@@ -607,7 +608,7 @@ Return a JSON object with a "questions" array where EVERY question has type "cod
       "hints": ["Hint related to the Question"],
       "solutionExplanation": "Solution Explanation related to the Question",
       "basedOnExam": "Based on Exam",
-      "description": "Description related to the Question",
+      "description": "Comprehensive HTML-formatted description. **MUST** include an HTML table showing the Table Schema (Columns/Types).",
       "starterCode": "starter code for the question always starts with SELECT(not the solution)",
       "testCases": [
         {
@@ -706,6 +707,16 @@ export function validateCodingQuestion(q: any, index: number): CodingQuestion {
 
   // Ensure we have test cases
   let testCases = Array.isArray(q.testCases) ? q.testCases : [];
+
+  // Normalize test cases to ensure fields are strings
+  testCases = testCases.map((tc: any) => ({
+    input: String(tc.input || ""),
+    expectedOutput: typeof tc.expectedOutput === "string"
+      ? tc.expectedOutput
+      : JSON.stringify(tc.expectedOutput),
+    isHidden: !!tc.isHidden,
+  }));
+
   if (testCases.length === 0) {
     console.warn(`Coding question ${index} has no test cases, adding default`);
     testCases = [

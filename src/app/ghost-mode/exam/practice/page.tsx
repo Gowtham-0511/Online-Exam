@@ -432,8 +432,20 @@ export default function PracticeExam() {
                     const result = await response.json();
 
                     if (result.success) {
-                        const actualOutput = result.output?.trim() || "";
-                        const expectedOutput = testCase.expectedOutput.trim();
+                        let actualOutput = "";
+                        if (typeof result.output === "string") {
+                            actualOutput = result.output.trim();
+                        } else if (result.output) {
+                            actualOutput = JSON.stringify(result.output);
+                        }
+
+                        let expectedOutput = "";
+                        if (typeof testCase.expectedOutput === "string") {
+                            expectedOutput = testCase.expectedOutput.trim();
+                        } else if (testCase.expectedOutput) {
+                            expectedOutput = JSON.stringify(testCase.expectedOutput);
+                        }
+
                         const passed = compareOutputs(actualOutput, expectedOutput);
 
                         results.push({
@@ -1770,14 +1782,14 @@ export default function PracticeExam() {
                                                                     <div>
                                                                         <span className="text-muted-foreground font-medium">Expected:</span>
                                                                         <pre className="mt-1 p-2 bg-background/50 rounded text-foreground overflow-x-auto font-mono border border-border/50 max-h-24">
-                                                                            {result.expectedOutput}
+                                                                            {typeof result.expectedOutput === 'string' ? result.expectedOutput : JSON.stringify(result.expectedOutput, null, 2)}
                                                                         </pre>
                                                                     </div>
                                                                     {result.actualOutput && (
                                                                         <div>
                                                                             <span className="text-muted-foreground font-medium text-amber-500/80">Got:</span>
                                                                             <pre className="mt-1 p-2 bg-amber-500/5 rounded text-foreground overflow-x-auto font-mono border border-amber-500/20 max-h-24">
-                                                                                {result.actualOutput}
+                                                                                {typeof result.actualOutput === 'string' ? result.actualOutput : JSON.stringify(result.actualOutput, null, 2)}
                                                                             </pre>
                                                                         </div>
                                                                     )}
