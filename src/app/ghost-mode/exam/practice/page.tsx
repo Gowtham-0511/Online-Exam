@@ -51,6 +51,7 @@ interface MCQQuestion {
     options: string[];
     correctAnswer: number;
     explanation: string;
+    hints?: string[];
 }
 
 interface CodingQuestion {
@@ -171,11 +172,20 @@ export default function PracticeExam() {
     const [executionMode, setExecutionMode] = useState<"docker" | "ai">("ai");
 
     const [showExitWarning, setShowExitWarning] = useState(false);
+    const [showReviewPopup, setShowReviewPopup] = useState(false);
+    const [timeSpent, setTimeSpent] = useState<number[]>([]);
 
     const [isFullscreen, setIsFullscreen] = useState(false);
     const [showFullscreenPrompt, setShowFullscreenPrompt] = useState(true);
     const [tabSwitchCount, setTabSwitchCount] = useState(0);
     const [warnings, setWarnings] = useState<string[]>([]);
+
+    const [showHints, setShowHints] = useState(false);
+    const [visibleHintsCount, setVisibleHintsCount] = useState(0);
+
+    const [hintsUsedCount, setHintsUsedCount] = useState<number[]>([]);
+    const [solutionsViewedCount, setSolutionsViewedCount] = useState<number[]>([]);
+    const [codeRunCounts, setCodeRunCounts] = useState<number[]>([]);
 
     // Refs for GSAP animations
     const headerRef = useRef<HTMLDivElement>(null);
@@ -199,6 +209,10 @@ export default function PracticeExam() {
                     q.type === "coding" ? q.starterCode : ""
                 )
             );
+            setTimeSpent(new Array(parsedQuestions.length).fill(0));
+            setHintsUsedCount(new Array(parsedQuestions.length).fill(0));
+            setSolutionsViewedCount(new Array(parsedQuestions.length).fill(0));
+            setCodeRunCounts(new Array(parsedQuestions.length).fill(0));
         }
 
         if (storedExamDetails) {
@@ -311,15 +325,32 @@ export default function PracticeExam() {
         }
     }, [showFullscreenPrompt]);
 
+    // Reset hints and solution view when question changes
+    useEffect(() => {
+        setShowHints(false);
+        setVisibleHintsCount(0);
+        setShowSolution(false);
+    }, [currentQuestion]);
+
     // Timer
     useEffect(() => {
-        if (timeLeft > 0 && !showResults) {
-            const timer = setTimeout(() => setTimeLeft(timeLeft - 1), 1000);
+        if (timeLeft > 0 && !showResults && !showFullscreenPrompt) {
+            const timer = setTimeout(() => {
+                setTimeLeft(prev => prev - 1);
+                // Track time spent per question
+                if (questions.length > 0) {
+                    setTimeSpent(prev => {
+                        const newTimeSpent = [...prev];
+                        newTimeSpent[currentQuestion] = (newTimeSpent[currentQuestion] || 0) + 1;
+                        return newTimeSpent;
+                    });
+                }
+            }, 1000);
             return () => clearTimeout(timer);
         } else if (timeLeft === 0 && questions.length > 0 && !showResults) {
-            handleSubmit();
+            handleSubmit(true);
         }
-    }, [timeLeft, showResults]);
+    }, [timeLeft, showResults, showFullscreenPrompt, currentQuestion, questions.length]);
 
     const prepareSqlQuery = (testCaseInput: string, userCode: string): string => {
         if (!testCaseInput) return userCode;
@@ -340,6 +371,11 @@ export default function PracticeExam() {
 
         setIsRunning(true);
         setTestResults([]);
+
+        // Track code runs
+        const newRunCounts = [...codeRunCounts];
+        newRunCounts[currentQuestion] = (newRunCounts[currentQuestion] || 0) + 1;
+        setCodeRunCounts(newRunCounts);
 
         // Animate run button
         gsap.to(".run-code-btn", {
@@ -502,7 +538,12 @@ export default function PracticeExam() {
         }
     };
 
-    const handleSubmit = async () => {
+    const handleSubmit = async (isAutoSubmit = false) => {
+        if (!isAutoSubmit && !showReviewPopup && !showResults) {
+            setShowReviewPopup(true);
+            return;
+        }
+        setShowReviewPopup(false);
         exitFullscreen();
         setShowResults(true);
         setIsSubmitting(false);
@@ -548,16 +589,20 @@ export default function PracticeExam() {
 
     const calculateScore = () => {
         let correct = 0;
+        let partial = 0;
 
         questions.forEach((q, idx) => {
             if (getQuestionResult(idx)) {
                 correct++;
+            } else if (q.type === "coding" && questionResults[idx]?.some(r => r.passed)) {
+                partial++;
             }
         });
 
         return {
             correct,
-            incorrect: questions.length - correct,
+            partial,
+            incorrect: questions.length - correct - partial,
             total: questions.length
         };
     };
@@ -708,9 +753,27 @@ export default function PracticeExam() {
         doc.setFontSize(10);
         doc.setFont("helvetica", "normal");
         doc.text(`Total Questions: ${score.total}`, 15, yPos);
-        doc.text(`Correct Answers: ${score.correct}`, 60, yPos);
-        doc.text(`Score: ${scorePercentage.toFixed(1)}%`, 110, yPos);
-        yPos += 15;
+        doc.text(`Correct: ${score.correct}`, 55, yPos);
+        doc.text(`Partial: ${score.partial}`, 95, yPos);
+        doc.text(`Incorrect: ${score.incorrect}`, 135, yPos);
+        doc.text(`Score: ${scorePercentage.toFixed(1)}%`, 175, yPos);
+        yPos += 8;
+
+        const totalDurationS = (examDetails?.duration || 0) * 60;
+        const timeTakenS = Math.max(0, totalDurationS - timeLeft);
+
+        doc.text(`Total Duration: ${examDetails?.duration || 0} mins`, 15, yPos);
+        doc.text(`Time Taken: ${formatTime(timeTakenS)}`, 65, yPos);
+        yPos += 8;
+
+        const totalRuns = codeRunCounts.reduce((a, b) => a + b, 0);
+        const totalHints = hintsUsedCount.reduce((a, b) => a + b, 0);
+        const totalSolutions = solutionsViewedCount.reduce((a, b) => a + b, 0);
+
+        doc.text(`Total Code Runs: ${totalRuns}`, 15, yPos);
+        doc.text(`Hints Used: ${totalHints}`, 65, yPos);
+        doc.text(`Solutions Viewed: ${totalSolutions}`, 115, yPos);
+        yPos += 12;
 
         const cleanContent = (text: string) => {
             if (!text) return "";
@@ -747,10 +810,18 @@ export default function PracticeExam() {
                 const userAnswer = selectedAnswers[index] !== -1 ? q.options[selectedAnswers[index]] : "Not Answered";
                 const correctAnswer = q.options[q.correctAnswer];
 
+                let resultText = "NOT ANSWERED";
+                if (hasRun) {
+                    if (isCorrect) resultText = "PASS";
+                    else resultText = "FAIL";
+                }
+
                 return [
                     `Q${index + 1}`,
                     cleanContent(q.question),
-                    hasRun ? (isCorrect ? "PASS" : "FAIL") : "NOT ANSWERED",
+                    resultText,
+                    formatTime(timeSpent[index] || 0),
+                    `Hints: ${hintsUsedCount[index] || 0}`,
                     userAnswer,
                     correctAnswer,
                     feedback
@@ -781,10 +852,19 @@ export default function PracticeExam() {
                 const userCode = codeAnswers[index] || "No Code Submitted";
                 const resultSummary = results && results.length > 0 ? `${statusHeader}\n\n${testCaseList}` : "Not Run";
 
+                let resultText = "NOT ANSWERED";
+                if (hasRun) {
+                    if (isCorrect) resultText = "PASS";
+                    else if (results && results.some(r => r.passed)) resultText = "PARTIAL";
+                    else resultText = "FAIL";
+                }
+
                 return [
                     `Q${index + 1}`,
                     questionText,
-                    hasRun ? (isCorrect ? "PASS" : "FAIL") : "NOT ANSWERED",
+                    resultText,
+                    formatTime(timeSpent[index] || 0),
+                    `Runs: ${codeRunCounts[index] || 0}\nHints: ${hintsUsedCount[index] || 0}\nSol: ${solutionsViewedCount[index] || 0}`,
                     userCode,
                     resultSummary,
                     feedback
@@ -794,7 +874,7 @@ export default function PracticeExam() {
 
         autoTable(doc, {
             startY: yPos,
-            head: [["#", "Question", "Result", "Your Answer", "Correct Answer", "AI Feedback"]],
+            head: [["#", "Question", "Result", "Time", "Usage", "Your Answer/Code", "Res/Summary", "AI Feedback"]],
             body: tableData,
             theme: "grid",
             headStyles: {
@@ -813,12 +893,14 @@ export default function PracticeExam() {
                 fillColor: [245, 245, 245]
             },
             columnStyles: {
-                0: { halign: 'center', cellWidth: 8 },
-                1: { halign: 'left', cellWidth: 35 },
-                2: { halign: 'center', cellWidth: 20, fontStyle: 'bold' },
-                3: { halign: 'left', cellWidth: 40, font: 'courier' },
-                4: { halign: 'left', cellWidth: 40 },
-                5: { halign: 'left', cellWidth: 35 }
+                0: { halign: 'center', cellWidth: 7 },
+                1: { halign: 'left', cellWidth: 28 },
+                2: { halign: 'center', cellWidth: 15, fontStyle: 'bold' },
+                3: { halign: 'center', cellWidth: 12 },
+                4: { halign: 'center', cellWidth: 18 },
+                5: { halign: 'left', cellWidth: 32, font: 'courier' },
+                6: { halign: 'left', cellWidth: 32 },
+                7: { halign: 'left', cellWidth: 32 }
             },
             margin: { left: 15, right: 15, top: 40, bottom: 20 },
             didParseCell: (data: any) => {
@@ -826,7 +908,9 @@ export default function PracticeExam() {
                     const result = data.cell.text[0];
                     if (result === 'PASS') {
                         data.cell.styles.textColor = [34, 197, 94];
-                    } else if (result.includes('FAIL')) {
+                    } else if (result === 'PARTIAL') {
+                        data.cell.styles.textColor = [245, 158, 11]; // Amber
+                    } else if (result === 'FAIL' || result.includes('FAIL')) {
                         data.cell.styles.textColor = [239, 68, 68];
                     } else {
                         data.cell.styles.textColor = [156, 163, 175];
@@ -1151,6 +1235,9 @@ export default function PracticeExam() {
                                                             >
                                                                 {isCorrect ? "Correct" : "Incorrect"}
                                                             </Badge>
+                                                            <Badge variant="outline" className="ml-2 bg-blue-500/10 text-blue-600 border-blue-500/20">
+                                                                Time: {formatTime(timeSpent[index] || 0)}
+                                                            </Badge>
                                                         </h3>
                                                     </div>
 
@@ -1242,6 +1329,9 @@ export default function PracticeExam() {
                                                                 variant="outline"
                                                             >
                                                                 {hasRun ? (isCorrect ? "Passed" : "Failed") : "Not Run"}
+                                                            </Badge>
+                                                            <Badge variant="outline" className="ml-2 bg-blue-500/10 text-blue-600 border-blue-500/20">
+                                                                Time: {formatTime(timeSpent[index] || 0)}
                                                             </Badge>
                                                         </h3>
                                                     </div>
@@ -1453,7 +1543,7 @@ export default function PracticeExam() {
                         </div>
 
                         {/* Submit Button */}
-                        <Button onClick={handleSubmit} disabled={isSubmitting} size="sm" className="bg-gradient-to-r from-green-600 to-green-500 hover:from-green-700 hover:to-green-600 shadow-lg shadow-green-500/20">
+                        <Button onClick={() => handleSubmit()} disabled={isSubmitting} size="sm" className="bg-gradient-to-r from-green-600 to-green-500 hover:from-green-700 hover:to-green-600 shadow-lg shadow-green-500/20">
                             {isSubmitting ? (
                                 <>
                                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
@@ -1519,6 +1609,10 @@ export default function PracticeExam() {
                                         <div
                                             className="text-foreground leading-relaxed"
                                             dangerouslySetInnerHTML={{ __html: currentQ.questionDescription }}
+                                        />
+                                        <div
+                                            className="text-foreground leading-relaxed"
+                                            dangerouslySetInnerHTML={{ __html: currentQ.description ? currentQ.description : currentQ.questionDescription }}
                                         />
                                     </div>
 
@@ -1592,6 +1686,57 @@ export default function PracticeExam() {
                                     ))}
                                 </div>
                             )}
+
+                            {/* Hints Section */}
+                            {(currentQ as any).hints && (currentQ as any).hints.length > 0 && (
+                                <div className="mt-8 pt-6 border-t border-border">
+                                    <div className="flex items-center justify-between mb-4">
+                                        <h3 className="font-semibold text-foreground flex items-center gap-2">
+                                            <Sparkles className="w-4 h-4 text-amber-500" />
+                                            Stuck? Get a Hint
+                                        </h3>
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            onClick={() => {
+                                                if (!showHints) setShowHints(true);
+                                                if (visibleHintsCount < (currentQ as any).hints.length) {
+                                                    const nextCount = visibleHintsCount + 1;
+                                                    setVisibleHintsCount(prev => prev + 1);
+
+                                                    // Track total hints used for this question
+                                                    const newHintsUsed = [...hintsUsedCount];
+                                                    // Only update if current reveal is more than what was previously tracked
+                                                    if (nextCount > newHintsUsed[currentQuestion]) {
+                                                        newHintsUsed[currentQuestion] = nextCount;
+                                                        setHintsUsedCount(newHintsUsed);
+                                                    }
+                                                }
+                                            }}
+                                            className="text-amber-500 hover:text-amber-600 hover:bg-amber-500/10"
+                                        >
+                                            <Sparkles className="w-4 h-4 mr-2" />
+                                            {showHints ? "Next Hint" : "Show Hint"}
+                                        </Button>
+                                    </div>
+
+                                    {showHints && (
+                                        <div className="space-y-3">
+                                            {(currentQ as any).hints.slice(0, visibleHintsCount).map((hint: string, idx: number) => (
+                                                <div
+                                                    key={idx}
+                                                    className="p-4 rounded-lg bg-amber-500/5 border border-amber-500/20 text-sm text-foreground animate-in fade-in slide-in-from-top-2 duration-300"
+                                                >
+                                                    <div className="flex gap-2">
+                                                        <span className="text-amber-500 font-bold shrink-0">#{idx + 1}</span>
+                                                        <span>{hint}</span>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            )}
                         </div>
                     </div>
                 </div>
@@ -1620,7 +1765,16 @@ export default function PracticeExam() {
                                         variant="ghost"
                                         size="sm"
                                         onClick={() => {
-                                            setShowSolution(!showSolution);
+                                            const willShow = !showSolution;
+                                            setShowSolution(willShow);
+
+                                            if (willShow) {
+                                                // Track solution viewed
+                                                const newSolutionsUsed = [...solutionsViewedCount];
+                                                newSolutionsUsed[currentQuestion] = (newSolutionsUsed[currentQuestion] || 0) + 1;
+                                                setSolutionsViewedCount(newSolutionsUsed);
+                                            }
+
                                             gsap.to(".editor-container", {
                                                 opacity: 0,
                                                 duration: 0.2,
@@ -1913,6 +2067,85 @@ export default function PracticeExam() {
                             className="flex-1"
                         >
                             Yes, Exit
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Review Popup Dialog */}
+            <Dialog open={showReviewPopup} onOpenChange={setShowReviewPopup}>
+                <DialogContent className="sm:max-w-2xl max-h-[80vh] flex flex-col">
+                    <DialogHeader>
+                        <DialogTitle className="text-2xl font-bold flex items-center gap-2">
+                            <ListChecks className="w-6 h-6 text-primary" />
+                            Review Your Progress
+                        </DialogTitle>
+                        <DialogDescription>
+                            Review your answers before final submission. Total time spent: {formatTime(((examDetails?.duration || 0) * 60) - timeLeft)}
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <div className="flex-1 overflow-y-auto py-4" id="exam-summary-content">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            {questions.map((q, idx) => {
+                                const hasAnswered = q.type === "mcq"
+                                    ? selectedAnswers[idx] !== -1
+                                    : codeAnswers[idx] !== q.starterCode && codeAnswers[idx].trim().length > 0;
+                                const isRun = q.type === "coding" && questionResults[idx] && questionResults[idx].length > 0;
+
+                                return (
+                                    <div
+                                        key={idx}
+                                        onClick={() => {
+                                            setCurrentQuestion(idx);
+                                            setShowReviewPopup(false);
+                                        }}
+                                        className={`p-3 rounded-lg border-2 cursor-pointer transition-all hover:bg-muted/50 ${currentQuestion === idx ? "border-primary bg-primary/5" : "border-border"
+                                            }`}
+                                    >
+                                        <div className="flex items-center justify-between">
+                                            <div className="flex items-center gap-2">
+                                                <span className="text-sm font-bold w-6 h-6 bg-muted rounded flex items-center justify-center">
+                                                    {idx + 1}
+                                                </span>
+                                                <span className="text-xs font-medium truncate max-w-[120px]">
+                                                    {q.type === "mcq" ? "MCQ Knowledge" : (q as CodingQuestion).questionTitle}
+                                                </span>
+                                            </div>
+                                            <div className="flex items-center gap-2">
+                                                <div className="text-[10px] text-muted-foreground mr-1">
+                                                    {formatTime(timeSpent[idx] || 0)}
+                                                </div>
+                                                {hasAnswered ? (
+                                                    <Badge variant="outline" className="bg-green-500/10 text-green-600 border-green-500/20 text-[10px] py-0 h-4">
+                                                        Attempted
+                                                    </Badge>
+                                                ) : (
+                                                    <Badge variant="outline" className="bg-amber-500/10 text-amber-600 border-amber-500/20 text-[10px] py-0 h-4">
+                                                        Empty
+                                                    </Badge>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </div>
+
+                    <DialogFooter className="flex-row gap-3 mt-4">
+                        <Button
+                            variant="outline"
+                            onClick={() => setShowReviewPopup(false)}
+                            className="flex-1"
+                        >
+                            Back to Exam
+                        </Button>
+                        <Button
+                            onClick={() => handleSubmit(true)}
+                            className="flex-1 bg-gradient-to-r from-primary to-primary/80"
+                        >
+                            Confirm Submit
                         </Button>
                     </DialogFooter>
                 </DialogContent>

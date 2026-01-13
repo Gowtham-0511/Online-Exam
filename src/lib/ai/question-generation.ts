@@ -5,6 +5,7 @@ export interface MCQQuestion {
   options: string[];
   correctAnswer: number;
   explanation: string;
+  hints?: string[];
 }
 
 export interface CodingQuestion {
@@ -22,6 +23,7 @@ export interface CodingQuestion {
   questionTitle?: string;
   description: string;
   questionDescription?: string;
+  hints?: string[];
   starterCode: string;
   testCases: Array<{
     input: string;
@@ -138,6 +140,7 @@ REQUIREMENTS:
 4. Include 3-5 test cases (at least 2 visible, 1-3 hidden)
 5. Provide working solution code
 6. Include explanation of the approach
+7. **Data Schema**: If the problem involves specific data structures or schemas, the "description" **MUST** include a beautifully styled HTML \`<table>\` showing the keys/columns and types.
 
 TEST CASE FORMAT RULES:
 - Single integer: "5" (not "[5]")
@@ -180,7 +183,7 @@ Return a JSON object with a "questions" array where EVERY question has type "cod
       "difficulty": "${difficulty}",
       "weakArea": "Weak Area related to the Question",
       "questionTitle": "Title Related to the Question",
-      "questionDescription": "Description Related to the Question",
+      "questionDescription": "detailed Description Related to the Question with all the requirements mentioned",
       "hints": ["Hint 1", "Hint 2"],
       "solutionExplanation": "Detailed step-by-step logic",
       "basedOnExam": "Practice Exam",
@@ -202,13 +205,32 @@ Return a JSON object with a "questions" array where EVERY question has type "cod
 
 REQUIREMENTS:
 1. **Scope**: Cover all relevant SQL topics for the chosen difficulty.
-2. **Detail**: Make the "question" and "description" as detailed as possible. Explain the business context. **IMPORTANT**: The "description" MUST include a clear table structure (e.g., an HTML table or formatted list) showing the columns and data types for the tables used in the problem.
-3. **Ordering**: If a specific output order is expected (essential for test case matching), explicitly state it in the question (e.g., "Sort the results by date in descending order").
-4. **Variety**: If multiple questions are requested, ensure they cover different aspects of ${topic} within the Northwind context.
-5. **Schema**: Use ONLY the Northwind schema provided.
-6. **Test Cases**: 2-4 test cases. EVERY test case input MUST start with "DROP TABLE IF EXISTS table_name;" for all tables involved.
-7. **Recursive Queries (Postgres)**: If generating a RECURSIVE query, **CRITICAL**: Ensure the non-recursive term and the recursive term have the EXACT same data types. Use explicit casting (e.g., \`CAST(x AS DATE)\` or \`::DATE\`) if necessary to prevent errors like "non-recursive term has type date but recursive term has type timestamp".
-8. **Test Case Precision**: DOUBLE-CHECK for typos. Ensure every column name in the \`CREATE TABLE\` and \`INSERT INTO\` statements perfectly matches the Northwind schema. The \`expectedOutput\` must be a high-precision JSON representation of the result of the \`solution\` query when run against the \`input\` SQL. Verify that date strings (e.g., '1997-01-01') and numeric precision are consistent throughout.
+2. **Detail**: Make the "question" and "description" as detailed as possible. Explain the business context.
+3. **Table Schema**: The "description" **MUST** include a beautifully styled HTML table showing the columns and data types for the relevant Northwind tables.
+   Example Format:
+   <div class="mb-4 overflow-hidden rounded-lg border border-zinc-800">
+     <h4 class="text-xs font-bold mb-2 px-3 py-1 bg-zinc-800/50 text-zinc-300 border-b border-zinc-800">Table: Categories</h4>
+     <table class="min-w-full border-collapse text-xs">
+       <thead>
+         <tr class="bg-zinc-900/80">
+           <th class="border-r border-b border-zinc-800 px-3 py-2 text-left text-zinc-100 font-semibold uppercase tracking-wider">Column</th>
+           <th class="border-b border-zinc-800 px-3 py-2 text-left text-zinc-100 font-semibold uppercase tracking-wider">Type</th>
+         </tr>
+       </thead>
+       <tbody>
+         <tr class="bg-zinc-900/30">
+           <td class="border-r border-zinc-800 px-3 py-2 font-mono text-zinc-300">CategoryID</td>
+           <td class="px-3 py-2 text-blue-400 font-medium italic">int</td>
+         </tr>
+       </tbody>
+     </table>
+   </div>
+4. **Ordering**: If a specific output order is expected (essential for test case matching), explicitly state it in the question (e.g., "Sort the results by date in descending order").
+5. **Variety**: If multiple questions are requested, ensure they cover different aspects of ${topic} within the Northwind context.
+6. **Schema**: Use ONLY the Northwind schema provided.
+7. **Test Cases**: 2-4 test cases. EVERY test case input MUST start with "DROP TABLE IF EXISTS table_name;" for all tables involved.
+8. **Recursive Queries (Postgres)**: If generating a RECURSIVE query, **CRITICAL**: Ensure the non-recursive term and the recursive term have the EXACT same data types. Use explicit casting (e.g., \`CAST(x AS DATE)\` or \`::DATE\`) if necessary to prevent errors like "non-recursive term has type date but recursive term has type timestamp".
+9. **Test Case Precision**: DOUBLE-CHECK for typos. Ensure every column name in the \`CREATE TABLE\` and \`INSERT INTO\` statements perfectly matches the Northwind schema. The \`expectedOutput\` must be a high-precision JSON representation of the result of the \`solution\` query when run against the \`input\` SQL. Verify that date strings (e.g., '1997-01-01') and numeric precision are consistent throughout.
 
 Difficulty Guidelines:
 - EASY: Focus on Basic SELECT, filtered results (WHERE), basic sorting (ORDER BY), and simple joins.
@@ -372,6 +394,7 @@ IMPORTANT RULES:
 3. Test cases should include sample data setup
 4. Expected output should match DataFrame.show() format
 5. Focus on real-world Databricks scenarios
+6. **Table Schema**: The "description" **MUST** include a beautifully styled HTML \`<table>\` showing the schema (columns/types) of the dataframes used.
 
 Generate ${count} questions now.`;
 }
@@ -442,6 +465,7 @@ IMPORTANT RULES:
 3. Description must include table context and sample data
 4. Expected output should be a single number or text value
 5. Focus on realistic business scenarios
+6. **Table Schema**: The "description" **MUST** include a beautifully styled HTML \`<table>\` showing the columns and data types for the relevant tables.
 
 Generate ${count} questions now.`;
 }
@@ -502,6 +526,7 @@ REQUIREMENTS:
 4. Include 3-5 test cases (at least 2 visible, 1-3 hidden)
 5. Provide working solution code
 6. Include explanation of the approach
+7. **Data Schema**: If the problem involves specific data structures or schemas, the "description" **MUST** include a beautifully styled HTML \`<table>\` showing the fields and types at the beginning of the description.
 
 TEST CASE FORMAT RULES:
 - Single integer: "5" (not "[5]")
@@ -574,6 +599,7 @@ IMPORTANT RULES:
 2. StarterCode should be a SQL file content with Jinja
 3. Focus on Analytics Engineering concepts
 4. Generate valid DBT SQL/Jinja code
+5. **Table Schema**: The "description" **MUST** include a beautifully styled HTML \`<table>\` showing the columns and data types for the relevant models.
 
 Generate ${count} questions now.`;
 }
@@ -638,6 +664,7 @@ IMPORTANT RULES:
 2. StarterCode should be a SQL file content with Snowflake-specific syntax
 3. Focus on Analytics Engineering concepts
 4. Generate valid Snowflake SQL code
+5. **Table Schema**: The "description" **MUST** include a beautifully styled HTML \`<table>\` showing the columns and data types for the relevant tables.
 
 Generate ${count} questions now.`;
 }
@@ -668,6 +695,7 @@ export function validateMCQQuestion(q: any, index: number): MCQQuestion {
     options: options.map((o: any) => String(o)),
     correctAnswer,
     explanation: String(q.explanation),
+    hints: Array.isArray(q.hints) ? q.hints.map((h: any) => String(h)) : [],
   };
 }
 
@@ -746,5 +774,6 @@ export function validateCodingQuestion(q: any, index: number): CodingQuestion {
     testCases,
     solution: String(q.solution || ""),
     explanation: String(q.explanation || ""),
+    hints: Array.isArray(q.hints) ? q.hints.map((h: any) => String(h)) : [],
   };
 }
