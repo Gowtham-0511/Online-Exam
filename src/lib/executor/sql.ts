@@ -118,16 +118,16 @@ export class DockerSqlExecutor {
           )}...`
         );
 
-        // Add row limit only to last SELECT query
+        // Add row limit only to last SELECT/WITH query
         const finalQuery =
-          isLast && query.toLowerCase().startsWith("select")
+          isLast && (query.toLowerCase().startsWith("select") || query.toLowerCase().startsWith("with"))
             ? this.addRowLimit(query, this.MAX_ROWS)
             : query;
 
         result = await pool.query(finalQuery);
 
-        // Only get results from the last SELECT query
-        if (isLast && query.toLowerCase().startsWith("select")) {
+        // Only get results from the last SELECT/WITH query
+        if (isLast && (query.toLowerCase().startsWith("select") || query.toLowerCase().startsWith("with"))) {
           columns = result.fields.map((field: { name: any }) => field.name);
           rows = result.rows;
         }
@@ -231,9 +231,9 @@ export class DockerSqlExecutor {
     }
 
     // Add appropriate limit based on query type
-    if (normalizedQuery.startsWith("select")) {
-      // PostgreSQL style
-      if (query.includes("pg_") || !normalizedQuery.includes("top")) {
+    if (normalizedQuery.startsWith("select") || normalizedQuery.startsWith("with")) {
+      // PostgreSQL style (also used as default for WITH)
+      if (query.includes("pg_") || !normalizedQuery.includes("top") || normalizedQuery.startsWith("with")) {
         return `${query.trim()} LIMIT ${limit}`;
       }
       // SQL Server style - inject TOP
@@ -280,26 +280,32 @@ export class DockerSqlExecutor {
         }
       }
 
-      // Last statement must be SELECT
-      if (isLastStatement && !statement.startsWith("select")) {
+      // Last statement must be SELECT or WITH
+      if (isLastStatement && !(statement.startsWith("select") || statement.startsWith("with"))) {
         return {
           valid: false,
           error: "Main query must be a SELECT statement",
         };
       }
 
-      // Non-last statements can be DROP (with IF EXISTS), CREATE or INSERT
+      // Non-last statements can be DROP, CREATE, INSERT, SELECT, WITH or SET
       if (!isLastStatement) {
-        const allowedSetup =
-          statement.startsWith("create") ||
-          statement.startsWith("insert") ||
-          statement.startsWith("drop table if exists");
+        const allowedPrefixes = [
+          "create",
+          "insert",
+          "drop",
+          "select",
+          "with",
+          "set"
+        ];
 
-        if (!allowedSetup) {
+        const hasAllowedPrefix = allowedPrefixes.some(prefix => statement.startsWith(prefix));
+
+        if (!hasAllowedPrefix) {
           return {
             valid: false,
             error:
-              "Setup statements must be DROP TABLE IF EXISTS, CREATE or INSERT only",
+              "Setup statements must be SELECT, INSERT, CREATE, DROP, WITH or SET only",
           };
         }
       }

@@ -88,10 +88,9 @@ export function generatePythonCodingPrompt(
   difficulty: string,
   count: number
 ): string {
-  return `Generate ${count} Python coding problems about "${topic}" at ${difficulty} difficulty level.
+  return `Generate ${count} Python scenario-based coding problems about "${topic}" at ${difficulty} difficulty level.
 
-CRITICAL: Generate ONLY Python coding problems, NOT multiple choice questions!
-
+CRITICAL: Generate ONLY scenario-based coding problems. Each question should be grounded in a real-world use case or business scenario (e.g., data processing for an e-commerce platform, automation for a log system, algorithm for a fintech app). Do NOT generate abstract math-only problems.
 Return a JSON object with a "questions" array where EVERY question has type "coding" and language "python":
 {
   "questions": [
@@ -164,10 +163,10 @@ export function generateSQLCodingPrompt(
   count: number,
   schema: string
 ): string {
-  return `Generate ${count} SQL query problems about "${topic}" at ${difficulty} difficulty level.
+  return `Generate ${count} highly detailed SCENARIO-BASED SQL query problems about "${topic}" at ${difficulty} difficulty level.
     ${schema}
 
-USE THE ABOVE REAL DATABASE SCHEMA to generate realistic SQL problems. Reference actual tables and columns from the schema.
+USE THE NORTHWIND DATABASE SCHEMA PROVIDED ABOVE to generate realistic SQL problems. Each problem MUST be a real-world business use case (e.g., "Analyze quarterly revenue growth by region", "Identify top-performing employees by order volume"). Reference actual tables and columns from the Northwind schema.
 
 CRITICAL: Generate ONLY SQL coding problems, NOT multiple choice questions!
 
@@ -176,55 +175,48 @@ Return a JSON object with a "questions" array where EVERY question has type "cod
   "questions": [
     {
       "type": "coding",
-      "language": "Language related to ${topic}",
-      "question": "Question",
+      "language": "sql",
       "topic": "${topic}",
       "difficulty": "${difficulty}",
       "weakArea": "Weak Area related to the Question",
       "questionTitle": "Title Related to the Question",
       "questionDescription": "Description Related to the Question",
-      "hints": ["Hint related to the Question"],
-      "solutionExplanation": "Solution Explanation related to the Question",
-      "basedOnExam": "Based on Exam",
-      "description": "Description related to the Question",
-      "starterCode": "starter code for the question always starts with SELECT",
+      "hints": ["Hint 1", "Hint 2"],
+      "solutionExplanation": "Detailed step-by-step logic",
+      "basedOnExam": "Practice Exam",
+      "question": "Detailed prompt: What exactly needs to be retrieved? Mention if sorting, grouping, or specific conditions are required.",
+      "description": "Comprehensive HTML-formatted description including table structure and examples.",
+      "starterCode": "SELECT ",
       "testCases": [
         {
-          "input": "DROP TABLE IF EXISTS users; CREATE TABLE users (id INT, name VARCHAR(50), status VARCHAR(20)); INSERT INTO users VALUES (1, 'Alice', 'active'), (2, 'Bob', 'inactive'), (3, 'Carol', 'active');",
-          "expectedOutput": "[{\\"id\\":1,\\"name\\":\\"Alice\\",\\"status\\":\\"active\\"},{\\"id\\":3,\\"name\\":\\"Carol\\",\\"status\\":\\"active\\"}]",
-          "isHidden": false
-        },
-        {
-          "input": "DROP TABLE IF EXISTS users; CREATE TABLE users (id INT, name VARCHAR(50), status VARCHAR(20)); INSERT INTO users VALUES (1, 'Dave', 'active'), (2, 'Eve', 'active');",
-          "expectedOutput": "[{\\"id\\":1,\\"name\\":\\"Dave\\",\\"status\\":\\"active\\"},{\\"id\\":2,\\"name\\":\\"Eve\\",\\"status\\":\\"active\\"}]",
+          "input": "DROP TABLE IF EXISTS ...; CREATE TABLE ...; INSERT INTO ...;",
+          "expectedOutput": "[{\\"col1\\":\\"val\\"}, ...]",
           "isHidden": false
         }
       ],
-      "solution": "Solution related to the Question",
-      "explanation": "Explanation related to the Question"
+      "solution": "CORRECT SQL QUERY",
+      "explanation": "Why this query works"
     }
   ]
 }
 
 REQUIREMENTS:
-1. EVERY question MUST have "type": "coding" and "language": "sql"
-2. Include table schemas in the description
-3. Provide starter SQL query
-4. Include 2-4 test cases with CREATE/INSERT statements
-5. **CRITICAL: EVERY test case input MUST start with "DROP TABLE IF EXISTS table_name;" before CREATE TABLE**
-6. Provide working solution query
-7. Include explanation
+1. **Scope**: Cover all relevant SQL topics for the chosen difficulty.
+2. **Detail**: Make the "question" and "description" as detailed as possible. Explain the business context.
+3. **Ordering**: If a specific output order is expected (essential for test case matching), explicitly state it in the question (e.g., "Sort the results by date in descending order").
+4. **Variety**: If multiple questions are requested, ensure they cover different aspects of ${topic} within the Northwind context.
+5. **Schema**: Use ONLY the Northwind schema provided.
+6. **Test Cases**: 2-4 test cases. EVERY test case input MUST start with "DROP TABLE IF EXISTS table_name;" for all tables involved.
+7. **Recursive Queries (Postgres)**: If generating a RECURSIVE query, **CRITICAL**: Ensure the non-recursive term and the recursive term have the EXACT same data types. Use explicit casting (e.g., \`CAST(x AS DATE)\` or \`::DATE\`) if necessary to prevent errors like "non-recursive term has type date but recursive term has type timestamp".
 
-Difficulty: ${difficulty === "easy"
-      ? "Basic SELECT, WHERE, ORDER BY"
-      : difficulty === "medium"
-        ? "JOINs, GROUP BY, subqueries"
-        : "Complex queries, window functions, CTEs"
-    }
+Difficulty Guidelines:
+- EASY: Focus on Basic SELECT, filtered results (WHERE), basic sorting (ORDER BY), and simple joins.
+- MEDIUM: Focus on Multiple JOINs, Aggregations (GROUP BY, HAVING), Subqueries, and Case statements.
+- HARD: Focus on Advanced Window Functions (RANK, ROW_NUMBER, LEAD/LAG), Common Table Expressions (CTEs), Recursive queries, and Complex Data analysis.
+
 Topic: ${topic}
 
-Generate ${count} SQL CODING problems now. DO NOT generate MCQ questions.
-**IMPORTANT: All test case inputs must begin with DROP TABLE IF EXISTS statements for all tables being created.**`;
+Generate ${count} comprehensive SCENARIO-BASED SQL CODING problems using the Northwind schema now. DO NOT generate MCQ questions.`;
 }
 
 // Generate javascript coding prompt
@@ -233,10 +225,9 @@ export function generateJavascriptCodingPrompt(
   difficulty: string,
   count: number
 ): string {
-  return `Generate ${count} JavaScript coding problems about "${topic}" at ${difficulty} difficulty level.
+  return `Generate ${count} scenario-based JavaScript coding problems about "${topic}" at ${difficulty} difficulty level.
 
-CRITICAL: Generate ONLY JavaScript coding problems, NOT multiple choice questions!
-
+CRITICAL: Each question MUST be a real-world programming scenario (e.g., "Implement a shopping cart validator", "Create an analytics event parser", "Build a component state manager"). Avoid abstract algorithmic puzzles without context.
 Return a JSON object with a "questions" array where EVERY question has type "coding" and language "javascript":
 {
   "questions": [
@@ -329,9 +320,10 @@ export function generatePySparkPrompt(
   difficulty: string,
   count: number
 ): string {
-  return `Generate ${count} PySpark/Databricks coding questions about ${topic} at ${difficulty} level.
+  return `Generate ${count} SCENARIO-BASED PySpark/Databricks coding questions about ${topic} at ${difficulty} level.
 
 CRITICAL REQUIREMENTS:
+- Each question MUST be a real-world data engineering scenario (e.g., "Processing daily clickstream data", "Aggregating monthly sales by region", "Cleaning IoT sensor logs").
 - Focus on DataFrame operations, transformations, aggregations, joins, and Spark SQL
 - Include realistic data scenarios
 - Questions should test PySpark understanding, not just Python
@@ -388,9 +380,10 @@ export function generateDaxPrompt(
   difficulty: string,
   count: number
 ): string {
-  return `Generate ${count} Power BI DAX expression questions about ${topic} at ${difficulty} level.
+  return `Generate ${count} SCENARIO-BASED Power BI DAX expression questions about ${topic} at ${difficulty} level.
 
 CRITICAL REQUIREMENTS:
+- Each question MUST be a business case scenario (e.g., "Calculating Year-over-Year revenue growth", "Calculating average customer lifetime value").
 - Focus on DAX formulas and calculations
 - Include realistic business scenarios
 - Test understanding of measures vs calculated columns
@@ -457,8 +450,9 @@ export function generateJavaCodingPrompt(
   difficulty: string,
   count: number
 ): string {
-  return `Generate ${count} Java coding problems about "${topic}" at ${difficulty} difficulty level.
+  return `Generate ${count} SCENARIO-BASED Java coding problems about "${topic}" at ${difficulty} difficulty level.
 
+CRITICAL: Each question MUST be grounded in a real-world software engineering scenario (e.g., "Building a library management system backend", "Implementing a thread-safe cache", "Parsing a financial transaction payload").
 CRITICAL: Generate ONLY Java coding problems, NOT multiple choice questions!
 
 Return a JSON object with a "questions" array where EVERY question has type "coding" and language "java":
@@ -529,9 +523,10 @@ export function generateDbtPrompt(
   difficulty: string,
   count: number
 ): string {
-  return `Generate ${count} DBT (Data Build Tool) coding questions about ${topic} at ${difficulty} level.
+  return `Generate ${count} SCENARIO-BASED DBT (Data Build Tool) coding questions about ${topic} at ${difficulty} level.
 
 CRITICAL REQUIREMENTS:
+- Each question MUST be a realistic analytics engineering scenario (e.g., "Building a dimensional model for customer analytics", "Implementing incremental logic for high-volume logs").
 - Focus on DBT models (SQL), Jinja templating, macros, and tests
 - Include realistic data scenarios
 - Test understanding of ref(), source(), config(), and other Jinja functions
@@ -587,9 +582,10 @@ export function generateSnowflakePrompt(
   difficulty: string,
   count: number
 ): string {
-  return `Generate ${count} Snowflake coding questions about ${topic} at ${difficulty} level.
+  return `Generate ${count} SCENARIO-BASED Snowflake coding questions about ${topic} at ${difficulty} level.
 
 CRITICAL REQUIREMENTS:
+- Each question MUST be a real-world cloud data warehousing scenario (e.g., "Implementing row-level security for HR data", "Optimizing data ingestion from S3 using Snowpipe").
 - Focus on Snowflake SQL, stored procedures, functions, and UDFs
 - Include realistic data scenarios
 - Test understanding of DDL, DML, and DCL

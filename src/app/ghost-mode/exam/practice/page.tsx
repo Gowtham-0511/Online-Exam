@@ -166,6 +166,9 @@ export default function PracticeExam() {
     const [questionResults, setQuestionResults] = useState<{ [key: number]: TestResult[] }>({});
     const [activeTab, setActiveTab] = useState<"problem" | "submission">("problem");
     const [showSolution, setShowSolution] = useState(false);
+    const [isAnalyzing, setIsAnalyzing] = useState(false);
+    const [aiAnalysis, setAiAnalysis] = useState<any>(null);
+    const [executionMode, setExecutionMode] = useState<"docker" | "ai">("docker");
 
     const [showExitWarning, setShowExitWarning] = useState(false);
 
@@ -353,65 +356,72 @@ export default function PracticeExam() {
             for (const testCase of visibleTests) {
                 try {
                     const language = question.language.toLowerCase();
-                    let endpoint = "/api/execute/";
+                    let endpoint = executionMode === "ai" ? "/api/execute/ai" : "/api/execute/";
 
-                    if (language === "python" || language === "python3") {
-                        endpoint += "python";
-                    } else if (language === "javascript" || language === "js" || language === "node") {
-                        endpoint += "javascript";
-                    } else if (language === "java") {
-                        endpoint += "java";
-                    } else if (language === "pyspark" || language === "spark" || language === "databricks") {
-                        endpoint += "pyspark";
-                    } else if (language === "dax" || language === "powerbi") {
-                        endpoint += "dax";
-                    } else if (language === "c++" || language === "cpp") {
-                        endpoint += "cpp";
-                    } else if (language === "sql" || language === "mysql" || language === "postgresql") {
-                        endpoint += "sql";
-                    } else if (language === "dbt") {
-                        endpoint += "dbt";
-                    } else if (language === "snowflake") {
-                        endpoint += "snowflake";
-                    } else {
-                        throw new Error(`Unsupported language: ${question.language}`);
+                    if (executionMode !== "ai") {
+                        if (language === "python" || language === "python3") {
+                            endpoint += "python";
+                        } else if (language === "javascript" || language === "js" || language === "node") {
+                            endpoint += "javascript";
+                        } else if (language === "java") {
+                            endpoint += "java";
+                        } else if (language === "pyspark" || language === "spark" || language === "databricks") {
+                            endpoint += "pyspark";
+                        } else if (language === "dax" || language === "powerbi") {
+                            endpoint += "dax";
+                        } else if (language === "c++" || language === "cpp") {
+                            endpoint += "cpp";
+                        } else if (language === "sql" || language === "mysql" || language === "postgresql") {
+                            endpoint += "sql";
+                        } else if (language === "dbt") {
+                            endpoint += "dbt";
+                        } else if (language === "snowflake") {
+                            endpoint += "snowflake";
+                        } else {
+                            throw new Error(`Unsupported language: ${question.language}`);
+                        }
                     }
 
-                    console.log(code);
-
-                    const requestBody = language === "sql" || language === "mysql" || language === "postgresql"
+                    const requestBody = executionMode === "ai"
                         ? {
-                            query: prepareSqlQuery(testCase.input, code),
-                            testCase: testCase,
-                            serverType: 'postgres',
-                            credentials: {
-                                host: '20.83.224.62',
-                                port: 5432,
-                                username: 'sysrankuser',
-                                password: 'RankPass!123',
-                                database: 'practice_db'
-                            }
+                            code: language === "sql" ? prepareSqlQuery(testCase.input, code) : code,
+                            language: language,
+                            question: question.questionDescription || question.description,
+                            testCase: testCase
                         }
-                        : (language === "dax" || language === "powerbi")
+                        : (language === "sql" || language === "mysql" || language === "postgresql")
                             ? {
-                                expression: code,
-                                testCase: {
-                                    input: testCase.input,
-                                    expectedOutput: testCase.expectedOutput
-                                }
-                            } : (language === "snowflake") ? {
                                 query: prepareSqlQuery(testCase.input, code),
-                                testCase: {
-                                    input: testCase.input,
-                                    expectedOutput: testCase.expectedOutput
+                                testCase: testCase,
+                                serverType: 'postgres',
+                                credentials: {
+                                    host: '20.83.224.62',
+                                    port: 5432,
+                                    username: 'sysrankuser',
+                                    password: 'RankPass!123',
+                                    database: 'practice_db'
                                 }
-                            } : {
-                                code,
-                                testCase: {
-                                    input: testCase.input,
-                                    expectedOutput: testCase.expectedOutput
-                                }
-                            };
+                            }
+                            : (language === "dax" || language === "powerbi")
+                                ? {
+                                    expression: code,
+                                    testCase: {
+                                        input: testCase.input,
+                                        expectedOutput: testCase.expectedOutput
+                                    }
+                                } : (language === "snowflake") ? {
+                                    query: prepareSqlQuery(testCase.input, code),
+                                    testCase: {
+                                        input: testCase.input,
+                                        expectedOutput: testCase.expectedOutput
+                                    }
+                                } : {
+                                    code,
+                                    testCase: {
+                                        input: testCase.input,
+                                        expectedOutput: testCase.expectedOutput
+                                    }
+                                };
 
                     const response = await fetch(endpoint, {
                         method: "POST",
@@ -561,6 +571,49 @@ export default function PracticeExam() {
     };
 
     const downloadPDF = async () => {
+        setIsAnalyzing(true);
+        let analysis = aiAnalysis;
+
+        try {
+            if (!analysis) {
+                const questionDetails = questions.map((q, index) => {
+                    const isCorrect = getQuestionResult(index);
+                    let userAnswer = "";
+                    let testResultsData = null;
+
+                    if (q.type === "mcq") {
+                        userAnswer = selectedAnswers[index] !== -1 ? q.options[selectedAnswers[index]] : "Not Answered";
+                    } else {
+                        userAnswer = codeAnswers[index] || "No Code Submitted";
+                        testResultsData = questionResults[index];
+                    }
+
+                    return {
+                        questionText: q.type === "mcq" ? q.question : q.questionTitle,
+                        questionType: q.type,
+                        userAnswer,
+                        isCorrect,
+                        testCaseResults: testResultsData
+                    };
+                });
+
+                const response = await fetch("/api/ghost-mode/exam/analyze", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ questionDetails })
+                });
+
+                if (response.ok) {
+                    analysis = await response.json();
+                    setAiAnalysis(analysis);
+                }
+            }
+        } catch (error) {
+            console.error("Error getting AI analysis:", error);
+        } finally {
+            setIsAnalyzing(false);
+        }
+
         const doc = new jsPDF();
         const score = calculateScore();
         const scorePercentage = (score.correct / score.total) * 100;
@@ -611,98 +664,72 @@ export default function PracticeExam() {
 
             doc.setFontSize(9);
             doc.text(`Generated: ${new Date().toLocaleDateString('en-US', {
-                month: 'short',
-                day: 'numeric',
-                year: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit'
-            })}`, pageWidth - 15, 15, { align: 'right' } as any);
-
-            doc.setTextColor(50, 50, 50);
+                month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit'
+            })}`, pageWidth - 15, 15, { align: 'right' });
         };
 
-        const addFooter = (pageNum: number, totalPages: number) => {
-            doc.setDrawColor(63, 169, 160);
-            doc.setLineWidth(0.5);
-            doc.line(15, pageHeight - 15, pageWidth - 15, pageHeight - 15);
+        const addFooter = (page: number, total: number) => {
+            doc.setPage(page);
+            doc.setFillColor(245, 245, 245);
+            doc.rect(0, pageHeight - 15, pageWidth, 15, 'F');
 
             doc.setFontSize(8);
-            doc.setTextColor(128, 128, 128);
-            doc.setFont('helvetica', 'normal');
-
-            doc.text('Confidential - For Review Only', 15, pageHeight - 10);
-            doc.text(
-                `Page ${pageNum} of ${totalPages}`,
-                pageWidth / 2,
-                pageHeight - 10,
-                { align: 'center' } as any
-            );
-            doc.text('www.systechusa.com', pageWidth - 15, pageHeight - 10, { align: 'right' } as any);
+            doc.setTextColor(100, 100, 100);
+            doc.text(`Generated on ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}`, 15, pageHeight - 7);
+            doc.text(`Page ${page} of ${total}`, pageWidth - 15, pageHeight - 7, { align: 'right' });
+            doc.text("Report generated by SysRank AI - Practice Platform", pageWidth / 2, pageHeight - 7, { align: 'center' });
         };
 
-        addWatermark();
+        // --- Start Content ---
         addHeader();
+        addWatermark();
 
         let yPos = 45;
 
-        doc.setFontSize(20);
-        doc.setFont('helvetica', 'bold');
-        doc.setTextColor(44, 68, 86);
-        doc.text('Practice Exam Report', 15, yPos);
-
-        yPos += 12;
-
-        const cardData = [
-            { label: 'Topic', value: examDetails?.topic || 'N/A' },
-            { label: 'Difficulty', value: examDetails?.difficulty || 'N/A' },
-            { label: 'Duration', value: `${examDetails?.duration || 'N/A'} minutes` },
-        ];
-
-        cardData.forEach((card, index) => {
-            const xPos = 15 + (index % 2) * 95;
-            const cardY = yPos + Math.floor(index / 2) * 20;
-
-            doc.setFillColor(245, 245, 245);
-            doc.roundedRect(xPos, cardY, 90, 16, 2, 2, 'F');
-
-            doc.setFontSize(9);
-            doc.setFont('helvetica', 'normal');
-            doc.setTextColor(100, 100, 100);
-            doc.text(card.label, xPos + 3, cardY + 6);
-
-            doc.setFontSize(11);
-            doc.setFont('helvetica', 'bold');
-            doc.setTextColor(50, 50, 50);
-            doc.text(card.value, xPos + 3, cardY + 12);
-        });
-
-        yPos += 50;
-
+        // Executive Summary
         doc.setFontSize(16);
-        doc.setFont('helvetica', 'bold');
-        doc.setTextColor(63, 169, 160);
-        doc.text('Questions Review', 15, yPos);
+        doc.setTextColor(50, 50, 50);
+        doc.setFont("helvetica", "bold");
+        doc.text("Executive Summary", 15, yPos);
+        yPos += 10;
 
-        yPos += 8;
+        doc.setFontSize(10);
+        doc.setFont("helvetica", "normal");
+        doc.text(`Total Questions: ${score.total}`, 15, yPos);
+        doc.text(`Correct Answers: ${score.correct}`, 60, yPos);
+        doc.text(`Score: ${scorePercentage.toFixed(1)}%`, 110, yPos);
+        yPos += 15;
 
         const cleanContent = (text: string) => {
             if (!text) return "";
-            // Replace common HTML entities and strip tags
-            return text
-                .replace(/<br\s*\/?>/gi, '\n')
-                .replace(/<\/p>/gi, '\n')
-                .replace(/<[^>]*>?/gm, '')
+
+            // Handle HTML entities and cleanup
+            let decoded = text
                 .replace(/&nbsp;/g, ' ')
                 .replace(/&amp;/g, '&')
                 .replace(/&lt;/g, '<')
                 .replace(/&gt;/g, '>')
                 .replace(/&quot;/g, '"')
+                .replace(/&#39;/g, "'")
+                .replace(/&bull;/g, '•')
+                .replace(/&middot;/g, '·');
+
+            // Handle those weird &c&h&a&r& or &s&u&c&c&e&s&s& patterns
+            if (decoded.includes('&') && decoded.split('&').length > decoded.length / 2) {
+                decoded = decoded.replace(/&/g, '');
+            }
+
+            return decoded
+                .replace(/<br\s*\/?>/gi, '\n')
+                .replace(/<\/p>/gi, '\n')
+                .replace(/<[^>]*>?/gm, '')
                 .trim();
         };
 
         const tableData = questions.map((q, index) => {
             const isCorrect = getQuestionResult(index);
             const hasRun = hasQuestionBeenRun(index);
+            const feedback = analysis?.questionFeedback?.[index] || "No additional feedback available.";
 
             if (q.type === "mcq") {
                 const userAnswer = selectedAnswers[index] !== -1 ? q.options[selectedAnswers[index]] : "Not Answered";
@@ -713,52 +740,60 @@ export default function PracticeExam() {
                     cleanContent(q.question),
                     hasRun ? (isCorrect ? "PASS" : "FAIL") : "NOT ANSWERED",
                     userAnswer,
-                    correctAnswer
+                    correctAnswer,
+                    feedback
                 ];
             } else {
                 const results = questionResults[index];
-                let statusText = "Not Run";
+                let statusHeader = "Not Run";
+                let testCaseList = "";
 
                 if (results && results.length > 0) {
                     const passedCount = results.filter(r => r.passed).length;
                     const totalCount = results.length;
 
                     if (passedCount === totalCount) {
-                        statusText = `All Tests Passed (${totalCount}/${totalCount})`;
+                        statusHeader = `All Passed (${passedCount}/${totalCount})`;
                     } else if (passedCount > 0) {
-                        statusText = `Partial (${passedCount}/${totalCount} Tests)`;
+                        statusHeader = `Partial (${passedCount}/${totalCount})`;
                     } else {
-                        statusText = `Failed (${passedCount}/${totalCount} Tests)`;
+                        statusHeader = `Failed (${passedCount}/${totalCount})`;
                     }
+
+                    testCaseList = results.map((r, i) =>
+                        `Test ${i + 1} ${r.passed ? "PASSED" : "FAILED"}`
+                    ).join("\n");
                 }
 
                 const questionText = `${q.questionTitle}\n\n${cleanContent(q.questionDescription || q.description || "")}`;
                 const userCode = codeAnswers[index] || "No Code Submitted";
+                const resultSummary = results && results.length > 0 ? `${statusHeader}\n\n${testCaseList}` : "Not Run";
 
                 return [
                     `Q${index + 1}`,
                     questionText,
                     hasRun ? (isCorrect ? "PASS" : "FAIL") : "NOT ANSWERED",
                     userCode,
-                    statusText
+                    resultSummary,
+                    feedback
                 ];
             }
         });
 
         autoTable(doc, {
             startY: yPos,
-            head: [["#", "Question", "Result", "Your Answer", "Correct Answer"]],
+            head: [["#", "Question", "Result", "Your Answer", "Correct Answer", "AI Feedback"]],
             body: tableData,
             theme: "grid",
             headStyles: {
                 fillColor: [63, 169, 160],
                 textColor: [255, 255, 255],
                 fontStyle: "bold",
-                fontSize: 10,
+                fontSize: 9,
                 halign: 'center'
             },
             bodyStyles: {
-                fontSize: 8,
+                fontSize: 7.5,
                 textColor: [50, 50, 50],
                 overflow: 'linebreak'
             },
@@ -766,19 +801,20 @@ export default function PracticeExam() {
                 fillColor: [245, 245, 245]
             },
             columnStyles: {
-                0: { halign: 'center', cellWidth: 10 },
-                1: { halign: 'left', cellWidth: 60 },
-                2: { halign: 'center', cellWidth: 25, fontStyle: 'bold' },
-                3: { halign: 'left', cellWidth: 55, font: 'courier' },
-                4: { halign: 'left', cellWidth: 40 }
+                0: { halign: 'center', cellWidth: 8 },
+                1: { halign: 'left', cellWidth: 35 },
+                2: { halign: 'center', cellWidth: 20, fontStyle: 'bold' },
+                3: { halign: 'left', cellWidth: 40, font: 'courier' },
+                4: { halign: 'left', cellWidth: 40 },
+                5: { halign: 'left', cellWidth: 35 }
             },
-            margin: { left: 15, right: 15 },
+            margin: { left: 15, right: 15, top: 40, bottom: 20 },
             didParseCell: (data: any) => {
                 if (data.column.index === 2 && data.section === 'body') {
                     const result = data.cell.text[0];
                     if (result === 'PASS') {
                         data.cell.styles.textColor = [34, 197, 94];
-                    } else if (result === 'FAIL') {
+                    } else if (result.includes('FAIL')) {
                         data.cell.styles.textColor = [239, 68, 68];
                     } else {
                         data.cell.styles.textColor = [156, 163, 175];
@@ -786,6 +822,69 @@ export default function PracticeExam() {
                 }
             }
         });
+
+        // Add Insights Sections at the end
+        if (analysis) {
+            doc.addPage();
+            addHeader();
+            addWatermark();
+
+            let analyzeY = 50;
+
+            // Strengths
+            doc.setFillColor(240, 253, 244); // Light green
+            doc.rect(15, analyzeY, pageWidth - 30, 8, 'F');
+            doc.setFontSize(12);
+            doc.setTextColor(21, 128, 61);
+            doc.setFont("helvetica", "bold");
+            doc.text("Key Strengths", 20, analyzeY + 6);
+            analyzeY += 12;
+
+            doc.setFontSize(10);
+            doc.setTextColor(50, 50, 50);
+            doc.setFont("helvetica", "normal");
+            analysis.strengths.forEach((s: string) => {
+                const lines = doc.splitTextToSize(`• ${s}`, pageWidth - 40);
+                doc.text(lines, 20, analyzeY);
+                analyzeY += (lines.length * 5) + 2;
+            });
+
+            analyzeY += 10;
+
+            // Weaknesses
+            doc.setFillColor(254, 242, 242); // Light red
+            doc.rect(15, analyzeY, pageWidth - 30, 8, 'F');
+            doc.setTextColor(185, 28, 28);
+            doc.setFont("helvetica", "bold");
+            doc.text("Areas of Weakness", 20, analyzeY + 6);
+            analyzeY += 12;
+
+            doc.setTextColor(50, 50, 50);
+            doc.setFont("helvetica", "normal");
+            analysis.weaknesses.forEach((w: string) => {
+                const lines = doc.splitTextToSize(`• ${w}`, pageWidth - 40);
+                doc.text(lines, 20, analyzeY);
+                analyzeY += (lines.length * 5) + 2;
+            });
+
+            analyzeY += 10;
+
+            // Recommendations
+            doc.setFillColor(239, 246, 255); // Light blue
+            doc.rect(15, analyzeY, pageWidth - 30, 8, 'F');
+            doc.setTextColor(29, 78, 216);
+            doc.setFont("helvetica", "bold");
+            doc.text("Roadmap for Improvement", 20, analyzeY + 6);
+            analyzeY += 12;
+
+            doc.setTextColor(50, 50, 50);
+            doc.setFont("helvetica", "normal");
+            analysis.improvements.forEach((imp: string) => {
+                const lines = doc.splitTextToSize(`• ${imp}`, pageWidth - 40);
+                doc.text(lines, 20, analyzeY);
+                analyzeY += (lines.length * 5) + 2;
+            });
+        }
 
         const pageCount = (doc as any).internal.pages.length - 1;
         for (let i = 1; i <= pageCount; i++) {
@@ -981,10 +1080,20 @@ export default function PracticeExam() {
                                 <Button
                                     variant="outline"
                                     onClick={downloadPDF}
-                                    className="min-w-[180px] h-11 hover:bg-primary/5 hover:border-primary/40 transition-all"
+                                    disabled={isAnalyzing}
+                                    className="w-full bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 shadow-lg shadow-primary/20 transition-all flex items-center justify-center gap-2 group h-12"
                                 >
-                                    <Download className="w-4 h-4 mr-2" />
-                                    Download Report
+                                    {isAnalyzing ? (
+                                        <>
+                                            <Loader2 className="w-5 h-5 animate-spin" />
+                                            Generating AI Analysis...
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Download className="w-5 h-5 group-hover:scale-110 transition-transform" />
+                                            Download Detailed PDF Report
+                                        </>
+                                    )}
                                 </Button>
                             </div>
                         </CardContent>
@@ -1560,10 +1669,33 @@ export default function PracticeExam() {
                             <div className="border-t border-border bg-card">
                                 {/* Action Bar */}
                                 <div className="px-4 py-3 flex items-center justify-between border-b border-border bg-muted/30">
-                                    <span className="text-sm font-medium text-foreground flex items-center gap-2">
-                                        <Activity className="w-4 h-4 text-primary" />
-                                        Test Results
-                                    </span>
+                                    <div className="flex items-center gap-4">
+                                        <span className="text-sm font-medium text-foreground flex items-center gap-2">
+                                            <Activity className="w-4 h-4 text-primary" />
+                                            Test Results
+                                        </span>
+                                        <div className="flex items-center bg-muted rounded-md p-1 scale-90">
+                                            {/* <button
+                                                onClick={() => setExecutionMode("docker")}
+                                                className={`px-3 py-1 text-[10px] font-bold rounded-sm transition-all ${executionMode === "docker"
+                                                    ? "bg-primary text-primary-foreground shadow-sm"
+                                                    : "text-muted-foreground hover:text-foreground"
+                                                    }`}
+                                            >
+                                                DOCKER
+                                            </button> */}
+                                            <button
+                                                onClick={() => setExecutionMode("ai")}
+                                                className={`px-4 py-1 text-[10px] font-bold rounded-sm transition-all flex items-center gap-1.5 ${executionMode === "ai"
+                                                    ? "bg-primary text-primary-foreground shadow-sm"
+                                                    : "text-muted-foreground hover:text-foreground"
+                                                    }`}
+                                            >
+                                                <Sparkles className="w-3 h-3" />
+                                                AI ENGINE
+                                            </button>
+                                        </div>
+                                    </div>
                                     <Button
                                         onClick={handleRunCode}
                                         disabled={isRunning}
@@ -1596,8 +1728,8 @@ export default function PracticeExam() {
                                             <div className="space-y-3">
                                                 {testResults.map((result, idx) => (
                                                     <div key={idx} className={`test-result-item p-3 rounded-lg border-2 transition-all ${result.passed
-                                                        ? "border-green-500 bg-green-500/5 hover:bg-green-500/10"
-                                                        : "border-red-500 bg-red-500/5 hover:bg-red-500/10"
+                                                        ? "border-green-500/30 bg-green-500/5 hover:bg-green-500/10"
+                                                        : "border-red-500/30 bg-red-500/5 hover:bg-red-500/10"
                                                         }`}>
                                                         <div className="flex items-center justify-between mb-2">
                                                             <div className="flex items-center gap-2">
@@ -1610,36 +1742,48 @@ export default function PracticeExam() {
                                                                     Test Case {idx + 1}
                                                                 </span>
                                                             </div>
-                                                            <Badge variant={result.passed ? "default" : "destructive"} className="text-xs">
+                                                            <Badge variant={result.passed ? "default" : "destructive"} className={`text-[10px] uppercase h-5 ${result.passed ? "bg-green-500 hover:bg-green-600" : ""}`}>
                                                                 {result.passed ? "Passed" : "Failed"}
                                                             </Badge>
                                                         </div>
-                                                        {!result.passed && (
-                                                            <div className="text-xs space-y-2 mt-2">
-                                                                {result.error && (
-                                                                    <div>
-                                                                        <span className="text-muted-foreground">Error:</span>
-                                                                        <pre className="mt-1 p-2 bg-background rounded text-red-400 overflow-x-auto font-mono">
-                                                                            {result.error}
-                                                                        </pre>
-                                                                    </div>
-                                                                )}
+
+                                                        <div className="text-xs space-y-2 mt-2">
+                                                            {result.input && (
                                                                 <div>
-                                                                    <span className="text-muted-foreground">Expected:</span>
-                                                                    <pre className="mt-1 p-2 bg-background rounded text-foreground overflow-x-auto font-mono">
-                                                                        {result.expectedOutput}
+                                                                    <span className="text-muted-foreground font-medium">Input:</span>
+                                                                    <pre className="mt-1 p-2 bg-background/50 rounded text-foreground overflow-x-auto font-mono border border-border/50 max-h-24">
+                                                                        {result.input}
                                                                     </pre>
                                                                 </div>
-                                                                {result.actualOutput && (
+                                                            )}
+
+                                                            {!result.passed && (
+                                                                <>
+                                                                    {result.error && (
+                                                                        <div>
+                                                                            <span className="text-muted-foreground font-medium text-red-500/80">Error:</span>
+                                                                            <pre className="mt-1 p-2 bg-red-500/5 rounded text-red-400 overflow-x-auto font-mono border border-red-500/20">
+                                                                                {result.error}
+                                                                            </pre>
+                                                                        </div>
+                                                                    )}
                                                                     <div>
-                                                                        <span className="text-muted-foreground">Got:</span>
-                                                                        <pre className="mt-1 p-2 bg-background rounded text-foreground overflow-x-auto font-mono">
-                                                                            {result.actualOutput}
+                                                                        <span className="text-muted-foreground font-medium">Expected:</span>
+                                                                        <pre className="mt-1 p-2 bg-background/50 rounded text-foreground overflow-x-auto font-mono border border-border/50 max-h-24">
+                                                                            {result.expectedOutput}
                                                                         </pre>
                                                                     </div>
-                                                                )}
-                                                            </div>
-                                                        )}
+                                                                    {result.actualOutput && (
+                                                                        <div>
+                                                                            <span className="text-muted-foreground font-medium text-amber-500/80">Got:</span>
+                                                                            <pre className="mt-1 p-2 bg-amber-500/5 rounded text-foreground overflow-x-auto font-mono border border-amber-500/20 max-h-24">
+                                                                                {result.actualOutput}
+                                                                            </pre>
+                                                                        </div>
+                                                                    )}
+                                                                </>
+                                                            )}
+                                                        </div>
                                                     </div>
                                                 ))}
                                                 {testResults.every(r => r.passed) && (

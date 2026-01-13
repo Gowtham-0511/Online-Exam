@@ -115,27 +115,25 @@ export async function regenerateTagsForQuestion(
   return generateQuestionTags(questionText, questionType, language);
 }
 
-export async function analyzeStudentPerformance(studentData: {
+export async function generateFullExamAnalysis(studentData: {
+  userName: string;
   questionDetails: Array<{
     questionText: string;
     questionType: string;
-    score: number;
-    maxMarks: number;
-    feedback: string;
+    userAnswer: string;
+    isCorrect: boolean;
+    testCaseResults?: any[];
   }>;
-  userName: string;
 }): Promise<{
-  strengths: Array<{ topic: string; score: number; description: string }>;
-  weaknesses: Array<{ topic: string; score: number; description: string }>;
-  recommendations: string[];
+  questionFeedback: string[];
+  strengths: string[];
+  weaknesses: string[];
+  improvements: string[];
 }> {
   const isDeterministicModel = /(mini|instruct)/i.test(deploymentName);
 
-  const prompt = `Analyze this student's performance across multiple questions and identify:
-        1. Top 3-5 strength areas (topics they excel at)
-        2. Top 3-5 weakness areas (topics needing improvement)
-        3. 2-3 specific recommendations for improvement
-
+  const prompt = `Analyze the student's exam performance and provide a detailed report.
+        
         Student: ${studentData.userName}
         Questions Attempted: ${studentData.questionDetails.length}
 
@@ -143,22 +141,29 @@ export async function analyzeStudentPerformance(studentData: {
         ${studentData.questionDetails
       .map(
         (q, i) => `
-        Q${i + 1}: ${q.questionText.replace(/<[^>]*>/g, "").substring(0, 100)}
+        Q${i + 1}: ${q.questionText.replace(/<[^>]*>/g, "").substring(0, 150)}
         Type: ${q.questionType}
-        Score: ${q.score}/${q.maxMarks} (${(
-            (q.score / q.maxMarks) *
-            100
-          ).toFixed(0)}%)
-        Feedback: ${q.feedback}
+        Result: ${q.isCorrect ? "CORRECT/PASS" : "INCORRECT/FAIL"}
+        User Answer/Code: ${q.userAnswer.substring(0, 300)}
+        ${q.testCaseResults ? `Test Results: ${JSON.stringify(q.testCaseResults)}` : ""}
         `
       )
       .join("\n")}
 
+        Provide:
+        1. A concise feedback for EACH question (string array indexed 0 to N-1). Do not use special formatting like bold or unusual character patterns.
+        2. A list of 3-4 overall strengths.
+        3. A list of 3-4 overall weaknesses.
+        4. 3-4 specific areas for improvement.
+
+        IMPORTANT: Return ONLY standard plain text strings. Do NOT use patterns like &char& or any custom character-level escaping.
+
         Return JSON in this exact format:
         {
-        "strengths": [{"topic": "string", "score": number 0-100, "description": "brief description"}],
-        "weaknesses": [{"topic": "string", "score": number 0-100, "description": "brief description"}],
-        "recommendations": ["recommendation 1", "recommendation 2"]
+          "questionFeedback": ["feedback for Q1", "feedback for Q2", ...],
+          "strengths": ["strength 1", "strength 2", ...],
+          "weaknesses": ["weakness 1", "weakness 2", ...],
+          "improvements": ["improvement 1", "improvement 2", ...]
         }
     `;
 
@@ -167,8 +172,7 @@ export async function analyzeStudentPerformance(studentData: {
     messages: [
       {
         role: "system",
-        content:
-          "You are an educational AI that analyzes student performance. Return only valid JSON, no markdown or explanations.",
+        content: "You are an expert technical evaluator. Provide constructive, insightful, and accurate feedback. Return only valid JSON.",
       },
       {
         role: "user",
@@ -179,8 +183,7 @@ export async function analyzeStudentPerformance(studentData: {
   };
 
   if (!isDeterministicModel) {
-    params.temperature = 0.7;
-    params.top_p = 0.9;
+    params.temperature = 0.5;
   }
 
   try {
@@ -189,16 +192,120 @@ export async function analyzeStudentPerformance(studentData: {
     const analysis = JSON.parse(content);
 
     return {
+      questionFeedback: analysis.questionFeedback || [],
+      strengths: analysis.strengths || [],
+      weaknesses: analysis.weaknesses || [],
+      improvements: analysis.improvements || [],
+    };
+  } catch (error: any) {
+    logger.error("Full Exam Analysis Error:", error.message);
+    return {
+      questionFeedback: studentData.questionDetails.map(
+        () => "Feedback unavailable"
+      ),
+      strengths: ["Performance data logged"],
+      weaknesses: ["Unable to analyze in depth at this moment"],
+      improvements: ["Continue practicing standard problems"],
+    };
+  }
+}
+
+export async function analyzeStudentPerformance(studentData: {
+  userName: string;
+  questionDetails: Array<{
+    questionText: string;
+    questionType: string;
+    score: number;
+    maxMarks: number;
+    feedback: string;
+  }>;
+}): Promise<{
+  hasData: boolean;
+  strengths: Array<{ topic: string; score: number; description: string }>;
+  weaknesses: Array<{ topic: string; score: number; description: string }>;
+  recommendations: string[];
+}> {
+  const isDeterministicModel = /(mini|instruct)/i.test(deploymentName);
+
+  const prompt = `Analyze the student's overall performance across multiple exams and provide a high-level diagnostic.
+        
+        Student: ${studentData.userName}
+        Total Questions Analyzed: ${studentData.questionDetails.length}
+
+        Performance Details:
+        ${studentData.questionDetails
+      .map(
+        (q, i) => `
+        Q${i + 1}: ${q.questionText.replace(/<[^>]*>/g, "").substring(0, 100)}
+        Type: ${q.questionType}
+        Score: ${q.score}/${q.maxMarks}
+        Feedback: ${q.feedback.substring(0, 150)}
+        `
+      )
+      .join("\n")}
+
+        Based on this data, provide:
+        1. A list of 2-3 dominant strengths (skills/topics they excel at).
+        2. A list of 2-3 focus areas (weaknesses/topics they struggle with).
+        3. 3 specific, actionable recommendations for improvement.
+
+        For each strength and weakness, provide:
+        - topic: The name of the skill or topic.
+        - score: A percentage (0-100) representing their proficiency in that topic.
+        - description: A brief explanation of why this was identified.
+
+        Return JSON in this exact format:
+        {
+          "strengths": [
+            { "topic": "Topic Name", "score": number, "description": "reason..." },
+            ...
+          ],
+          "weaknesses": [
+            { "topic": "Topic Name", "score": number, "description": "reason..." },
+            ...
+          ],
+          "recommendations": ["rec 1", "rec 2", "rec 3"]
+        }
+    `;
+
+  const params: any = {
+    model: deploymentName,
+    messages: [
+      {
+        role: "system",
+        content:
+          "You are an AI educational consultant for a coding platform. Analyze student performance data and provide actionable regularized insights. Return only valid JSON.",
+      },
+      {
+        role: "user",
+        content: prompt,
+      },
+    ],
+    response_format: { type: "json_object" },
+  };
+
+  if (!isDeterministicModel) {
+    params.temperature = 0.5;
+  }
+
+  try {
+    const result = await getClient().chat.completions.create(params);
+    const content = result.choices[0]?.message?.content?.trim() || "{}";
+    const analysis = JSON.parse(content);
+
+    return {
+      hasData: true,
       strengths: analysis.strengths || [],
       weaknesses: analysis.weaknesses || [],
       recommendations: analysis.recommendations || [],
     };
   } catch (error: any) {
-    logger.error("Azure OpenAI Analysis Error:", error.message);
+    logger.error("Student Performance Analysis Error:", error.message);
     return {
+      hasData: false,
       strengths: [],
       weaknesses: [],
-      recommendations: ["Unable to generate recommendations at this time."],
+      recommendations: [],
     };
   }
 }
@@ -1842,13 +1949,101 @@ export async function transcribeAudio(audioBuffer: Buffer): Promise<string> {
 
     const result = await getClient().audio.transcriptions.create({
       file: file,
-      model: "whisper", // Azure usually ignores this parameter and uses the deployment model
+      model: "whisper-1", // This would be the deployment name for Azure
     });
 
     return result.text;
   } catch (error: any) {
-    console.error("Transcription error:", error);
-    return "";
+    logger.error("Transcription error:", error.message);
+    throw error;
+  }
+}
+
+/**
+ * Simulates the execution of code using AI.
+ * This is useful for languages or environments where a real executor is not available
+ * or as a fallback when the real executor fails.
+ */
+export async function simulateExecution(
+  code: string,
+  language: string,
+  question: string,
+  testCase: { input: string; expectedOutput: string }
+): Promise<{
+  success: boolean;
+  output: string;
+  error?: string;
+}> {
+  const isDeterministicModel = /(mini|instruct)/i.test(deploymentName);
+
+  const prompt = `
+        You are a highly accurate code execution engine for ${language}.
+        
+        Problem Context:
+        ${question}
+        
+        Code to Execute:
+        ${code}
+        
+        Test Case Setup/Input:
+        ${testCase.input}
+        
+        Expected Output (for reference):
+        ${testCase.expectedOutput}
+        
+        Task:
+        1. Analyze the code and the test case input.
+        2. Simulate exactly what would happen if this code was run in a local ${language} environment.
+        3. If it is SQL:
+           - Treat the 'Test Case Setup' as the initial state of the database (CREATE TABLE, INSERT INTO).
+           - Execute the user's code as a query against this state.
+           - Return the result as a JSON array of objects, one per row.
+           - Ensure column names match the expected output.
+        4. If it is Python/Javascript:
+           - Simulate the execution and return the printed output or final expression evaluation.
+        5. If there is a runtime error or syntax error, provide a clear error message.
+
+        Return ONLY a JSON object in this format:
+        {
+            "success": boolean,
+            "output": "The simulated output as a string (must be a JSON string of an array for SQL)",
+            "error": "Description of the error if success is false"
+        }
+    `;
+
+  const params: any = {
+    model: deploymentName,
+    messages: [
+      {
+        role: "system",
+        content: "You are a precise code simulator. You return only valid JSON representing the execution result."
+      },
+      { role: "user", content: prompt }
+    ],
+    response_format: { type: "json_object" }
+  };
+
+  if (!isDeterministicModel) {
+    params.temperature = 0.0; // Most deterministic
+  }
+
+  try {
+    const result = await getClient().chat.completions.create(params);
+    const content = result.choices[0]?.message?.content || "{}";
+    const parsed = JSON.parse(content);
+
+    return {
+      success: parsed.success ?? true,
+      output: parsed.output || "",
+      error: parsed.error
+    };
+  } catch (error: any) {
+    logger.error("AI simulation error:", error.message);
+    return {
+      success: false,
+      output: "",
+      error: "AI Simulation failed: " + error.message
+    };
   }
 }
 
