@@ -36,13 +36,27 @@ export interface CodingQuestion {
 
 export type Question = MCQQuestion | CodingQuestion;
 
+
+// Helper to generate duration context
+function getDurationContext(duration?: number, totalQuestions?: number): string {
+  if (!duration || !totalQuestions) return "";
+  const minsPerQ = duration / totalQuestions;
+  return `
+CONTEXT: The user has ${duration} minutes to complete the full exam of ${totalQuestions} questions (approx ${minsPerQ.toFixed(1)} mins/question).
+ADJUST DIFFICULTY: ${minsPerQ < 5 ? "Questions should be specific and solvable quickly. Avoid overly massive schemas or complex multi-page logic." : "Questions can be more complex, requiring deeper analysis or multi-step logic."}
+`;
+}
+
 // Generate MCQ prompt
 export function generateMCQPrompt(
   topic: string,
   difficulty: string,
-  count: number
+  count: number,
+  duration?: number,
+  totalQuestions?: number
 ): string {
-  return `Generate ${count} multiple-choice questions about "${topic}" at ${difficulty} difficulty level.
+  const durationCtx = getDurationContext(duration, totalQuestions);
+  return `Generate ${count} multiple-choice questions about "${topic}" at ${difficulty} difficulty level.${durationCtx}
 
 CRITICAL: Generate ONLY multiple-choice questions, NOT coding problems!
 
@@ -88,9 +102,12 @@ Generate ${count} multiple-choice questions now.`;
 export function generatePythonCodingPrompt(
   topic: string,
   difficulty: string,
-  count: number
+  count: number,
+  duration?: number,
+  totalQuestions?: number
 ): string {
-  return `Generate ${count} Python scenario-based coding problems about "${topic}" at ${difficulty} difficulty level.
+  const durationCtx = getDurationContext(duration, totalQuestions);
+  return `Generate ${count} Python scenario-based coding problems about "${topic}" at ${difficulty} difficulty level.${durationCtx}
 
 CRITICAL: Generate ONLY scenario-based coding problems. Each question should be grounded in a real-world use case or business scenario (e.g., data processing for an e-commerce platform, automation for a log system, algorithm for a fintech app). Do NOT generate abstract math-only problems.
 Return a JSON object with a "questions" array where EVERY question has type "coding" and language "python":
@@ -164,9 +181,12 @@ export function generateSQLCodingPrompt(
   topic: string,
   difficulty: string,
   count: number,
-  schema: string
+  schema: string,
+  duration?: number,
+  totalQuestions?: number
 ): string {
-  return `Generate ${count} highly detailed SCENARIO-BASED SQL query problems about "${topic}" at ${difficulty} difficulty level.
+  const durationCtx = getDurationContext(duration, totalQuestions);
+  return `Generate ${count} highly detailed SCENARIO-BASED SQL query problems about "${topic}" at ${difficulty} difficulty level.${durationCtx}
     ${schema}
 
 USE THE NORTHWIND DATABASE SCHEMA PROVIDED ABOVE to generate realistic SQL problems. Each problem MUST be a real-world business use case (e.g., "Analyze quarterly revenue growth by region", "Identify top-performing employees by order volume"). Reference actual tables and columns from the Northwind schema.
@@ -246,9 +266,12 @@ Generate ${count} comprehensive SCENARIO-BASED SQL CODING problems using the Nor
 export function generateJavascriptCodingPrompt(
   topic: string,
   difficulty: string,
-  count: number
+  count: number,
+  duration?: number,
+  totalQuestions?: number
 ): string {
-  return `Generate ${count} scenario-based JavaScript coding problems about "${topic}" at ${difficulty} difficulty level.
+  const durationCtx = getDurationContext(duration, totalQuestions);
+  return `Generate ${count} scenario-based JavaScript coding problems about "${topic}" at ${difficulty} difficulty level.${durationCtx}
 
 CRITICAL: Each question MUST be a real-world programming scenario (e.g., "Implement a shopping cart validator", "Create an analytics event parser", "Build a component state manager"). Avoid abstract algorithmic puzzles without context.
 Return a JSON object with a "questions" array where EVERY question has type "coding" and language "javascript":
@@ -341,9 +364,12 @@ Generate ${mcqCount} MCQ + ${codingCount} ${language.toUpperCase()} coding quest
 export function generatePySparkPrompt(
   topic: string,
   difficulty: string,
-  count: number
+  count: number,
+  duration?: number,
+  totalQuestions?: number
 ): string {
-  return `Generate ${count} SCENARIO-BASED PySpark/Databricks coding questions about ${topic} at ${difficulty} level.
+  const durationCtx = getDurationContext(duration, totalQuestions);
+  return `Generate ${count} SCENARIO-BASED PySpark/Databricks coding questions about ${topic} at ${difficulty} level.${durationCtx}
 
 CRITICAL REQUIREMENTS:
 - Each question MUST be a real-world data engineering scenario (e.g., "Processing daily clickstream data", "Aggregating monthly sales by region", "Cleaning IoT sensor logs").
@@ -402,9 +428,12 @@ Generate ${count} questions now.`;
 export function generateDaxPrompt(
   topic: string,
   difficulty: string,
-  count: number
+  count: number,
+  duration?: number,
+  totalQuestions?: number
 ): string {
-  return `Generate ${count} SCENARIO-BASED Power BI DAX expression questions about ${topic} at ${difficulty} level.
+  const durationCtx = getDurationContext(duration, totalQuestions);
+  return `Generate ${count} SCENARIO-BASED Power BI DAX expression questions about ${topic} at ${difficulty} level.${durationCtx}
 
 CRITICAL REQUIREMENTS:
 - Each question MUST be a business case scenario (e.g., "Calculating Year-over-Year revenue growth", "Calculating average customer lifetime value").
@@ -473,9 +502,12 @@ Generate ${count} questions now.`;
 export function generateJavaCodingPrompt(
   topic: string,
   difficulty: string,
-  count: number
+  count: number,
+  duration?: number,
+  totalQuestions?: number
 ): string {
-  return `Generate ${count} SCENARIO-BASED Java coding problems about "${topic}" at ${difficulty} difficulty level.
+  const durationCtx = getDurationContext(duration, totalQuestions);
+  return `Generate ${count} SCENARIO-BASED Java coding problems about "${topic}" at ${difficulty} difficulty level.${durationCtx}
 
 CRITICAL: Each question MUST be grounded in a real-world software engineering scenario (e.g., "Building a library management system backend", "Implementing a thread-safe cache", "Parsing a financial transaction payload").
 CRITICAL: Generate ONLY Java coding problems, NOT multiple choice questions!
@@ -547,9 +579,12 @@ Generate ${count} Java CODING problems now. DO NOT generate MCQ questions.`;
 export function generateDbtPrompt(
   topic: string,
   difficulty: string,
-  count: number
+  count: number,
+  duration?: number,
+  totalQuestions?: number
 ): string {
-  return `Generate ${count} SCENARIO-BASED DBT (Data Build Tool) coding questions about ${topic} at ${difficulty} level.
+  const durationCtx = getDurationContext(duration, totalQuestions);
+  return `Generate ${count} SCENARIO-BASED DBT (Data Build Tool) coding questions about ${topic} at ${difficulty} level.${durationCtx}
 
 CRITICAL REQUIREMENTS:
 - Each question MUST be a realistic analytics engineering scenario (e.g., "Building a dimensional model for customer analytics", "Implementing incremental logic for high-volume logs").
@@ -607,9 +642,12 @@ Generate ${count} questions now.`;
 export function generateSnowflakePrompt(
   topic: string,
   difficulty: string,
-  count: number
+  count: number,
+  duration?: number,
+  totalQuestions?: number
 ): string {
-  return `Generate ${count} SCENARIO-BASED Snowflake coding questions about ${topic} at ${difficulty} level.
+  const durationCtx = getDurationContext(duration, totalQuestions);
+  return `Generate ${count} SCENARIO-BASED Snowflake coding questions about ${topic} at ${difficulty} level.${durationCtx}
 
 CRITICAL REQUIREMENTS:
 - Each question MUST be a real-world cloud data warehousing scenario (e.g., "Implementing row-level security for HR data", "Optimizing data ingestion from S3 using Snowpipe").
