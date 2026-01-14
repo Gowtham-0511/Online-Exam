@@ -37,6 +37,7 @@ import {
     Sparkles,
     Ghost,
     BookOpen,
+    Bot,
 } from "lucide-react";
 import Editor from "@monaco-editor/react";
 import jsPDF from 'jspdf';
@@ -182,6 +183,8 @@ export default function PracticeExam() {
 
     const [showHints, setShowHints] = useState(false);
     const [visibleHintsCount, setVisibleHintsCount] = useState(0);
+    const [isGeneratingHint, setIsGeneratingHint] = useState(false);
+    const [smartHint, setSmartHint] = useState<string | null>(null);
 
     const [hintsUsedCount, setHintsUsedCount] = useState<number[]>([]);
     const [solutionsViewedCount, setSolutionsViewedCount] = useState<number[]>([]);
@@ -329,6 +332,7 @@ export default function PracticeExam() {
     useEffect(() => {
         setShowHints(false);
         setVisibleHintsCount(0);
+        setSmartHint(null);
         setShowSolution(false);
     }, [currentQuestion]);
 
@@ -535,6 +539,35 @@ export default function PracticeExam() {
             console.error("Error running code:", error);
         } finally {
             setIsRunning(false);
+        }
+    };
+
+    const handleSmartHint = async () => {
+        setIsGeneratingHint(true);
+        setSmartHint(null);
+        try {
+            // Get current code
+            const code = codeAnswers[currentQuestion] || (questions[currentQuestion] as CodingQuestion).starterCode;
+            const error = questionResults[currentQuestion]?.find(r => !r.passed && r.error)?.error;
+
+            const response = await fetch("/api/ghost-mode/smart-hint", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    question: questions[currentQuestion].type === "coding" ? (questions[currentQuestion] as CodingQuestion).questionDescription : (questions[currentQuestion] as MCQQuestion).question,
+                    userCode: code,
+                    language: questions[currentQuestion].type === "coding" ? (questions[currentQuestion] as CodingQuestion).language : "text",
+                    error: error
+                }),
+            });
+            const data = await response.json();
+            if (data.hint) {
+                setSmartHint(data.hint);
+            }
+        } catch (error) {
+            console.error("Error generating hint:", error);
+        } finally {
+            setIsGeneratingHint(false);
         }
     };
 
@@ -1631,19 +1664,31 @@ export default function PracticeExam() {
                                                     <div className="p-4 space-y-3">
                                                         <div>
                                                             <div className="text-xs font-medium text-muted-foreground mb-1">Input:</div>
-                                                            <pre className="text-sm bg-background p-3 rounded border border-border overflow-x-auto font-mono">
+                                                            <pre className="text-xs bg-background p-3 rounded border border-border overflow-x-auto font-mono whitespace-pre w-full">
                                                                 <code className="text-foreground">{tc.input || "No input"}</code>
                                                             </pre>
                                                         </div>
                                                         <div>
                                                             <div className="text-xs font-medium text-muted-foreground mb-1">Expected Output:</div>
-                                                            <pre className="text-sm bg-background p-3 rounded border border-border overflow-x-auto font-mono">
+                                                            <pre className="text-xs bg-background p-3 rounded border border-border overflow-x-auto font-mono whitespace-pre w-full">
                                                                 <code className="text-foreground">{tc.expectedOutput}</code>
                                                             </pre>
                                                         </div>
                                                     </div>
                                                 </div>
                                             ))}
+                                        </div>
+                                    )}
+
+                                    {smartHint && (
+                                        <div className="mt-4 p-4 rounded-lg bg-indigo-500/5 border border-indigo-500/20 text-sm text-foreground animate-in fade-in slide-in-from-top-2 duration-300">
+                                            <div className="flex gap-2">
+                                                <Bot className="w-5 h-5 text-indigo-500 shrink-0" />
+                                                <div className="space-y-1">
+                                                    <p className="font-semibold text-indigo-500">AI Assistant:</p>
+                                                    <p className="leading-relaxed">{smartHint}</p>
+                                                </div>
+                                            </div>
                                         </div>
                                     )}
                                 </div>
@@ -1695,29 +1740,48 @@ export default function PracticeExam() {
                                             <Sparkles className="w-4 h-4 text-amber-500" />
                                             Stuck? Get a Hint
                                         </h3>
-                                        <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            onClick={() => {
-                                                if (!showHints) setShowHints(true);
-                                                if (visibleHintsCount < (currentQ as any).hints.length) {
-                                                    const nextCount = visibleHintsCount + 1;
-                                                    setVisibleHintsCount(prev => prev + 1);
+                                        <div className="flex items-center gap-2">
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                onClick={() => {
+                                                    if (!showHints) setShowHints(true);
+                                                    if (visibleHintsCount < (currentQ as any).hints.length) {
+                                                        const nextCount = visibleHintsCount + 1;
+                                                        setVisibleHintsCount(prev => prev + 1);
 
-                                                    // Track total hints used for this question
-                                                    const newHintsUsed = [...hintsUsedCount];
-                                                    // Only update if current reveal is more than what was previously tracked
-                                                    if (nextCount > newHintsUsed[currentQuestion]) {
-                                                        newHintsUsed[currentQuestion] = nextCount;
-                                                        setHintsUsedCount(newHintsUsed);
+                                                        // Track total hints used for this question
+                                                        const newHintsUsed = [...hintsUsedCount];
+                                                        // Only update if current reveal is more than what was previously tracked
+                                                        if (nextCount > newHintsUsed[currentQuestion]) {
+                                                            newHintsUsed[currentQuestion] = nextCount;
+                                                            setHintsUsedCount(newHintsUsed);
+                                                        }
                                                     }
-                                                }
-                                            }}
-                                            className="text-amber-500 hover:text-amber-600 hover:bg-amber-500/10"
-                                        >
-                                            <Sparkles className="w-4 h-4 mr-2" />
-                                            {showHints ? "Next Hint" : "Show Hint"}
-                                        </Button>
+                                                }}
+                                                className="text-amber-500 hover:text-amber-600 hover:bg-amber-500/10"
+                                            >
+                                                <Sparkles className="w-4 h-4 mr-2" />
+                                                {showHints ? "Next Hint" : "Show Hint"}
+                                            </Button>
+
+                                            {currentQ.type === "coding" && (
+                                                <Button
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    onClick={handleSmartHint}
+                                                    disabled={isGeneratingHint}
+                                                    className="text-indigo-500 hover:text-indigo-600 hover:bg-indigo-500/10"
+                                                >
+                                                    {isGeneratingHint ? (
+                                                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                                    ) : (
+                                                        <Bot className="w-4 h-4 mr-2" />
+                                                    )}
+                                                    Ask AI Assistant
+                                                </Button>
+                                            )}
+                                        </div>
                                     </div>
 
                                     {showHints && (
@@ -1917,7 +1981,7 @@ export default function PracticeExam() {
                                                             {result.input && (
                                                                 <div>
                                                                     <span className="text-muted-foreground font-medium">Input:</span>
-                                                                    <pre className="mt-1 p-2 bg-background/50 rounded text-foreground overflow-x-auto font-mono border border-border/50 max-h-24">
+                                                                    <pre className="mt-1 p-2 bg-background/50 rounded text-foreground overflow-x-auto font-mono border border-border/50 max-h-24 whitespace-pre text-xs w-full">
                                                                         {result.input}
                                                                     </pre>
                                                                 </div>
@@ -1928,21 +1992,21 @@ export default function PracticeExam() {
                                                                     {result.error && (
                                                                         <div>
                                                                             <span className="text-muted-foreground font-medium text-red-500/80">Error:</span>
-                                                                            <pre className="mt-1 p-2 bg-red-500/5 rounded text-red-400 overflow-x-auto font-mono border border-red-500/20">
+                                                                            <pre className="mt-1 p-2 bg-red-500/5 rounded text-red-400 overflow-x-auto font-mono border border-red-500/20 whitespace-pre text-xs w-full">
                                                                                 {result.error}
                                                                             </pre>
                                                                         </div>
                                                                     )}
                                                                     <div>
                                                                         <span className="text-muted-foreground font-medium">Expected:</span>
-                                                                        <pre className="mt-1 p-2 bg-background/50 rounded text-foreground overflow-x-auto font-mono border border-border/50 max-h-24">
+                                                                        <pre className="mt-1 p-2 bg-background/50 rounded text-foreground overflow-x-auto font-mono border border-border/50 max-h-24 whitespace-pre text-xs w-full">
                                                                             {typeof result.expectedOutput === 'string' ? result.expectedOutput : JSON.stringify(result.expectedOutput, null, 2)}
                                                                         </pre>
                                                                     </div>
                                                                     {result.actualOutput && (
                                                                         <div>
                                                                             <span className="text-muted-foreground font-medium text-amber-500/80">Got:</span>
-                                                                            <pre className="mt-1 p-2 bg-amber-500/5 rounded text-foreground overflow-x-auto font-mono border border-amber-500/20 max-h-24">
+                                                                            <pre className="mt-1 p-2 bg-amber-500/5 rounded text-foreground overflow-x-auto font-mono border border-amber-500/20 max-h-24 whitespace-pre text-xs w-full">
                                                                                 {typeof result.actualOutput === 'string' ? result.actualOutput : JSON.stringify(result.actualOutput, null, 2)}
                                                                             </pre>
                                                                         </div>

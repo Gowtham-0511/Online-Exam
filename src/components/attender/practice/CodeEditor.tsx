@@ -308,19 +308,19 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
                                                         <div className="space-y-2 text-xs">
                                                             <div>
                                                                 <p className="font-semibold text-muted-foreground">Input:</p>
-                                                                <pre className="bg-muted p-2 rounded mt-1">
+                                                                <pre className="bg-muted p-2 rounded mt-1 overflow-x-auto text-xs">
                                                                     {result.testCase.input}
                                                                 </pre>
                                                             </div>
                                                             <div>
                                                                 <p className="font-semibold text-muted-foreground">Expected:</p>
-                                                                <pre className="bg-muted p-2 rounded mt-1">
+                                                                <pre className="bg-muted p-2 rounded mt-1 overflow-x-auto text-xs">
                                                                     {result.testCase.expectedOutput}
                                                                 </pre>
                                                             </div>
                                                             <div>
                                                                 <p className="font-semibold text-muted-foreground">Your Output:</p>
-                                                                <pre className="bg-muted p-2 rounded mt-1">
+                                                                <pre className="bg-muted p-2 rounded mt-1 overflow-x-auto text-xs">
                                                                     {result.actualOutput}
                                                                 </pre>
                                                             </div>
@@ -331,7 +331,7 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
                                                 {result.error && (
                                                     <div className="mt-2">
                                                         <p className="text-xs font-semibold text-rose-600">Error:</p>
-                                                        <pre className="text-xs text-rose-600 bg-rose-50 dark:bg-rose-950/20 p-2 rounded mt-1">
+                                                        <pre className="text-xs text-rose-600 bg-rose-50 dark:bg-rose-950/20 p-2 rounded mt-1 overflow-x-auto">
                                                             {result.error}
                                                         </pre>
                                                     </div>

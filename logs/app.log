@@ -296,3 +296,883 @@
 {"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-08 14:01:51"}
 {"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-08 14:01:51"}
 {"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-08 14:01:51"}
+{"level":"info","message":"Pool has ended","service":"sysrank-service","timestamp":"2026-01-08 15:04:37"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-08 15:05:01"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-08 15:05:01"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-08 15:05:01"}
+{"level":"info","message":"Exam Titles: [\n  'python-bootcamp-assessment',\n  'tesst',\n  'testing',\n  'sql-bootcamp-assessment',\n  'test-exam',\n  'sql-test',\n  'sql-proctored',\n  'test',\n  'etc',\n  'test-demo',\n  'testing-1',\n  'etc-1',\n  'demo',\n  'python-exam-',\n  [length]: 14\n]","service":"sysrank-service","timestamp":"2026-01-08 15:05:12"}
+{"level":"info","message":"Fetching submissions for exam IDs: [\n  43,\n  57,\n  58,\n  49,\n  50,\n  51,\n  52,\n  54,\n  55,\n  60,\n  59,\n  56,\n  53,\n  61,\n  [length]: 14\n]","service":"sysrank-service","timestamp":"2026-01-08 15:05:12"}
+{"level":"info","message":"Submissions found: 26","service":"sysrank-service","timestamp":"2026-01-08 15:05:13"}
+{"level":"info","message":"Exam Titles: [\n  'python-bootcamp-assessment',\n  'tesst',\n  'testing',\n  'sql-bootcamp-assessment',\n  'test-exam',\n  'sql-test',\n  'sql-proctored',\n  'test',\n  'etc',\n  'test-demo',\n  'testing-1',\n  'etc-1',\n  'demo',\n  'python-exam-',\n  [length]: 14\n]","service":"sysrank-service","timestamp":"2026-01-08 15:05:19"}
+{"level":"info","message":"Fetching submissions for exam IDs: [\n  43,\n  57,\n  58,\n  49,\n  50,\n  51,\n  52,\n  54,\n  55,\n  60,\n  59,\n  56,\n  53,\n  61,\n  [length]: 14\n]","service":"sysrank-service","timestamp":"2026-01-08 15:05:19"}
+{"level":"info","message":"Submissions found: 26","service":"sysrank-service","timestamp":"2026-01-08 15:05:20"}
+{"code":"42703","file":"parse_relation.c","hint":"Perhaps you meant to reference the column \"Assessment.title\".","length":167,"level":"error","line":"3738","message":"Error scheduling assessment 61:","name":"error","position":"8","routine":"errorMissingColumn","service":"sysrank-service","severity":"ERROR","timestamp":"2026-01-08 15:05:53"}
+{"code":"42703","file":"parse_relation.c","hint":"Perhaps you meant to reference the column \"Assessment.id\".","length":162,"level":"error","line":"3738","message":"Error scheduling assessment 61:","name":"error","position":"40","routine":"errorMissingColumn","service":"sysrank-service","severity":"ERROR","timestamp":"2026-01-08 15:07:03"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-08 15:07:19"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-08 15:07:19"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-08 15:07:19"}
+{"code":"42703","file":"parse_relation.c","hint":"Perhaps you meant to reference the column \"Assessment.id\".","length":162,"level":"error","line":"3738","message":"Error scheduling assessment 50:","name":"error","position":"40","routine":"errorMissingColumn","service":"sysrank-service","severity":"ERROR","timestamp":"2026-01-08 15:07:39"}
+{"code":"EAUTH","command":"AUTH XOAUTH2","level":"error","message":"Error sending email to gowthamr@systechusa.com:","service":"sysrank-service","timestamp":"2026-01-08 15:08:49"}
+{"level":"info","message":"Exam Titles: [\n  'python-bootcamp-assessment',\n  'tesst',\n  'testing',\n  'sql-bootcamp-assessment',\n  'test-exam',\n  'sql-test',\n  'sql-proctored',\n  'test',\n  'etc',\n  'test-demo',\n  'testing-1',\n  'etc-1',\n  'demo',\n  'python-exam-',\n  [length]: 14\n]","service":"sysrank-service","timestamp":"2026-01-08 15:08:52"}
+{"level":"info","message":"Fetching submissions for exam IDs: [\n  43,\n  57,\n  58,\n  49,\n  50,\n  51,\n  52,\n  54,\n  55,\n  60,\n  59,\n  56,\n  53,\n  61,\n  [length]: 14\n]","service":"sysrank-service","timestamp":"2026-01-08 15:08:52"}
+{"level":"info","message":"Submissions found: 26","service":"sysrank-service","timestamp":"2026-01-08 15:08:53"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-08 15:10:24"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-08 15:10:24"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-08 15:10:24"}
+{"level":"info","message":"Exam Titles: [\n  'python-bootcamp-assessment',\n  'tesst',\n  'testing',\n  'sql-bootcamp-assessment',\n  'test-exam',\n  'sql-test',\n  'sql-proctored',\n  'test',\n  'etc',\n  'test-demo',\n  'testing-1',\n  'etc-1',\n  'demo',\n  'python-exam-',\n  [length]: 14\n]","service":"sysrank-service","timestamp":"2026-01-08 15:10:24"}
+{"level":"info","message":"Fetching submissions for exam IDs: [\n  43,\n  57,\n  58,\n  49,\n  50,\n  51,\n  52,\n  54,\n  55,\n  60,\n  59,\n  56,\n  53,\n  61,\n  [length]: 14\n]","service":"sysrank-service","timestamp":"2026-01-08 15:10:24"}
+{"level":"info","message":"Submissions found: 26","service":"sysrank-service","timestamp":"2026-01-08 15:10:25"}
+{"level":"info","message":"Exam Titles: [\n  'python-bootcamp-assessment',\n  'tesst',\n  'testing',\n  'sql-bootcamp-assessment',\n  'test-exam',\n  'sql-test',\n  'sql-proctored',\n  'test',\n  'etc',\n  'test-demo',\n  'testing-1',\n  'etc-1',\n  'demo',\n  'python-exam-',\n  [length]: 14\n]","service":"sysrank-service","timestamp":"2026-01-08 15:10:43"}
+{"level":"info","message":"Fetching submissions for exam IDs: [\n  43,\n  57,\n  58,\n  49,\n  50,\n  51,\n  52,\n  54,\n  55,\n  60,\n  59,\n  56,\n  53,\n  61,\n  [length]: 14\n]","service":"sysrank-service","timestamp":"2026-01-08 15:10:43"}
+{"level":"info","message":"Submissions found: 26","service":"sysrank-service","timestamp":"2026-01-08 15:10:44"}
+{"level":"info","message":"Email sent to gowthamr@systechusa.com: <f16bf90f-1854-6bcf-f878-c7f311245088@systechusa.com>","service":"sysrank-service","timestamp":"2026-01-08 15:11:09"}
+{"level":"info","message":"Exam Titles: [\n  'python-bootcamp-assessment',\n  'tesst',\n  'testing',\n  'sql-bootcamp-assessment',\n  'test-exam',\n  'sql-test',\n  'sql-proctored',\n  'test',\n  'etc',\n  'test-demo',\n  'testing-1',\n  'etc-1',\n  'demo',\n  'python-exam-',\n  [length]: 14\n]","service":"sysrank-service","timestamp":"2026-01-08 15:15:31"}
+{"level":"info","message":"Fetching submissions for exam IDs: [\n  43,\n  57,\n  58,\n  49,\n  50,\n  51,\n  52,\n  54,\n  55,\n  60,\n  59,\n  56,\n  53,\n  61,\n  [length]: 14\n]","service":"sysrank-service","timestamp":"2026-01-08 15:15:31"}
+{"level":"info","message":"Submissions found: 26","service":"sysrank-service","timestamp":"2026-01-08 15:15:33"}
+{"level":"info","message":"Exam Titles: [\n  'python-bootcamp-assessment',\n  'tesst',\n  'testing',\n  'sql-bootcamp-assessment',\n  'test-exam',\n  'sql-test',\n  'sql-proctored',\n  'test',\n  'etc',\n  'test-demo',\n  'testing-1',\n  'etc-1',\n  'demo',\n  'python-exam-',\n  [length]: 14\n]","service":"sysrank-service","timestamp":"2026-01-08 15:16:24"}
+{"level":"info","message":"Fetching submissions for exam IDs: [\n  43,\n  57,\n  58,\n  49,\n  50,\n  51,\n  52,\n  54,\n  55,\n  60,\n  59,\n  56,\n  53,\n  61,\n  [length]: 14\n]","service":"sysrank-service","timestamp":"2026-01-08 15:16:24"}
+{"level":"info","message":"Submissions found: 26","service":"sysrank-service","timestamp":"2026-01-08 15:16:25"}
+{"level":"info","message":"Email sent to gowthamr@systechusa.com: <28683343-a590-06b2-6c41-dbda0e119fbc@systechusa.com>","service":"sysrank-service","timestamp":"2026-01-08 15:16:50"}
+{"level":"info","message":"Email sent to kalaiselvanj@systechusa.com: <58375c30-db99-e3c6-3953-1a45557d282c@systechusa.com>","service":"sysrank-service","timestamp":"2026-01-08 15:16:51"}
+{"level":"info","message":"Email sent to srinivasaganesha@systechusa.com: <1179468e-5e76-7c20-e640-e5a1b097e128@systechusa.com>","service":"sysrank-service","timestamp":"2026-01-08 15:16:52"}
+{"level":"info","message":"Exam Titles: [\n  'python-bootcamp-assessment',\n  'tesst',\n  'testing',\n  'sql-bootcamp-assessment',\n  'test-exam',\n  'sql-test',\n  'sql-proctored',\n  'test',\n  'etc',\n  'test-demo',\n  'testing-1',\n  'etc-1',\n  'demo',\n  'python-exam-',\n  [length]: 14\n]","service":"sysrank-service","timestamp":"2026-01-08 15:24:47"}
+{"level":"info","message":"Fetching submissions for exam IDs: [\n  43,\n  57,\n  58,\n  49,\n  50,\n  51,\n  52,\n  54,\n  55,\n  60,\n  59,\n  56,\n  53,\n  61,\n  [length]: 14\n]","service":"sysrank-service","timestamp":"2026-01-08 15:24:47"}
+{"level":"info","message":"Submissions found: 26","service":"sysrank-service","timestamp":"2026-01-08 15:24:48"}
+{"code":"42703","file":"parse_relation.c","hint":"Perhaps you meant to reference the column \"Assessment.createdBy\".","length":176,"level":"error","line":"3738","message":"Error scheduling assessment 57:","name":"error","position":"17","routine":"errorMissingColumn","service":"sysrank-service","severity":"ERROR","timestamp":"2026-01-08 15:25:07"}
+{"code":"42P01","file":"parse_relation.c","length":109,"level":"error","line":"1452","message":"Error scheduling assessment 57:","name":"error","position":"20","routine":"parserOpenTable","service":"sysrank-service","severity":"ERROR","timestamp":"2026-01-08 15:26:03"}
+{"level":"info","message":"Email sent to gowthamr@systechusa.com: <96bd0333-0af6-e000-b566-2755d7e20024@systechusa.com>","service":"sysrank-service","timestamp":"2026-01-08 15:27:40"}
+{"level":"info","message":"Exam Titles: [\n  'python-bootcamp-assessment',\n  'tesst',\n  'testing',\n  'sql-bootcamp-assessment',\n  'test-exam',\n  'sql-test',\n  'sql-proctored',\n  'test',\n  'etc',\n  'test-demo',\n  'testing-1',\n  'etc-1',\n  'demo',\n  'python-exam-',\n  [length]: 14\n]","service":"sysrank-service","timestamp":"2026-01-08 15:30:02"}
+{"level":"info","message":"Fetching submissions for exam IDs: [\n  43,\n  57,\n  58,\n  49,\n  50,\n  51,\n  52,\n  54,\n  55,\n  60,\n  59,\n  56,\n  53,\n  61,\n  [length]: 14\n]","service":"sysrank-service","timestamp":"2026-01-08 15:30:02"}
+{"level":"info","message":"Exam Titles: [\n  'python-bootcamp-assessment',\n  'tesst',\n  'testing',\n  'sql-bootcamp-assessment',\n  'test-exam',\n  'sql-test',\n  'sql-proctored',\n  'test',\n  'etc',\n  'test-demo',\n  'testing-1',\n  'etc-1',\n  'demo',\n  'python-exam-',\n  [length]: 14\n]","service":"sysrank-service","timestamp":"2026-01-08 15:30:04"}
+{"level":"info","message":"Fetching submissions for exam IDs: [\n  43,\n  57,\n  58,\n  49,\n  50,\n  51,\n  52,\n  54,\n  55,\n  60,\n  59,\n  56,\n  53,\n  61,\n  [length]: 14\n]","service":"sysrank-service","timestamp":"2026-01-08 15:30:04"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-08 15:30:04"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-08 15:30:04"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-08 15:30:04"}
+{"level":"info","message":"Submissions found: 26","service":"sysrank-service","timestamp":"2026-01-08 15:30:04"}
+{"level":"info","message":"Submissions found: 26","service":"sysrank-service","timestamp":"2026-01-08 15:30:05"}
+{"level":"info","message":"Email sent to gowthamr@systechusa.com: <e3721d6a-778f-9db8-d3b5-136d9dbacb2c@systechusa.com>","service":"sysrank-service","timestamp":"2026-01-08 15:30:35"}
+{"level":"info","message":"Exam Titles: [\n  'python-bootcamp-assessment',\n  'tesst',\n  'testing',\n  'sql-bootcamp-assessment',\n  'test-exam',\n  'sql-test',\n  'sql-proctored',\n  'test',\n  'etc',\n  'test-demo',\n  'testing-1',\n  'etc-1',\n  'demo',\n  'python-exam-',\n  [length]: 14\n]","service":"sysrank-service","timestamp":"2026-01-08 15:30:39"}
+{"level":"info","message":"Fetching submissions for exam IDs: [\n  43,\n  57,\n  58,\n  49,\n  50,\n  51,\n  52,\n  54,\n  55,\n  60,\n  59,\n  56,\n  53,\n  61,\n  [length]: 14\n]","service":"sysrank-service","timestamp":"2026-01-08 15:30:39"}
+{"level":"info","message":"Submissions found: 26","service":"sysrank-service","timestamp":"2026-01-08 15:30:40"}
+{"level":"info","message":"Exam Titles: [\n  'python-bootcamp-assessment',\n  'tesst',\n  'testing',\n  'sql-bootcamp-assessment',\n  'test-exam',\n  'sql-test',\n  'sql-proctored',\n  'test',\n  'etc',\n  'test-demo',\n  'testing-1',\n  'etc-1',\n  'demo',\n  'python-exam-',\n  [length]: 14\n]","service":"sysrank-service","timestamp":"2026-01-08 15:31:05"}
+{"level":"info","message":"Fetching submissions for exam IDs: [\n  43,\n  57,\n  58,\n  49,\n  50,\n  51,\n  52,\n  54,\n  55,\n  60,\n  59,\n  56,\n  53,\n  61,\n  [length]: 14\n]","service":"sysrank-service","timestamp":"2026-01-08 15:31:05"}
+{"level":"info","message":"Submissions found: 26","service":"sysrank-service","timestamp":"2026-01-08 15:31:06"}
+{"level":"info","message":"Exam Titles: [\n  'python-bootcamp-assessment',\n  'tesst',\n  'testing',\n  'sql-bootcamp-assessment',\n  'test-exam',\n  'sql-test',\n  'sql-proctored',\n  'test',\n  'etc',\n  'test-demo',\n  'testing-1',\n  'etc-1',\n  'demo',\n  'python-exam-',\n  [length]: 14\n]","service":"sysrank-service","timestamp":"2026-01-08 15:33:11"}
+{"level":"info","message":"Fetching submissions for exam IDs: [\n  43,\n  57,\n  58,\n  49,\n  50,\n  51,\n  52,\n  54,\n  55,\n  60,\n  59,\n  56,\n  53,\n  61,\n  [length]: 14\n]","service":"sysrank-service","timestamp":"2026-01-08 15:33:11"}
+{"level":"info","message":"Submissions found: 26","service":"sysrank-service","timestamp":"2026-01-08 15:33:12"}
+{"level":"info","message":"Email sent to gowthamr@systechusa.com: <75858ae2-c75f-3068-cb2e-146825cdeefd@systechusa.com>","service":"sysrank-service","timestamp":"2026-01-08 15:33:38"}
+{"level":"info","message":"Exam Titles: [\n  'python-bootcamp-assessment',\n  'tesst',\n  'testing',\n  'sql-bootcamp-assessment',\n  'test-exam',\n  'sql-test',\n  'sql-proctored',\n  'test',\n  'etc',\n  'test-demo',\n  'testing-1',\n  'etc-1',\n  'demo',\n  'python-exam-',\n  [length]: 14\n]","service":"sysrank-service","timestamp":"2026-01-08 15:33:41"}
+{"level":"info","message":"Fetching submissions for exam IDs: [\n  43,\n  57,\n  58,\n  49,\n  50,\n  51,\n  52,\n  54,\n  55,\n  60,\n  59,\n  56,\n  53,\n  61,\n  [length]: 14\n]","service":"sysrank-service","timestamp":"2026-01-08 15:33:41"}
+{"level":"info","message":"Submissions found: 26","service":"sysrank-service","timestamp":"2026-01-08 15:33:43"}
+{"level":"info","message":"Exam Titles: [\n  'python-bootcamp-assessment',\n  'tesst',\n  'testing',\n  'sql-bootcamp-assessment',\n  'test-exam',\n  'sql-test',\n  'sql-proctored',\n  'test',\n  'etc',\n  'test-demo',\n  'testing-1',\n  'etc-1',\n  'demo',\n  'python-exam-',\n  [length]: 14\n]","service":"sysrank-service","timestamp":"2026-01-08 15:34:03"}
+{"level":"info","message":"Fetching submissions for exam IDs: [\n  43,\n  57,\n  58,\n  49,\n  50,\n  51,\n  52,\n  54,\n  55,\n  60,\n  59,\n  56,\n  53,\n  61,\n  [length]: 14\n]","service":"sysrank-service","timestamp":"2026-01-08 15:34:03"}
+{"level":"info","message":"Submissions found: 26","service":"sysrank-service","timestamp":"2026-01-08 15:34:04"}
+{"level":"info","message":"Exam Titles: [\n  'python-bootcamp-assessment',\n  'tesst',\n  'testing',\n  'sql-bootcamp-assessment',\n  'test-exam',\n  'sql-test',\n  'sql-proctored',\n  'test',\n  'etc',\n  'test-demo',\n  'testing-1',\n  'etc-1',\n  'demo',\n  'python-exam-',\n  [length]: 14\n]","service":"sysrank-service","timestamp":"2026-01-08 15:38:23"}
+{"level":"info","message":"Fetching submissions for exam IDs: [\n  43,\n  57,\n  58,\n  49,\n  50,\n  51,\n  52,\n  54,\n  55,\n  60,\n  59,\n  56,\n  53,\n  61,\n  [length]: 14\n]","service":"sysrank-service","timestamp":"2026-01-08 15:38:23"}
+{"level":"info","message":"Submissions found: 26","service":"sysrank-service","timestamp":"2026-01-08 15:38:24"}
+{"level":"info","message":"Exam Titles: [\n  'python-bootcamp-assessment',\n  'tesst',\n  'testing',\n  'sql-bootcamp-assessment',\n  'test-exam',\n  'sql-test',\n  'sql-proctored',\n  'test',\n  'etc',\n  'test-demo',\n  'testing-1',\n  'etc-1',\n  'demo',\n  'python-exam-',\n  [length]: 14\n]","service":"sysrank-service","timestamp":"2026-01-08 16:03:45"}
+{"level":"info","message":"Fetching submissions for exam IDs: [\n  43,\n  57,\n  58,\n  49,\n  50,\n  51,\n  52,\n  54,\n  55,\n  60,\n  59,\n  56,\n  53,\n  61,\n  [length]: 14\n]","service":"sysrank-service","timestamp":"2026-01-08 16:03:45"}
+{"level":"info","message":"Submissions found: 26","service":"sysrank-service","timestamp":"2026-01-08 16:03:46"}
+{"level":"info","message":"Exam Titles: [\n  'python-bootcamp-assessment',\n  'tesst',\n  'testing',\n  'sql-bootcamp-assessment',\n  'test-exam',\n  'sql-test',\n  'sql-proctored',\n  'test',\n  'etc',\n  'test-demo',\n  'testing-1',\n  'etc-1',\n  'demo',\n  'python-exam-',\n  [length]: 14\n]","service":"sysrank-service","timestamp":"2026-01-08 16:07:42"}
+{"level":"info","message":"Fetching submissions for exam IDs: [\n  43,\n  57,\n  58,\n  49,\n  50,\n  51,\n  52,\n  54,\n  55,\n  60,\n  59,\n  56,\n  53,\n  61,\n  [length]: 14\n]","service":"sysrank-service","timestamp":"2026-01-08 16:07:42"}
+{"level":"info","message":"Submissions found: 26","service":"sysrank-service","timestamp":"2026-01-08 16:07:43"}
+{"level":"info","message":"Exam Titles: [\n  'python-bootcamp-assessment',\n  'tesst',\n  'testing',\n  'sql-bootcamp-assessment',\n  'test-exam',\n  'sql-test',\n  'sql-proctored',\n  'test',\n  'etc',\n  'test-demo',\n  'testing-1',\n  'etc-1',\n  'demo',\n  'python-exam-',\n  [length]: 14\n]","service":"sysrank-service","timestamp":"2026-01-08 16:12:49"}
+{"level":"info","message":"Fetching submissions for exam IDs: [\n  43,\n  57,\n  58,\n  49,\n  50,\n  51,\n  52,\n  54,\n  55,\n  60,\n  59,\n  56,\n  53,\n  61,\n  [length]: 14\n]","service":"sysrank-service","timestamp":"2026-01-08 16:12:49"}
+{"level":"info","message":"Submissions found: 26","service":"sysrank-service","timestamp":"2026-01-08 16:12:51"}
+{"level":"info","message":"Exam Titles: [\n  'python-bootcamp-assessment',\n  'tesst',\n  'testing',\n  'sql-bootcamp-assessment',\n  'test-exam',\n  'sql-test',\n  'sql-proctored',\n  'test',\n  'etc',\n  'test-demo',\n  'testing-1',\n  'etc-1',\n  'demo',\n  'python-exam-',\n  [length]: 14\n]","service":"sysrank-service","timestamp":"2026-01-08 17:45:10"}
+{"level":"info","message":"Fetching submissions for exam IDs: [\n  43,\n  57,\n  58,\n  49,\n  50,\n  51,\n  52,\n  54,\n  55,\n  60,\n  59,\n  56,\n  53,\n  61,\n  [length]: 14\n]","service":"sysrank-service","timestamp":"2026-01-08 17:45:10"}
+{"level":"info","message":"Submissions found: 26","service":"sysrank-service","timestamp":"2026-01-08 17:45:12"}
+{"level":"info","message":"Exam Titles: [\n  'python-bootcamp-assessment',\n  'tesst',\n  'testing',\n  'sql-bootcamp-assessment',\n  'test-exam',\n  'sql-test',\n  'sql-proctored',\n  'test',\n  'etc',\n  'test-demo',\n  'testing-1',\n  'etc-1',\n  'demo',\n  'python-exam-',\n  [length]: 14\n]","service":"sysrank-service","timestamp":"2026-01-08 17:45:21"}
+{"level":"info","message":"Fetching submissions for exam IDs: [\n  43,\n  57,\n  58,\n  49,\n  50,\n  51,\n  52,\n  54,\n  55,\n  60,\n  59,\n  56,\n  53,\n  61,\n  [length]: 14\n]","service":"sysrank-service","timestamp":"2026-01-08 17:45:21"}
+{"level":"info","message":"Submissions found: 26","service":"sysrank-service","timestamp":"2026-01-08 17:45:22"}
+{"level":"info","message":"Admin dashboard stats requested","service":"sysrank-service","timestamp":"2026-01-08 17:45:29"}
+{"level":"info","message":"Admin dashboard stats requested","service":"sysrank-service","timestamp":"2026-01-08 17:46:02"}
+{"level":"info","message":"Admin fetching all assessments","service":"sysrank-service","timestamp":"2026-01-08 17:46:11"}
+{"level":"info","message":"Admin fetching all assessments","service":"sysrank-service","timestamp":"2026-01-08 17:46:12"}
+{"level":"info","message":"Fetching external users list","service":"sysrank-service","timestamp":"2026-01-08 17:46:28"}
+{"level":"info","message":"Fetching external users list","service":"sysrank-service","timestamp":"2026-01-08 17:46:28"}
+{"level":"info","message":"Exam Titles: [\n  'python-bootcamp-assessment',\n  'tesst',\n  'testing',\n  'sql-bootcamp-assessment',\n  'test-exam',\n  'sql-test',\n  'sql-proctored',\n  'test',\n  'etc',\n  'test-demo',\n  'testing-1',\n  'etc-1',\n  'demo',\n  'python-exam-',\n  [length]: 14\n]","service":"sysrank-service","timestamp":"2026-01-08 18:00:41"}
+{"level":"info","message":"Fetching submissions for exam IDs: [\n  43,\n  57,\n  58,\n  49,\n  50,\n  51,\n  52,\n  54,\n  55,\n  60,\n  59,\n  56,\n  53,\n  61,\n  [length]: 14\n]","service":"sysrank-service","timestamp":"2026-01-08 18:00:41"}
+{"level":"info","message":"Submissions found: 26","service":"sysrank-service","timestamp":"2026-01-08 18:00:42"}
+{"level":"info","message":"Fetching allowed exams for: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-08 18:26:41"}
+{"level":"info","message":"Fetching stats for user: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-08 18:26:41"}
+{"level":"info","message":"Generating 10 questions of type: mcq for topic: Time travel in Snow SQL ","service":"sysrank-service","timestamp":"2026-01-08 18:29:59"}
+{"level":"info","message":"=== Found 9 questions ===","service":"sysrank-service","timestamp":"2026-01-08 18:30:20"}
+{"level":"info","message":"Question types in response: [\n  'mcq', 'mcq',\n  'mcq', 'mcq',\n  'mcq', 'mcq',\n  'mcq', 'mcq',\n  'mcq', [length]: 9\n]","service":"sysrank-service","timestamp":"2026-01-08 18:30:20"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-08 21:09:54"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-08 21:09:54"}
+{"level":"info","message":"Fetching allowed exams for: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-08 21:09:54"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-08 21:09:54"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-08 21:09:54"}
+{"level":"info","message":"Fetching stats for user: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-08 21:09:55"}
+{"level":"info","message":"Exam Titles: [\n  'python-bootcamp-assessment',\n  'tesst',\n  'testing',\n  'sql-bootcamp-assessment',\n  'test-exam',\n  'sql-test',\n  'sql-proctored',\n  'test',\n  'etc',\n  'test-demo',\n  'testing-1',\n  'etc-1',\n  'demo',\n  'python-exam-',\n  [length]: 14\n]","service":"sysrank-service","timestamp":"2026-01-08 21:09:59"}
+{"level":"info","message":"Fetching submissions for exam IDs: [\n  43,\n  57,\n  58,\n  49,\n  50,\n  51,\n  52,\n  54,\n  55,\n  60,\n  59,\n  56,\n  53,\n  61,\n  [length]: 14\n]","service":"sysrank-service","timestamp":"2026-01-08 21:09:59"}
+{"level":"info","message":"Submissions found: 26","service":"sysrank-service","timestamp":"2026-01-08 21:10:01"}
+{"level":"info","message":"Exam Titles: [\n  'python-bootcamp-assessment',\n  'tesst',\n  'testing',\n  'sql-bootcamp-assessment',\n  'test-exam',\n  'sql-test',\n  'sql-proctored',\n  'test',\n  'etc',\n  'test-demo',\n  'testing-1',\n  'etc-1',\n  'demo',\n  'python-exam-',\n  [length]: 14\n]","service":"sysrank-service","timestamp":"2026-01-08 21:10:10"}
+{"level":"info","message":"Fetching submissions for exam IDs: [\n  43,\n  57,\n  58,\n  49,\n  50,\n  51,\n  52,\n  54,\n  55,\n  60,\n  59,\n  56,\n  53,\n  61,\n  [length]: 14\n]","service":"sysrank-service","timestamp":"2026-01-08 21:10:10"}
+{"level":"info","message":"Submissions found: 26","service":"sysrank-service","timestamp":"2026-01-08 21:10:11"}
+{"level":"info","message":"Generating practice questions: gowthamr@systechusa.com, SQL, easy, 5, coding","service":"sysrank-service","timestamp":"2026-01-08 21:11:24"}
+{"level":"info","message":"Language: sql","service":"sysrank-service","timestamp":"2026-01-08 21:11:24"}
+{"level":"info","message":"Inserted coding question: 148","service":"sysrank-service","timestamp":"2026-01-08 21:12:10"}
+{"level":"info","message":"Inserted coding question: 149","service":"sysrank-service","timestamp":"2026-01-08 21:12:10"}
+{"level":"info","message":"Inserted coding question: 150","service":"sysrank-service","timestamp":"2026-01-08 21:12:10"}
+{"level":"info","message":"Inserted coding question: 151","service":"sysrank-service","timestamp":"2026-01-08 21:12:11"}
+{"level":"info","message":"Inserted coding question: 152","service":"sysrank-service","timestamp":"2026-01-08 21:12:11"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-09 09:54:27"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-09 09:54:34"}
+{"level":"info","message":"Admin dashboard stats requested","service":"sysrank-service","timestamp":"2026-01-09 09:54:35"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-09 09:54:36"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-09 09:54:36"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-09 09:54:36"}
+{"level":"info","message":"Admin dashboard stats requested","service":"sysrank-service","timestamp":"2026-01-09 09:55:04"}
+{"level":"info","message":"Admin dashboard stats requested","service":"sysrank-service","timestamp":"2026-01-09 09:55:38"}
+{"level":"info","message":"Fetching stats for user: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-09 09:55:51"}
+{"level":"info","message":"Fetching allowed exams for: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-09 09:55:51"}
+{"level":"info","message":"Generating practice questions: gowthamr@systechusa.com, SQL Rank Function, easy, 5, mcq","service":"sysrank-service","timestamp":"2026-01-09 09:57:08"}
+{"level":"info","message":"Inserted mcq question: 163","service":"sysrank-service","timestamp":"2026-01-09 09:57:24"}
+{"level":"info","message":"Inserted mcq question: 164","service":"sysrank-service","timestamp":"2026-01-09 09:57:24"}
+{"level":"info","message":"Inserted mcq question: 165","service":"sysrank-service","timestamp":"2026-01-09 09:57:24"}
+{"level":"info","message":"Inserted mcq question: 166","service":"sysrank-service","timestamp":"2026-01-09 09:57:25"}
+{"level":"info","message":"Inserted mcq question: 167","service":"sysrank-service","timestamp":"2026-01-09 09:57:25"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-09 10:00:38"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-09 10:00:38"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-09 10:00:39"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-09 10:00:39"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-09 10:00:41"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-09 10:00:42"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-09 10:00:42"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-09 10:00:42"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-09 10:00:45"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-09 10:00:45"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-09 10:00:45"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-09 10:01:37"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-09 10:01:37"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-09 10:01:37"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-09 10:01:37"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-09 10:08:00"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-09 10:08:00"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-09 10:08:00"}
+{"level":"info","message":"Generating practice questions: gowthamr@systechusa.com, Sql Rank Function, easy, 5, mcq","service":"sysrank-service","timestamp":"2026-01-09 10:08:33"}
+{"level":"info","message":"Inserted mcq question: 168","service":"sysrank-service","timestamp":"2026-01-09 10:08:57"}
+{"level":"info","message":"Inserted mcq question: 169","service":"sysrank-service","timestamp":"2026-01-09 10:08:57"}
+{"level":"info","message":"Inserted mcq question: 170","service":"sysrank-service","timestamp":"2026-01-09 10:08:58"}
+{"level":"info","message":"Inserted mcq question: 171","service":"sysrank-service","timestamp":"2026-01-09 10:08:58"}
+{"level":"info","message":"Inserted mcq question: 172","service":"sysrank-service","timestamp":"2026-01-09 10:08:58"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-09 10:09:43"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-09 10:09:43"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-09 10:09:43"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-09 10:09:43"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-09 10:49:40"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-09 10:49:40"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-09 10:49:40"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-09 10:49:40"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-09 10:49:48"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-09 10:49:48"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-09 10:49:48"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-09 10:49:48"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-09 10:52:28"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-09 10:52:28"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-09 10:52:28"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-09 10:52:28"}
+{"level":"info","message":"Generating practice questions: gowthamr@systechusa.com, SQL, easy, 5, coding","service":"sysrank-service","timestamp":"2026-01-09 10:57:43"}
+{"level":"info","message":"Language: sql","service":"sysrank-service","timestamp":"2026-01-09 10:57:45"}
+{"level":"info","message":"Inserted coding question: 173","service":"sysrank-service","timestamp":"2026-01-09 10:58:30"}
+{"level":"info","message":"Inserted coding question: 174","service":"sysrank-service","timestamp":"2026-01-09 10:58:30"}
+{"level":"info","message":"Inserted coding question: 175","service":"sysrank-service","timestamp":"2026-01-09 10:58:31"}
+{"level":"info","message":"Inserted coding question: 176","service":"sysrank-service","timestamp":"2026-01-09 10:58:31"}
+{"level":"info","message":"Inserted coding question: 177","service":"sysrank-service","timestamp":"2026-01-09 10:58:31"}
+{"level":"info","message":"🔍 Validating query...","service":"sysrank-service","timestamp":"2026-01-09 10:58:50"}
+{"level":"info","message":"✅ Validation passed, executing query...","service":"sysrank-service","timestamp":"2026-01-09 10:58:50"}
+{"level":"info","message":"🟢 Executing PostgreSQL query...","service":"sysrank-service","timestamp":"2026-01-09 10:58:50"}
+{"level":"info","message":"✅ PostgreSQL query completed in 3448ms, 3 rows","service":"sysrank-service","timestamp":"2026-01-09 10:58:53"}
+{"level":"info","message":"🔍 Validating query...","service":"sysrank-service","timestamp":"2026-01-09 10:58:53"}
+{"level":"info","message":"✅ Validation passed, executing query...","service":"sysrank-service","timestamp":"2026-01-09 10:58:53"}
+{"level":"info","message":"🟢 Executing PostgreSQL query...","service":"sysrank-service","timestamp":"2026-01-09 10:58:53"}
+{"level":"info","message":"✅ PostgreSQL query completed in 3412ms, 3 rows","service":"sysrank-service","timestamp":"2026-01-09 10:58:56"}
+{"level":"info","message":"🔍 Validating query...","service":"sysrank-service","timestamp":"2026-01-09 11:00:09"}
+{"level":"info","message":"✅ Validation passed, executing query...","service":"sysrank-service","timestamp":"2026-01-09 11:00:09"}
+{"level":"info","message":"🟢 Executing PostgreSQL query...","service":"sysrank-service","timestamp":"2026-01-09 11:00:09"}
+{"level":"info","message":"✅ PostgreSQL query completed in 3266ms, 2 rows","service":"sysrank-service","timestamp":"2026-01-09 11:00:12"}
+{"level":"info","message":"🔍 Validating query...","service":"sysrank-service","timestamp":"2026-01-09 11:00:12"}
+{"level":"info","message":"✅ Validation passed, executing query...","service":"sysrank-service","timestamp":"2026-01-09 11:00:12"}
+{"level":"info","message":"🟢 Executing PostgreSQL query...","service":"sysrank-service","timestamp":"2026-01-09 11:00:12"}
+{"level":"info","message":"✅ PostgreSQL query completed in 3263ms, 2 rows","service":"sysrank-service","timestamp":"2026-01-09 11:00:15"}
+{"level":"info","message":"🔍 Validating query...","service":"sysrank-service","timestamp":"2026-01-09 11:02:28"}
+{"level":"info","message":"✅ Validation passed, executing query...","service":"sysrank-service","timestamp":"2026-01-09 11:02:28"}
+{"level":"info","message":"🟢 Executing PostgreSQL query...","service":"sysrank-service","timestamp":"2026-01-09 11:02:28"}
+{"level":"info","message":"✅ PostgreSQL query completed in 3333ms, 2 rows","service":"sysrank-service","timestamp":"2026-01-09 11:02:32"}
+{"level":"info","message":"🔍 Validating query...","service":"sysrank-service","timestamp":"2026-01-09 11:02:32"}
+{"level":"info","message":"✅ Validation passed, executing query...","service":"sysrank-service","timestamp":"2026-01-09 11:02:32"}
+{"level":"info","message":"🟢 Executing PostgreSQL query...","service":"sysrank-service","timestamp":"2026-01-09 11:02:32"}
+{"level":"info","message":"✅ PostgreSQL query completed in 3329ms, 2 rows","service":"sysrank-service","timestamp":"2026-01-09 11:02:35"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-09 11:02:47"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-09 11:02:47"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-09 11:02:47"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-09 11:02:48"}
+{"level":"info","message":"🔍 Validating query...","service":"sysrank-service","timestamp":"2026-01-09 11:03:34"}
+{"level":"info","message":"✅ Validation passed, executing query...","service":"sysrank-service","timestamp":"2026-01-09 11:03:34"}
+{"level":"info","message":"🟢 Executing PostgreSQL query...","service":"sysrank-service","timestamp":"2026-01-09 11:03:34"}
+{"level":"info","message":"✅ PostgreSQL query completed in 3250ms, 2 rows","service":"sysrank-service","timestamp":"2026-01-09 11:03:37"}
+{"level":"info","message":"🔍 Validating query...","service":"sysrank-service","timestamp":"2026-01-09 11:03:38"}
+{"level":"info","message":"✅ Validation passed, executing query...","service":"sysrank-service","timestamp":"2026-01-09 11:03:38"}
+{"level":"info","message":"🟢 Executing PostgreSQL query...","service":"sysrank-service","timestamp":"2026-01-09 11:03:38"}
+{"level":"info","message":"✅ PostgreSQL query completed in 3283ms, 2 rows","service":"sysrank-service","timestamp":"2026-01-09 11:03:41"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-09 11:04:25"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-09 11:04:25"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-09 11:04:25"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-09 11:04:25"}
+{"level":"info","message":"🔍 Validating query...","service":"sysrank-service","timestamp":"2026-01-09 11:04:34"}
+{"level":"info","message":"✅ Validation passed, executing query...","service":"sysrank-service","timestamp":"2026-01-09 11:04:34"}
+{"level":"info","message":"🟢 Executing PostgreSQL query...","service":"sysrank-service","timestamp":"2026-01-09 11:04:34"}
+{"level":"info","message":"✅ PostgreSQL query completed in 3331ms, 3 rows","service":"sysrank-service","timestamp":"2026-01-09 11:04:37"}
+{"level":"info","message":"🔍 Validating query...","service":"sysrank-service","timestamp":"2026-01-09 11:04:37"}
+{"level":"info","message":"✅ Validation passed, executing query...","service":"sysrank-service","timestamp":"2026-01-09 11:04:37"}
+{"level":"info","message":"🟢 Executing PostgreSQL query...","service":"sysrank-service","timestamp":"2026-01-09 11:04:37"}
+{"level":"info","message":"✅ PostgreSQL query completed in 3458ms, 3 rows","service":"sysrank-service","timestamp":"2026-01-09 11:04:41"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-09 11:05:58"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-09 11:05:58"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-09 11:05:58"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-09 11:05:59"}
+{"level":"info","message":"Exam Titles: [\n  'python-bootcamp-assessment',\n  'tesst',\n  'testing',\n  'sql-bootcamp-assessment',\n  'test-exam',\n  'sql-test',\n  'sql-proctored',\n  'test',\n  'etc',\n  'test-demo',\n  'testing-1',\n  'etc-1',\n  'demo',\n  'python-exam-',\n  [length]: 14\n]","service":"sysrank-service","timestamp":"2026-01-09 11:06:13"}
+{"level":"info","message":"Fetching submissions for exam IDs: [\n  43,\n  57,\n  58,\n  49,\n  50,\n  51,\n  52,\n  54,\n  55,\n  60,\n  59,\n  56,\n  53,\n  61,\n  [length]: 14\n]","service":"sysrank-service","timestamp":"2026-01-09 11:06:13"}
+{"level":"info","message":"Submissions found: 26","service":"sysrank-service","timestamp":"2026-01-09 11:06:15"}
+{"level":"info","message":"Exam Titles: [\n  'python-bootcamp-assessment',\n  'tesst',\n  'testing',\n  'sql-bootcamp-assessment',\n  'test-exam',\n  'sql-test',\n  'sql-proctored',\n  'test',\n  'etc',\n  'test-demo',\n  'testing-1',\n  'etc-1',\n  'demo',\n  'python-exam-',\n  [length]: 14\n]","service":"sysrank-service","timestamp":"2026-01-09 11:06:23"}
+{"level":"info","message":"Fetching submissions for exam IDs: [\n  43,\n  57,\n  58,\n  49,\n  50,\n  51,\n  52,\n  54,\n  55,\n  60,\n  59,\n  56,\n  53,\n  61,\n  [length]: 14\n]","service":"sysrank-service","timestamp":"2026-01-09 11:06:23"}
+{"level":"info","message":"Submissions found: 26","service":"sysrank-service","timestamp":"2026-01-09 11:06:24"}
+{"level":"info","message":"Admin dashboard stats requested","service":"sysrank-service","timestamp":"2026-01-09 11:06:29"}
+{"level":"info","message":"Admin fetching all submissions","service":"sysrank-service","timestamp":"2026-01-09 11:06:35"}
+{"level":"info","message":"Admin fetching all submissions","service":"sysrank-service","timestamp":"2026-01-09 11:06:35"}
+{"level":"info","message":"Admin fetching all submissions","service":"sysrank-service","timestamp":"2026-01-09 11:11:52"}
+{"level":"info","message":"Admin fetching all submissions","service":"sysrank-service","timestamp":"2026-01-09 11:11:52"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-09 11:11:53"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-09 11:11:53"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-09 11:11:53"}
+{"level":"info","message":"Admin fetching all submissions","service":"sysrank-service","timestamp":"2026-01-09 11:12:28"}
+{"level":"info","message":"Admin fetching all submissions","service":"sysrank-service","timestamp":"2026-01-09 11:12:28"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-09 11:12:29"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-09 11:12:29"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-09 11:12:29"}
+{"level":"info","message":"Fetching stats for user: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-09 11:12:36"}
+{"level":"info","message":"Fetching allowed exams for: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-09 11:12:36"}
+{"level":"info","message":"Admin fetching all submissions","service":"sysrank-service","timestamp":"2026-01-09 11:16:52"}
+{"level":"info","message":"Admin fetching all submissions","service":"sysrank-service","timestamp":"2026-01-09 11:16:52"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-09 11:16:54"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-09 11:16:54"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-09 11:16:54"}
+{"level":"info","message":"Admin fetching all submissions","service":"sysrank-service","timestamp":"2026-01-09 11:18:40"}
+{"level":"info","message":"Admin fetching all submissions","service":"sysrank-service","timestamp":"2026-01-09 11:18:40"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-09 11:18:42"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-09 11:18:42"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-09 11:18:42"}
+{"level":"info","message":"Admin fetching all submissions","service":"sysrank-service","timestamp":"2026-01-09 11:21:54"}
+{"code":"42703","file":"parse_relation.c","hint":"Perhaps you meant to reference the column \"ps.score\".","length":160,"level":"error","line":"3738","message":"Error fetching practice set details: column ps.code does not exist","name":"error","position":"79","routine":"errorMissingColumn","service":"sysrank-service","severity":"ERROR","stack":"error: column ps.code does not exist\n    at C:\\Users\\GowthamPrabhakaranRa\\Desktop\\sysrank\\sysrank\\node_modules\\pg-pool\\index.js:45:11\n    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)\n    at async GET (C:\\Users\\GowthamPrabhakaranRa\\Desktop\\sysrank\\sysrank\\.next\\dev\\server\\chunks\\[root-of-the-server]__9c8bca47._.js:275:24)\n    at async AppRouteRouteModule.do (C:\\Users\\GowthamPrabhakaranRa\\Desktop\\sysrank\\sysrank\\node_modules\\next\\dist\\compiled\\next-server\\app-route-turbo.runtime.dev.js:5:37789)\n    at async AppRouteRouteModule.handle (C:\\Users\\GowthamPrabhakaranRa\\Desktop\\sysrank\\sysrank\\node_modules\\next\\dist\\compiled\\next-server\\app-route-turbo.runtime.dev.js:5:45045)\n    at async responseGenerator (C:\\Users\\GowthamPrabhakaranRa\\Desktop\\sysrank\\sysrank\\.next\\dev\\server\\chunks\\e5a84_next_f85d1de6._.js:14339:38)\n    at async AppRouteRouteModule.handleResponse (C:\\Users\\GowthamPrabhakaranRa\\Desktop\\sysrank\\sysrank\\node_modules\\next\\dist\\compiled\\next-server\\app-route-turbo.runtime.dev.js:1:187851)\n    at async handleResponse (C:\\Users\\GowthamPrabhakaranRa\\Desktop\\sysrank\\sysrank\\.next\\dev\\server\\chunks\\e5a84_next_f85d1de6._.js:14401:32)\n    at async handler (C:\\Users\\GowthamPrabhakaranRa\\Desktop\\sysrank\\sysrank\\.next\\dev\\server\\chunks\\e5a84_next_f85d1de6._.js:14454:13)\n    at async DevServer.renderToResponseWithComponentsImpl (C:\\Users\\GowthamPrabhakaranRa\\Desktop\\sysrank\\sysrank\\node_modules\\next\\dist\\server\\base-server.js:1413:9)\n    at async DevServer.renderPageComponent (C:\\Users\\GowthamPrabhakaranRa\\Desktop\\sysrank\\sysrank\\node_modules\\next\\dist\\server\\base-server.js:1465:24)\n    at async DevServer.renderToResponseImpl (C:\\Users\\GowthamPrabhakaranRa\\Desktop\\sysrank\\sysrank\\node_modules\\next\\dist\\server\\base-server.js:1515:32)\n    at async DevServer.pipeImpl (C:\\Users\\GowthamPrabhakaranRa\\Desktop\\sysrank\\sysrank\\node_modules\\next\\dist\\server\\base-server.js:1021:25)\n    at async NextNodeServer.handleCatchallRenderRequest (C:\\Users\\GowthamPrabhakaranRa\\Desktop\\sysrank\\sysrank\\node_modules\\next\\dist\\server\\next-server.js:394:17)\n    at async DevServer.handleRequestImpl (C:\\Users\\GowthamPrabhakaranRa\\Desktop\\sysrank\\sysrank\\node_modules\\next\\dist\\server\\base-server.js:912:17)\n    at async C:\\Users\\GowthamPrabhakaranRa\\Desktop\\sysrank\\sysrank\\node_modules\\next\\dist\\server\\dev\\next-dev-server.js:382:20\n    at async Span.traceAsyncFn (C:\\Users\\GowthamPrabhakaranRa\\Desktop\\sysrank\\sysrank\\node_modules\\next\\dist\\trace\\trace.js:157:20)\n    at async DevServer.handleRequest (C:\\Users\\GowthamPrabhakaranRa\\Desktop\\sysrank\\sysrank\\node_modules\\next\\dist\\server\\dev\\next-dev-server.js:378:24)\n    at async invokeRender (C:\\Users\\GowthamPrabhakaranRa\\Desktop\\sysrank\\sysrank\\node_modules\\next\\dist\\server\\lib\\router-server.js:240:21)\n    at async handleRequest (C:\\Users\\GowthamPrabhakaranRa\\Desktop\\sysrank\\sysrank\\node_modules\\next\\dist\\server\\lib\\router-server.js:436:24)\n    at async requestHandlerImpl (C:\\Users\\GowthamPrabhakaranRa\\Desktop\\sysrank\\sysrank\\node_modules\\next\\dist\\server\\lib\\router-server.js:484:13)\n    at async Server.requestListener (C:\\Users\\GowthamPrabhakaranRa\\Desktop\\sysrank\\sysrank\\node_modules\\next\\dist\\server\\lib\\start-server.js:226:13)","timestamp":"2026-01-09 11:22:03"}
+{"level":"info","message":"Admin fetching all submissions","service":"sysrank-service","timestamp":"2026-01-09 11:23:36"}
+{"level":"info","message":"Admin fetching all submissions","service":"sysrank-service","timestamp":"2026-01-09 11:23:36"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-09 11:23:37"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-09 11:23:37"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-09 11:23:37"}
+{"code":"42703","file":"parse_relation.c","length":111,"level":"error","line":"3727","message":"Error fetching practice set details: column ps.createdAt does not exist","name":"error","position":"377","routine":"errorMissingColumn","service":"sysrank-service","severity":"ERROR","stack":"error: column ps.createdAt does not exist\n    at C:\\Users\\GowthamPrabhakaranRa\\Desktop\\sysrank\\sysrank\\node_modules\\pg-pool\\index.js:45:11\n    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)\n    at async GET (C:\\Users\\GowthamPrabhakaranRa\\Desktop\\sysrank\\sysrank\\.next\\dev\\server\\chunks\\[root-of-the-server]__9c8bca47._.js:275:24)\n    at async AppRouteRouteModule.do (C:\\Users\\GowthamPrabhakaranRa\\Desktop\\sysrank\\sysrank\\node_modules\\next\\dist\\compiled\\next-server\\app-route-turbo.runtime.dev.js:5:37789)\n    at async AppRouteRouteModule.handle (C:\\Users\\GowthamPrabhakaranRa\\Desktop\\sysrank\\sysrank\\node_modules\\next\\dist\\compiled\\next-server\\app-route-turbo.runtime.dev.js:5:45045)\n    at async responseGenerator (C:\\Users\\GowthamPrabhakaranRa\\Desktop\\sysrank\\sysrank\\.next\\dev\\server\\chunks\\e5a84_next_f85d1de6._.js:14339:38)\n    at async AppRouteRouteModule.handleResponse (C:\\Users\\GowthamPrabhakaranRa\\Desktop\\sysrank\\sysrank\\node_modules\\next\\dist\\compiled\\next-server\\app-route-turbo.runtime.dev.js:1:187851)\n    at async handleResponse (C:\\Users\\GowthamPrabhakaranRa\\Desktop\\sysrank\\sysrank\\.next\\dev\\server\\chunks\\e5a84_next_f85d1de6._.js:14401:32)\n    at async handler (C:\\Users\\GowthamPrabhakaranRa\\Desktop\\sysrank\\sysrank\\.next\\dev\\server\\chunks\\e5a84_next_f85d1de6._.js:14454:13)\n    at async DevServer.renderToResponseWithComponentsImpl (C:\\Users\\GowthamPrabhakaranRa\\Desktop\\sysrank\\sysrank\\node_modules\\next\\dist\\server\\base-server.js:1413:9)\n    at async DevServer.renderPageComponent (C:\\Users\\GowthamPrabhakaranRa\\Desktop\\sysrank\\sysrank\\node_modules\\next\\dist\\server\\base-server.js:1465:24)\n    at async DevServer.renderToResponseImpl (C:\\Users\\GowthamPrabhakaranRa\\Desktop\\sysrank\\sysrank\\node_modules\\next\\dist\\server\\base-server.js:1515:32)\n    at async DevServer.pipeImpl (C:\\Users\\GowthamPrabhakaranRa\\Desktop\\sysrank\\sysrank\\node_modules\\next\\dist\\server\\base-server.js:1021:25)\n    at async NextNodeServer.handleCatchallRenderRequest (C:\\Users\\GowthamPrabhakaranRa\\Desktop\\sysrank\\sysrank\\node_modules\\next\\dist\\server\\next-server.js:394:17)\n    at async DevServer.handleRequestImpl (C:\\Users\\GowthamPrabhakaranRa\\Desktop\\sysrank\\sysrank\\node_modules\\next\\dist\\server\\base-server.js:912:17)\n    at async C:\\Users\\GowthamPrabhakaranRa\\Desktop\\sysrank\\sysrank\\node_modules\\next\\dist\\server\\dev\\next-dev-server.js:382:20\n    at async Span.traceAsyncFn (C:\\Users\\GowthamPrabhakaranRa\\Desktop\\sysrank\\sysrank\\node_modules\\next\\dist\\trace\\trace.js:157:20)\n    at async DevServer.handleRequest (C:\\Users\\GowthamPrabhakaranRa\\Desktop\\sysrank\\sysrank\\node_modules\\next\\dist\\server\\dev\\next-dev-server.js:378:24)\n    at async invokeRender (C:\\Users\\GowthamPrabhakaranRa\\Desktop\\sysrank\\sysrank\\node_modules\\next\\dist\\server\\lib\\router-server.js:240:21)\n    at async handleRequest (C:\\Users\\GowthamPrabhakaranRa\\Desktop\\sysrank\\sysrank\\node_modules\\next\\dist\\server\\lib\\router-server.js:436:24)\n    at async requestHandlerImpl (C:\\Users\\GowthamPrabhakaranRa\\Desktop\\sysrank\\sysrank\\node_modules\\next\\dist\\server\\lib\\router-server.js:484:13)\n    at async Server.requestListener (C:\\Users\\GowthamPrabhakaranRa\\Desktop\\sysrank\\sysrank\\node_modules\\next\\dist\\server\\lib\\start-server.js:226:13)","timestamp":"2026-01-09 11:23:44"}
+{"level":"info","message":"Admin fetching all submissions","service":"sysrank-service","timestamp":"2026-01-09 11:25:57"}
+{"level":"info","message":"Admin fetching all submissions","service":"sysrank-service","timestamp":"2026-01-09 11:25:57"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-09 11:25:59"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-09 11:25:59"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-09 11:25:59"}
+{"code":"42703","file":"parse_relation.c","length":107,"level":"error","line":"3727","message":"Error fetching practice set details: column pq.title does not exist","name":"error","position":"416","routine":"errorMissingColumn","service":"sysrank-service","severity":"ERROR","stack":"error: column pq.title does not exist\n    at C:\\Users\\GowthamPrabhakaranRa\\Desktop\\sysrank\\sysrank\\node_modules\\pg-pool\\index.js:45:11\n    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)\n    at async GET (C:\\Users\\GowthamPrabhakaranRa\\Desktop\\sysrank\\sysrank\\.next\\dev\\server\\chunks\\[root-of-the-server]__9c8bca47._.js:274:24)\n    at async AppRouteRouteModule.do (C:\\Users\\GowthamPrabhakaranRa\\Desktop\\sysrank\\sysrank\\node_modules\\next\\dist\\compiled\\next-server\\app-route-turbo.runtime.dev.js:5:37789)\n    at async AppRouteRouteModule.handle (C:\\Users\\GowthamPrabhakaranRa\\Desktop\\sysrank\\sysrank\\node_modules\\next\\dist\\compiled\\next-server\\app-route-turbo.runtime.dev.js:5:45045)\n    at async responseGenerator (C:\\Users\\GowthamPrabhakaranRa\\Desktop\\sysrank\\sysrank\\.next\\dev\\server\\chunks\\e5a84_next_f85d1de6._.js:14339:38)\n    at async AppRouteRouteModule.handleResponse (C:\\Users\\GowthamPrabhakaranRa\\Desktop\\sysrank\\sysrank\\node_modules\\next\\dist\\compiled\\next-server\\app-route-turbo.runtime.dev.js:1:187851)\n    at async handleResponse (C:\\Users\\GowthamPrabhakaranRa\\Desktop\\sysrank\\sysrank\\.next\\dev\\server\\chunks\\e5a84_next_f85d1de6._.js:14401:32)\n    at async handler (C:\\Users\\GowthamPrabhakaranRa\\Desktop\\sysrank\\sysrank\\.next\\dev\\server\\chunks\\e5a84_next_f85d1de6._.js:14454:13)\n    at async DevServer.renderToResponseWithComponentsImpl (C:\\Users\\GowthamPrabhakaranRa\\Desktop\\sysrank\\sysrank\\node_modules\\next\\dist\\server\\base-server.js:1413:9)\n    at async DevServer.renderPageComponent (C:\\Users\\GowthamPrabhakaranRa\\Desktop\\sysrank\\sysrank\\node_modules\\next\\dist\\server\\base-server.js:1465:24)\n    at async DevServer.renderToResponseImpl (C:\\Users\\GowthamPrabhakaranRa\\Desktop\\sysrank\\sysrank\\node_modules\\next\\dist\\server\\base-server.js:1515:32)\n    at async DevServer.pipeImpl (C:\\Users\\GowthamPrabhakaranRa\\Desktop\\sysrank\\sysrank\\node_modules\\next\\dist\\server\\base-server.js:1021:25)\n    at async NextNodeServer.handleCatchallRenderRequest (C:\\Users\\GowthamPrabhakaranRa\\Desktop\\sysrank\\sysrank\\node_modules\\next\\dist\\server\\next-server.js:394:17)\n    at async DevServer.handleRequestImpl (C:\\Users\\GowthamPrabhakaranRa\\Desktop\\sysrank\\sysrank\\node_modules\\next\\dist\\server\\base-server.js:912:17)\n    at async C:\\Users\\GowthamPrabhakaranRa\\Desktop\\sysrank\\sysrank\\node_modules\\next\\dist\\server\\dev\\next-dev-server.js:382:20\n    at async Span.traceAsyncFn (C:\\Users\\GowthamPrabhakaranRa\\Desktop\\sysrank\\sysrank\\node_modules\\next\\dist\\trace\\trace.js:157:20)\n    at async DevServer.handleRequest (C:\\Users\\GowthamPrabhakaranRa\\Desktop\\sysrank\\sysrank\\node_modules\\next\\dist\\server\\dev\\next-dev-server.js:378:24)\n    at async invokeRender (C:\\Users\\GowthamPrabhakaranRa\\Desktop\\sysrank\\sysrank\\node_modules\\next\\dist\\server\\lib\\router-server.js:240:21)\n    at async handleRequest (C:\\Users\\GowthamPrabhakaranRa\\Desktop\\sysrank\\sysrank\\node_modules\\next\\dist\\server\\lib\\router-server.js:436:24)\n    at async requestHandlerImpl (C:\\Users\\GowthamPrabhakaranRa\\Desktop\\sysrank\\sysrank\\node_modules\\next\\dist\\server\\lib\\router-server.js:484:13)\n    at async Server.requestListener (C:\\Users\\GowthamPrabhakaranRa\\Desktop\\sysrank\\sysrank\\node_modules\\next\\dist\\server\\lib\\start-server.js:226:13)","timestamp":"2026-01-09 11:27:10"}
+{"level":"info","message":"Admin fetching all submissions","service":"sysrank-service","timestamp":"2026-01-09 11:28:29"}
+{"level":"info","message":"Admin fetching all submissions","service":"sysrank-service","timestamp":"2026-01-09 11:28:29"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-09 11:28:31"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-09 11:28:31"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-09 11:28:31"}
+{"level":"info","message":"Admin fetching all submissions","service":"sysrank-service","timestamp":"2026-01-09 11:28:40"}
+{"level":"info","message":"Admin fetching all submissions","service":"sysrank-service","timestamp":"2026-01-09 11:28:40"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-09 11:28:41"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-09 11:28:41"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-09 11:28:41"}
+{"level":"info","message":"Fetching allowed exams for: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-09 11:37:39"}
+{"level":"info","message":"Fetching stats for user: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-09 11:37:40"}
+{"level":"info","message":"Generating 5 questions of type: coding for topic: SQL","service":"sysrank-service","timestamp":"2026-01-09 11:38:09"}
+{"level":"info","message":"Language determined: sql","service":"sysrank-service","timestamp":"2026-01-09 11:38:09"}
+{"level":"info","message":"=== Found 5 questions ===","service":"sysrank-service","timestamp":"2026-01-09 11:39:16"}
+{"level":"info","message":"Question types in response: [ 'coding', 'coding', 'coding', 'coding', 'coding', [length]: 5 ]","service":"sysrank-service","timestamp":"2026-01-09 11:39:16"}
+{"level":"info","message":"🔍 Validating query...","service":"sysrank-service","timestamp":"2026-01-09 11:50:36"}
+{"level":"info","message":"✅ Validation passed, executing query...","service":"sysrank-service","timestamp":"2026-01-09 11:50:36"}
+{"level":"info","message":"🟢 Executing PostgreSQL query...","service":"sysrank-service","timestamp":"2026-01-09 11:50:36"}
+{"level":"info","message":"✅ PostgreSQL query completed in 3631ms, 2 rows","service":"sysrank-service","timestamp":"2026-01-09 11:50:40"}
+{"level":"info","message":"🔍 Validating query...","service":"sysrank-service","timestamp":"2026-01-09 11:50:40"}
+{"level":"info","message":"✅ Validation passed, executing query...","service":"sysrank-service","timestamp":"2026-01-09 11:50:40"}
+{"level":"info","message":"🟢 Executing PostgreSQL query...","service":"sysrank-service","timestamp":"2026-01-09 11:50:40"}
+{"level":"info","message":"✅ PostgreSQL query completed in 3564ms, 2 rows","service":"sysrank-service","timestamp":"2026-01-09 11:50:43"}
+{"level":"info","message":"🔍 Validating query...","service":"sysrank-service","timestamp":"2026-01-09 11:50:50"}
+{"level":"info","message":"✅ Validation passed, executing query...","service":"sysrank-service","timestamp":"2026-01-09 11:50:50"}
+{"level":"info","message":"🟢 Executing PostgreSQL query...","service":"sysrank-service","timestamp":"2026-01-09 11:50:50"}
+{"level":"info","message":"✅ PostgreSQL query completed in 3606ms, 2 rows","service":"sysrank-service","timestamp":"2026-01-09 11:50:54"}
+{"level":"info","message":"🔍 Validating query...","service":"sysrank-service","timestamp":"2026-01-09 11:50:54"}
+{"level":"info","message":"✅ Validation passed, executing query...","service":"sysrank-service","timestamp":"2026-01-09 11:50:54"}
+{"level":"info","message":"🟢 Executing PostgreSQL query...","service":"sysrank-service","timestamp":"2026-01-09 11:50:54"}
+{"level":"info","message":"✅ PostgreSQL query completed in 3483ms, 2 rows","service":"sysrank-service","timestamp":"2026-01-09 11:50:57"}
+{"level":"info","message":"🔍 Validating query...","service":"sysrank-service","timestamp":"2026-01-09 11:52:20"}
+{"level":"info","message":"✅ Validation passed, executing query...","service":"sysrank-service","timestamp":"2026-01-09 11:52:20"}
+{"level":"info","message":"🟢 Executing PostgreSQL query...","service":"sysrank-service","timestamp":"2026-01-09 11:52:20"}
+{"level":"info","message":"✅ PostgreSQL query completed in 3343ms, 2 rows","service":"sysrank-service","timestamp":"2026-01-09 11:52:23"}
+{"level":"info","message":"🔍 Validating query...","service":"sysrank-service","timestamp":"2026-01-09 11:52:23"}
+{"level":"info","message":"✅ Validation passed, executing query...","service":"sysrank-service","timestamp":"2026-01-09 11:52:23"}
+{"level":"info","message":"🟢 Executing PostgreSQL query...","service":"sysrank-service","timestamp":"2026-01-09 11:52:23"}
+{"level":"info","message":"✅ PostgreSQL query completed in 3766ms, 2 rows","service":"sysrank-service","timestamp":"2026-01-09 11:52:27"}
+{"level":"info","message":"🔍 Validating query...","service":"sysrank-service","timestamp":"2026-01-09 11:52:35"}
+{"level":"info","message":"✅ Validation passed, executing query...","service":"sysrank-service","timestamp":"2026-01-09 11:52:35"}
+{"level":"info","message":"🟢 Executing PostgreSQL query...","service":"sysrank-service","timestamp":"2026-01-09 11:52:35"}
+{"level":"info","message":"✅ PostgreSQL query completed in 4122ms, 2 rows","service":"sysrank-service","timestamp":"2026-01-09 11:52:39"}
+{"level":"info","message":"🔍 Validating query...","service":"sysrank-service","timestamp":"2026-01-09 11:52:39"}
+{"level":"info","message":"✅ Validation passed, executing query...","service":"sysrank-service","timestamp":"2026-01-09 11:52:39"}
+{"level":"info","message":"🟢 Executing PostgreSQL query...","service":"sysrank-service","timestamp":"2026-01-09 11:52:39"}
+{"level":"info","message":"✅ PostgreSQL query completed in 3515ms, 0 rows","service":"sysrank-service","timestamp":"2026-01-09 11:52:43"}
+{"level":"info","message":"🔍 Validating query...","service":"sysrank-service","timestamp":"2026-01-09 11:52:52"}
+{"level":"info","message":"✅ Validation passed, executing query...","service":"sysrank-service","timestamp":"2026-01-09 11:52:52"}
+{"level":"info","message":"🟢 Executing PostgreSQL query...","service":"sysrank-service","timestamp":"2026-01-09 11:52:52"}
+{"level":"info","message":"✅ PostgreSQL query completed in 3592ms, 2 rows","service":"sysrank-service","timestamp":"2026-01-09 11:52:56"}
+{"level":"info","message":"🔍 Validating query...","service":"sysrank-service","timestamp":"2026-01-09 11:52:56"}
+{"level":"info","message":"✅ Validation passed, executing query...","service":"sysrank-service","timestamp":"2026-01-09 11:52:56"}
+{"level":"info","message":"🟢 Executing PostgreSQL query...","service":"sysrank-service","timestamp":"2026-01-09 11:52:56"}
+{"level":"info","message":"✅ PostgreSQL query completed in 3624ms, 3 rows","service":"sysrank-service","timestamp":"2026-01-09 11:53:00"}
+{"level":"info","message":"🔍 Validating query...","service":"sysrank-service","timestamp":"2026-01-09 11:53:11"}
+{"level":"info","message":"✅ Validation passed, executing query...","service":"sysrank-service","timestamp":"2026-01-09 11:53:11"}
+{"level":"info","message":"🟢 Executing PostgreSQL query...","service":"sysrank-service","timestamp":"2026-01-09 11:53:11"}
+{"level":"info","message":"✅ PostgreSQL query completed in 3841ms, 3 rows","service":"sysrank-service","timestamp":"2026-01-09 11:53:15"}
+{"level":"info","message":"🔍 Validating query...","service":"sysrank-service","timestamp":"2026-01-09 11:53:15"}
+{"level":"info","message":"✅ Validation passed, executing query...","service":"sysrank-service","timestamp":"2026-01-09 11:53:15"}
+{"level":"info","message":"🟢 Executing PostgreSQL query...","service":"sysrank-service","timestamp":"2026-01-09 11:53:15"}
+{"level":"info","message":"✅ PostgreSQL query completed in 4209ms, 2 rows","service":"sysrank-service","timestamp":"2026-01-09 11:53:19"}
+{"level":"info","message":"Fetching stats for user: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-09 12:15:21"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-09 12:15:22"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-09 12:15:22"}
+{"level":"info","message":"Fetching allowed exams for: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-09 12:15:22"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-09 12:15:22"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-09 12:15:22"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-09 14:59:34"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-09 14:59:34"}
+{"level":"info","message":"Fetching allowed exams for: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-09 14:59:34"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-09 14:59:34"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-09 14:59:35"}
+{"level":"info","message":"Fetching stats for user: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-09 14:59:35"}
+{"level":"info","message":"Generating 10 questions of type: coding for topic: SQL","service":"sysrank-service","timestamp":"2026-01-12 15:17:22"}
+{"level":"info","message":"Language determined: sql","service":"sysrank-service","timestamp":"2026-01-12 15:17:22"}
+{"level":"info","message":"=== Found 10 questions ===","service":"sysrank-service","timestamp":"2026-01-12 15:18:32"}
+{"level":"info","message":"Question types in response: [\n  'coding',     'coding',\n  'coding',     'coding',\n  'coding',     'coding',\n  'coding',     'coding',\n  'coding',     'coding',\n  [length]: 10\n]","service":"sysrank-service","timestamp":"2026-01-12 15:18:32"}
+{"level":"info","message":"Fetching stats for user: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-12 15:18:39"}
+{"level":"info","message":"Fetching allowed exams for: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-12 15:18:39"}
+{"level":"info","message":"🔍 Validating query...","service":"sysrank-service","timestamp":"2026-01-12 15:18:52"}
+{"level":"info","message":"✅ Validation passed, executing query...","service":"sysrank-service","timestamp":"2026-01-12 15:18:52"}
+{"level":"info","message":"🟢 Executing PostgreSQL query...","service":"sysrank-service","timestamp":"2026-01-12 15:18:52"}
+{"level":"info","message":"✅ PostgreSQL query completed in 3385ms, 2 rows","service":"sysrank-service","timestamp":"2026-01-12 15:18:55"}
+{"level":"info","message":"🔍 Validating query...","service":"sysrank-service","timestamp":"2026-01-12 15:18:55"}
+{"level":"info","message":"✅ Validation passed, executing query...","service":"sysrank-service","timestamp":"2026-01-12 15:18:55"}
+{"level":"info","message":"🟢 Executing PostgreSQL query...","service":"sysrank-service","timestamp":"2026-01-12 15:18:55"}
+{"level":"info","message":"✅ PostgreSQL query completed in 3553ms, 2 rows","service":"sysrank-service","timestamp":"2026-01-12 15:18:59"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-12 15:20:42"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-12 15:20:42"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-12 15:20:42"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-12 15:20:43"}
+{"level":"info","message":"Fetching allowed exams for: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-12 15:20:43"}
+{"level":"info","message":"Fetching stats for user: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-12 15:20:43"}
+{"level":"info","message":"Admin dashboard stats requested","service":"sysrank-service","timestamp":"2026-01-12 15:21:56"}
+{"level":"info","message":"Exam Titles: [\n  'python-bootcamp-assessment',\n  'tesst',\n  'testing',\n  'sql-bootcamp-assessment',\n  'test-exam',\n  'sql-test',\n  'sql-proctored',\n  'test',\n  'etc',\n  'test-demo',\n  'testing-1',\n  'etc-1',\n  'demo',\n  'python-exam-',\n  [length]: 14\n]","service":"sysrank-service","timestamp":"2026-01-12 15:22:13"}
+{"level":"info","message":"Fetching submissions for exam IDs: [\n  43,\n  57,\n  58,\n  49,\n  50,\n  51,\n  52,\n  54,\n  55,\n  60,\n  59,\n  56,\n  53,\n  61,\n  [length]: 14\n]","service":"sysrank-service","timestamp":"2026-01-12 15:22:13"}
+{"level":"info","message":"Submissions found: 26","service":"sysrank-service","timestamp":"2026-01-12 15:22:14"}
+{"level":"info","message":"Exam Titles: [\n  'python-bootcamp-assessment',\n  'tesst',\n  'testing',\n  'sql-bootcamp-assessment',\n  'test-exam',\n  'sql-test',\n  'sql-proctored',\n  'test',\n  'etc',\n  'test-demo',\n  'testing-1',\n  'etc-1',\n  'demo',\n  'python-exam-',\n  [length]: 14\n]","service":"sysrank-service","timestamp":"2026-01-12 15:22:17"}
+{"level":"info","message":"Fetching submissions for exam IDs: [\n  43,\n  57,\n  58,\n  49,\n  50,\n  51,\n  52,\n  54,\n  55,\n  60,\n  59,\n  56,\n  53,\n  61,\n  [length]: 14\n]","service":"sysrank-service","timestamp":"2026-01-12 15:22:17"}
+{"level":"info","message":"Submissions found: 26","service":"sysrank-service","timestamp":"2026-01-12 15:22:18"}
+{"level":"info","message":"Fetching allowed exams for: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-12 15:24:02"}
+{"level":"info","message":"Fetching stats for user: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-12 15:24:02"}
+{"level":"info","message":"Admin dashboard stats requested","service":"sysrank-service","timestamp":"2026-01-12 16:53:20"}
+{"level":"info","message":"Admin dashboard stats requested","service":"sysrank-service","timestamp":"2026-01-12 16:53:57"}
+{"level":"info","message":"Admin dashboard stats requested","service":"sysrank-service","timestamp":"2026-01-12 16:54:04"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-12 16:56:11"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-12 16:56:11"}
+{"level":"info","message":"Fetching allowed exams for: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-12 16:56:11"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-12 16:56:11"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-12 16:56:11"}
+{"level":"info","message":"Fetching stats for user: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-12 16:56:11"}
+{"level":"info","message":"Generating 5 questions of type: coding for topic: SQL","service":"sysrank-service","timestamp":"2026-01-12 18:02:26"}
+{"level":"info","message":"Language determined: sql","service":"sysrank-service","timestamp":"2026-01-12 18:02:26"}
+{"level":"info","message":"=== Found 5 questions ===","service":"sysrank-service","timestamp":"2026-01-12 18:03:56"}
+{"level":"info","message":"Question types in response: [ 'coding', 'coding', 'coding', 'coding', 'coding', [length]: 5 ]","service":"sysrank-service","timestamp":"2026-01-12 18:03:56"}
+{"level":"info","message":"Admin dashboard stats requested","service":"sysrank-service","timestamp":"2026-01-12 19:47:01"}
+{"level":"info","message":"Admin fetching all assessments","service":"sysrank-service","timestamp":"2026-01-12 19:47:19"}
+{"level":"info","message":"Admin fetching all assessments","service":"sysrank-service","timestamp":"2026-01-12 19:47:21"}
+{"level":"info","message":"🔍 Validating query...","service":"sysrank-service","timestamp":"2026-01-13 10:43:13"}
+{"level":"warn","message":"❌ Validation failed: Main query must be a SELECT statement","service":"sysrank-service","timestamp":"2026-01-13 10:43:13"}
+{"level":"info","message":"🔍 Validating query...","service":"sysrank-service","timestamp":"2026-01-13 10:43:13"}
+{"level":"warn","message":"❌ Validation failed: Main query must be a SELECT statement","service":"sysrank-service","timestamp":"2026-01-13 10:43:13"}
+{"level":"info","message":"🔍 Validating query...","service":"sysrank-service","timestamp":"2026-01-13 10:46:37"}
+{"level":"info","message":"✅ Validation passed, executing query...","service":"sysrank-service","timestamp":"2026-01-13 10:46:37"}
+{"level":"info","message":"🟢 Executing PostgreSQL query...","service":"sysrank-service","timestamp":"2026-01-13 10:46:37"}
+{"level":"info","message":"✅ PostgreSQL query completed in 3687ms, 5 rows","service":"sysrank-service","timestamp":"2026-01-13 10:46:41"}
+{"level":"info","message":"🔍 Validating query...","service":"sysrank-service","timestamp":"2026-01-13 10:46:41"}
+{"level":"info","message":"✅ Validation passed, executing query...","service":"sysrank-service","timestamp":"2026-01-13 10:46:41"}
+{"level":"info","message":"🟢 Executing PostgreSQL query...","service":"sysrank-service","timestamp":"2026-01-13 10:46:41"}
+{"level":"info","message":"✅ PostgreSQL query completed in 3939ms, 3 rows","service":"sysrank-service","timestamp":"2026-01-13 10:46:45"}
+{"level":"info","message":"🔍 Validating query...","service":"sysrank-service","timestamp":"2026-01-13 10:46:51"}
+{"level":"info","message":"✅ Validation passed, executing query...","service":"sysrank-service","timestamp":"2026-01-13 10:46:51"}
+{"level":"info","message":"🟢 Executing PostgreSQL query...","service":"sysrank-service","timestamp":"2026-01-13 10:46:51"}
+{"level":"info","message":"✅ PostgreSQL query completed in 7968ms, 2 rows","service":"sysrank-service","timestamp":"2026-01-13 10:46:59"}
+{"level":"info","message":"🔍 Validating query...","service":"sysrank-service","timestamp":"2026-01-13 10:46:59"}
+{"level":"info","message":"✅ Validation passed, executing query...","service":"sysrank-service","timestamp":"2026-01-13 10:46:59"}
+{"level":"info","message":"🟢 Executing PostgreSQL query...","service":"sysrank-service","timestamp":"2026-01-13 10:46:59"}
+{"level":"info","message":"✅ PostgreSQL query completed in 8022ms, 2 rows","service":"sysrank-service","timestamp":"2026-01-13 10:47:07"}
+{"level":"info","message":"🔍 Validating query...","service":"sysrank-service","timestamp":"2026-01-13 10:47:18"}
+{"level":"info","message":"✅ Validation passed, executing query...","service":"sysrank-service","timestamp":"2026-01-13 10:47:18"}
+{"level":"info","message":"🟢 Executing PostgreSQL query...","service":"sysrank-service","timestamp":"2026-01-13 10:47:18"}
+{"level":"info","message":"✅ PostgreSQL query completed in 3847ms, 3 rows","service":"sysrank-service","timestamp":"2026-01-13 10:47:22"}
+{"level":"info","message":"🔍 Validating query...","service":"sysrank-service","timestamp":"2026-01-13 10:47:22"}
+{"level":"info","message":"✅ Validation passed, executing query...","service":"sysrank-service","timestamp":"2026-01-13 10:47:22"}
+{"level":"info","message":"🟢 Executing PostgreSQL query...","service":"sysrank-service","timestamp":"2026-01-13 10:47:22"}
+{"level":"info","message":"✅ PostgreSQL query completed in 3518ms, 0 rows","service":"sysrank-service","timestamp":"2026-01-13 10:47:26"}
+{"level":"info","message":"🔍 Validating query...","service":"sysrank-service","timestamp":"2026-01-13 10:48:19"}
+{"level":"info","message":"✅ Validation passed, executing query...","service":"sysrank-service","timestamp":"2026-01-13 10:48:19"}
+{"level":"info","message":"🟢 Executing PostgreSQL query...","service":"sysrank-service","timestamp":"2026-01-13 10:48:19"}
+{"level":"info","message":"✅ PostgreSQL query completed in 3626ms, 3 rows","service":"sysrank-service","timestamp":"2026-01-13 10:48:22"}
+{"level":"info","message":"🔍 Validating query...","service":"sysrank-service","timestamp":"2026-01-13 10:48:23"}
+{"level":"info","message":"✅ Validation passed, executing query...","service":"sysrank-service","timestamp":"2026-01-13 10:48:23"}
+{"level":"info","message":"🟢 Executing PostgreSQL query...","service":"sysrank-service","timestamp":"2026-01-13 10:48:23"}
+{"level":"info","message":"✅ PostgreSQL query completed in 3695ms, 2 rows","service":"sysrank-service","timestamp":"2026-01-13 10:48:26"}
+{"level":"info","message":"🔍 Validating query...","service":"sysrank-service","timestamp":"2026-01-13 10:48:41"}
+{"level":"info","message":"✅ Validation passed, executing query...","service":"sysrank-service","timestamp":"2026-01-13 10:48:41"}
+{"level":"info","message":"🟢 Executing PostgreSQL query...","service":"sysrank-service","timestamp":"2026-01-13 10:48:41"}
+{"level":"info","message":"✅ PostgreSQL query completed in 5776ms, 1 rows","service":"sysrank-service","timestamp":"2026-01-13 10:48:47"}
+{"level":"info","message":"🔍 Validating query...","service":"sysrank-service","timestamp":"2026-01-13 10:48:47"}
+{"level":"info","message":"✅ Validation passed, executing query...","service":"sysrank-service","timestamp":"2026-01-13 10:48:47"}
+{"level":"info","message":"🟢 Executing PostgreSQL query...","service":"sysrank-service","timestamp":"2026-01-13 10:48:47"}
+{"level":"info","message":"✅ PostgreSQL query completed in 5655ms, 2 rows","service":"sysrank-service","timestamp":"2026-01-13 10:48:53"}
+{"level":"info","message":"🔍 Validating query...","service":"sysrank-service","timestamp":"2026-01-13 11:10:51"}
+{"level":"info","message":"✅ Validation passed, executing query...","service":"sysrank-service","timestamp":"2026-01-13 11:10:51"}
+{"level":"info","message":"🟢 Executing PostgreSQL query...","service":"sysrank-service","timestamp":"2026-01-13 11:10:51"}
+{"level":"info","message":"✅ PostgreSQL query completed in 3635ms, 5 rows","service":"sysrank-service","timestamp":"2026-01-13 11:10:54"}
+{"level":"info","message":"🔍 Validating query...","service":"sysrank-service","timestamp":"2026-01-13 11:10:54"}
+{"level":"info","message":"✅ Validation passed, executing query...","service":"sysrank-service","timestamp":"2026-01-13 11:10:54"}
+{"level":"info","message":"🟢 Executing PostgreSQL query...","service":"sysrank-service","timestamp":"2026-01-13 11:10:54"}
+{"level":"info","message":"✅ PostgreSQL query completed in 3821ms, 3 rows","service":"sysrank-service","timestamp":"2026-01-13 11:10:58"}
+{"level":"info","message":"🔍 Validating query...","service":"sysrank-service","timestamp":"2026-01-13 11:11:09"}
+{"level":"info","message":"✅ Validation passed, executing query...","service":"sysrank-service","timestamp":"2026-01-13 11:11:09"}
+{"level":"info","message":"🟢 Executing PostgreSQL query...","service":"sysrank-service","timestamp":"2026-01-13 11:11:09"}
+{"level":"info","message":"✅ PostgreSQL query completed in 8933ms, 2 rows","service":"sysrank-service","timestamp":"2026-01-13 11:11:18"}
+{"level":"info","message":"🔍 Validating query...","service":"sysrank-service","timestamp":"2026-01-13 11:11:18"}
+{"level":"info","message":"✅ Validation passed, executing query...","service":"sysrank-service","timestamp":"2026-01-13 11:11:18"}
+{"level":"info","message":"🟢 Executing PostgreSQL query...","service":"sysrank-service","timestamp":"2026-01-13 11:11:18"}
+{"level":"info","message":"✅ PostgreSQL query completed in 9581ms, 2 rows","service":"sysrank-service","timestamp":"2026-01-13 11:11:28"}
+{"level":"info","message":"🔍 Validating query...","service":"sysrank-service","timestamp":"2026-01-13 11:11:48"}
+{"level":"info","message":"✅ Validation passed, executing query...","service":"sysrank-service","timestamp":"2026-01-13 11:11:48"}
+{"level":"info","message":"🟢 Executing PostgreSQL query...","service":"sysrank-service","timestamp":"2026-01-13 11:11:48"}
+{"level":"info","message":"✅ PostgreSQL query completed in 3822ms, 3 rows","service":"sysrank-service","timestamp":"2026-01-13 11:11:52"}
+{"level":"info","message":"🔍 Validating query...","service":"sysrank-service","timestamp":"2026-01-13 11:11:52"}
+{"level":"info","message":"✅ Validation passed, executing query...","service":"sysrank-service","timestamp":"2026-01-13 11:11:52"}
+{"level":"info","message":"🟢 Executing PostgreSQL query...","service":"sysrank-service","timestamp":"2026-01-13 11:11:52"}
+{"level":"info","message":"✅ PostgreSQL query completed in 3816ms, 0 rows","service":"sysrank-service","timestamp":"2026-01-13 11:11:56"}
+{"level":"info","message":"🔍 Validating query...","service":"sysrank-service","timestamp":"2026-01-13 11:12:17"}
+{"level":"info","message":"✅ Validation passed, executing query...","service":"sysrank-service","timestamp":"2026-01-13 11:12:17"}
+{"level":"info","message":"🟢 Executing PostgreSQL query...","service":"sysrank-service","timestamp":"2026-01-13 11:12:17"}
+{"level":"info","message":"✅ PostgreSQL query completed in 3736ms, 3 rows","service":"sysrank-service","timestamp":"2026-01-13 11:12:21"}
+{"level":"info","message":"🔍 Validating query...","service":"sysrank-service","timestamp":"2026-01-13 11:12:21"}
+{"level":"info","message":"✅ Validation passed, executing query...","service":"sysrank-service","timestamp":"2026-01-13 11:12:21"}
+{"level":"info","message":"🟢 Executing PostgreSQL query...","service":"sysrank-service","timestamp":"2026-01-13 11:12:21"}
+{"level":"info","message":"✅ PostgreSQL query completed in 3772ms, 2 rows","service":"sysrank-service","timestamp":"2026-01-13 11:12:25"}
+{"level":"info","message":"🔍 Validating query...","service":"sysrank-service","timestamp":"2026-01-13 11:12:59"}
+{"level":"info","message":"✅ Validation passed, executing query...","service":"sysrank-service","timestamp":"2026-01-13 11:12:59"}
+{"level":"info","message":"🟢 Executing PostgreSQL query...","service":"sysrank-service","timestamp":"2026-01-13 11:12:59"}
+{"level":"info","message":"✅ PostgreSQL query completed in 5807ms, 1 rows","service":"sysrank-service","timestamp":"2026-01-13 11:13:05"}
+{"level":"info","message":"🔍 Validating query...","service":"sysrank-service","timestamp":"2026-01-13 11:13:05"}
+{"level":"info","message":"✅ Validation passed, executing query...","service":"sysrank-service","timestamp":"2026-01-13 11:13:05"}
+{"level":"info","message":"🟢 Executing PostgreSQL query...","service":"sysrank-service","timestamp":"2026-01-13 11:13:05"}
+{"level":"info","message":"✅ PostgreSQL query completed in 6240ms, 2 rows","service":"sysrank-service","timestamp":"2026-01-13 11:13:12"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-13 11:24:13"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-13 11:24:13"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-13 11:24:13"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-13 11:24:13"}
+{"level":"info","message":"Fetching allowed exams for: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-13 11:24:13"}
+{"level":"info","message":"Fetching stats for user: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-13 11:24:17"}
+{"level":"info","message":"Fetching allowed exams for: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-13 11:24:17"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-13 11:24:17"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-13 11:24:17"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-13 11:24:17"}
+{"level":"info","message":"Fetching stats for user: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-13 11:25:30"}
+{"level":"info","message":"Fetching allowed exams for: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-13 11:25:30"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-13 11:25:31"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-13 11:25:31"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-13 11:25:31"}
+{"level":"info","message":"Generating 5 questions of type: coding for topic: SQL","service":"sysrank-service","timestamp":"2026-01-13 11:32:12"}
+{"level":"info","message":"Language determined: sql","service":"sysrank-service","timestamp":"2026-01-13 11:32:12"}
+{"level":"info","message":"=== Found 5 questions ===","service":"sysrank-service","timestamp":"2026-01-13 11:33:31"}
+{"level":"info","message":"Question types in response: [ 'coding', 'coding', 'coding', 'coding', 'coding', [length]: 5 ]","service":"sysrank-service","timestamp":"2026-01-13 11:33:31"}
+{"level":"info","message":"🔍 Validating query...","service":"sysrank-service","timestamp":"2026-01-13 11:33:48"}
+{"level":"info","message":"✅ Validation passed, executing query...","service":"sysrank-service","timestamp":"2026-01-13 11:33:48"}
+{"level":"info","message":"🟢 Executing PostgreSQL query...","service":"sysrank-service","timestamp":"2026-01-13 11:33:48"}
+{"level":"info","message":"✅ PostgreSQL query completed in 4112ms, 6 rows","service":"sysrank-service","timestamp":"2026-01-13 11:33:52"}
+{"level":"info","message":"🔍 Validating query...","service":"sysrank-service","timestamp":"2026-01-13 11:34:18"}
+{"level":"info","message":"✅ Validation passed, executing query...","service":"sysrank-service","timestamp":"2026-01-13 11:34:18"}
+{"level":"info","message":"🟢 Executing PostgreSQL query...","service":"sysrank-service","timestamp":"2026-01-13 11:34:18"}
+{"code":"42601","level":"error","message":"syntax error at or near \"LIMIT\"","position":"16","service":"sysrank-service","timestamp":"2026-01-13 11:34:22"}
+{"0":"❌","1":" ","10":"a","11":"x","12":" ","13":"E","14":"r","15":"r","16":"o","17":"r","18":":","19":" ","2":"S","20":"s","21":"y","22":"n","23":"t","24":"a","25":"x","26":" ","27":"e","28":"r","29":"r","3":"Q","30":"o","31":"r","32":" ","33":"a","34":"t","35":" ","36":"o","37":"r","38":" ","39":"n","4":"L","40":"e","41":"a","42":"r","43":" ","44":"\"","45":"L","46":"I","47":"M","48":"I","49":"T","5":" ","50":"\"","6":"S","7":"y","8":"n","9":"t","level":"error","message":"❌ SQL execution failed:","service":"sysrank-service","timestamp":"2026-01-13 11:34:22"}
+{"level":"info","message":"🔍 Validating query...","service":"sysrank-service","timestamp":"2026-01-13 11:34:47"}
+{"level":"info","message":"✅ Validation passed, executing query...","service":"sysrank-service","timestamp":"2026-01-13 11:34:47"}
+{"level":"info","message":"🟢 Executing PostgreSQL query...","service":"sysrank-service","timestamp":"2026-01-13 11:34:47"}
+{"code":"42804","hint":"Cast the output of the non-recursive term to the correct type.","level":"error","message":"recursive query \"dates\" column 3 has type date in non-recursive term but type timestamp without time zone overall","position":"61","service":"sysrank-service","timestamp":"2026-01-13 11:34:50"}
+{"0":"r","1":"e","10":"q","100":" ","101":"z","102":"o","103":"n","104":"e","105":" ","106":"o","107":"v","108":"e","109":"r","11":"u","110":"a","111":"l","112":"l","12":"e","13":"r","14":"y","15":" ","16":"\"","17":"d","18":"a","19":"t","2":"c","20":"e","21":"s","22":"\"","23":" ","24":"c","25":"o","26":"l","27":"u","28":"m","29":"n","3":"u","30":" ","31":"3","32":" ","33":"h","34":"a","35":"s","36":" ","37":"t","38":"y","39":"p","4":"r","40":"e","41":" ","42":"d","43":"a","44":"t","45":"e","46":" ","47":"i","48":"n","49":" ","5":"s","50":"n","51":"o","52":"n","53":"-","54":"r","55":"e","56":"c","57":"u","58":"r","59":"s","6":"i","60":"i","61":"v","62":"e","63":" ","64":"t","65":"e","66":"r","67":"m","68":" ","69":"b","7":"v","70":"u","71":"t","72":" ","73":"t","74":"y","75":"p","76":"e","77":" ","78":"t","79":"i","8":"e","80":"m","81":"e","82":"s","83":"t","84":"a","85":"m","86":"p","87":" ","88":"w","89":"i","9":" ","90":"t","91":"h","92":"o","93":"u","94":"t","95":" ","96":"t","97":"i","98":"m","99":"e","level":"error","message":"❌ SQL execution failed:","service":"sysrank-service","timestamp":"2026-01-13 11:34:50"}
+{"level":"info","message":"🔍 Validating query...","service":"sysrank-service","timestamp":"2026-01-13 11:34:59"}
+{"level":"info","message":"✅ Validation passed, executing query...","service":"sysrank-service","timestamp":"2026-01-13 11:34:59"}
+{"level":"info","message":"🟢 Executing PostgreSQL query...","service":"sysrank-service","timestamp":"2026-01-13 11:34:59"}
+{"code":"42804","hint":"Cast the output of the non-recursive term to the correct type.","level":"error","message":"recursive query \"dates\" column 3 has type date in non-recursive term but type timestamp without time zone overall","position":"61","service":"sysrank-service","timestamp":"2026-01-13 11:35:03"}
+{"0":"r","1":"e","10":"q","100":" ","101":"z","102":"o","103":"n","104":"e","105":" ","106":"o","107":"v","108":"e","109":"r","11":"u","110":"a","111":"l","112":"l","12":"e","13":"r","14":"y","15":" ","16":"\"","17":"d","18":"a","19":"t","2":"c","20":"e","21":"s","22":"\"","23":" ","24":"c","25":"o","26":"l","27":"u","28":"m","29":"n","3":"u","30":" ","31":"3","32":" ","33":"h","34":"a","35":"s","36":" ","37":"t","38":"y","39":"p","4":"r","40":"e","41":" ","42":"d","43":"a","44":"t","45":"e","46":" ","47":"i","48":"n","49":" ","5":"s","50":"n","51":"o","52":"n","53":"-","54":"r","55":"e","56":"c","57":"u","58":"r","59":"s","6":"i","60":"i","61":"v","62":"e","63":" ","64":"t","65":"e","66":"r","67":"m","68":" ","69":"b","7":"v","70":"u","71":"t","72":" ","73":"t","74":"y","75":"p","76":"e","77":" ","78":"t","79":"i","8":"e","80":"m","81":"e","82":"s","83":"t","84":"a","85":"m","86":"p","87":" ","88":"w","89":"i","9":" ","90":"t","91":"h","92":"o","93":"u","94":"t","95":" ","96":"t","97":"i","98":"m","99":"e","level":"error","message":"❌ SQL execution failed:","service":"sysrank-service","timestamp":"2026-01-13 11:35:03"}
+{"level":"info","message":"🔍 Validating query...","service":"sysrank-service","timestamp":"2026-01-13 11:35:31"}
+{"level":"info","message":"✅ Validation passed, executing query...","service":"sysrank-service","timestamp":"2026-01-13 11:35:31"}
+{"level":"info","message":"🟢 Executing PostgreSQL query...","service":"sysrank-service","timestamp":"2026-01-13 11:35:31"}
+{"level":"info","message":"✅ PostgreSQL query completed in 3968ms, 3 rows","service":"sysrank-service","timestamp":"2026-01-13 11:35:35"}
+{"level":"info","message":"🔍 Validating query...","service":"sysrank-service","timestamp":"2026-01-13 11:35:35"}
+{"level":"info","message":"✅ Validation passed, executing query...","service":"sysrank-service","timestamp":"2026-01-13 11:35:35"}
+{"level":"info","message":"🟢 Executing PostgreSQL query...","service":"sysrank-service","timestamp":"2026-01-13 11:35:35"}
+{"level":"info","message":"✅ PostgreSQL query completed in 3859ms, 4 rows","service":"sysrank-service","timestamp":"2026-01-13 11:35:39"}
+{"level":"info","message":"🔍 Validating query...","service":"sysrank-service","timestamp":"2026-01-13 11:35:49"}
+{"level":"info","message":"✅ Validation passed, executing query...","service":"sysrank-service","timestamp":"2026-01-13 11:35:49"}
+{"level":"info","message":"🟢 Executing PostgreSQL query...","service":"sysrank-service","timestamp":"2026-01-13 11:35:49"}
+{"level":"info","message":"✅ PostgreSQL query completed in 3920ms, 4 rows","service":"sysrank-service","timestamp":"2026-01-13 11:35:53"}
+{"level":"info","message":"🔍 Validating query...","service":"sysrank-service","timestamp":"2026-01-13 11:35:53"}
+{"level":"info","message":"✅ Validation passed, executing query...","service":"sysrank-service","timestamp":"2026-01-13 11:35:53"}
+{"level":"info","message":"🟢 Executing PostgreSQL query...","service":"sysrank-service","timestamp":"2026-01-13 11:35:53"}
+{"level":"info","message":"✅ PostgreSQL query completed in 3619ms, 5 rows","service":"sysrank-service","timestamp":"2026-01-13 11:35:57"}
+{"level":"info","message":"🔍 Validating query...","service":"sysrank-service","timestamp":"2026-01-13 11:36:05"}
+{"level":"info","message":"✅ Validation passed, executing query...","service":"sysrank-service","timestamp":"2026-01-13 11:36:05"}
+{"level":"info","message":"🟢 Executing PostgreSQL query...","service":"sysrank-service","timestamp":"2026-01-13 11:36:05"}
+{"level":"info","message":"✅ PostgreSQL query completed in 4039ms, 4 rows","service":"sysrank-service","timestamp":"2026-01-13 11:36:09"}
+{"level":"info","message":"🔍 Validating query...","service":"sysrank-service","timestamp":"2026-01-13 11:36:09"}
+{"level":"info","message":"✅ Validation passed, executing query...","service":"sysrank-service","timestamp":"2026-01-13 11:36:09"}
+{"level":"info","message":"🟢 Executing PostgreSQL query...","service":"sysrank-service","timestamp":"2026-01-13 11:36:09"}
+{"level":"info","message":"✅ PostgreSQL query completed in 3733ms, 5 rows","service":"sysrank-service","timestamp":"2026-01-13 11:36:12"}
+{"level":"info","message":"🔍 Validating query...","service":"sysrank-service","timestamp":"2026-01-13 11:36:17"}
+{"level":"info","message":"✅ Validation passed, executing query...","service":"sysrank-service","timestamp":"2026-01-13 11:36:17"}
+{"level":"info","message":"🟢 Executing PostgreSQL query...","service":"sysrank-service","timestamp":"2026-01-13 11:36:17"}
+{"level":"info","message":"✅ PostgreSQL query completed in 3700ms, 6 rows","service":"sysrank-service","timestamp":"2026-01-13 11:36:21"}
+{"level":"info","message":"🔍 Validating query...","service":"sysrank-service","timestamp":"2026-01-13 11:36:28"}
+{"level":"info","message":"✅ Validation passed, executing query...","service":"sysrank-service","timestamp":"2026-01-13 11:36:28"}
+{"level":"info","message":"🟢 Executing PostgreSQL query...","service":"sysrank-service","timestamp":"2026-01-13 11:36:28"}
+{"code":"42804","hint":"Cast the output of the non-recursive term to the correct type.","level":"error","message":"recursive query \"dates\" column 3 has type date in non-recursive term but type timestamp without time zone overall","position":"61","service":"sysrank-service","timestamp":"2026-01-13 11:36:32"}
+{"0":"r","1":"e","10":"q","100":" ","101":"z","102":"o","103":"n","104":"e","105":" ","106":"o","107":"v","108":"e","109":"r","11":"u","110":"a","111":"l","112":"l","12":"e","13":"r","14":"y","15":" ","16":"\"","17":"d","18":"a","19":"t","2":"c","20":"e","21":"s","22":"\"","23":" ","24":"c","25":"o","26":"l","27":"u","28":"m","29":"n","3":"u","30":" ","31":"3","32":" ","33":"h","34":"a","35":"s","36":" ","37":"t","38":"y","39":"p","4":"r","40":"e","41":" ","42":"d","43":"a","44":"t","45":"e","46":" ","47":"i","48":"n","49":" ","5":"s","50":"n","51":"o","52":"n","53":"-","54":"r","55":"e","56":"c","57":"u","58":"r","59":"s","6":"i","60":"i","61":"v","62":"e","63":" ","64":"t","65":"e","66":"r","67":"m","68":" ","69":"b","7":"v","70":"u","71":"t","72":" ","73":"t","74":"y","75":"p","76":"e","77":" ","78":"t","79":"i","8":"e","80":"m","81":"e","82":"s","83":"t","84":"a","85":"m","86":"p","87":" ","88":"w","89":"i","9":" ","90":"t","91":"h","92":"o","93":"u","94":"t","95":" ","96":"t","97":"i","98":"m","99":"e","level":"error","message":"❌ SQL execution failed:","service":"sysrank-service","timestamp":"2026-01-13 11:36:32"}
+{"level":"info","message":"🔍 Validating query...","service":"sysrank-service","timestamp":"2026-01-13 11:39:57"}
+{"level":"info","message":"✅ Validation passed, executing query...","service":"sysrank-service","timestamp":"2026-01-13 11:39:57"}
+{"level":"info","message":"🟢 Executing PostgreSQL query...","service":"sysrank-service","timestamp":"2026-01-13 11:39:57"}
+{"level":"info","message":"✅ PostgreSQL query completed in 3831ms, 4 rows","service":"sysrank-service","timestamp":"2026-01-13 11:40:01"}
+{"level":"info","message":"🔍 Validating query...","service":"sysrank-service","timestamp":"2026-01-13 11:40:01"}
+{"level":"info","message":"✅ Validation passed, executing query...","service":"sysrank-service","timestamp":"2026-01-13 11:40:01"}
+{"level":"info","message":"🟢 Executing PostgreSQL query...","service":"sysrank-service","timestamp":"2026-01-13 11:40:01"}
+{"level":"info","message":"✅ PostgreSQL query completed in 3635ms, 5 rows","service":"sysrank-service","timestamp":"2026-01-13 11:40:05"}
+{"level":"info","message":"🔍 Validating query...","service":"sysrank-service","timestamp":"2026-01-13 11:40:16"}
+{"level":"info","message":"✅ Validation passed, executing query...","service":"sysrank-service","timestamp":"2026-01-13 11:40:16"}
+{"level":"info","message":"🟢 Executing PostgreSQL query...","service":"sysrank-service","timestamp":"2026-01-13 11:40:16"}
+{"level":"info","message":"✅ PostgreSQL query completed in 3795ms, 1 rows","service":"sysrank-service","timestamp":"2026-01-13 11:40:19"}
+{"level":"info","message":"🔍 Validating query...","service":"sysrank-service","timestamp":"2026-01-13 11:40:19"}
+{"level":"info","message":"✅ Validation passed, executing query...","service":"sysrank-service","timestamp":"2026-01-13 11:40:19"}
+{"level":"info","message":"🟢 Executing PostgreSQL query...","service":"sysrank-service","timestamp":"2026-01-13 11:40:19"}
+{"level":"info","message":"✅ PostgreSQL query completed in 4039ms, 1 rows","service":"sysrank-service","timestamp":"2026-01-13 11:40:23"}
+{"level":"info","message":"🔍 Validating query...","service":"sysrank-service","timestamp":"2026-01-13 11:40:26"}
+{"level":"info","message":"✅ Validation passed, executing query...","service":"sysrank-service","timestamp":"2026-01-13 11:40:26"}
+{"level":"info","message":"🟢 Executing PostgreSQL query...","service":"sysrank-service","timestamp":"2026-01-13 11:40:26"}
+{"level":"info","message":"✅ PostgreSQL query completed in 3718ms, 1 rows","service":"sysrank-service","timestamp":"2026-01-13 11:40:29"}
+{"level":"info","message":"🔍 Validating query...","service":"sysrank-service","timestamp":"2026-01-13 11:40:29"}
+{"level":"info","message":"✅ Validation passed, executing query...","service":"sysrank-service","timestamp":"2026-01-13 11:40:29"}
+{"level":"info","message":"🟢 Executing PostgreSQL query...","service":"sysrank-service","timestamp":"2026-01-13 11:40:29"}
+{"level":"info","message":"✅ PostgreSQL query completed in 3802ms, 1 rows","service":"sysrank-service","timestamp":"2026-01-13 11:40:33"}
+{"level":"info","message":"Generating 5 questions of type: coding for topic: SQL","service":"sysrank-service","timestamp":"2026-01-13 11:48:08"}
+{"level":"info","message":"Language determined: sql","service":"sysrank-service","timestamp":"2026-01-13 11:48:08"}
+{"level":"info","message":"=== Found 5 questions ===","service":"sysrank-service","timestamp":"2026-01-13 11:49:32"}
+{"level":"info","message":"Question types in response: [ 'coding', 'coding', 'coding', 'coding', 'coding', [length]: 5 ]","service":"sysrank-service","timestamp":"2026-01-13 11:49:32"}
+{"level":"info","message":"🔍 Validating query...","service":"sysrank-service","timestamp":"2026-01-13 11:49:59"}
+{"level":"info","message":"✅ Validation passed, executing query...","service":"sysrank-service","timestamp":"2026-01-13 11:49:59"}
+{"level":"info","message":"🟢 Executing PostgreSQL query...","service":"sysrank-service","timestamp":"2026-01-13 11:49:59"}
+{"code":"42704","level":"error","message":"type \"datetime\" does not exist","position":"64","service":"sysrank-service","timestamp":"2026-01-13 11:50:02"}
+{"0":"t","1":"y","10":"t","11":"i","12":"m","13":"e","14":"\"","15":" ","16":"d","17":"o","18":"e","19":"s","2":"p","20":" ","21":"n","22":"o","23":"t","24":" ","25":"e","26":"x","27":"i","28":"s","29":"t","3":"e","4":" ","5":"\"","6":"d","7":"a","8":"t","9":"e","level":"error","message":"❌ SQL execution failed:","service":"sysrank-service","timestamp":"2026-01-13 11:50:02"}
+{"level":"info","message":"🔍 Validating query...","service":"sysrank-service","timestamp":"2026-01-13 11:50:02"}
+{"level":"info","message":"✅ Validation passed, executing query...","service":"sysrank-service","timestamp":"2026-01-13 11:50:02"}
+{"level":"info","message":"🟢 Executing PostgreSQL query...","service":"sysrank-service","timestamp":"2026-01-13 11:50:02"}
+{"code":"42704","level":"error","message":"type \"datetime\" does not exist","position":"64","service":"sysrank-service","timestamp":"2026-01-13 11:50:05"}
+{"0":"t","1":"y","10":"t","11":"i","12":"m","13":"e","14":"\"","15":" ","16":"d","17":"o","18":"e","19":"s","2":"p","20":" ","21":"n","22":"o","23":"t","24":" ","25":"e","26":"x","27":"i","28":"s","29":"t","3":"e","4":" ","5":"\"","6":"d","7":"a","8":"t","9":"e","level":"error","message":"❌ SQL execution failed:","service":"sysrank-service","timestamp":"2026-01-13 11:50:05"}
+{"level":"info","message":"🔍 Validating query...","service":"sysrank-service","timestamp":"2026-01-13 11:50:35"}
+{"level":"info","message":"✅ Validation passed, executing query...","service":"sysrank-service","timestamp":"2026-01-13 11:50:35"}
+{"level":"info","message":"🟢 Executing PostgreSQL query...","service":"sysrank-service","timestamp":"2026-01-13 11:50:35"}
+{"code":"42704","level":"error","message":"type \"datetime\" does not exist","position":"60","service":"sysrank-service","timestamp":"2026-01-13 11:50:37"}
+{"0":"t","1":"y","10":"t","11":"i","12":"m","13":"e","14":"\"","15":" ","16":"d","17":"o","18":"e","19":"s","2":"p","20":" ","21":"n","22":"o","23":"t","24":" ","25":"e","26":"x","27":"i","28":"s","29":"t","3":"e","4":" ","5":"\"","6":"d","7":"a","8":"t","9":"e","level":"error","message":"❌ SQL execution failed:","service":"sysrank-service","timestamp":"2026-01-13 11:50:37"}
+{"level":"info","message":"🔍 Validating query...","service":"sysrank-service","timestamp":"2026-01-13 11:50:38"}
+{"level":"info","message":"✅ Validation passed, executing query...","service":"sysrank-service","timestamp":"2026-01-13 11:50:38"}
+{"level":"info","message":"🟢 Executing PostgreSQL query...","service":"sysrank-service","timestamp":"2026-01-13 11:50:38"}
+{"code":"42704","level":"error","message":"type \"datetime\" does not exist","position":"60","service":"sysrank-service","timestamp":"2026-01-13 11:50:40"}
+{"0":"t","1":"y","10":"t","11":"i","12":"m","13":"e","14":"\"","15":" ","16":"d","17":"o","18":"e","19":"s","2":"p","20":" ","21":"n","22":"o","23":"t","24":" ","25":"e","26":"x","27":"i","28":"s","29":"t","3":"e","4":" ","5":"\"","6":"d","7":"a","8":"t","9":"e","level":"error","message":"❌ SQL execution failed:","service":"sysrank-service","timestamp":"2026-01-13 11:50:40"}
+{"level":"info","message":"🤖 AI simulating execution for sql...","service":"sysrank-service","timestamp":"2026-01-13 11:56:37"}
+{"level":"info","message":"🤖 AI simulating execution for sql...","service":"sysrank-service","timestamp":"2026-01-13 11:56:47"}
+{"level":"info","message":"🤖 AI simulating execution for sql...","service":"sysrank-service","timestamp":"2026-01-13 11:57:50"}
+{"level":"info","message":"🤖 AI simulating execution for sql...","service":"sysrank-service","timestamp":"2026-01-13 11:57:58"}
+{"level":"info","message":"🤖 AI simulating execution for sql...","service":"sysrank-service","timestamp":"2026-01-13 11:58:24"}
+{"level":"info","message":"🤖 AI simulating execution for sql...","service":"sysrank-service","timestamp":"2026-01-13 11:58:38"}
+{"level":"info","message":"🤖 AI simulating execution for sql...","service":"sysrank-service","timestamp":"2026-01-13 11:58:53"}
+{"level":"info","message":"🤖 AI simulating execution for sql...","service":"sysrank-service","timestamp":"2026-01-13 11:59:00"}
+{"level":"info","message":"🤖 AI simulating execution for sql...","service":"sysrank-service","timestamp":"2026-01-13 11:59:17"}
+{"level":"info","message":"🤖 AI simulating execution for sql...","service":"sysrank-service","timestamp":"2026-01-13 11:59:27"}
+{"level":"info","message":"🤖 AI simulating execution for sql...","service":"sysrank-service","timestamp":"2026-01-13 11:59:43"}
+{"level":"info","message":"🤖 AI simulating execution for sql...","service":"sysrank-service","timestamp":"2026-01-13 11:59:49"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-13 12:16:00"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-13 12:16:00"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-13 12:16:00"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-13 12:16:00"}
+{"level":"info","message":"Fetching allowed exams for: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-13 12:16:00"}
+{"level":"info","message":"Fetching stats for user: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-13 12:16:02"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-13 12:16:27"}
+{"level":"info","message":"Admin dashboard stats requested","service":"sysrank-service","timestamp":"2026-01-13 12:16:28"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-13 12:16:28"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-13 12:16:30"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-13 12:16:30"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-13 12:16:30"}
+{"level":"info","message":"Admin dashboard stats requested","service":"sysrank-service","timestamp":"2026-01-13 12:19:06"}
+{"level":"info","message":"Admin dashboard stats requested","service":"sysrank-service","timestamp":"2026-01-13 12:19:13"}
+{"level":"info","message":"Admin dashboard stats requested","service":"sysrank-service","timestamp":"2026-01-13 12:19:26"}
+{"level":"info","message":"Fetching stats for user: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-13 12:19:28"}
+{"level":"info","message":"Fetching allowed exams for: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-13 12:19:28"}
+{"level":"info","message":"Generating 5 questions of type: coding for topic: SQL","service":"sysrank-service","timestamp":"2026-01-13 12:19:44"}
+{"level":"info","message":"Language determined: sql","service":"sysrank-service","timestamp":"2026-01-13 12:19:44"}
+{"level":"info","message":"Updated user role: AnandP@Systechusa.com -> admin","service":"sysrank-service","timestamp":"2026-01-13 12:20:09"}
+{"level":"info","message":"=== Found 5 questions ===","service":"sysrank-service","timestamp":"2026-01-13 12:20:19"}
+{"level":"info","message":"Question types in response: [ 'coding', 'coding', 'coding', 'coding', 'coding', [length]: 5 ]","service":"sysrank-service","timestamp":"2026-01-13 12:20:19"}
+{"level":"info","message":"🤖 AI simulating execution for sql...","service":"sysrank-service","timestamp":"2026-01-13 12:21:03"}
+{"level":"info","message":"🤖 AI simulating execution for sql...","service":"sysrank-service","timestamp":"2026-01-13 12:21:10"}
+{"level":"info","message":"Updated user role: kalaiselvanj@systechusa.com -> admin","service":"sysrank-service","timestamp":"2026-01-13 12:42:31"}
+{"level":"info","message":"🤖 AI simulating execution for sql...","service":"sysrank-service","timestamp":"2026-01-13 12:43:11"}
+{"level":"info","message":"🤖 AI simulating execution for sql...","service":"sysrank-service","timestamp":"2026-01-13 12:43:19"}
+{"level":"info","message":"Generating 5 questions of type: coding for topic: SQL","service":"sysrank-service","timestamp":"2026-01-13 12:45:31"}
+{"level":"info","message":"Language determined: sql","service":"sysrank-service","timestamp":"2026-01-13 12:45:31"}
+{"level":"info","message":"=== Found 5 questions ===","service":"sysrank-service","timestamp":"2026-01-13 12:46:14"}
+{"level":"info","message":"Question types in response: [ 'coding', 'coding', 'coding', 'coding', 'coding', [length]: 5 ]","service":"sysrank-service","timestamp":"2026-01-13 12:46:14"}
+{"level":"info","message":"🤖 AI simulating execution for sql...","service":"sysrank-service","timestamp":"2026-01-13 12:46:47"}
+{"level":"info","message":"🤖 AI simulating execution for sql...","service":"sysrank-service","timestamp":"2026-01-13 12:46:56"}
+{"level":"info","message":"🤖 AI simulating execution for sql...","service":"sysrank-service","timestamp":"2026-01-13 12:47:14"}
+{"level":"info","message":"🤖 AI simulating execution for sql...","service":"sysrank-service","timestamp":"2026-01-13 12:47:18"}
+{"level":"info","message":"🤖 AI simulating execution for sql...","service":"sysrank-service","timestamp":"2026-01-13 12:47:30"}
+{"level":"info","message":"🤖 AI simulating execution for sql...","service":"sysrank-service","timestamp":"2026-01-13 12:47:37"}
+{"level":"info","message":"🤖 AI simulating execution for sql...","service":"sysrank-service","timestamp":"2026-01-13 12:47:59"}
+{"level":"info","message":"🤖 AI simulating execution for sql...","service":"sysrank-service","timestamp":"2026-01-13 12:48:11"}
+{"level":"info","message":"🤖 AI simulating execution for sql...","service":"sysrank-service","timestamp":"2026-01-13 12:48:39"}
+{"level":"info","message":"🤖 AI simulating execution for sql...","service":"sysrank-service","timestamp":"2026-01-13 12:48:47"}
+{"level":"info","message":"Generating 5 questions of type: coding for topic: SQL","service":"sysrank-service","timestamp":"2026-01-13 12:51:36"}
+{"level":"info","message":"Language determined: sql","service":"sysrank-service","timestamp":"2026-01-13 12:51:36"}
+{"level":"info","message":"=== Found 5 questions ===","service":"sysrank-service","timestamp":"2026-01-13 12:52:51"}
+{"level":"info","message":"Question types in response: [ 'coding', 'coding', 'coding', 'coding', 'coding', [length]: 5 ]","service":"sysrank-service","timestamp":"2026-01-13 12:52:51"}
+{"level":"info","message":"Generating 5 questions of type: coding for topic: SQL","service":"sysrank-service","timestamp":"2026-01-13 12:54:41"}
+{"level":"info","message":"Language determined: sql","service":"sysrank-service","timestamp":"2026-01-13 12:54:41"}
+{"level":"info","message":"=== Found 5 questions ===","service":"sysrank-service","timestamp":"2026-01-13 12:55:58"}
+{"level":"info","message":"Question types in response: [ 'coding', 'coding', 'coding', 'coding', 'coding', [length]: 5 ]","service":"sysrank-service","timestamp":"2026-01-13 12:55:58"}
+{"level":"info","message":"Generating 5 questions of type: coding for topic: SQL","service":"sysrank-service","timestamp":"2026-01-13 12:59:04"}
+{"level":"info","message":"Language determined: sql","service":"sysrank-service","timestamp":"2026-01-13 12:59:04"}
+{"level":"info","message":"=== Found 5 questions ===","service":"sysrank-service","timestamp":"2026-01-13 13:00:27"}
+{"level":"info","message":"Question types in response: [ 'coding', 'coding', 'coding', 'coding', 'coding', [length]: 5 ]","service":"sysrank-service","timestamp":"2026-01-13 13:00:27"}
+{"level":"info","message":"🤖 AI simulating execution for sql...","service":"sysrank-service","timestamp":"2026-01-13 13:00:45"}
+{"level":"info","message":"🤖 AI simulating execution for sql...","service":"sysrank-service","timestamp":"2026-01-13 13:00:51"}
+{"level":"info","message":"Generating 5 questions of type: coding for topic: Python","service":"sysrank-service","timestamp":"2026-01-13 14:06:49"}
+{"level":"info","message":"Language determined: python","service":"sysrank-service","timestamp":"2026-01-13 14:06:49"}
+{"level":"info","message":"=== Found 5 questions ===","service":"sysrank-service","timestamp":"2026-01-13 14:08:02"}
+{"level":"info","message":"Question types in response: [ 'coding', 'coding', 'coding', 'coding', 'coding', [length]: 5 ]","service":"sysrank-service","timestamp":"2026-01-13 14:08:02"}
+{"level":"info","message":"Generating 5 questions of type: coding for topic: SQL","service":"sysrank-service","timestamp":"2026-01-13 14:13:21"}
+{"level":"info","message":"Language determined: sql","service":"sysrank-service","timestamp":"2026-01-13 14:13:21"}
+{"level":"info","message":"Generating 5 questions of type: coding for topic: SQL","service":"sysrank-service","timestamp":"2026-01-13 14:14:54"}
+{"level":"info","message":"Language determined: sql","service":"sysrank-service","timestamp":"2026-01-13 14:14:54"}
+{"level":"info","message":"=== Found 5 questions ===","service":"sysrank-service","timestamp":"2026-01-13 14:15:02"}
+{"level":"info","message":"Question types in response: [ 'coding', 'coding', 'coding', 'coding', 'coding', [length]: 5 ]","service":"sysrank-service","timestamp":"2026-01-13 14:15:02"}
+{"level":"info","message":"=== Found 5 questions ===","service":"sysrank-service","timestamp":"2026-01-13 14:16:20"}
+{"level":"info","message":"Question types in response: [ 'coding', 'coding', 'coding', 'coding', 'coding', [length]: 5 ]","service":"sysrank-service","timestamp":"2026-01-13 14:16:20"}
+{"level":"info","message":"🤖 AI simulating execution for sql...","service":"sysrank-service","timestamp":"2026-01-13 14:17:02"}
+{"level":"info","message":"🤖 AI simulating execution for sql...","service":"sysrank-service","timestamp":"2026-01-13 14:17:16"}
+{"level":"info","message":"🤖 AI simulating execution for sql...","service":"sysrank-service","timestamp":"2026-01-13 14:17:52"}
+{"level":"info","message":"🤖 AI simulating execution for sql...","service":"sysrank-service","timestamp":"2026-01-13 14:18:00"}
+{"level":"info","message":"Generating 5 questions of type: coding for topic: SQL","service":"sysrank-service","timestamp":"2026-01-13 14:24:37"}
+{"level":"info","message":"Language determined: sql","service":"sysrank-service","timestamp":"2026-01-13 14:24:37"}
+{"level":"info","message":"=== Found 5 questions ===","service":"sysrank-service","timestamp":"2026-01-13 14:26:04"}
+{"level":"info","message":"Question types in response: [ 'coding', 'coding', 'coding', 'coding', 'coding', [length]: 5 ]","service":"sysrank-service","timestamp":"2026-01-13 14:26:04"}
+{"level":"info","message":"🤖 AI simulating execution for sql...","service":"sysrank-service","timestamp":"2026-01-13 14:28:18"}
+{"level":"info","message":"🤖 AI simulating execution for sql...","service":"sysrank-service","timestamp":"2026-01-13 14:28:25"}
+{"level":"info","message":"🤖 AI simulating execution for sql...","service":"sysrank-service","timestamp":"2026-01-13 14:28:39"}
+{"level":"info","message":"🤖 AI simulating execution for sql...","service":"sysrank-service","timestamp":"2026-01-13 14:28:46"}
+{"level":"info","message":"🤖 AI simulating execution for sql...","service":"sysrank-service","timestamp":"2026-01-13 14:29:05"}
+{"level":"info","message":"🤖 AI simulating execution for sql...","service":"sysrank-service","timestamp":"2026-01-13 14:29:19"}
+{"level":"info","message":"🤖 AI simulating execution for sql...","service":"sysrank-service","timestamp":"2026-01-13 14:30:02"}
+{"level":"info","message":"🤖 AI simulating execution for sql...","service":"sysrank-service","timestamp":"2026-01-13 14:30:14"}
+{"level":"info","message":"🤖 AI simulating execution for sql...","service":"sysrank-service","timestamp":"2026-01-13 14:30:50"}
+{"level":"info","message":"🤖 AI simulating execution for sql...","service":"sysrank-service","timestamp":"2026-01-13 14:30:54"}
+{"level":"info","message":"Generating 5 questions of type: coding for topic: SQL","service":"sysrank-service","timestamp":"2026-01-13 15:00:53"}
+{"level":"info","message":"Language determined: sql","service":"sysrank-service","timestamp":"2026-01-13 15:00:53"}
+{"level":"info","message":"=== Found 5 questions ===","service":"sysrank-service","timestamp":"2026-01-13 15:02:37"}
+{"level":"info","message":"Question types in response: [ 'coding', 'coding', 'coding', 'coding', 'coding', [length]: 5 ]","service":"sysrank-service","timestamp":"2026-01-13 15:02:37"}
+{"level":"info","message":"🤖 AI simulating execution for sql...","service":"sysrank-service","timestamp":"2026-01-13 15:03:13"}
+{"level":"info","message":"🤖 AI simulating execution for sql...","service":"sysrank-service","timestamp":"2026-01-13 15:03:23"}
+{"level":"info","message":"🤖 AI simulating execution for sql...","service":"sysrank-service","timestamp":"2026-01-13 15:04:30"}
+{"level":"info","message":"🤖 AI simulating execution for sql...","service":"sysrank-service","timestamp":"2026-01-13 15:05:08"}
+{"level":"info","message":"🤖 AI simulating execution for sql...","service":"sysrank-service","timestamp":"2026-01-13 15:06:08"}
+{"level":"info","message":"🤖 AI simulating execution for sql...","service":"sysrank-service","timestamp":"2026-01-13 15:18:12"}
+{"level":"info","message":"🤖 AI simulating execution for sql...","service":"sysrank-service","timestamp":"2026-01-13 15:18:21"}
+{"level":"info","message":"🤖 AI simulating execution for sql...","service":"sysrank-service","timestamp":"2026-01-13 15:18:45"}
+{"level":"info","message":"🤖 AI simulating execution for sql...","service":"sysrank-service","timestamp":"2026-01-13 15:19:07"}
+{"level":"info","message":"Generating 5 questions of type: coding for topic: SQL","service":"sysrank-service","timestamp":"2026-01-13 15:22:52"}
+{"level":"info","message":"Language determined: sql","service":"sysrank-service","timestamp":"2026-01-13 15:22:52"}
+{"level":"info","message":"=== Found 5 questions ===","service":"sysrank-service","timestamp":"2026-01-13 15:23:54"}
+{"level":"info","message":"Question types in response: [ 'coding', 'coding', 'coding', 'coding', 'coding', [length]: 5 ]","service":"sysrank-service","timestamp":"2026-01-13 15:23:54"}
+{"level":"info","message":"🤖 AI simulating execution for sql...","service":"sysrank-service","timestamp":"2026-01-13 15:24:55"}
+{"level":"info","message":"🤖 AI simulating execution for sql...","service":"sysrank-service","timestamp":"2026-01-13 15:25:31"}
+{"level":"info","message":"🤖 AI simulating execution for sql...","service":"sysrank-service","timestamp":"2026-01-13 15:25:46"}
+{"level":"info","message":"🤖 AI simulating execution for sql...","service":"sysrank-service","timestamp":"2026-01-13 15:26:22"}
+{"level":"info","message":"🤖 AI simulating execution for sql...","service":"sysrank-service","timestamp":"2026-01-13 15:26:38"}
+{"level":"info","message":"🤖 AI simulating execution for sql...","service":"sysrank-service","timestamp":"2026-01-13 15:26:58"}
+{"level":"info","message":"Generating 5 questions of type: coding for topic: SQL","service":"sysrank-service","timestamp":"2026-01-13 18:00:02"}
+{"level":"info","message":"Language determined: sql","service":"sysrank-service","timestamp":"2026-01-13 18:00:02"}
+{"level":"info","message":"=== Found 5 questions ===","service":"sysrank-service","timestamp":"2026-01-13 18:01:33"}
+{"level":"info","message":"Question types in response: [ 'coding', 'coding', 'coding', 'coding', 'coding', [length]: 5 ]","service":"sysrank-service","timestamp":"2026-01-13 18:01:33"}
+{"level":"info","message":"Fetching stats for user: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-13 18:02:47"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-13 18:02:48"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-13 18:02:48"}
+{"level":"info","message":"Fetching allowed exams for: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-13 18:02:48"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-13 18:02:48"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-13 18:02:48"}
+{"level":"info","message":"Generating 5 questions of type: coding for topic: SQL","service":"sysrank-service","timestamp":"2026-01-13 18:03:02"}
+{"level":"info","message":"Language determined: sql","service":"sysrank-service","timestamp":"2026-01-13 18:03:02"}
+{"level":"info","message":"=== Found 5 questions ===","service":"sysrank-service","timestamp":"2026-01-13 18:04:40"}
+{"level":"info","message":"Question types in response: [ 'coding', 'coding', 'coding', 'coding', 'coding', [length]: 5 ]","service":"sysrank-service","timestamp":"2026-01-13 18:04:40"}
+{"level":"info","message":"🤖 AI simulating execution for sql...","service":"sysrank-service","timestamp":"2026-01-13 18:04:58"}
+{"level":"info","message":"🤖 AI simulating execution for sql...","service":"sysrank-service","timestamp":"2026-01-13 18:05:05"}
+{"level":"info","message":"🤖 AI simulating execution for sql...","service":"sysrank-service","timestamp":"2026-01-13 18:06:12"}
+{"level":"info","message":"🤖 AI simulating execution for sql...","service":"sysrank-service","timestamp":"2026-01-13 18:06:23"}
+{"level":"info","message":"🤖 AI simulating execution for sql...","service":"sysrank-service","timestamp":"2026-01-13 18:06:39"}
+{"level":"info","message":"🤖 AI simulating execution for sql...","service":"sysrank-service","timestamp":"2026-01-13 18:06:46"}
+{"level":"info","message":"🤖 AI simulating execution for sql...","service":"sysrank-service","timestamp":"2026-01-13 18:07:47"}
+{"level":"info","message":"🤖 AI simulating execution for sql...","service":"sysrank-service","timestamp":"2026-01-13 18:07:56"}
+{"level":"info","message":"🤖 AI simulating execution for sql...","service":"sysrank-service","timestamp":"2026-01-13 18:08:33"}
+{"level":"info","message":"🤖 AI simulating execution for sql...","service":"sysrank-service","timestamp":"2026-01-13 18:08:39"}
+{"level":"info","message":"🤖 AI simulating execution for sql...","service":"sysrank-service","timestamp":"2026-01-13 18:08:50"}
+{"level":"info","message":"🤖 AI simulating execution for sql...","service":"sysrank-service","timestamp":"2026-01-13 18:08:57"}
+{"level":"info","message":"🤖 AI simulating execution for sql...","service":"sysrank-service","timestamp":"2026-01-13 18:09:06"}
+{"level":"info","message":"🤖 AI simulating execution for sql...","service":"sysrank-service","timestamp":"2026-01-13 18:09:11"}
+{"level":"info","message":"🤖 AI simulating execution for sql...","service":"sysrank-service","timestamp":"2026-01-13 18:09:32"}
+{"level":"info","message":"🤖 AI simulating execution for sql...","service":"sysrank-service","timestamp":"2026-01-13 18:09:41"}
+{"level":"info","message":"Fetching stats for user: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-13 18:12:40"}
+{"level":"info","message":"Fetching allowed exams for: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-13 18:12:40"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-13 18:12:41"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-13 18:12:41"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-13 18:12:41"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-13 18:12:41"}
+{"level":"info","message":"Exam Titles: [\n  'python-bootcamp-assessment',\n  'tesst',\n  'testing',\n  'sql-bootcamp-assessment',\n  'test-exam',\n  'sql-test',\n  'sql-proctored',\n  'test',\n  'etc',\n  'test-demo',\n  'testing-1',\n  'etc-1',\n  'demo',\n  'python-exam-',\n  [length]: 14\n]","service":"sysrank-service","timestamp":"2026-01-13 18:12:51"}
+{"level":"info","message":"Fetching submissions for exam IDs: [\n  43,\n  57,\n  58,\n  49,\n  50,\n  51,\n  52,\n  54,\n  55,\n  60,\n  59,\n  56,\n  53,\n  61,\n  [length]: 14\n]","service":"sysrank-service","timestamp":"2026-01-13 18:12:51"}
+{"level":"info","message":"Submissions found: 26","service":"sysrank-service","timestamp":"2026-01-13 18:12:53"}
+{"level":"info","message":"Admin dashboard stats requested","service":"sysrank-service","timestamp":"2026-01-13 18:12:55"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-14 12:28:42"}
+{"level":"info","message":"Admin dashboard stats requested","service":"sysrank-service","timestamp":"2026-01-14 12:28:42"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-14 12:28:43"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-14 12:28:44"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-14 12:28:44"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-14 12:28:44"}
+{"level":"info","message":"Fetching allowed exams for: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-14 12:28:53"}
+{"level":"info","message":"Fetching stats for user: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-14 12:28:53"}
+{"level":"info","message":"Generating 30 questions of type: coding for topic: SQL","service":"sysrank-service","timestamp":"2026-01-14 12:29:33"}
+{"level":"info","message":"Language determined: sql","service":"sysrank-service","timestamp":"2026-01-14 12:29:33"}
+{"level":"info","message":"=== Found 4 questions ===","service":"sysrank-service","timestamp":"2026-01-14 12:30:24"}
+{"level":"info","message":"Question types in response: [ 'coding', 'coding', 'coding', 'coding', [length]: 4 ]","service":"sysrank-service","timestamp":"2026-01-14 12:30:24"}
+{"level":"info","message":"Generating 30 questions of type: coding for topic: SQL (Duration: N/A)","service":"sysrank-service","timestamp":"2026-01-14 12:36:11"}
+{"level":"info","message":"Splitting request into 8 batches: [4, 4, 4, 4, 4, 4, 4, 2]","service":"sysrank-service","timestamp":"2026-01-14 12:36:11"}
+{"level":"info","message":"Batch 1/8: Requesting 4 questions...","service":"sysrank-service","timestamp":"2026-01-14 12:36:11"}
+{"level":"info","message":"Batch 2/8: Requesting 4 questions...","service":"sysrank-service","timestamp":"2026-01-14 12:36:11"}
+{"level":"info","message":"Batch 3/8: Requesting 4 questions...","service":"sysrank-service","timestamp":"2026-01-14 12:36:11"}
+{"level":"info","message":"Batch 4/8: Requesting 4 questions...","service":"sysrank-service","timestamp":"2026-01-14 12:36:11"}
+{"level":"info","message":"Batch 5/8: Requesting 4 questions...","service":"sysrank-service","timestamp":"2026-01-14 12:36:11"}
+{"level":"info","message":"Batch 6/8: Requesting 4 questions...","service":"sysrank-service","timestamp":"2026-01-14 12:36:11"}
+{"level":"info","message":"Batch 7/8: Requesting 4 questions...","service":"sysrank-service","timestamp":"2026-01-14 12:36:11"}
+{"level":"info","message":"Batch 8/8: Requesting 2 questions...","service":"sysrank-service","timestamp":"2026-01-14 12:36:11"}
+{"level":"info","message":"Batch 8 complete: Got 2 valid questions.","service":"sysrank-service","timestamp":"2026-01-14 12:37:06"}
+{"level":"info","message":"Batch 7 complete: Got 4 valid questions.","service":"sysrank-service","timestamp":"2026-01-14 12:37:11"}
+{"level":"info","message":"Batch 6 complete: Got 4 valid questions.","service":"sysrank-service","timestamp":"2026-01-14 12:37:11"}
+{"level":"info","message":"Batch 3 complete: Got 4 valid questions.","service":"sysrank-service","timestamp":"2026-01-14 12:37:28"}
+{"level":"info","message":"Batch 4 complete: Got 4 valid questions.","service":"sysrank-service","timestamp":"2026-01-14 12:37:44"}
+{"level":"info","message":"Batch 5 complete: Got 4 valid questions.","service":"sysrank-service","timestamp":"2026-01-14 12:37:51"}
+{"level":"info","message":"Batch 2 complete: Got 4 valid questions.","service":"sysrank-service","timestamp":"2026-01-14 12:38:07"}
+{"level":"info","message":"Batch 1 complete: Got 4 valid questions.","service":"sysrank-service","timestamp":"2026-01-14 12:38:44"}
+{"level":"info","message":"=== Total Valid Questions Generated: 30 ===","service":"sysrank-service","timestamp":"2026-01-14 12:38:44"}
+{"level":"info","message":"🤖 AI simulating execution for sql...","service":"sysrank-service","timestamp":"2026-01-14 12:39:14"}
+{"level":"info","message":"🤖 AI simulating execution for sql...","service":"sysrank-service","timestamp":"2026-01-14 12:39:22"}
+{"level":"info","message":"🤖 AI simulating execution for sql...","service":"sysrank-service","timestamp":"2026-01-14 12:40:39"}
+{"level":"info","message":"🤖 AI simulating execution for sql...","service":"sysrank-service","timestamp":"2026-01-14 12:40:49"}
+{"level":"info","message":"🤖 AI simulating execution for sql...","service":"sysrank-service","timestamp":"2026-01-14 12:41:06"}
+{"level":"info","message":"Generating 30 questions of type: coding for topic: SQL (Duration: N/A)","service":"sysrank-service","timestamp":"2026-01-14 12:42:34"}
+{"level":"info","message":"Splitting request into 8 batches: [4, 4, 4, 4, 4, 4, 4, 2]","service":"sysrank-service","timestamp":"2026-01-14 12:42:34"}
+{"level":"info","message":"Batch 1/8: Requesting 4 questions...","service":"sysrank-service","timestamp":"2026-01-14 12:42:34"}
+{"level":"info","message":"Batch 2/8: Requesting 4 questions...","service":"sysrank-service","timestamp":"2026-01-14 12:42:34"}
+{"level":"info","message":"Batch 3/8: Requesting 4 questions...","service":"sysrank-service","timestamp":"2026-01-14 12:42:34"}
+{"level":"info","message":"Batch 4/8: Requesting 4 questions...","service":"sysrank-service","timestamp":"2026-01-14 12:42:34"}
+{"level":"info","message":"Batch 5/8: Requesting 4 questions...","service":"sysrank-service","timestamp":"2026-01-14 12:42:34"}
+{"level":"info","message":"Batch 6/8: Requesting 4 questions...","service":"sysrank-service","timestamp":"2026-01-14 12:42:34"}
+{"level":"info","message":"Batch 7/8: Requesting 4 questions...","service":"sysrank-service","timestamp":"2026-01-14 12:42:34"}
+{"level":"info","message":"Batch 8/8: Requesting 2 questions...","service":"sysrank-service","timestamp":"2026-01-14 12:42:34"}
+{"level":"info","message":"Batch 5 complete: Got 4 valid questions.","service":"sysrank-service","timestamp":"2026-01-14 12:43:51"}
+{"level":"info","message":"Batch 8 complete: Got 2 valid questions.","service":"sysrank-service","timestamp":"2026-01-14 12:44:03"}
+{"level":"info","message":"Batch 2 complete: Got 4 valid questions.","service":"sysrank-service","timestamp":"2026-01-14 12:44:32"}
+{"level":"info","message":"Batch 6 complete: Got 4 valid questions.","service":"sysrank-service","timestamp":"2026-01-14 12:44:40"}
+{"level":"info","message":"Batch 3 complete: Got 4 valid questions.","service":"sysrank-service","timestamp":"2026-01-14 12:44:43"}
+{"level":"info","message":"Batch 4 complete: Got 4 valid questions.","service":"sysrank-service","timestamp":"2026-01-14 12:44:54"}
+{"level":"info","message":"Batch 1 complete: Got 4 valid questions.","service":"sysrank-service","timestamp":"2026-01-14 12:44:58"}
+{"level":"info","message":"Batch 7 complete: Got 4 valid questions.","service":"sysrank-service","timestamp":"2026-01-14 12:46:39"}
+{"level":"info","message":"=== Total Valid Questions Generated: 30 ===","service":"sysrank-service","timestamp":"2026-01-14 12:46:39"}
+{"level":"info","message":"Generating 5 questions of type: coding for topic: SQL (Duration: N/A)","service":"sysrank-service","timestamp":"2026-01-14 12:48:02"}
+{"level":"info","message":"Splitting request into 2 batches: [4, 1]","service":"sysrank-service","timestamp":"2026-01-14 12:48:02"}
+{"level":"info","message":"Batch 1/2: Requesting 4 questions...","service":"sysrank-service","timestamp":"2026-01-14 12:48:02"}
+{"level":"info","message":"Batch 2/2: Requesting 1 questions...","service":"sysrank-service","timestamp":"2026-01-14 12:48:02"}
+{"level":"info","message":"Batch 2 complete: Got 1 valid questions.","service":"sysrank-service","timestamp":"2026-01-14 12:48:48"}
+{"level":"info","message":"Batch 1 complete: Got 4 valid questions.","service":"sysrank-service","timestamp":"2026-01-14 12:49:14"}
+{"level":"info","message":"=== Total Valid Questions Generated: 5 ===","service":"sysrank-service","timestamp":"2026-01-14 12:49:14"}
+{"level":"info","message":"🤖 AI simulating execution for sql...","service":"sysrank-service","timestamp":"2026-01-14 13:03:34"}
+{"level":"info","message":"🤖 AI simulating execution for sql...","service":"sysrank-service","timestamp":"2026-01-14 13:03:41"}
+{"level":"info","message":"🤖 AI simulating execution for sql...","service":"sysrank-service","timestamp":"2026-01-14 13:05:36"}
+{"level":"info","message":"🤖 AI simulating execution for sql...","service":"sysrank-service","timestamp":"2026-01-14 13:05:41"}
+{"level":"info","message":"🤖 AI simulating execution for sql...","service":"sysrank-service","timestamp":"2026-01-14 13:07:23"}
+{"level":"info","message":"🤖 AI simulating execution for sql...","service":"sysrank-service","timestamp":"2026-01-14 13:07:29"}
+{"level":"info","message":"🤖 AI simulating execution for sql...","service":"sysrank-service","timestamp":"2026-01-14 13:08:15"}
+{"level":"info","message":"🤖 AI simulating execution for sql...","service":"sysrank-service","timestamp":"2026-01-14 13:08:29"}
+{"level":"info","message":"🤖 AI simulating execution for sql...","service":"sysrank-service","timestamp":"2026-01-14 13:13:57"}
+{"level":"info","message":"🤖 AI simulating execution for sql...","service":"sysrank-service","timestamp":"2026-01-14 13:14:04"}
+{"level":"info","message":"🤖 AI simulating execution for sql...","service":"sysrank-service","timestamp":"2026-01-14 13:14:23"}
+{"level":"info","message":"🤖 AI simulating execution for sql...","service":"sysrank-service","timestamp":"2026-01-14 13:14:29"}
+{"level":"info","message":"🤖 AI simulating execution for sql...","service":"sysrank-service","timestamp":"2026-01-14 13:14:48"}
+{"level":"info","message":"🤖 AI simulating execution for sql...","service":"sysrank-service","timestamp":"2026-01-14 13:14:55"}
+{"level":"info","message":"🤖 AI simulating execution for sql...","service":"sysrank-service","timestamp":"2026-01-14 13:15:51"}
+{"level":"info","message":"🤖 AI simulating execution for sql...","service":"sysrank-service","timestamp":"2026-01-14 13:16:06"}
+{"level":"info","message":"🤖 AI simulating execution for sql...","service":"sysrank-service","timestamp":"2026-01-14 13:17:54"}
+{"level":"info","message":"🤖 AI simulating execution for sql...","service":"sysrank-service","timestamp":"2026-01-14 13:17:59"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-14 20:37:35"}
+{"level":"info","message":"Admin dashboard stats requested","service":"sysrank-service","timestamp":"2026-01-14 20:37:38"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-14 20:37:39"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-14 20:37:39"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-14 20:37:39"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-14 20:37:39"}
+{"level":"info","message":"Fetching stats for user: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-14 20:37:47"}
+{"level":"info","message":"Fetching allowed exams for: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-14 20:37:47"}
+{"level":"info","message":"Generating 5 questions of type: coding for topic: SQL (Duration: N/A)","service":"sysrank-service","timestamp":"2026-01-14 20:38:07"}
+{"level":"info","message":"Splitting request into 2 batches: [4, 1]","service":"sysrank-service","timestamp":"2026-01-14 20:38:07"}
+{"level":"info","message":"Batch 1/2: Requesting 4 questions...","service":"sysrank-service","timestamp":"2026-01-14 20:38:07"}
+{"level":"info","message":"Batch 2/2: Requesting 1 questions...","service":"sysrank-service","timestamp":"2026-01-14 20:38:07"}
+{"level":"info","message":"Batch 2 complete: Got 1 valid questions.","service":"sysrank-service","timestamp":"2026-01-14 20:40:02"}
+{"level":"info","message":"Batch 1 complete: Got 4 valid questions.","service":"sysrank-service","timestamp":"2026-01-14 20:40:57"}
+{"level":"info","message":"=== Total Valid Questions Generated: 5 ===","service":"sysrank-service","timestamp":"2026-01-14 20:40:57"}
+{"level":"info","message":"Fetching stats for user: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-14 22:37:03"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-14 22:37:04"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-14 22:37:04"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-14 22:37:04"}
+{"level":"info","message":"Fetching allowed exams for: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-14 22:37:04"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-14 22:37:04"}
+{"level":"info","message":"Fetching stats for user: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-14 22:44:43"}
+{"level":"info","message":"Fetching allowed exams for: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-14 22:44:43"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-14 22:44:44"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-14 22:44:44"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-14 22:44:44"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-14 22:44:44"}
+{"level":"info","message":"Generating 5 questions of type: coding for topic: SQL (Duration: N/A)","service":"sysrank-service","timestamp":"2026-01-14 23:14:25"}
+{"level":"info","message":"Splitting request into 2 batches: [4, 1]","service":"sysrank-service","timestamp":"2026-01-14 23:14:25"}
+{"level":"info","message":"Batch 1/2: Requesting 4 questions...","service":"sysrank-service","timestamp":"2026-01-14 23:14:25"}
+{"level":"info","message":"Batch 2/2: Requesting 1 questions...","service":"sysrank-service","timestamp":"2026-01-14 23:14:25"}
+{"level":"info","message":"Batch 2 complete: Got 1 valid questions.","service":"sysrank-service","timestamp":"2026-01-14 23:15:52"}
+{"level":"info","message":"Batch 1 complete: Got 4 valid questions.","service":"sysrank-service","timestamp":"2026-01-14 23:16:10"}
+{"level":"info","message":"=== Total Valid Questions Generated: 5 ===","service":"sysrank-service","timestamp":"2026-01-14 23:16:10"}

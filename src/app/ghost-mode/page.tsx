@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useMsal } from "@azure/msal-react";
 import {
@@ -13,11 +13,20 @@ import {
     ArrowLeft,
     Play,
     Lightbulb,
-    Trophy,
     Zap,
     Terminal,
     EyeOff,
-    FileText
+    FileText,
+    Shield,
+    Activity,
+    Lock,
+    Cpu,
+    Network,
+    ChevronRight,
+    Command,
+    LayoutTemplate,
+    SearchCode,
+    Flame
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -32,7 +41,6 @@ import {
 } from '@/components/ui/dialog';
 import gsap from 'gsap';
 import { useGSAP } from '@gsap/react';
-import { Separator } from '@/components/ui/separator';
 
 // Ghost Mode Session Type
 interface GhostSession {
@@ -44,352 +52,454 @@ interface GhostSession {
 
 const GhostModeLanding = () => {
     const router = useRouter();
-    const { instance, accounts } = useMsal();
+    const { accounts } = useMsal();
     const session = accounts[0];
     const [showExitWarning, setShowExitWarning] = useState(false);
     const [ghostSession, setGhostSession] = useState<GhostSession | null>(null);
+    const [activeModeIndex, setActiveModeIndex] = useState(0);
 
-    const containerRef = useRef(null);
+    const containerRef = useRef<HTMLDivElement>(null);
+    const stageRef = useRef<HTMLDivElement>(null);
 
-    // Initialize ghost session on mount
-    React.useEffect(() => {
+    // Initialize ghost session
+    useEffect(() => {
         if (!ghostSession) {
             setGhostSession({
-                sessionId: `ghost_${Date.now()}`,
+                sessionId: `GS-${Math.random().toString(36).substring(2, 8).toUpperCase()}`,
                 startTime: new Date(),
-                nickname: session?.name || 'Ghost User',
+                nickname: session?.name || 'Operator',
                 activeMode: null
             });
         }
     }, [ghostSession, session?.name]);
 
-    // Animations
-    useGSAP(() => {
-        const tl = gsap.timeline();
-
-        // Set initial states to ensure they are hidden before animation starts
-        gsap.set(".animate-header", { autoAlpha: 0, y: -30 });
-        gsap.set(".animate-mode-card", { autoAlpha: 0, y: 30 });
-        gsap.set(".animate-info-card", { autoAlpha: 0, y: 20 });
-
-        tl.to(".animate-header", {
-            y: 0,
-            autoAlpha: 1,
-            duration: 0.8,
-            ease: "power3.out"
-        })
-            .to(".animate-mode-card", {
-                y: 0,
-                autoAlpha: 1,
-                stagger: 0.1,
-                duration: 0.8,
-                ease: "back.out(1.2)"
-            }, "-=0.4")
-            .to(".animate-info-card", {
-                y: 0,
-                autoAlpha: 1,
-                stagger: 0.1,
-                duration: 0.6,
-                ease: "power2.out"
-            }, "-=0.4");
-
-    }, { scope: containerRef });
-
-    // Available Ghost Modes
     const ghostModes = [
         {
             id: 'ai-study-buddy',
-            title: 'AI Companion',
-            subtitle: 'Personalized Study Buddy',
-            description: 'Interactive conversations to master complex topics. Ask questions, clarify doubts, and learn at your own pace.',
+            title: 'Synapse',
+            subtitle: 'AI Research Partner',
+            description: 'Adaptive neural entity for synthesizing complex information. Optimized for real-time context ingestion and architectural breakdown.',
             icon: Brain,
-            color: 'text-violet-500 dark:text-violet-400',
-            bgColor: 'bg-violet-500/10 dark:bg-violet-500/20',
-            borderColor: 'border-violet-500/20',
+            color: 'from-violet-500 to-indigo-600',
+            glow: 'rgba(139, 92, 246, 0.4)',
             route: '/ghost-mode/study-buddy',
-            features: ['Instant Answers', 'Concept Deep Dives', 'Context Aware'],
-            comingSoon: false,
-            primary: true
+            features: ['Neural Context', 'Real-time Synthesis', 'Cross-Domain Logic'],
+            status: 'Operational'
         },
         {
             id: 'dream-exam',
-            title: 'Dream Exam',
-            subtitle: 'Custom Exam Generator',
-            description: 'Define your syllabus, difficulty, and format. Our AI architects the perfect practice test just for you.',
+            title: 'Dream Forge',
+            subtitle: 'Challenge Architect',
+            description: 'Construct advanced evaluation scenarios and edge-case simulations. Define complexity spikes and synthetic stress tests.',
             icon: Sparkles,
-            color: 'text-amber-500 dark:text-amber-400',
-            bgColor: 'bg-amber-500/10 dark:bg-amber-500/20',
-            borderColor: 'border-amber-500/20',
+            color: 'from-amber-400 to-orange-600',
+            glow: 'rgba(245, 158, 11, 0.4)',
             route: '/ghost-mode/dream-exam',
-            features: ['Tailored Difficulty', 'Specific Topics', 'Instant Review'],
-            comingSoon: false,
-            primary: true
+            features: ['Dynamic Scaling', 'Edge-Case Gen', 'Stress Simulation'],
+            status: 'Operational'
         },
         {
             id: 'doc-alchemist',
-            title: 'Doc Alchemist',
-            subtitle: 'Docs to Audio & Cards',
-            description: 'Transform static documents into dynamic learning materials. Generate podcasts and flashcards instantly from your uploads.',
+            title: 'Alchemist',
+            subtitle: 'Data Transmutation',
+            description: 'Transmute static documentation into interactive logs. Convert PDFs into audio streams and smart neural flashcard decks.',
             icon: FileText,
-            color: 'text-pink-500 dark:text-pink-400',
-            bgColor: 'bg-pink-500/10 dark:bg-pink-500/20',
-            borderColor: 'border-pink-500/20',
+            color: 'from-pink-500 to-rose-600',
+            glow: 'rgba(236, 72, 153, 0.4)',
             route: '/ghost-mode/document-alchemist',
-            features: ['Doc Upload', 'Podcast Gen', 'Flashcard Deck'],
-            comingSoon: false,
-            primary: true
+            features: ['Audio Synthesis', 'Logic Extraction', 'Smart Decks'],
+            status: 'Active'
+        },
+        {
+            id: 'schema-architect',
+            title: 'Architect',
+            subtitle: 'Schema Modeler',
+            description: 'High-performance schema modeling for Snowflake & Databricks. Focused on cost optimization and star schema efficiency.',
+            icon: LayoutTemplate,
+            color: 'from-cyan-500 to-blue-600',
+            glow: 'rgba(6, 182, 212, 0.4)',
+            route: '/ghost-mode/schema-architect',
+            features: ['Star Schema', 'Cost Optimization', 'Migration Paths'],
+            status: 'Operational'
+        },
+        {
+            id: 'pipeline-pathologist',
+            title: 'Pathologist',
+            subtitle: 'Pipeline Forensic',
+            description: 'Trace data corruption and silent failures in ETL streams. Deep log analysis and root cause forensic identification.',
+            icon: SearchCode,
+            color: 'from-orange-500 to-red-600',
+            glow: 'rgba(249, 115, 22, 0.4)',
+            route: '/ghost-mode/pipeline-pathologist',
+            features: ['Root Cause', 'Log Forensic', 'Stream Auditing'],
+            status: 'Operational'
         },
         {
             id: 'sandbox-lab',
-            title: 'Code Sandbox',
-            subtitle: 'Safe Experimentation',
-            description: 'A completely isolated environment to run unsafe code, test exploits, or try wild architectural ideas.',
+            title: 'Void Box',
+            subtitle: 'Isolated Runtime',
+            description: 'Safe execution environment for untrusted or radical code. Complete cryptographic isolation with zero-trace persistence.',
             icon: Code,
-            color: 'text-blue-500 dark:text-blue-400',
-            bgColor: 'bg-blue-500/10 dark:bg-blue-500/20',
-            borderColor: 'border-blue-500/20',
+            color: 'from-blue-500 to-indigo-500',
+            glow: 'rgba(59, 130, 246, 0.4)',
             route: '/ghost-mode/sandbox',
-            features: ['Multi-language', 'Isolated Runtime', 'No Persistence'],
-            comingSoon: false,
-            primary: false
+            features: ['Ephemeral', 'Zero Trace', 'Kernel Isolation'],
+            status: 'Core'
         },
         {
             id: 'battle-arena',
-            title: 'Battle Arena',
-            subtitle: 'Anonymous PVP',
-            description: 'Enter the colosseum anonymously. Challenge random peers to algorithmic duels where reputation is not at stake.',
-            icon: Users,
-            color: 'text-rose-500 dark:text-rose-400',
-            bgColor: 'bg-rose-500/10 dark:bg-rose-500/20',
-            borderColor: 'border-rose-500/20',
+            title: 'Shadow Hub',
+            subtitle: 'Anonymous PvP',
+            description: 'Encrypted colosseum for anonymous algorithmic duels. Test your logic against peer encryption levels in real-time.',
+            icon: Flame,
+            color: 'from-rose-500 to-orange-500',
+            glow: 'rgba(244, 63, 94, 0.4)',
             route: '/ghost-mode/battle',
-            features: ['Live Styling', 'Ephemeral Stats', 'Quick Match'],
-            comingSoon: false,
-            primary: false
+            features: ['Matchmaking', 'Live Duel', 'Elo Persistence'],
+            status: 'Beta'
         },
         {
             id: 'skill-tree',
-            title: 'Skill Tree',
-            subtitle: 'RPG Progression',
-            description: 'Visualize your knowledge gaps as an interactive skill tree. Unlock nodes by completing micro-challenges.',
+            title: 'Node Map',
+            subtitle: 'Growth Visualizer',
+            description: 'Interactive topography mapping your cognitive expansion. Visualize skill nodes and trajectory paths.',
             icon: Target,
-            color: 'text-emerald-500 dark:text-emerald-400',
-            bgColor: 'bg-emerald-500/10 dark:bg-emerald-500/20',
-            borderColor: 'border-emerald-500/20',
+            color: 'from-emerald-400 to-teal-600',
+            glow: 'rgba(16, 185, 129, 0.4)',
             route: '/ghost-mode/skill-tree',
-            features: ['Visual Path', 'Dependencies', 'Gamified'],
-            comingSoon: false,
-            primary: false
+            features: ['Visual Path', 'Gaps Finder', 'Node Progress'],
+            status: 'Dev'
         }
     ];
 
-    const handleModeSelect = (mode: any) => {
-        if (mode.comingSoon) return;
-        router.push(mode.route);
+    const currentMode = ghostModes[activeModeIndex];
+
+    const handleInitialize = () => {
+        router.push(currentMode.route);
     };
 
-    const handleExitGhostMode = () => {
-        setShowExitWarning(true);
-    };
+    // Immersive GSAP Animations
+    useGSAP(() => {
+        const tl = gsap.timeline();
 
-    const confirmExit = () => {
-        setGhostSession(null);
-        router.push('/attender');
-    };
+        // Initial Layout Fade In
+        tl.fromTo(".dash-panel",
+            { opacity: 0, x: -20 },
+            { opacity: 1, x: 0, duration: 0.6, stagger: 0.1, ease: "power2.out" }
+        );
+
+        // Header and Footer
+        gsap.fromTo(".animate-header", { y: -20, opacity: 0 }, { y: 0, opacity: 1, duration: 0.5 });
+        gsap.fromTo(".animate-footer", { y: 20, opacity: 0 }, { y: 0, opacity: 1, duration: 0.5 });
+
+    }, { scope: containerRef });
+
+    // Transition effect when switching modes
+    useEffect(() => {
+        if (!stageRef.current) return;
+
+        gsap.fromTo(".stage-content",
+            { opacity: 0, scale: 0.98, y: 10 },
+            { opacity: 1, scale: 1, y: 0, duration: 0.4, ease: "power3.out" }
+        );
+
+        gsap.fromTo(".feature-tag",
+            { opacity: 0, x: -10 },
+            { opacity: 1, x: 0, duration: 0.3, stagger: 0.05, ease: "power2.out", delay: 0.1 }
+        );
+
+        gsap.fromTo(".stage-icon",
+            { rotateY: 90, opacity: 0 },
+            { rotateY: 0, opacity: 1, duration: 0.6, ease: "back.out(1.7)" }
+        );
+    }, [activeModeIndex]);
 
     return (
-        <div ref={containerRef} className="min-h-screen bg-background relative overflow-hidden font-sans selection:bg-violet-500/30">
-            {/* Background Decorations */}
-            <div className="fixed inset-0 pointer-events-none">
-                <div className="absolute top-0 right-0 -z-10 w-[600px] h-[600px] bg-violet-500/5 rounded-full blur-[120px]" />
-                <div className="absolute bottom-0 left-0 -z-10 w-[500px] h-[500px] bg-indigo-500/5 rounded-full blur-[100px]" />
-                <div className="absolute inset-0 bg-[linear-gradient(rgba(0,0,0,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(0,0,0,0.02)_1px,transparent_1px)] dark:bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:48px_48px] [mask-image:radial-gradient(ellipse_at_center,black_60%,transparent_100%)]" />
+        <div ref={containerRef} className="h-screen w-full bg-[#030303] text-slate-200 overflow-hidden font-sans selection:bg-violet-500/40 flex flex-col">
+            {/* Immersive Background */}
+            <div className="fixed inset-0 pointer-events-none z-0">
+                <div
+                    className="absolute inset-0 opacity-[0.03]"
+                    style={{
+                        backgroundImage: `radial-gradient(#ffffff 1px, transparent 1px)`,
+                        backgroundSize: '32px 32px'
+                    }}
+                />
+                <div
+                    className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[1000px] h-[1000px] rounded-full blur-[150px] pointer-events-none opacity-[0.02] transition-colors duration-1000"
+                    style={{ backgroundColor: currentMode.glow }}
+                />
             </div>
 
-            {/* Header / Nav */}
-            <div className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/80 backdrop-blur-md animate-header">
-                <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                        <div className="flex items-center justify-center w-9 h-9 rounded-xl bg-violet-600/10 text-violet-600 dark:text-violet-400 ring-1 ring-violet-600/20">
-                            <Ghost className="w-5 h-5" />
+            {/* Tactical Header */}
+            <header className="animate-header z-50 w-full border-b border-white/5 bg-black/60 backdrop-blur-md h-10 flex items-center shrink-0">
+                <div className="w-full px-4 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-2">
+                            <div className="w-5 h-5 rounded bg-violet-500/10 border border-violet-500/20 flex items-center justify-center text-violet-400">
+                                <Ghost className="w-3 h-3" />
+                            </div>
+                            <span className="text-[9px] font-black tracking-[0.2em] uppercase text-white/90">GHOST_PROTOCOL</span>
                         </div>
-                        <div className="flex flex-col">
-                            <span className="text-sm font-bold tracking-tight">Ghost Protocol</span>
-                            <span className="text-[10px] text-muted-foreground font-mono uppercase tracking-wider">Session Active</span>
+                        <div className="hidden sm:flex items-center gap-2 border-l border-white/10 pl-3 ml-1">
+                            <span className="w-1 h-1 rounded-full bg-emerald-500 animate-pulse" />
+                            <span className="text-[8px] text-white/40 font-mono">SYS_STATUS: OPTIMAL</span>
                         </div>
                     </div>
 
                     <div className="flex items-center gap-4">
-                        <div className="hidden md:flex flex-col items-end mr-2">
-                            <div className="flex items-center gap-2">
-                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-[pulse_3s_infinite]"></span>
-                                <span className="text-xs font-medium text-foreground">{ghostSession?.nickname}</span>
-                            </div>
-                            <span className="text-[10px] text-muted-foreground font-mono">ID: {ghostSession?.sessionId.slice(-8)}</span>
+                        <div className="hidden md:flex flex-col items-end">
+                            <span className="text-[8px] font-bold text-white/60 tracking-tight leading-none mb-0.5">{ghostSession?.nickname}</span>
+                            <span className="text-[7px] text-white/20 font-mono tracking-tighter uppercase leading-none">{ghostSession?.sessionId}</span>
                         </div>
                         <Button
-                            onClick={handleExitGhostMode}
-                            variant="destructive"
+                            onClick={() => setShowExitWarning(true)}
+                            variant="ghost"
                             size="sm"
-                            className="h-9 px-4 shadow-sm"
+                            className="h-6 px-2 text-[9px] font-bold bg-white/5 hover:bg-red-500/10 text-white/60 hover:text-red-400 border border-white/5 rounded transition-all"
                         >
-                            <ArrowLeft className="w-4 h-4 mr-2" />
-                            Exit Session
+                            <ArrowLeft className="w-2.5 h-2.5 mr-1" />
+                            ESCAPE
                         </Button>
                     </div>
                 </div>
-            </div>
+            </header>
 
-            <div className="max-w-7xl mx-auto px-6 py-12 relative z-10">
+            {/* Dashboard Workspace */}
+            <main className="flex-1 flex overflow-hidden relative z-10">
+                {/* 1. Protocol Sidebar */}
+                <aside className="dash-panel w-64 lg:w-72 border-r border-white/5 flex flex-col bg-black/20 backdrop-blur-sm shrink-0">
+                    <div className="p-3 border-b border-white/5 flex items-center justify-between">
+                        <h2 className="text-[9px] font-black text-white/30 tracking-[0.2em] uppercase">Protocol Index</h2>
+                        <SearchCode className="w-2.5 h-2.5 text-white/20" />
+                    </div>
 
-                {/* Hero Block */}
-                <div className="text-center max-w-3xl mx-auto mb-16 space-y-6 animate-header">
-                    <Badge variant="outline" className="px-4 py-1.5 border-violet-500/30 bg-violet-500/5 text-violet-600 dark:text-violet-300 rounded-full text-xs uppercase tracking-wide">
-                        <Terminal className="w-3 h-3 mr-2" />
-                        Incognito Environment
-                    </Badge>
-
-                    <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold tracking-tight text-foreground">
-                        Choose Your <br className="hidden sm:block" />
-                        <span className="text-transparent bg-clip-text bg-gradient-to-r from-violet-600 via-indigo-500 to-violet-600 animate-gradient-x">Unknown Adventure</span>
-                    </h1>
-
-                    <p className="text-lg text-muted-foreground leading-relaxed">
-                        Step into a sandbox where rules don't apply. Experiment with wild ideas, generate custom exams, or battle anonymously.
-                        <span className="block mt-2 font-medium text-foreground/80"> What happens in Ghost Mode, stays in Ghost Mode.</span>
-                    </p>
-                </div>
-
-                {/* Primary Modes */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-20">
-                    {ghostModes.map((mode) => {
-                        const Icon = mode.icon;
-                        return (
-                            <Card
-                                key={mode.id}
-                                onClick={() => handleModeSelect(mode)}
-                                className={`group relative overflow-hidden border-border bg-card/50 backdrop-blur-sm transition-all duration-300 animate-mode-card hover:shadow-xl hover:-translate-y-1 ${mode.comingSoon ? "opacity-60 cursor-not-allowed" : "cursor-pointer hover:border-violet-500/30 dark:hover:border-violet-400/30"
-                                    }`}
-                            >
-                                {/* Hover Gradient */}
-                                {!mode.comingSoon && (
-                                    <div className="absolute inset-0 bg-gradient-to-br from-violet-500/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-                                )}
-
-                                <CardHeader className="relative z-10">
-                                    <div className="flex justify-between items-start mb-4">
-                                        <div className={`p-3.5 rounded-2xl ${mode.bgColor} ${mode.color} ring-1 ring-inset ring-white/10`}>
-                                            <Icon className="w-6 h-6" />
+                    <div className="flex-1 overflow-y-auto p-1.5 space-y-0.5 scrollbar-hide">
+                        {ghostModes.map((mode, idx) => {
+                            const Icon = mode.icon;
+                            const isActive = activeModeIndex === idx;
+                            return (
+                                <button
+                                    key={mode.id}
+                                    onClick={() => setActiveModeIndex(idx)}
+                                    className={`w-full group text-left p-2 rounded-md border transition-all duration-200 ${isActive
+                                        ? 'bg-white/5 border-white/10 ring-1 ring-white/5 shadow-sm'
+                                        : 'bg-transparent border-transparent hover:bg-white/[0.02] hover:border-white/5'
+                                        }`}
+                                >
+                                    <div className="flex items-center gap-2.5">
+                                        <div className={`p-1.5 rounded transition-all duration-300 ${isActive
+                                            ? `bg-gradient-to-br ${mode.color} shadow-lg shadow-black/40`
+                                            : 'bg-white/5 text-slate-400 group-hover:text-white'
+                                            }`}>
+                                            <Icon className={`w-3.5 h-3.5 ${isActive ? 'text-white' : ''}`} />
                                         </div>
-                                        {mode.comingSoon && (
-                                            <Badge variant="secondary" className="text-[10px] font-medium opacity-80">Dev Preview</Badge>
-                                        )}
-                                    </div>
-                                    <CardTitle className="text-xl font-bold">{mode.title}</CardTitle>
-                                    <CardDescription className="font-medium text-xs uppercase tracking-wider text-muted-foreground">{mode.subtitle}</CardDescription>
-                                </CardHeader>
-
-                                <CardContent className="relative z-10 space-y-6">
-                                    <p className="text-sm text-muted-foreground leading-relaxed">
-                                        {mode.description}
-                                    </p>
-
-                                    <Separator className="bg-border/50" />
-
-                                    <div className="space-y-2">
-                                        {mode.features.map((feature, idx) => (
-                                            <div key={idx} className="flex items-center text-xs font-medium text-muted-foreground/80">
-                                                <div className={`w-1 h-1 rounded-full ${mode.color.split(' ')[0].replace('text-', 'bg-')} mr-2.5`} />
-                                                {feature}
+                                        <div className="flex-1 min-w-0">
+                                            <div className="flex items-center justify-between gap-1">
+                                                <p className={`text-[10px] font-black tracking-tight truncate ${isActive ? 'text-white' : 'text-slate-400 group-hover:text-slate-200'}`}>
+                                                    {mode.title}
+                                                </p>
+                                                <Badge variant="outline" className="h-3 px-1 text-[6px] font-mono border-white/5 text-white/20">
+                                                    {mode.status}
+                                                </Badge>
                                             </div>
+                                            <p className="text-[8px] text-slate-500 font-medium truncate uppercase tracking-wider">{mode.subtitle}</p>
+                                        </div>
+                                    </div>
+                                </button>
+                            );
+                        })}
+                    </div>
+                </aside>
+
+                {/* 2. Visual Stage */}
+                <section ref={stageRef} className="dash-panel flex-1 flex flex-col bg-black/40 relative overflow-hidden">
+                    <div className="flex-1 p-4 lg:p-12 flex flex-col items-center justify-center text-center max-w-3xl mx-auto w-full stage-content">
+                        {/* Protocol Schematic Head */}
+                        <div className="mb-8 relative group">
+                            <div
+                                className="absolute -inset-10 opacity-20 blur-[60px] rounded-full transition-all duration-1000 group-hover:opacity-40"
+                                style={{ backgroundColor: currentMode.glow }}
+                            />
+                            <div className={`stage-icon w-24 h-24 lg:w-32 lg:h-32 rounded-2xl bg-gradient-to-br ${currentMode.color} shadow-2xl shadow-black/60 flex items-center justify-center relative z-10 border border-white/10 group-hover:scale-105 transition-transform duration-500`}>
+                                <currentMode.icon className="w-12 h-12 lg:w-16 lg:h-16 text-white" />
+                                <div className="absolute top-3 right-3 animate-ping">
+                                    <span className="flex h-2 w-2 rounded-full bg-white opacity-40"></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="space-y-4 max-w-xl mb-8">
+                            <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full border border-white/5 bg-white/[0.03]">
+                                <Activity className="w-3 h-3 text-violet-400" />
+                                <span className="text-[9px] font-black text-violet-300 tracking-[0.2em] uppercase">{currentMode.subtitle}</span>
+                            </div>
+
+                            <h1 className="text-3xl lg:text-5xl font-black tracking-tighter text-white leading-none uppercase">
+                                {currentMode.title}
+                            </h1>
+
+                            <p className="text-xs lg:text-sm text-slate-400 leading-relaxed font-medium">
+                                {currentMode.description}
+                            </p>
+                        </div>
+
+                        <div className="flex flex-wrap items-center justify-center gap-2 mb-8">
+                            {currentMode.features.map((feature, idx) => (
+                                <span
+                                    key={idx}
+                                    className="feature-tag inline-flex items-center text-[10px] font-bold text-white/40 bg-white/5 border border-white/10 px-3 py-1.5 rounded-md backdrop-blur-md"
+                                >
+                                    <ChevronRight className="w-2.5 h-2.5 mr-1.5 text-violet-500" />
+                                    {feature}
+                                </span>
+                            ))}
+                        </div>
+
+                        <div className="pt-2 w-full max-w-[280px]">
+                            <Button
+                                onClick={handleInitialize}
+                                className="w-full h-11 bg-white text-black hover:bg-slate-200 text-[11px] font-black tracking-widest transition-all duration-300 shadow-xl shadow-white/5 flex items-center justify-between px-6 group"
+                            >
+                                START PROTOCOL
+                                <Play className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform fill-current" />
+                            </Button>
+                        </div>
+                    </div>
+                </section>
+
+                {/* 3. Stats & Intel Sidebar */}
+                <aside className="dash-panel w-64 lg:w-72 border-l border-white/5 flex flex-col bg-black/20 backdrop-blur-sm shrink-0 hidden lg:flex">
+                    <div className="p-3 border-b border-white/5">
+                        <h2 className="text-[9px] font-black text-white/30 tracking-[0.2em] uppercase">Intelligence Hub</h2>
+                    </div>
+
+                    <div className="p-4 space-y-6 overflow-y-auto scrollbar-hide">
+                        <div className="space-y-3">
+                            <p className="text-[8px] font-black text-white/30 uppercase tracking-[0.1em]">Session Telemetry</p>
+                            <div className="grid grid-cols-2 gap-2">
+                                <MicroTechModule icon={EyeOff} label="MASKING" value="100%" color="text-emerald-400" />
+                                <MicroTechModule icon={Zap} label="LATENCY" value="8ms" color="text-amber-400" />
+                                <MicroTechModule icon={Cpu} label="COMPUTE" value="active" color="text-blue-400" />
+                                <MicroTechModule icon={Network} label="UPTIME" value="99.9%" color="text-violet-400" />
+                            </div>
+                        </div>
+
+                        <div className="pt-4 border-t border-white/5 space-y-3">
+                            <p className="text-[8px] font-black text-white/30 uppercase tracking-[0.1em]">Protocol Analysis</p>
+                            <div className="p-3 rounded-lg bg-white/[0.02] border border-white/5 space-y-3">
+                                <div className="space-y-1.5">
+                                    <div className="flex justify-between items-center text-[9px]">
+                                        <span className="text-slate-500 uppercase font-bold">Enc Width</span>
+                                        <span className="text-white font-mono">1024_BIT</span>
+                                    </div>
+                                    <div className="flex items-center gap-1">
+                                        {[1, 1, 1, 1, 1, 0, 0, 0].map((v, i) => (
+                                            <div key={i} className={`h-0.5 flex-1 rounded-sm ${v ? 'bg-violet-500/50' : 'bg-white/5'}`} />
                                         ))}
                                     </div>
-                                </CardContent>
-
-                                <CardFooter className="relative z-10 pt-0">
-                                    {!mode.comingSoon && (
-                                        <Button className="w-full justify-between group-hover:bg-violet-600 group-hover:text-white transition-all duration-300" variant="secondary">
-                                            Initialize
-                                            <Play className="w-4 h-4 opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-300" />
-                                        </Button>
-                                    )}
-                                </CardFooter>
-                            </Card>
-                        )
-                    })}
-                </div>
-
-                {/* Features / Philosophy */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-8 pb-12">
-                    <InfoCard
-                        icon={EyeOff}
-                        title="Zero Persistence"
-                        desc="Sessions are ephemeral. Once you exit, all data, logs, and history are cryptographically shredded."
-                        color="text-emerald-500"
-                        bg="bg-emerald-500/10"
-                    />
-                    <InfoCard
-                        icon={Zap}
-                        title="Hyper-Fast Runtime"
-                        desc="Optimized for experimentation. Pre-warmed containers ensure your code runs instantly."
-                        color="text-amber-500"
-                        bg="bg-amber-500/10"
-                    />
-                    <InfoCard
-                        icon={Lightbulb}
-                        title="Adaptive AI"
-                        desc="The environment learns from your session context to provide relevant hints and resources."
-                        color="text-blue-500"
-                        bg="bg-blue-500/10"
-                    />
-                </div>
-
-            </div>
-
-            {/* Exit Warning Dialog */}
-            <Dialog open={showExitWarning} onOpenChange={setShowExitWarning}>
-                <DialogContent className="sm:max-w-[400px] gap-6 border-destructive/20">
-                    <DialogHeader className="space-y-4">
-                        <div className="w-14 h-14 rounded-full bg-destructive/10 flex items-center justify-center mx-auto ring-4 ring-destructive/5">
-                            <Ghost className="w-7 h-7 text-destructive" />
+                                </div>
+                                <div className="space-y-1.5">
+                                    <div className="flex justify-between items-center text-[9px]">
+                                        <span className="text-slate-500 uppercase font-bold">Sync Level</span>
+                                        <span className="text-white font-mono">OPTIMAL</span>
+                                    </div>
+                                    <div className="flex items-center gap-1">
+                                        {[1, 1, 1, 1, 1, 1, 1, 1].map((v, i) => (
+                                            <div key={i} className={`h-0.5 flex-1 rounded-sm ${v ? 'bg-emerald-500/50' : 'bg-white/5'}`} />
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
                         </div>
-                        <div className="space-y-2 text-center">
-                            <DialogTitle className="text-xl">Terminate Session?</DialogTitle>
-                            <DialogDescription className="text-base">
-                                All session data will be permanently wiped. This action cannot be undone.
+
+                        <div className="pt-4 border-t border-white/5 text-center">
+                            <Network className="w-8 h-8 text-white/5 mx-auto mb-3 animate-pulse" />
+                            <p className="text-[7px] font-mono text-white/10 uppercase leading-relaxed tracking-wider">
+                                Encrypted node distribution active across 12 global regions.
+                            </p>
+                        </div>
+                    </div>
+                </aside>
+            </main>
+
+            {/* Bottom System Ticker */}
+            <footer className="shrink-0 h-5 bg-black border-t border-white/5 flex items-center z-50 overflow-hidden">
+                <div className="flex items-center gap-8 animate-scroll whitespace-nowrap px-4 w-full">
+                    {[1, 2, 3].map(i => (
+                        <div key={i} className="flex items-center gap-8">
+                            <span className="text-[7px] font-mono text-white/20 uppercase tracking-[0.2em] leading-none">STATUS_OK // NO_TRACE_ACTIVE</span>
+                            <span className="text-[7px] font-mono text-white/20 uppercase tracking-[0.2em] leading-none">ENCRYPTION: AES_256_GCM</span>
+                            <span className="text-[7px] font-mono text-white/20 uppercase tracking-[0.2em] leading-none">NODES: 12_DOMAINS_ACTIVE</span>
+                            <span className="text-[7px] font-mono text-violet-500/30 uppercase tracking-[0.2em] leading-none">GHOST_MODE_V4.2.1-RELEASE</span>
+                        </div>
+                    ))}
+                </div>
+            </footer>
+
+            {/* Exit Warning */}
+            <Dialog open={showExitWarning} onOpenChange={setShowExitWarning}>
+                <DialogContent className="sm:max-w-[320px] bg-[#0A0A0A] border-white/10 p-5 overflow-hidden">
+                    <div className="absolute top-0 inset-x-0 h-0.5 bg-gradient-to-r from-transparent via-red-500/40 to-transparent" />
+                    <DialogHeader className="space-y-2">
+                        <div className="w-10 h-10 rounded-lg bg-red-500/10 flex items-center justify-center mx-auto border border-red-500/20">
+                            <Shield className="w-5 h-5 text-red-500" />
+                        </div>
+                        <div className="space-y-1 text-center">
+                            <DialogTitle className="text-base font-black tracking-tight text-white uppercase leading-none">ABORT_SEQUENCE</DialogTitle>
+                            <DialogDescription className="text-slate-400 text-[10px] leading-relaxed">
+                                Termination will purge session logs and credentials. This action is irreversible.
                             </DialogDescription>
                         </div>
                     </DialogHeader>
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="flex gap-3 pt-3">
                         <Button
                             variant="outline"
                             onClick={() => setShowExitWarning(false)}
-                            className="w-full"
+                            className="flex-1 h-9 border-white/10 bg-white/5 text-white text-[10px] font-bold"
                         >
-                            Cancel
+                            CANCEL
                         </Button>
                         <Button
                             variant="destructive"
-                            onClick={confirmExit}
-                            className="w-full shadow-lg shadow-destructive/20"
+                            onClick={() => router.push('/attender')}
+                            className="flex-1 h-9 bg-red-600 hover:bg-red-700 text-[10px] font-bold"
                         >
-                            Confirm Exit
+                            TERMINATE
                         </Button>
                     </div>
                 </DialogContent>
             </Dialog>
 
+            <style jsx global>{`
+                @keyframes scroll {
+                    from { transform: translateX(0); }
+                    to { transform: translateX(-33.33%); }
+                }
+                .animate-scroll {
+                    animation: scroll 30s linear infinite;
+                }
+                .scrollbar-hide::-webkit-scrollbar {
+                    display: none;
+                }
+                .scrollbar-hide {
+                    -ms-overflow-style: none;
+                    scrollbar-width: none;
+                }
+            `}</style>
         </div>
     );
 };
 
-const InfoCard = ({ icon: Icon, title, desc, color, bg }: any) => (
-    <div className="animate-info-card flex flex-col items-center text-center space-y-3 p-6 rounded-2xl bg-card border border-border/50 hover:border-border transition-colors">
-        <div className={`p-3 rounded-xl ${bg} ${color} mb-2`}>
-            <Icon className="w-6 h-6" />
+const MicroTechModule = ({ icon: Icon, label, value, color }: any) => (
+    <div className="flex flex-col gap-1.5 p-2 rounded-lg bg-white/[0.02] border border-white/5 items-center text-center">
+        <div className={`p-1.5 rounded bg-white/5 ${color}`}>
+            <Icon className="w-2.5 h-2.5" />
         </div>
-        <h3 className="font-semibold text-foreground">{title}</h3>
-        <p className="text-sm text-muted-foreground leading-relaxed">{desc}</p>
+        <div>
+            <p className="text-[7px] font-bold text-white/20 uppercase leading-none mb-0.5">{label}</p>
+            <p className={`text-[9px] font-black tracking-tighter uppercase ${color} leading-none`}>{value}</p>
+        </div>
     </div>
 );
 

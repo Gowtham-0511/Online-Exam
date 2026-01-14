@@ -815,3 +815,31 @@ export function validateCodingQuestion(q: any, index: number): CodingQuestion {
     hints: Array.isArray(q.hints) ? q.hints.map((h: any) => String(h)) : [],
   };
 }
+
+// Generate Smart Hint Prompt
+export function generateSmartHintPrompt(
+  question: string,
+  userCode: string,
+  language: string,
+  error?: string
+): string {
+  return `You are a helpful coding tutor. The user is stuck on a problem and needs a hint.
+  
+Problem Description:
+${question}
+
+User's Current Code (${language}):
+${userCode}
+
+${error ? `Error Message:\n${error}\n` : ""}
+
+Task: Provide a helpful, constructive hint.
+- Do NOT give the full solution.
+- Do NOT rewrite the entire code for them.
+- Identify the logical error or syntax mistake in their code.
+- If the code is mostly correct but missing a specific edge case, point that out.
+- If the code is completely wrong, suggest the correct algorithmic approach.
+- Keep the hint short and encouraging (2-3 sentences max).
+
+Your Hint:`;
+}
