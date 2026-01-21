@@ -15,11 +15,6 @@ export async function GET(request: Request) {
 
     const params: any[] = [];
 
-    if (createdBy) {
-      query += " WHERE created_by = $1";
-      params.push(createdBy);
-    }
-
     query += " ORDER BY created_at DESC";
 
     const result = await pool.query(query, params);
