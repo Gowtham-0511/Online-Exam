@@ -7,6 +7,7 @@ import { InteractionStatus } from "@azure/msal-browser";
 import useSWR from 'swr';
 import gsap from 'gsap';
 import Editor from '@monaco-editor/react';
+import { useTheme } from "next-themes";
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -37,13 +38,13 @@ const PracticeQuestionPage = () => {
     const [executionResult, setExecutionResult] = useState<any>(null);
     const [activeTab, setActiveTab] = useState('problem');
     const [visibleHintCount, setVisibleHintCount] = useState(0);
-    const [theme, setTheme] = useState<'vs-dark' | 'light'>('vs-dark');
+    const { theme, setTheme, resolvedTheme } = useTheme();
     const [selectedMcqAnswer, setSelectedMcqAnswer] = useState<number | null>(null);
 
     // New state for enhanced run code
     const [testResults, setTestResults] = useState<any[]>([]);
     const [codeRunCounts, setCodeRunCounts] = useState<Record<string, number>>({});
-    const [executionMode, setExecutionMode] = useState<"standard" | "ai">("standard");
+    const [executionMode, setExecutionMode] = useState<"standard" | "ai">("ai");
 
     // Fetch current question
     const { data: questionData, isLoading } = useSWR(
@@ -55,6 +56,8 @@ const PracticeQuestionPage = () => {
 
     const question = questionData?.questions?.find((q: any) => q.id === parseInt(questionId));
 
+    console.log(question);
+
     // Fetch set context to determine "Next" question
     const setId = question?.practiceSetId;
     const { data: setData } = useSWR(
@@ -64,6 +67,52 @@ const PracticeQuestionPage = () => {
 
     const isMcqQuestion = question?.type === 'mcq';
     const mcqOptions = question?.mcqOptions ? (typeof question.mcqOptions === 'string' ? JSON.parse(question.mcqOptions) : question.mcqOptions) : null;
+
+    const isSqlQuestion = ['sql', 'mysql', 'postgresql', 'snowflake'].includes(question?.language?.toLowerCase());
+    const schema = React.useMemo(() => {
+        if (!isSqlQuestion || !question?.testCases) return [];
+        try {
+            const tcs = typeof question.testCases === 'string' ? JSON.parse(question.testCases) : question.testCases;
+            if (!tcs || !tcs.length) return [];
+
+            const input = tcs[0].input || '';
+            const tables: { name: string; columns: { name: string; type: string }[] }[] = [];
+            // Regex to match CREATE TABLE statements, handling optional quotes and IF NOT EXISTS
+            const regex = /CREATE TABLE\s+(?:IF NOT EXISTS\s+)?['"`\[]?(\w+)['"`\]]?\s*\(([\s\S]+?)\);/gi;
+            let match;
+
+            while ((match = regex.exec(input)) !== null) {
+                const tableName = match[1];
+                const columnsDef = match[2];
+                // Split by comma, ignoring commas inside parentheses (e.g. DECIMAL(10,2))
+                const columnParts = columnsDef.split(/,(?![^(]*\))/);
+
+                const columns = columnParts.map((part) => {
+                    const cleanPart = part.trim();
+                    if (!cleanPart) return null;
+                    // Skip constraint definitions like PRIMARY KEY, FOREIGN KEY, etc.
+                    if (/^(PRIMARY\s+KEY|FOREIGN\s+KEY|CONSTRAINT|UNIQUE|CHECK|INDEX|KEY)\b/i.test(cleanPart)) return null;
+
+                    // Split by first whitespace to separate name and type
+                    const firstSpace = cleanPart.indexOf(' ');
+                    if (firstSpace === -1) return { name: cleanPart, type: 'Unknown' };
+
+                    const name = cleanPart.substring(0, firstSpace).trim().replace(/^['"`\[]|['"`\]]$/g, '');
+                    const type = cleanPart.substring(firstSpace).trim();
+
+                    return { name, type };
+                }).filter((c): c is { name: string; type: string } => c !== null);
+
+                if (columns.length > 0) {
+                    tables.push({ name: tableName, columns });
+                }
+            }
+            return tables;
+        } catch (e) {
+            console.error("Error parsing schema:", e);
+            return [];
+        }
+    }, [question, isSqlQuestion]);
 
     React.useEffect(() => {
         if (question && !isMcqQuestion) {
@@ -410,9 +459,9 @@ const PracticeQuestionPage = () => {
                             <Button
                                 variant="ghost"
                                 size="icon"
-                                onClick={() => setTheme(theme === 'vs-dark' ? 'light' : 'vs-dark')}
+                                onClick={() => setTheme(resolvedTheme === 'dark' ? 'light' : 'dark')}
                             >
-                                {theme === 'vs-dark' ? <Icons.Sun className="h-4 w-4" /> : <Icons.Moon className="h-4 w-4" />}
+                                {resolvedTheme === 'dark' ? <Icons.Sun className="h-4 w-4" /> : <Icons.Moon className="h-4 w-4" />}
                             </Button>
                         )}
                     </div>
@@ -441,6 +490,12 @@ const PracticeQuestionPage = () => {
                                             <Icons.Lightbulb className="h-4 w-4" />
                                             Hints ({visibleHintCount}/{question.hints?.length || 0})
                                         </TabsTrigger>
+                                        {isSqlQuestion && schema && schema.length > 0 && (
+                                            <TabsTrigger value="schema" className="gap-2">
+                                                <Icons.Database className="h-4 w-4" />
+                                                Schema
+                                            </TabsTrigger>
+                                        )}
                                     </TabsList>
                                 </div>
 
@@ -550,6 +605,55 @@ const PracticeQuestionPage = () => {
                                         </div>
                                     </ScrollArea>
                                 </TabsContent>
+
+                                {isSqlQuestion && schema && schema.length > 0 && (
+                                    <TabsContent value="schema" className="mt-0 flex-1 overflow-hidden">
+                                        <ScrollArea className="h-full">
+                                            <div className="p-6">
+                                                <div className="space-y-6">
+                                                    <div className="flex items-center gap-2">
+                                                        <Icons.Database className="h-5 w-5 text-primary" />
+                                                        <h3 className="text-lg font-semibold">Database Schema</h3>
+                                                    </div>
+
+                                                    {schema.map((table: any, idx: number) => (
+                                                        <div key={idx} className="border rounded-lg overflow-hidden bg-card">
+                                                            <div className="px-4 py-2 bg-muted/50 border-b flex items-center font-medium">
+                                                                <Icons.Table className="mr-2 h-4 w-4 text-muted-foreground" />
+                                                                {table.name}
+                                                            </div>
+                                                            <div className="overflow-x-auto">
+                                                                <table className="w-full text-sm">
+                                                                    <thead className="bg-muted/20 text-muted-foreground font-medium text-xs uppercase">
+                                                                        <tr>
+                                                                            <th className="px-4 py-2 text-left">Column</th>
+                                                                            <th className="px-4 py-2 text-left">Type</th>
+                                                                        </tr>
+                                                                    </thead>
+                                                                    <tbody className="divide-y">
+                                                                        {table.columns.map((col: any, cIdx: number) => (
+                                                                            <tr key={cIdx} className="hover:bg-muted/10">
+                                                                                <td className="px-4 py-2 font-mono text-foreground/90">{col.name}</td>
+                                                                                <td className="px-4 py-2 text-muted-foreground">{col.type}</td>
+                                                                            </tr>
+                                                                        ))}
+                                                                    </tbody>
+                                                                </table>
+                                                            </div>
+                                                        </div>
+                                                    ))}
+
+                                                    <Alert>
+                                                        <Icons.Info className="h-4 w-4" />
+                                                        <AlertDescription>
+                                                            These tables are available for your query. The data types shown match the database environment.
+                                                        </AlertDescription>
+                                                    </Alert>
+                                                </div>
+                                            </div>
+                                        </ScrollArea>
+                                    </TabsContent>
+                                )}
                             </Tabs>
                         </div>
                     </ResizablePanel>
@@ -566,7 +670,7 @@ const PracticeQuestionPage = () => {
                                         <Button variant="ghost" size="sm" onClick={() => setCode(question.starterCode || '')} className="text-xs gap-1"><Icons.RotateCcw className="h-3 w-3" />Reset</Button>
                                     </div>
                                     <div className="flex-1">
-                                        <Editor height="100%" language={question.language.toLowerCase()} value={code} onChange={(v) => setCode(v || '')} theme={theme} options={{ minimap: { enabled: false }, fontSize: 14 }} />
+                                        <Editor height="100%" language={question.language.toLowerCase()} value={code} onChange={(v) => setCode(v || '')} theme={resolvedTheme === 'dark' ? 'vs-dark' : 'light'} options={{ minimap: { enabled: false }, fontSize: 14 }} />
                                     </div>
                                     <div className="border-t bg-card p-4 flex justify-between items-center">
                                         <Button onClick={() => handleRunCode(false)} disabled={isRunning} variant="secondary" className="run-code-btn gap-2">

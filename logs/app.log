@@ -1336,3 +1336,37 @@
 {"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-21 20:54:49"}
 {"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-21 20:54:49"}
 {"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-21 20:54:49"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-21 20:58:27"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-21 20:58:27"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-21 20:58:27"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-21 20:58:27"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-21 21:09:50"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-21 21:09:50"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-21 21:09:50"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-21 21:09:50"}
+{"level":"info","message":"🔍 Validating query...","service":"sysrank-service","timestamp":"2026-01-21 21:10:09"}
+{"level":"info","message":"✅ Validation passed, executing query...","service":"sysrank-service","timestamp":"2026-01-21 21:10:09"}
+{"level":"info","message":"🟢 Executing PostgreSQL query...","service":"sysrank-service","timestamp":"2026-01-21 21:10:09"}
+{"code":"42601","level":"error","message":"syntax error at or near \"s\"","position":"113","service":"sysrank-service","timestamp":"2026-01-21 21:10:11"}
+{"0":"❌","1":" ","10":"a","11":"x","12":" ","13":"E","14":"r","15":"r","16":"o","17":"r","18":":","19":" ","2":"S","20":"s","21":"y","22":"n","23":"t","24":"a","25":"x","26":" ","27":"e","28":"r","29":"r","3":"Q","30":"o","31":"r","32":" ","33":"a","34":"t","35":" ","36":"o","37":"r","38":" ","39":"n","4":"L","40":"e","41":"a","42":"r","43":" ","44":"\"","45":"s","46":"\"","5":" ","6":"S","7":"y","8":"n","9":"t","level":"error","message":"❌ SQL execution failed:","service":"sysrank-service","timestamp":"2026-01-21 21:10:11"}
+{"level":"info","message":"🔍 Validating query...","service":"sysrank-service","timestamp":"2026-01-21 21:10:20"}
+{"level":"info","message":"✅ Validation passed, executing query...","service":"sysrank-service","timestamp":"2026-01-21 21:10:20"}
+{"level":"info","message":"🟢 Executing PostgreSQL query...","service":"sysrank-service","timestamp":"2026-01-21 21:10:20"}
+{"level":"info","message":"✅ PostgreSQL query completed in 2475ms, 1 rows","service":"sysrank-service","timestamp":"2026-01-21 21:10:22"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-21 21:10:41"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-21 21:10:41"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-21 21:10:41"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-21 21:10:41"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-21 21:10:45"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-21 21:10:45"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-21 21:10:46"}
+{"level":"info","message":"🔍 Validating query...","service":"sysrank-service","timestamp":"2026-01-21 21:12:53"}
+{"level":"info","message":"✅ Validation passed, executing query...","service":"sysrank-service","timestamp":"2026-01-21 21:12:53"}
+{"level":"info","message":"🟢 Executing PostgreSQL query...","service":"sysrank-service","timestamp":"2026-01-21 21:12:53"}
+{"code":"42704","level":"error","message":"type \"datetime\" does not exist","position":"77","service":"sysrank-service","timestamp":"2026-01-21 21:12:54"}
+{"0":"t","1":"y","10":"t","11":"i","12":"m","13":"e","14":"\"","15":" ","16":"d","17":"o","18":"e","19":"s","2":"p","20":" ","21":"n","22":"o","23":"t","24":" ","25":"e","26":"x","27":"i","28":"s","29":"t","3":"e","4":" ","5":"\"","6":"d","7":"a","8":"t","9":"e","level":"error","message":"❌ SQL execution failed:","service":"sysrank-service","timestamp":"2026-01-21 21:12:54"}
+{"level":"info","message":"🤖 AI simulating execution for sql...","service":"sysrank-service","timestamp":"2026-01-21 21:15:04"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-21 21:15:57"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-21 21:15:57"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-21 21:15:57"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-21 21:15:57"}
