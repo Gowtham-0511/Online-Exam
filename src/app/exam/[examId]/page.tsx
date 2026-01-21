@@ -26,6 +26,7 @@ import {
     Terminal,
     Database,
     X,
+    Maximize,
 } from "lucide-react";
 import { formatDistanceToNow } from 'date-fns';
 
@@ -73,6 +74,7 @@ export default function ExamPage() {
 
     const [showRestoreDialog, setShowRestoreDialog] = useState(false);
     const [pendingProgress, setPendingProgress] = useState<any>(null);
+    const [isFullscreen, setIsFullscreen] = useState(true);
 
     // State management hooks
     const examState = useExamState();
@@ -176,6 +178,7 @@ export default function ExamPage() {
     } = useExamViolations();
 
     // Refs for accessing state in intervals/callbacks without dependencies
+    const fsGraceTimer = useRef<NodeJS.Timeout | null>(null);
     const stateRef = useRef({
         examId,
         exam,
@@ -978,44 +981,60 @@ export default function ExamPage() {
         };
     }, [examStarted]);
 
-    // Fullscreen monitoring with 3-strike system
+    // Fullscreen monitoring with 10s grace period system
     useEffect(() => {
         const onFsChange = () => {
-            if (!document.fullscreenElement && examStarted && !hasSubmittedRef.current) {
-                // Increment violation count
-                screenChangeViolationsRef.current += 1;
-                const newCount = screenChangeViolationsRef.current;
-                const timestamp = new Date().toLocaleTimeString();
+            const isFs = !!document.fullscreenElement;
+            setIsFullscreen(isFs);
 
-                // Update state
-                setScreenChangeViolations(newCount);
-                setLastScreenChangeTime(timestamp);
+            if (!isFs && examStarted && !hasSubmittedRef.current) {
+                toast("⚠️ Fullscreen exited! Resume within 10 seconds to avoid penalty.", {
+                    icon: "⚠️",
+                    duration: 5000,
+                });
 
-                // Update total violations
-                violationsRef.current += 1;
-                setViolations(violationsRef.current);
+                if (fsGraceTimer.current) clearTimeout(fsGraceTimer.current);
 
-                // Track the violation
-                toast.error(`⚠️ Fullscreen exit detected. Warning ${newCount}/3`);
+                fsGraceTimer.current = setTimeout(() => {
+                    if (!document.fullscreenElement && examStarted && !hasSubmittedRef.current) {
+                        screenChangeViolationsRef.current += 1;
+                        const newCount = screenChangeViolationsRef.current;
+                        const timestamp = new Date().toLocaleTimeString();
 
-                console.log(`Fullscreen exited. Violation ${violationsRef.current}/3 at ${timestamp}`);
+                        setScreenChangeViolations(newCount);
+                        setLastScreenChangeTime(timestamp);
 
-                // Check if should disqualify
-                if (violationsRef.current >= 3) {
-                    console.log("3 violations reached - disqualifying");
-                    setDisqualified(true);
-                    handleSubmitWithDisqualification(true);
-                } else {
-                    // Show warning toast
-                    toast.error(`⚠️ Warning: Fullscreen exit detected! Violation ${violationsRef.current}/3`);
+                        violationsRef.current += 1;
+                        setViolations(violationsRef.current);
 
-                    // Optional: Show alert
-                    if (violationsRef.current === 2) {
-                        alert('⚠️ FINAL WARNING: One more violation will disqualify you from the exam!');
+                        toast.error(`⚠️ Fullscreen exit violation recorded. (${newCount}/3)`);
+
+                        console.log(`Fullscreen exited. Violation ${violationsRef.current}/3 at ${timestamp}`);
+
+                        if (violationsRef.current >= 3) {
+                            console.log("3 violations reached - disqualifying");
+                            setDisqualified(true);
+                            handleSubmitWithDisqualification(true);
+                        } else {
+                            toast.error(`⚠️ Warning: Fullscreen exit detected! Violation ${violationsRef.current}/3`);
+
+                            if (violationsRef.current === 2) {
+                                alert('⚠️ FINAL WARNING: One more violation will disqualify you from the exam!');
+                            }
+                        }
                     }
+                }, 10000);
+            } else if (isFs) {
+                if (fsGraceTimer.current) {
+                    clearTimeout(fsGraceTimer.current);
+                    fsGraceTimer.current = null;
+                    toast.success("Fullscreen resumed!");
                 }
             }
         };
+
+        // Initialize state
+        setIsFullscreen(!!document.fullscreenElement);
 
         document.addEventListener("fullscreenchange", onFsChange);
         document.addEventListener("webkitfullscreenchange", onFsChange);
@@ -1025,6 +1044,7 @@ export default function ExamPage() {
             document.removeEventListener("fullscreenchange", onFsChange);
             document.removeEventListener("webkitfullscreenchange", onFsChange);
             document.removeEventListener("mozfullscreenchange", onFsChange);
+            if (fsGraceTimer.current) clearTimeout(fsGraceTimer.current);
         };
     }, [examStarted]);
 
@@ -1098,13 +1118,6 @@ export default function ExamPage() {
             }
         };
 
-        const handleFullscreenChange = () => {
-            if (!document.fullscreenElement && examStarted && !hasSubmittedRef.current) {
-                console.log("Exited fullscreen - disqualifying");
-                handleDisqualification("Exited fullscreen mode");
-            }
-        };
-
         const handleMouseLeave = (e: MouseEvent) => {
             if ((e.clientY <= 0 || e.clientY >= window.innerHeight ||
                 e.clientX <= 0 || e.clientX >= window.innerWidth) &&
@@ -1173,9 +1186,6 @@ export default function ExamPage() {
         document.addEventListener('visibilitychange', handleVisibilityChange);
         window.addEventListener('blur', handleBlur);
         window.addEventListener('focus', () => setIsTabVisible(true));
-        document.addEventListener('fullscreenchange', handleFullscreenChange);
-        document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
-        document.addEventListener('mozfullscreenchange', handleFullscreenChange);
         document.addEventListener('mouseleave', handleMouseLeave);
         document.addEventListener('keydown', handleKeyDown);
         window.addEventListener('resize', handleResize);
@@ -1189,9 +1199,6 @@ export default function ExamPage() {
             document.removeEventListener('visibilitychange', handleVisibilityChange);
             window.removeEventListener('blur', handleBlur);
             window.removeEventListener('focus', () => setIsTabVisible(true));
-            document.removeEventListener('fullscreenchange', handleFullscreenChange);
-            document.removeEventListener('webkitfullscreenchange', handleFullscreenChange);
-            document.removeEventListener('mozfullscreenchange', handleFullscreenChange);
             document.removeEventListener('mouseleave', handleMouseLeave);
             document.removeEventListener('keydown', handleKeyDown);
             window.removeEventListener('resize', handleResize);
@@ -1985,6 +1992,35 @@ export default function ExamPage() {
                     schemaData={schemaData}
                     onClose={() => setShowErDiagram(false)}
                 />
+            )}
+
+            {/* Warn Overlay for Fullscreen Escape */}
+            {examStarted && !isFullscreen && !isDisqualified && !hasSubmittedRef.current && (
+                <div className="fixed inset-0 bg-background/95 backdrop-blur-md z-[110] flex items-center justify-center p-4 animate-in fade-in duration-200">
+                    <div className="max-w-md w-full bg-card border-2 border-amber-500 rounded-xl shadow-2xl p-8 text-center space-y-6">
+                        <div className="w-20 h-20 bg-amber-100 dark:bg-amber-900/30 rounded-full flex items-center justify-center mx-auto animate-pulse">
+                            <Maximize className="w-10 h-10 text-amber-600 dark:text-amber-500" />
+                        </div>
+                        <div className="space-y-4">
+                            <h2 className="text-3xl font-bold">Fullscreen Required</h2>
+                            <p className="text-muted-foreground text-lg">
+                                You have exited fullscreen mode. Please resume immediately to avoid disqualification.
+                            </p>
+                        </div>
+                        <Button
+                            size="lg"
+                            className="w-full font-bold text-lg h-14"
+                            onClick={() => {
+                                document.documentElement.requestFullscreen().catch(err => {
+                                    console.error("Error attempting to enable fullscreen:", err);
+                                    toast.error("Could not enter fullscreen. Please press F11.");
+                                });
+                            }}
+                        >
+                            Resume Exam
+                        </Button>
+                    </div>
+                </div>
             )}
 
             {isDisqualified && (

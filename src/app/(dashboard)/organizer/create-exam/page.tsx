@@ -137,6 +137,63 @@ export default function CreateExam() {
         medium: 40,
         hard: 20
     });
+    const [isAnalyzingIntent, setIsAnalyzingIntent] = useState(false);
+
+    const handleAIIntent = async (prompt: string) => {
+        setIsAnalyzingIntent(true);
+        try {
+            const res = await fetch('/api/organizer/ai/parse-intent', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ prompt })
+            });
+
+            if (!res.ok) throw new Error("Failed to parse intent");
+
+            const data = await res.json();
+            const config = data.config;
+
+            if (config) {
+                // Apply Configuration
+                if (config.title) setTitle(config.title);
+                if (config.language) {
+                    const normLang = config.language.toLowerCase();
+                    // Match against options
+                    const validLang = languageOptions.find(o => o.value === normLang) ? normLang : 'python';
+                    setLanguage(validLang);
+                }
+                if (config.duration) setDuration(config.duration);
+                if (config.totalMarks) setTotalMarks(config.totalMarks);
+
+                if (config.difficultyDistribution) {
+                    setDifficultyDistribution(config.difficultyDistribution);
+                }
+
+                if (config.questionTypes) {
+                    setMarksDistribution(prev => ({
+                        ...prev,
+                        coding: config.questionTypes.coding || 70,
+                        mcq: config.questionTypes.mcq || 30
+                    }));
+                }
+
+                if (config.topics && Array.isArray(config.topics)) {
+                    // Filter valid tags if we want to be strict, or just set them
+                    // For now, we'll set them directly, but typically you'd want to match against 'availableTags'
+                    // Since 'availableTags' comes from SWR, we might just add them.
+                    setSelectedTags(config.topics);
+                }
+
+                toast.success("Exam configuration auto-filled!");
+            }
+
+        } catch (error) {
+            console.error("AI Intent Error:", error);
+            toast.error("Could not auto-configure. Please try again or set manually.");
+        } finally {
+            setIsAnalyzingIntent(false);
+        }
+    };
 
     const { data: existingCredentials = [], mutate: mutateCredentials, isLoading: loadingCredentials } = useSWR<SqlCredential[]>(
         sqlServerType && session?.username ? `/api/organizer/sql/list-credentials?createdBy=${session.username}` : null,
@@ -427,6 +484,99 @@ export default function CreateExam() {
         }
     };
 
+    const [generatingAI, setGeneratingAI] = useState(false);
+    const [regeneratingId, setRegeneratingId] = useState<string | null>(null);
+
+    const handleRegenerateQuestion = async (questionId: string, index: number) => {
+        const questionToRegen = questions[index];
+        if (!questionToRegen) return;
+
+        setRegeneratingId(questionId);
+        try {
+            const response = await fetch('/api/organizer/ai/regenerate-question', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    language,
+                    type: questionToRegen.type,
+                    difficulty: questionToRegen.difficulty,
+                    marks: questionToRegen.marks,
+                    topics: selectedTags
+                })
+            });
+
+            if (!response.ok) throw new Error('Failed to regenerate');
+
+            const data = await response.json();
+            if (data.success && data.question) {
+                const newQuestion = {
+                    ...data.question,
+                    id: `ai-regen-${Date.now()}`,
+                    // Preserve marks if AI returns something different or weird, but usually we trust the AI context
+                    marks: questionToRegen.marks
+                };
+
+                const updatedQuestions = [...questions];
+                updatedQuestions[index] = newQuestion;
+                setQuestions(updatedQuestions);
+                toast.success('Question regenerated successfully');
+            }
+        } catch (error) {
+            console.error(error);
+            toast.error('Failed to regenerate question');
+        } finally {
+            setRegeneratingId(null);
+        }
+    };
+
+    const generateQuestionsWithAI = async () => {
+        if (totalMarks <= 0) {
+            toast.error('Please enter valid total marks');
+            return;
+        }
+
+        setGeneratingAI(true);
+        setError('');
+
+        try {
+            const response = await fetch('/api/organizer/ai/generate-question', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    language,
+                    totalMarks,
+                    difficultyDistribution,
+                    questionTypes: marksDistribution,
+                    topics: selectedTags
+                })
+            });
+
+            if (!response.ok) throw new Error('Failed to generate questions');
+
+            const data = await response.json();
+
+            if (data.questions && Array.isArray(data.questions)) {
+                // Map to ensure IDs are unique
+                const newQuestions = data.questions.map((q: any, i: number) => ({
+                    ...q,
+                    id: `ai-gen-${Date.now()}-${i}`,
+                    solution: q.solution || ''
+                }));
+
+                setQuestions(newQuestions);
+                toast.success(`Generated ${newQuestions.length} unique questions using AI!`);
+            } else {
+                throw new Error('Invalid response format');
+            }
+
+        } catch (err) {
+            console.error('AI Generation Error:', err);
+            toast.error('Failed to generate questions with AI. Please try again.');
+        } finally {
+            setGeneratingAI(false);
+        }
+    };
+
     const fetchQuestions = async () => {
         const codingTotal = beginnerCount + intermediateCount + expertCount;
         const mcqTotal = mcqBeginnerCount + mcqIntermediateCount + mcqExpertCount;
@@ -613,6 +763,53 @@ export default function CreateExam() {
                                     <h2 className="text-lg font-semibold mb-1">Basic Information</h2>
                                     <p className="text-sm text-muted-foreground">Set up your exam details</p>
                                 </div>
+
+                                {/* Natural Language Setup */}
+                                <Card className="border-primary/20 bg-primary/5 mb-6 overflow-hidden relative">
+                                    <div className="absolute top-0 right-0 p-3 opacity-10">
+                                        <Sparkles className="w-24 h-24" />
+                                    </div>
+                                    <CardContent className="p-4 sm:p-6 space-y-4">
+                                        <div className="flex items-center gap-2 mb-2">
+                                            <div className="p-2 rounded-lg bg-primary/10 text-primary">
+                                                <Sparkles className="w-5 h-5" />
+                                            </div>
+                                            <div>
+                                                <h3 className="font-semibold text-foreground">Magic Setup</h3>
+                                                <p className="text-xs text-muted-foreground">Describe your exam, and we'll configure everything for you.</p>
+                                            </div>
+                                        </div>
+                                        <div className="flex gap-2">
+                                            <Input
+                                                placeholder="e.g. Create a 45-minute Python test for interns focusing on Strings and Loops with 50 total marks."
+                                                className="bg-background border-primary/20 focus-visible:ring-primary/30"
+                                                id="ai-intent-input"
+                                                onKeyDown={(e) => {
+                                                    if (e.key === 'Enter') {
+                                                        const val = (e.target as HTMLInputElement).value;
+                                                        if (val) handleAIIntent(val);
+                                                    }
+                                                }}
+                                            />
+                                            <Button
+                                                onClick={() => {
+                                                    const input = document.getElementById('ai-intent-input') as HTMLInputElement;
+                                                    if (input && input.value) handleAIIntent(input.value);
+                                                }}
+                                                disabled={isAnalyzingIntent}
+                                                className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg shadow-primary/20"
+                                            >
+                                                {isAnalyzingIntent ? (
+                                                    <Loader2 className="w-4 h-4 animate-spin" />
+                                                ) : (
+                                                    <Sparkles className="w-4 h-4 mr-2" />
+                                                )}
+                                                {isAnalyzingIntent ? 'Scanning...' : 'Auto-Fill'}
+                                            </Button>
+                                        </div>
+                                    </CardContent>
+                                </Card>
+
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div className="space-y-2">
                                         <Label htmlFor="title">Exam Title *</Label>
@@ -1403,24 +1600,46 @@ export default function CreateExam() {
                                             </CardContent>
                                         </Card>
 
-                                        <Button
-                                            onClick={generateQuestionsByMarks}
-                                            disabled={loading || totalMarks <= 0}
-                                            className="w-full"
-                                            size="lg"
-                                        >
-                                            {loading ? (
-                                                <>
-                                                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                                                    Generating Questions...
-                                                </>
-                                            ) : (
-                                                <>
-                                                    <Sparkles className="w-4 h-4 mr-2" />
-                                                    Generate Question Paper ({totalMarks} marks)
-                                                </>
-                                            )}
-                                        </Button>
+                                        <div className="flex flex-col sm:flex-row gap-4">
+                                            <Button
+                                                onClick={generateQuestionsByMarks}
+                                                disabled={loading || generatingAI || totalMarks <= 0}
+                                                className="flex-1"
+                                                size="lg"
+                                                variant="outline"
+                                            >
+                                                {loading ? (
+                                                    <>
+                                                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                                        Generating...
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <FileText className="w-4 h-4 mr-2" />
+                                                        Fetch from DB
+                                                    </>
+                                                )}
+                                            </Button>
+
+                                            <Button
+                                                onClick={generateQuestionsWithAI}
+                                                disabled={loading || generatingAI || totalMarks <= 0}
+                                                className="flex-1 bg-violet-600 hover:bg-violet-700 text-white shadow-lg shadow-violet-200 dark:shadow-violet-900/20"
+                                                size="lg"
+                                            >
+                                                {generatingAI ? (
+                                                    <>
+                                                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                                        Neural Generating...
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <Sparkles className="w-4 h-4 mr-2" />
+                                                        Neural Generate (AI)
+                                                    </>
+                                                )}
+                                            </Button>
+                                        </div>
 
                                         {totalMarks > 0 && (
                                             <Alert>
@@ -1428,9 +1647,9 @@ export default function CreateExam() {
                                                 <AlertDescription>
                                                     <p className="font-medium mb-2">Distribution Preview</p>
                                                     <div className="text-xs space-y-1">
-                                                        <p>â€¢ Coding: ~{Math.round((totalMarks * marksDistribution.coding) / 100)} marks ({marksDistribution.coding}%)</p>
-                                                        <p>â€¢ MCQ: ~{Math.round((totalMarks * marksDistribution.mcq) / 100)} marks ({marksDistribution.mcq}%)</p>
-                                                        <p className="mt-2 pt-2 border-t">â€¢ Easy: {difficultyDistribution.easy}% | Medium: {difficultyDistribution.medium}% | Hard: {difficultyDistribution.hard}%</p>
+                                                        <p>&bull; Coding: ~{Math.round((totalMarks * marksDistribution.coding) / 100)} marks ({marksDistribution.coding}%)</p>
+                                                        <p>&bull; MCQ: ~{Math.round((totalMarks * marksDistribution.mcq) / 100)} marks ({marksDistribution.mcq}%)</p>
+                                                        <p className="mt-2 pt-2 border-t">&bull; Easy: {difficultyDistribution.easy}% | Medium: {difficultyDistribution.medium}% | Hard: {difficultyDistribution.hard}%</p>
                                                     </div>
                                                 </AlertDescription>
                                             </Alert>
@@ -1483,6 +1702,19 @@ export default function CreateExam() {
                                                             <Button
                                                                 variant="ghost"
                                                                 size="sm"
+                                                                onClick={() => handleRegenerateQuestion(q.id, index)}
+                                                                className="text-muted-foreground hover:text-primary mr-1"
+                                                                disabled={regeneratingId === q.id}
+                                                            >
+                                                                {regeneratingId === q.id ? (
+                                                                    <Loader2 className="w-4 h-4 animate-spin" />
+                                                                ) : (
+                                                                    <RefreshCw className="w-4 h-4" />
+                                                                )}
+                                                            </Button>
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="sm"
                                                                 onClick={() => deleteQuestion(q.id)}
                                                                 className="text-destructive hover:text-destructive"
                                                             >
@@ -1526,7 +1758,7 @@ export default function CreateExam() {
                                                             <div>
                                                                 <Label className="text-xs text-muted-foreground mb-1 block">Expected Output:</Label>
                                                                 <code className="text-sm p-3 bg-background rounded-md border border-border block font-mono">
-                                                                    {q.expectedOutput}
+                                                                    {typeof q.expectedOutput === 'object' ? JSON.stringify(q.expectedOutput) : q.expectedOutput}
                                                                 </code>
                                                             </div>
                                                         )}
@@ -1540,11 +1772,15 @@ export default function CreateExam() {
                                                                             <div className="grid grid-cols-1 gap-1">
                                                                                 <div>
                                                                                     <span className="text-xs text-muted-foreground font-sans">Input:</span>
-                                                                                    <span className="ml-2">{tc.input}</span>
+                                                                                    <span className="ml-2">
+                                                                                        {typeof tc.input === 'object' ? JSON.stringify(tc.input) : tc.input}
+                                                                                    </span>
                                                                                 </div>
                                                                                 <div>
                                                                                     <span className="text-xs text-muted-foreground font-sans">Expected Output:</span>
-                                                                                    <span className="ml-2">{tc.expectedOutput}</span>
+                                                                                    <span className="ml-2">
+                                                                                        {typeof tc.expectedOutput === 'object' ? JSON.stringify(tc.expectedOutput) : tc.expectedOutput}
+                                                                                    </span>
                                                                                 </div>
                                                                                 {tc.isHidden && (
                                                                                     <Badge variant="secondary" className="w-fit text-[10px] h-5">Hidden Case</Badge>

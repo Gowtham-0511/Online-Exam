@@ -489,19 +489,6 @@ const AttenderDashboard = () => {
                             )}
                         </section>
 
-                        {/* Learning Path */}
-                        {completedExams.length > 0 && (
-                            <section className="space-y-5 animate-main-section">
-                                <div className="flex items-center gap-3">
-                                    <div className="p-2 rounded-lg bg-indigo-500/10 text-indigo-500">
-                                        <BrainCircuit className="w-5 h-5" />
-                                    </div>
-                                    <h2 className="text-2xl font-bold tracking-tight">Adaptive Learning Path</h2>
-                                </div>
-                                <AdaptiveLearningPath email={session?.username || ''} />
-                            </section>
-                        )}
-
                         {/* Recent Activity */}
                         <section className="space-y-5 animate-main-section">
                             <div className="flex items-center justify-between">
@@ -589,7 +576,7 @@ const AttenderDashboard = () => {
                                 </div>
                             )}
 
-                            {completedExams.length >= 2 && (
+                            {/* {completedExams.length >= 2 && (
                                 <div className="space-y-4">
                                     <PerformancePredictionCard
                                         prediction={performancePrediction}
@@ -600,7 +587,7 @@ const AttenderDashboard = () => {
                                         isLoading={achievementLoading}
                                     />
                                 </div>
-                            )}
+                            )} */}
                         </div>
                     </div>
                 </div>

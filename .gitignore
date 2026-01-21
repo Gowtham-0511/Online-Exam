@@ -39,3 +39,8 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+.vs/slnx.sqlite
+.vs/VSWorkspaceState.json
+.vs/sysrank/FileContentIndex/c15cee5d-e95d-456d-beaf-b8ca77dd8b3d.vsidx
+.vs/sysrank/v17/.wsuo
+.vs/sysrank/v17/DocumentLayout.json

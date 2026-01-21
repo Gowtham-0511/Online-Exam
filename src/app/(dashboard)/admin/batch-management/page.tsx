@@ -907,8 +907,8 @@ const BatchManagementPage: React.FC = () => {
                                     </SelectTrigger>
                                     <SelectContent>
                                         <SelectItem value="all">All Departments</SelectItem>
-                                        {departments.map(dept => (
-                                            <SelectItem key={dept} value={dept}>{dept}</SelectItem>
+                                        {departments.map((dept, index) => (
+                                            <SelectItem key={`${dept}-${index}`} value={dept || 'unknown'}>{dept || 'Unknown'}</SelectItem>
                                         ))}
                                     </SelectContent>
                                 </Select>

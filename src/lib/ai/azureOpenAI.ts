@@ -2122,3 +2122,220 @@ export async function generatePodcastInteraction(
     return { text: "Error interacting.", audio: null };
   }
 }
+
+export async function parseExamCreationIntent(promptText: string): Promise<{
+  title: string;
+  language: string;
+  duration: number;
+  difficultyDistribution: { easy: number; medium: number; hard: number };
+  topics: string[];
+  totalMarks: number;
+  questionTypes: { coding: number; mcq: number };
+}> {
+  const isDeterministicModel = /(mini|instruct)/i.test(deploymentName);
+
+  const prompt = `
+      Analyze the user's intent to create an exam/assessment and extract configuration details.
+
+      User Request: "${promptText}"
+
+      Extract or Infer:
+      1. Title: A professional title for the exam.
+      2. Language: The programming language (python, sql, java, cpp, javascript, etc.). Default to "python" if unclear.
+      3. Duration: In minutes (default 60 if unclear).
+      4. Difficulty Distribution: Percentage for easy/medium/hard (must sum to 100).
+      5. Topics: List of technical tags/topics mentioned or implied.
+      6. Total Marks: Suggested total marks (default 100).
+      7. Question Types: Percentage distribution for Coding vs MCQ (must sum to 100).
+
+      Return JSON:
+      {
+          "title": "string",
+          "language": "string",
+          "duration": number,
+          "difficultyDistribution": { "easy": number, "medium": number, "hard": number },
+          "topics": ["topic1", "topic2"],
+          "totalMarks": number,
+          "questionTypes": { "coding": number, "mcq": number }
+      }
+  `;
+
+  const params: any = {
+    model: deploymentName,
+    messages: [
+      {
+        role: "system",
+        content: "You are an AI assistant that configures technical assessments. Return only valid JSON.",
+      },
+      { role: "user", content: prompt },
+    ],
+    response_format: { type: "json_object" },
+  };
+
+  if (!isDeterministicModel) {
+    params.temperature = 0.4;
+  }
+
+  try {
+    const result = await getClient().chat.completions.create(params);
+    return JSON.parse(result.choices[0]?.message?.content || "{}");
+  } catch (error) {
+    logger.error("Exam intent parsing error:", error);
+    return {
+      title: "New Assessment",
+      language: "python",
+      duration: 60,
+      difficultyDistribution: { easy: 40, medium: 40, hard: 20 },
+      topics: [],
+      totalMarks: 100,
+      questionTypes: { coding: 70, mcq: 30 }
+    };
+  }
+}
+
+export async function generateExamQuestions(
+  language: string,
+  totalMarks: number,
+  difficultyDistribution: { easy: number; medium: number; hard: number },
+  questionTypes: { coding: number; mcq: number },
+  topics: string[]
+): Promise<any[]> {
+  const isDeterministicModel = /(mini|instruct)/i.test(deploymentName);
+
+  const prompt = `
+      Create a comprehensive exam paper based on these requirements:
+      
+      Language: ${language}
+      Total Marks: ${totalMarks}
+      Topics: ${topics.length > 0 ? topics.join(', ') : 'General ' + language + ' concepts'}
+      
+      Requirements:
+      - Create a mix of Coding and MCQ questions.
+      - Adhere to this Difficulty Distribution (approx % of marks): Easy ${difficultyDistribution.easy}%, Medium ${difficultyDistribution.medium}%, Hard ${difficultyDistribution.hard}%.
+      - Adhere to this Type Distribution (approx % of marks): Coding ${questionTypes.coding}%, MCQ ${questionTypes.mcq}%.
+      
+      For Coding Questions:
+      - Include clear problem statement.
+      - Include 3-4 test cases (inputs/outputs).
+      - Include a solution code.
+      
+      For MCQ Questions:
+      - Include 4 options.
+      - Indicate correct answer index (0-3).
+      
+      Return JSON:
+      {
+          "questions": [
+              {
+                  "type": "coding",
+                  "question": "Problem statement...",
+                  "difficulty": "Easy|Medium|Hard",
+                  "marks": number,
+                  "testCases": [{"input": "...", "expectedOutput": "..."}],
+                  "solution": "code...",
+                  "tags": ["tag1"]
+              },
+              {
+                  "type": "mcq",
+                  "question": "Question text...",
+                  "difficulty": "Easy|Medium|Hard",
+                  "marks": number,
+                  "options": [{"id": 1, "text": "Option A", "isCorrect": false}, ...],
+                  "correctAnswer": 2,
+                  "tags": ["tag2"]
+              }
+          ]
+      }
+  `;
+
+  const params: any = {
+    model: deploymentName,
+    messages: [
+      {
+        role: "system",
+        content: "You are an expert exam setter. Create high-quality, unique questions. Return only valid JSON.",
+      },
+      { role: "user", content: prompt },
+    ],
+    response_format: { type: "json_object" },
+  };
+
+  if (!isDeterministicModel) {
+    params.temperature = 0.7; // High creativity for new questions
+  }
+
+  try {
+    const result = await getClient().chat.completions.create(params);
+    const content = result.choices[0]?.message?.content?.trim() || "{}";
+    const data = JSON.parse(content);
+    return data.questions || [];
+  } catch (error) {
+    logger.error("Exam generation error:", error);
+    return [];
+  }
+}
+
+export async function regenerateSingleQuestion(
+  language: string,
+  type: "coding" | "mcq",
+  difficulty: string,
+  marks: number,
+  topics: string[]
+): Promise<any | null> {
+  const isDeterministicModel = /(mini|instruct)/i.test(deploymentName);
+
+  const prompt = `
+      Generate a SINGLE unique ${difficulty} ${type} question for a ${language} exam.
+      
+      Context:
+      - Marks: ${marks}
+      - Topics: ${topics.length > 0 ? topics.join(', ') : 'General ' + language + ' concepts'}
+      
+      ${type === 'coding' ? `
+      Requirements for Coding Question:
+      - Clear problem statement.
+      - 3-4 robust test cases.
+      - Efficient solution code.
+      ` : `
+      Requirements for MCQ Question:
+      - Clear question text.
+      - 4 distinct options.
+      - Correct answer index (0-3).
+      `}
+      
+      Return JSON:
+      {
+          "type": "${type}",
+          "question": "...",
+          "difficulty": "${difficulty}",
+          "marks": ${marks},
+          ${type === 'coding' ? `"testCases": [{"input": "...", "expectedOutput": "..."}], "solution": "...",` : `"options": [{"id": 1, "text": "...", "isCorrect": false}], "correctAnswer": 0,`}
+          "tags": ["tag1"]
+      }
+  `;
+
+  const params: any = {
+    model: deploymentName,
+    messages: [
+      {
+        role: "system",
+        content: "You are an expert exam setter. Create a high-quality, unique question. Return only valid JSON.",
+      },
+      { role: "user", content: prompt },
+    ],
+    response_format: { type: "json_object" },
+  };
+
+  if (!isDeterministicModel) {
+    params.temperature = 0.8; // High variation
+  }
+
+  try {
+    const result = await getClient().chat.completions.create(params);
+    const content = result.choices[0]?.message?.content?.trim() || "{}";
+    return JSON.parse(content);
+  } catch (error) {
+    logger.error("Single question regeneration error:", error);
+    return null;
+  }
+}

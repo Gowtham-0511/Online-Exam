@@ -5,6 +5,7 @@ import { useRouter, useParams } from 'next/navigation';
 import { useMsal } from "@azure/msal-react";
 import { InteractionStatus } from "@azure/msal-browser";
 import useSWR from 'swr';
+import gsap from 'gsap';
 import Editor from '@monaco-editor/react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -38,6 +39,11 @@ const PracticeQuestionPage = () => {
     const [visibleHintCount, setVisibleHintCount] = useState(0);
     const [theme, setTheme] = useState<'vs-dark' | 'light'>('vs-dark');
     const [selectedMcqAnswer, setSelectedMcqAnswer] = useState<number | null>(null);
+
+    // New state for enhanced run code
+    const [testResults, setTestResults] = useState<any[]>([]);
+    const [codeRunCounts, setCodeRunCounts] = useState<Record<string, number>>({});
+    const [executionMode, setExecutionMode] = useState<"standard" | "ai">("standard");
 
     // Fetch current question
     const { data: questionData, isLoading } = useSWR(
@@ -98,8 +104,32 @@ const PracticeQuestionPage = () => {
         return `${dropStatements.join('\n')}\n${testCaseInput};\n${userCode}`;
     };
 
+    const compareOutputs = (actual: string, expected: string): boolean => {
+        if (actual === expected) return true;
+        const normalize = (str: string) => str ? str.toString().trim().replace(/\r\n/g, '\n').replace(/\s+$/gm, '') : '';
+        return normalize(actual) === normalize(expected);
+    };
+
     const handleRunCode = async (silent = false) => {
         setIsRunning(true);
+        if (!silent) setTestResults([]);
+
+        // Track code runs
+        const currentQId = question.id.toString();
+        const newRunCounts = { ...codeRunCounts };
+        newRunCounts[currentQId] = (newRunCounts[currentQId] || 0) + 1;
+        setCodeRunCounts(newRunCounts);
+
+        // Animate run button if not silent
+        if (!silent) {
+            gsap.to(".run-code-btn", {
+                scale: 0.95,
+                duration: 0.1,
+                yoyo: true,
+                repeat: 1
+            });
+        }
+
         try {
             const results: any[] = [];
             const testCases = question.testCases ? (typeof question.testCases === 'string' ? JSON.parse(question.testCases) : question.testCases) : [];
@@ -121,48 +151,127 @@ const PracticeQuestionPage = () => {
             for (const testCase of visibleTests) {
                 try {
                     const language = question.language.toLowerCase();
-                    let endpoint = "/api/execute/";
-                    if (language.includes("python")) endpoint += "python";
-                    else if (language.includes("javascript") || language.includes("js")) endpoint += "javascript";
-                    else if (language === "java") endpoint += "java";
-                    else if (language.includes("spark")) endpoint += "pyspark";
-                    else if (language.includes("dax") || language.includes("powerbi")) endpoint += "dax";
-                    else if (language.includes("c++") || language.includes("cpp")) endpoint += "cpp";
-                    else if (language.includes("sql") || language.includes("postgres")) endpoint += "sql";
-                    else throw new Error(`Unsupported: ${question.language}`);
+                    let endpoint = executionMode === "ai" ? "/api/execute/ai" : "/api/execute/";
 
-                    const requestBody = endpoint.endsWith("sql")
-                        ? {
-                            query: prepareSqlQuery(testCase.input, code),
-                            testCase: testCase,
-                            serverType: 'postgres',
-                            credentials: { host: '20.83.224.62', port: 5432, username: 'sysrankuser', password: 'RankPass!123', database: 'practice_db' }
+                    if (executionMode !== "ai") {
+                        if (language === "python" || language === "python3") {
+                            endpoint += "python";
+                        } else if (language === "javascript" || language === "js" || language === "node") {
+                            endpoint += "javascript";
+                        } else if (language === "java") {
+                            endpoint += "java";
+                        } else if (language === "pyspark" || language === "spark" || language === "databricks") {
+                            endpoint += "pyspark";
+                        } else if (language === "dax" || language === "powerbi") {
+                            endpoint += "dax";
+                        } else if (language === "c++" || language === "cpp") {
+                            endpoint += "cpp";
+                        } else if (language === "sql" || language === "mysql" || language === "postgresql") {
+                            endpoint += "sql";
+                        } else if (language === "dbt") {
+                            endpoint += "dbt";
+                        } else if (language === "snowflake") {
+                            endpoint += "snowflake";
+                        } else {
+                            throw new Error(`Unsupported language: ${question.language}`);
                         }
-                        : (endpoint.endsWith("dax") ? { expression: code, testCase } : { code, testCase });
+                    }
+
+                    const requestBody = executionMode === "ai"
+                        ? {
+                            code: language === "sql" ? prepareSqlQuery(testCase.input, code) : code,
+                            language: language,
+                            question: question.questionDescription || question.description,
+                            testCase: testCase
+                        }
+                        : (language === "sql" || language === "mysql" || language === "postgresql")
+                            ? {
+                                query: prepareSqlQuery(testCase.input, code),
+                                testCase: testCase,
+                                serverType: 'postgres',
+                                credentials: {
+                                    host: '20.83.224.62',
+                                    port: 5432,
+                                    username: 'sysrankuser',
+                                    password: 'RankPass!123',
+                                    database: 'practice_db'
+                                }
+                            }
+                            : (language === "dax" || language === "powerbi")
+                                ? {
+                                    expression: code,
+                                    testCase: {
+                                        input: testCase.input,
+                                        expectedOutput: testCase.expectedOutput
+                                    }
+                                } : (language === "snowflake") ? {
+                                    query: prepareSqlQuery(testCase.input, code),
+                                    testCase: {
+                                        input: testCase.input,
+                                        expectedOutput: testCase.expectedOutput
+                                    }
+                                } : {
+                                    code,
+                                    testCase: {
+                                        input: testCase.input,
+                                        expectedOutput: testCase.expectedOutput
+                                    }
+                                };
 
                     const response = await fetch(endpoint, {
                         method: "POST",
                         headers: { "Content-Type": "application/json" },
                         body: JSON.stringify(requestBody),
                     });
+
                     const result = await response.json();
 
-                    const actual = typeof result.output === 'string' ? result.output.trim() : JSON.stringify(result.output);
-                    const expected = testCase.expectedOutput.trim();
-                    // Basic normalization for comparison
-                    const passed = result.success && (actual === expected || actual.replace(/\s+/g, '') === expected.replace(/\s+/g, ''));
+                    if (result.success) {
+                        let actualOutput = "";
+                        if (typeof result.output === "string") {
+                            actualOutput = result.output.trim();
+                        } else if (result.output) {
+                            actualOutput = JSON.stringify(result.output);
+                        }
 
+                        let expectedOutput = "";
+                        if (typeof testCase.expectedOutput === "string") {
+                            expectedOutput = testCase.expectedOutput.trim();
+                        } else if (testCase.expectedOutput) {
+                            expectedOutput = JSON.stringify(testCase.expectedOutput);
+                        }
+
+                        const passed = compareOutputs(actualOutput, expectedOutput);
+
+                        results.push({
+                            passed,
+                            input: testCase.input,
+                            expectedOutput,
+                            actualOutput,
+                        });
+                    } else {
+                        results.push({
+                            passed: false,
+                            input: testCase.input,
+                            expectedOutput: testCase.expectedOutput,
+                            actualOutput: "",
+                            error: result.error || "Execution failed",
+                        });
+                    }
+                } catch (error: any) {
                     results.push({
-                        passed,
-                        testCase,
-                        actualOutput: actual,
-                        expectedOutput: expected,
-                        error: result.error
+                        passed: false,
+                        input: testCase.input,
+                        expectedOutput: testCase.expectedOutput,
+                        actualOutput: "",
+                        error: error.message || "Execution error",
                     });
-                } catch (e: any) {
-                    results.push({ passed: false, testCase, error: e.message });
                 }
             }
+
+            if (!silent) setTestResults(results);
+
+            // Calculate final result for compatibility with submit logic
             const passedCount = results.filter(r => r.passed).length;
             const finalResult = {
                 success: passedCount === results.length,
@@ -173,11 +282,28 @@ const PracticeQuestionPage = () => {
 
             if (!silent) {
                 setExecutionResult(finalResult);
+
+                // Set initial state and animate test results
+                gsap.set(".test-result-item", { x: -20, opacity: 0 });
+
+                setTimeout(() => {
+                    const elements = document.querySelectorAll(".test-result-item");
+                    if (elements.length > 0) {
+                        gsap.to(".test-result-item", {
+                            x: 0,
+                            opacity: 1,
+                            duration: 0.4,
+                            stagger: 0.1,
+                            ease: "power2.out"
+                        });
+                    }
+                }, 50);
+
                 setActiveTab('testcases');
             }
             return finalResult;
-        } catch (error) {
-            console.error(error);
+        } catch (error: any) {
+            console.error("Error running code:", error);
             return { success: false, error: 'Execution failed' };
         } finally {
             setIsRunning(false);
@@ -374,10 +500,33 @@ const PracticeQuestionPage = () => {
                                                     // Only show rudimentary results if manually run.
                                                     <div className="space-y-4">
                                                         {executionResult.testResults?.map((res: any, i: number) => (
-                                                            <div key={i} className={`p-4 rounded border ${res.passed ? 'border-emerald-500/20 bg-emerald-500/5' : 'border-rose-500/20 bg-rose-500/5'}`}>
-                                                                <div className="font-semibold mb-2">Test Case {i + 1}: {res.passed ? 'Passed' : 'Failed'}</div>
+                                                            <div key={i} className={`test-result-item p-4 rounded border ${res.passed ? 'border-emerald-500/20 bg-emerald-500/5' : 'border-rose-500/20 bg-rose-500/5'}`}>
+                                                                <div className="font-semibold mb-2 flex items-center gap-2">
+                                                                    {res.passed ? <Icons.CheckCircle className="h-4 w-4 text-emerald-500" /> : <Icons.XCircle className="h-4 w-4 text-rose-500" />}
+                                                                    Test Case {i + 1}
+                                                                </div>
                                                                 {/* Added whitespace-pre-wrap and break-all to ensure full visibility */}
-                                                                <pre className="text-xs bg-background p-2 rounded whitespace-pre-wrap break-all">{res.actualOutput}</pre>
+                                                                <div className="space-y-2 text-xs">
+                                                                    <div>
+                                                                        <span className="font-medium text-muted-foreground">Input:</span>
+                                                                        <pre className="bg-background/50 p-2 rounded mt-1 whitespace-pre-wrap break-all">{res.input || res.testCase?.input}</pre>
+                                                                    </div>
+                                                                    <div>
+                                                                        <span className="font-medium text-muted-foreground">Output:</span>
+                                                                        <pre className="bg-background/50 p-2 rounded mt-1 whitespace-pre-wrap break-all">{res.actualOutput}</pre>
+                                                                    </div>
+                                                                    {!res.passed && (
+                                                                        <div>
+                                                                            <span className="font-medium text-muted-foreground">Expected:</span>
+                                                                            <pre className="bg-background/50 p-2 rounded mt-1 whitespace-pre-wrap break-all">{res.expectedOutput}</pre>
+                                                                        </div>
+                                                                    )}
+                                                                    {res.error && (
+                                                                        <div className="text-rose-500 mt-2">
+                                                                            Error: {res.error}
+                                                                        </div>
+                                                                    )}
+                                                                </div>
                                                             </div>
                                                         ))}
                                                     </div>
@@ -420,7 +569,7 @@ const PracticeQuestionPage = () => {
                                         <Editor height="100%" language={question.language.toLowerCase()} value={code} onChange={(v) => setCode(v || '')} theme={theme} options={{ minimap: { enabled: false }, fontSize: 14 }} />
                                     </div>
                                     <div className="border-t bg-card p-4 flex justify-between items-center">
-                                        <Button onClick={() => handleRunCode(false)} disabled={isRunning} variant="secondary" className="gap-2">
+                                        <Button onClick={() => handleRunCode(false)} disabled={isRunning} variant="secondary" className="run-code-btn gap-2">
                                             {isRunning ? <Icons.Loader2 className="animate-spin h-4 w-4" /> : <Icons.Play className="h-4 w-4" />} Run Code
                                         </Button>
                                         <Button onClick={handleNext} disabled={isSubmitting} className="gap-2 min-w-[140px]">
