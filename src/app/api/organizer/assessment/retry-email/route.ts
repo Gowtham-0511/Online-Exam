@@ -35,9 +35,6 @@ export async function POST(request: Request) {
             },
         ];
 
-        // Ideally we would fetch user names here too, but for retry we might use a generic name or pass it in.
-        // To keep it simple, we'll try to look up names if possible or default to "Candidate".
-
         // Send emails in parallel with retry mechanism
         const sendEmailWithRetry = async (to: string, subject: string, html: string, attachments: any[]) => {
             for (let i = 0; i < 4; i++) {
@@ -51,64 +48,68 @@ export async function POST(request: Request) {
             }
         };
 
-        await Promise.all(emails.map(async (email: any) => {
-            // Try to fetch name (optional optimization)
-            let name = "Candidate";
-            try {
-                // Check employees first
-                const userRes = await pool.query(`SELECT "Name" FROM "Employees" WHERE "Email" = $1`, [email]);
-                if (userRes.rows.length > 0) {
-                    name = userRes.rows[0].Name;
-                } else {
-                    // Check external users if needed, or AssessmentUserMapping
-                    const mapRes = await pool.query(`SELECT "userEmail" FROM "AssessmentUserMapping" WHERE "userEmail" = $1 AND "assessmentId" = $2`, [email, assessmentId]);
-                    // If we find it, good. We don't store names in mapping though.
-                }
-            } catch (e) { }
+        // Process emails in batches to avoid concurrent connection limits
+        const BATCH_SIZE = 3;
+        for (let i = 0; i < emails.length; i += BATCH_SIZE) {
+            const batch = emails.slice(i, i + BATCH_SIZE);
+            await Promise.all(batch.map(async (email: any) => {
+                // Try to fetch name (optional optimization)
+                let name = "Candidate";
+                try {
+                    // Check employees first
+                    const userRes = await pool.query(`SELECT "Name" FROM "Employees" WHERE "Email" = $1`, [email]);
+                    if (userRes.rows.length > 0) {
+                        name = userRes.rows[0].Name;
+                    } else {
+                        // Check external users if needed, or AssessmentUserMapping
+                        const mapRes = await pool.query(`SELECT "userEmail" FROM "AssessmentUserMapping" WHERE "userEmail" = $1 AND "assessmentId" = $2`, [email, assessmentId]);
+                        // If we find it, good. We don't store names in mapping though.
+                    }
+                } catch (e) { }
 
-            // For retry, we might not have the exact start/end time unless we query it. 
-            // Let's query the schedule for this user.
-            let startDateStr = 'Available now';
-            let endDateStr = 'No deadline';
+                // For retry, we might not have the exact start/end time unless we query it. 
+                // Let's query the schedule for this user.
+                let startDateStr = 'Available now';
+                let endDateStr = 'No deadline';
 
-            try {
-                const scheduleRes = await pool.query(
-                    `SELECT "startTime", "endTime" FROM "AssessmentUserMapping" WHERE "assessmentId" = $1 AND "userEmail" = $2`,
-                    [assessmentId, email]
-                );
+                try {
+                    const scheduleRes = await pool.query(
+                        `SELECT "startTime", "endTime" FROM "AssessmentUserMapping" WHERE "assessmentId" = $1 AND "userEmail" = $2`,
+                        [assessmentId, email]
+                    );
 
-                // Note: If it was a Batch Schedule, it might not be in UserMapping individually unless we inserted it.
-                // But the schedule API DOES insert individually into UserMapping even for batches.
-                // Check lines 93-120 in schedule/route.ts. Wait, lines 43-91 insert into AssessmentBatchMapping. 
-                // Lines 93-120 insert into AssessmentUserMapping. 
-                // BUT, wait... 
-                // In schedule/route.ts, batch logic (lines 43-91) inserts into AssessmentBatchMapping. It does NOT insert into UserMapping.
-                // So if the user is from a batch, we need to check AssessmentBatchMapping -> Batch -> startTime.
-                // This is getting complicated to reconstruct perfectly.
-                // However, the email content needs it.
-                // Simplified approach for retry: Just send generic "Available now" or try best effort. 
-                // Or better: Pass the details in the request body if available? 
-                // The frontend has the data! It knows the start/end time it just tried to send.
-                // But the frontend might have cleared state. 
+                    // Note: If it was a Batch Schedule, it might not be in UserMapping individually unless we inserted it.
+                    // But the schedule API DOES insert individually into UserMapping even for batches.
+                    // Check lines 93-120 in schedule/route.ts. Wait, lines 43-91 insert into AssessmentBatchMapping. 
+                    // Lines 93-120 insert into AssessmentUserMapping. 
+                    // BUT, wait... 
+                    // In schedule/route.ts, batch logic (lines 43-91) inserts into AssessmentBatchMapping. It does NOT insert into UserMapping.
+                    // So if the user is from a batch, we need to check AssessmentBatchMapping -> Batch -> startTime.
+                    // This is getting complicated to reconstruct perfectly.
+                    // However, the email content needs it.
+                    // Simplified approach for retry: Just send generic "Available now" or try best effort. 
+                    // Or better: Pass the details in the request body if available? 
+                    // The frontend has the data! It knows the start/end time it just tried to send.
+                    // But the frontend might have cleared state. 
 
-                // Let's try to query UserMapping first.
-                if (scheduleRes.rows.length > 0) {
-                    const s = scheduleRes.rows[0];
-                    if (s.startTime) startDateStr = new Date(s.startTime).toLocaleString('en-US', { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
-                    if (s.endTime) endDateStr = new Date(s.endTime).toLocaleString('en-US', { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
-                } else {
-                    // Try batch mapping
-                    // This is hard to reverse engineer easily without more queries. 
-                    // Let's just use generic "Check Dashboard" if we can't find it, or just "Available now" as fallback.
-                }
-            } catch (e) { }
+                    // Let's try to query UserMapping first.
+                    if (scheduleRes.rows.length > 0) {
+                        const s = scheduleRes.rows[0];
+                        if (s.startTime) startDateStr = new Date(s.startTime).toLocaleString('en-US', { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+                        if (s.endTime) endDateStr = new Date(s.endTime).toLocaleString('en-US', { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+                    } else {
+                        // Try batch mapping
+                        // This is hard to reverse engineer easily without more queries. 
+                        // Let's just use generic "Check Dashboard" if we can't find it, or just "Available now" as fallback.
+                    }
+                } catch (e) { }
 
 
-            try {
-                await sendEmailWithRetry(
-                    email,
-                    `New Assessment Scheduled: ${assessmentTitle}`,
-                    `
+                try {
+                    await sendEmailWithRetry(
+                        email,
+                        `New Assessment Scheduled: ${assessmentTitle}`,
+                        `
             <!DOCTYPE html>
             <html lang="en">
             <head>
@@ -184,14 +185,20 @@ export async function POST(request: Request) {
             </body>
             </html>
             `,
-                    attachments
-                );
+                        attachments
+                    );
 
-            } catch (e) {
-                logger.error("Failed to retry email for %s", email, e);
-                failedEmails.push(email);
+                } catch (e) {
+                    logger.error("Failed to retry email for %s", email, e);
+                    failedEmails.push(email);
+                }
+            }));
+
+            // Add a small delay between batches
+            if (i + BATCH_SIZE < emails.length) {
+                await new Promise(resolve => setTimeout(resolve, 2000));
             }
-        }));
+        }
 
         return NextResponse.json({ success: true, failedEmails });
 

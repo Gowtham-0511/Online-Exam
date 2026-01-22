@@ -32,6 +32,8 @@ export async function GET(request: Request) {
 
     const result = await pool.query(query, [email]);
 
+    console.log(result.rows)
+
     return NextResponse.json(result.rows, { status: 200 });
   } catch (error) {
     logger.error("Error fetching assessment by user %s:", email, error);

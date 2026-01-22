@@ -23,15 +23,29 @@ export async function POST(request: Request) {
   const apiVersion = process.env.AZURE_OAI_API_VER || "";
 
   try {
-    const body = await request.json();
+    let body;
+    try {
+      body = await request.json();
+    } catch (e) {
+      logger.error("Failed to parse request body: %s", e);
+      return NextResponse.json({ message: "Invalid JSON body" }, { status: 400 });
+    }
 
     const { email, topic, difficulty, count, questionType } = body;
 
-    logger.info("Generating practice questions: %s, %s, %s, %s, %s", email, topic, difficulty, count, questionType);
+    logger.info("Generating practice questions: email=%s, topic=%s, difficulty=%s, count=%s, type=%s", email, topic, difficulty, count, questionType);
 
     if (!email || !topic || !difficulty || !count || !questionType) {
+      const missingFields = [];
+      if (!email) missingFields.push("email");
+      if (!topic) missingFields.push("topic");
+      if (!difficulty) missingFields.push("difficulty");
+      if (!count) missingFields.push("count");
+      if (!questionType) missingFields.push("questionType");
+
+      logger.warn("Missing required fields: %j", missingFields);
       return NextResponse.json(
-        { message: "Missing required fields" },
+        { message: "Missing required fields", missingFields },
         { status: 400 }
       );
     }

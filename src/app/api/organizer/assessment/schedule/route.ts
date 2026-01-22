@@ -154,32 +154,36 @@ export async function POST(request: Request) {
         }
       };
 
-      await Promise.all(emails.map(async ([email, details]) => {
-        const startDateStr = details.start
-          ? new Date(details.start).toLocaleString('en-US', {
-            weekday: 'short',
-            month: 'short',
-            day: 'numeric',
-            hour: 'numeric',
-            minute: '2-digit'
-          })
-          : 'Available now';
+      // Process emails in batches to avoid concurrent connection limits
+      const BATCH_SIZE = 3;
+      for (let i = 0; i < emails.length; i += BATCH_SIZE) {
+        const batch = emails.slice(i, i + BATCH_SIZE);
+        await Promise.all(batch.map(async ([email, details]) => {
+          const startDateStr = details.start
+            ? new Date(details.start).toLocaleString('en-US', {
+              weekday: 'short',
+              month: 'short',
+              day: 'numeric',
+              hour: 'numeric',
+              minute: '2-digit'
+            })
+            : 'Available now';
 
-        const endDateStr = details.end
-          ? new Date(details.end).toLocaleString('en-US', {
-            weekday: 'short',
-            month: 'short',
-            day: 'numeric',
-            hour: 'numeric',
-            minute: '2-digit'
-          })
-          : 'No deadline';
+          const endDateStr = details.end
+            ? new Date(details.end).toLocaleString('en-US', {
+              weekday: 'short',
+              month: 'short',
+              day: 'numeric',
+              hour: 'numeric',
+              minute: '2-digit'
+            })
+            : 'No deadline';
 
-        try {
-          await sendEmailWithRetry(
-            email,
-            `New Assessment Scheduled: ${assessmentTitle}`,
-            `
+          try {
+            await sendEmailWithRetry(
+              email,
+              `New Assessment Scheduled: ${assessmentTitle}`,
+              `
             <!DOCTYPE html>
             <html lang="en">
             <head>
@@ -255,13 +259,19 @@ export async function POST(request: Request) {
             </body>
             </html>
             `,
-            attachments
-          );
-        } catch (error) {
-          logger.error(`Failed to send email to ${email}`, error);
-          failedEmails.push(email);
+              attachments
+            );
+          } catch (error) {
+            logger.error(`Failed to send email to ${email}`, error);
+            failedEmails.push(email);
+          }
+        }));
+
+        // Add a small delay between batches
+        if (i + BATCH_SIZE < emails.length) {
+          await new Promise(resolve => setTimeout(resolve, 2000));
         }
-      }));
+      }
     }
 
     // @ts-ignore

@@ -100,7 +100,6 @@ export default function ExaminerSubmissionsPage() {
 
     // Animations
     useGSAP(() => {
-        if (loading || submissions.length === 0) return;
 
         const tl = gsap.timeline({ defaults: { ease: "power3.out" } });
 
@@ -531,14 +530,33 @@ export default function ExaminerSubmissionsPage() {
                         <TableBody>
                             {filteredSubmissions.length === 0 ? (
                                 <TableRow>
-                                    <TableCell colSpan={6} className="h-[300px] text-center">
-                                        <div className="flex flex-col items-center justify-center p-8 text-muted-foreground">
-                                            <div className="w-16 h-16 bg-muted/20 rounded-full flex items-center justify-center mb-4">
-                                                <Search className="w-8 h-8 opacity-50" />
+                                    <TableCell colSpan={6} className="h-[400px] text-center">
+                                        {submissions.length === 0 ? (
+                                            <div className="flex flex-col items-center justify-center p-8 text-muted-foreground animate-in fade-in zoom-in duration-500">
+                                                <div className="w-20 h-20 bg-muted/30 rounded-full flex items-center justify-center mb-6">
+                                                    <FileText className="w-10 h-10 opacity-40" />
+                                                </div>
+                                                <h3 className="text-xl font-bold text-foreground mb-2">No Records Found</h3>
+                                                <p className="text-sm opacity-70 max-w-sm leading-relaxed">
+                                                    There are no exam submissions to display yet. Once students complete their exams, the results will appear here.
+                                                </p>
                                             </div>
-                                            <p className="text-lg font-medium">No submissions found</p>
-                                            <p className="text-sm opacity-70">Adjust your filters or wait for new submissions.</p>
-                                        </div>
+                                        ) : (
+                                            <div className="flex flex-col items-center justify-center p-8 text-muted-foreground animate-in fade-in zoom-in duration-500">
+                                                <div className="w-16 h-16 bg-muted/20 rounded-full flex items-center justify-center mb-4">
+                                                    <Search className="w-8 h-8 opacity-50" />
+                                                </div>
+                                                <p className="text-lg font-medium">No matches found</p>
+                                                <p className="text-sm opacity-70">We couldn't find any submissions matching your filters.</p>
+                                                <Button
+                                                    variant="link"
+                                                    onClick={() => { setSearchQuery(""); setFilterStatus("all"); setSelectedExam("all"); }}
+                                                    className="mt-2 text-primary"
+                                                >
+                                                    Clear Filters
+                                                </Button>
+                                            </div>
+                                        )}
                                     </TableCell>
                                 </TableRow>
                             ) : (
