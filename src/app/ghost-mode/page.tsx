@@ -3,44 +3,40 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useMsal } from "@azure/msal-react";
+import { useTheme } from "next-themes";
 import {
     Ghost,
     Brain,
     Sparkles,
     Code,
-    Users,
     Target,
-    ArrowLeft,
+    ArrowRight,
     Play,
-    Lightbulb,
-    Zap,
     Terminal,
-    EyeOff,
     FileText,
     Shield,
     Activity,
-    Lock,
     Cpu,
     Network,
-    ChevronRight,
-    Command,
     LayoutTemplate,
     SearchCode,
-    Flame
+    Flame,
+    Zap,
+    Globe
 } from 'lucide-react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import ThemeToggle from '@/components/ThemeToggle';
 import {
     Dialog,
     DialogContent,
     DialogDescription,
-    DialogFooter,
     DialogHeader,
     DialogTitle,
 } from '@/components/ui/dialog';
 import gsap from 'gsap';
 import { useGSAP } from '@gsap/react';
+import { cn } from '@/lib/utils'; // Assuming this utility exists, otherwise standard class strings work
 
 // Ghost Mode Session Type
 interface GhostSession {
@@ -53,13 +49,12 @@ interface GhostSession {
 const GhostModeLanding = () => {
     const router = useRouter();
     const { accounts } = useMsal();
+    const { theme } = useTheme();
     const session = accounts[0];
     const [showExitWarning, setShowExitWarning] = useState(false);
     const [ghostSession, setGhostSession] = useState<GhostSession | null>(null);
-    const [activeModeIndex, setActiveModeIndex] = useState(0);
 
     const containerRef = useRef<HTMLDivElement>(null);
-    const stageRef = useRef<HTMLDivElement>(null);
 
     // Initialize ghost session
     useEffect(() => {
@@ -76,431 +71,302 @@ const GhostModeLanding = () => {
     const ghostModes = [
         {
             id: 'ai-study-buddy',
-            title: 'Synapse',
-            subtitle: 'AI Research Partner',
-            description: 'Adaptive neural entity for synthesizing complex information. Optimized for real-time context ingestion and architectural breakdown.',
+            title: 'AI Research Assistant',
+            codename: 'Project Synapse',
+            description: 'Adaptive neural entity for synthesizing complex information. Optimized for real-time context ingestion.',
             icon: Brain,
-            color: 'from-violet-500 to-indigo-600',
-            glow: 'rgba(139, 92, 246, 0.4)',
+            color: 'text-violet-500',
+            gradient: 'from-violet-500/20 to-indigo-500/20',
+            border: 'hover:border-violet-500/50',
             route: '/ghost-mode/study-buddy',
-            features: ['Neural Context', 'Real-time Synthesis', 'Cross-Domain Logic'],
-            status: 'Operational'
+            status: 'Operational',
+            span: 'md:col-span-2', // Bento Full Width
+            iconBg: 'bg-violet-500/10'
         },
         {
             id: 'dream-exam',
-            title: 'Dream Forge',
-            subtitle: 'Challenge Architect',
-            description: 'Construct advanced evaluation scenarios and edge-case simulations. Define complexity spikes and synthetic stress tests.',
+            title: 'Adaptive Exam Simulator',
+            codename: 'Project Dream Forge',
+            description: 'Construct advanced evaluation scenarios and edge-case simulations with dynamic complexity scaling.',
             icon: Sparkles,
-            color: 'from-amber-400 to-orange-600',
-            glow: 'rgba(245, 158, 11, 0.4)',
+            color: 'text-amber-500',
+            gradient: 'from-amber-500/20 to-orange-500/20',
+            border: 'hover:border-amber-500/50',
             route: '/ghost-mode/dream-exam',
-            features: ['Dynamic Scaling', 'Edge-Case Gen', 'Stress Simulation'],
-            status: 'Operational'
-        },
-        {
-            id: 'doc-alchemist',
-            title: 'Alchemist',
-            subtitle: 'Data Transmutation',
-            description: 'Transmute static documentation into interactive logs. Convert PDFs into audio streams and smart neural flashcard decks.',
-            icon: FileText,
-            color: 'from-pink-500 to-rose-600',
-            glow: 'rgba(236, 72, 153, 0.4)',
-            route: '/ghost-mode/document-alchemist',
-            features: ['Audio Synthesis', 'Logic Extraction', 'Smart Decks'],
-            status: 'Active'
-        },
-        {
-            id: 'schema-architect',
-            title: 'Architect',
-            subtitle: 'Schema Modeler',
-            description: 'High-performance schema modeling for Snowflake & Databricks. Focused on cost optimization and star schema efficiency.',
-            icon: LayoutTemplate,
-            color: 'from-cyan-500 to-blue-600',
-            glow: 'rgba(6, 182, 212, 0.4)',
-            route: '/ghost-mode/schema-architect',
-            features: ['Star Schema', 'Cost Optimization', 'Migration Paths'],
-            status: 'Operational'
-        },
-        {
-            id: 'pipeline-pathologist',
-            title: 'Pathologist',
-            subtitle: 'Pipeline Forensic',
-            description: 'Trace data corruption and silent failures in ETL streams. Deep log analysis and root cause forensic identification.',
-            icon: SearchCode,
-            color: 'from-orange-500 to-red-600',
-            glow: 'rgba(249, 115, 22, 0.4)',
-            route: '/ghost-mode/pipeline-pathologist',
-            features: ['Root Cause', 'Log Forensic', 'Stream Auditing'],
-            status: 'Operational'
+            status: 'Operational',
+            span: 'md:col-span-1',
+            iconBg: 'bg-amber-500/10'
         },
         {
             id: 'sandbox-lab',
-            title: 'Void Box',
-            subtitle: 'Isolated Runtime',
-            description: 'Safe execution environment for untrusted or radical code. Complete cryptographic isolation with zero-trace persistence.',
+            title: 'Secure Sandbox',
+            codename: 'Project Void',
+            description: 'Safe execution environment for untrusted code with complete cryptographic isolation.',
             icon: Code,
-            color: 'from-blue-500 to-indigo-500',
-            glow: 'rgba(59, 130, 246, 0.4)',
+            color: 'text-blue-500',
+            gradient: 'from-blue-500/20 to-cyan-500/20',
+            border: 'hover:border-blue-500/50',
             route: '/ghost-mode/sandbox',
-            features: ['Ephemeral', 'Zero Trace', 'Kernel Isolation'],
-            status: 'Core'
+            status: 'Core',
+            span: 'md:col-span-1',
+            iconBg: 'bg-blue-500/10'
+        },
+        {
+            id: 'doc-alchemist',
+            title: 'Document Converter',
+            codename: 'Project Alchemist',
+            description: 'Transmute static documentation into interactive logs, audio streams, and neural flashcards.',
+            icon: FileText,
+            color: 'text-pink-500',
+            gradient: 'from-pink-500/20 to-rose-500/20',
+            border: 'hover:border-pink-500/50',
+            route: '/ghost-mode/document-alchemist',
+            status: 'Active',
+            span: 'md:col-span-1',
+            iconBg: 'bg-pink-500/10'
+        },
+        {
+            id: 'schema-architect',
+            title: 'Schema Modeler',
+            codename: 'Project Architect',
+            description: 'High-performance schema modeling for Snowflake & Databricks with cost optimization analysis.',
+            icon: LayoutTemplate,
+            color: 'text-cyan-500',
+            gradient: 'from-cyan-500/20 to-sky-500/20',
+            border: 'hover:border-cyan-500/50',
+            route: '/ghost-mode/schema-architect',
+            status: 'Operational',
+            span: 'md:col-span-2', // Bento Full Width
+            iconBg: 'bg-cyan-500/10'
+        },
+        {
+            id: 'pipeline-pathologist',
+            title: 'Pipeline Debugger',
+            codename: 'Project Pathologist',
+            description: 'Trace data corruption and silent failures in ETL streams.',
+            icon: SearchCode,
+            color: 'text-orange-500',
+            gradient: 'from-orange-500/20 to-red-500/20',
+            border: 'hover:border-orange-500/50',
+            route: '/ghost-mode/pipeline-pathologist',
+            status: 'Operational',
+            span: 'md:col-span-1',
+            iconBg: 'bg-orange-500/10'
         },
         {
             id: 'battle-arena',
-            title: 'Shadow Hub',
-            subtitle: 'Anonymous PvP',
-            description: 'Encrypted colosseum for anonymous algorithmic duels. Test your logic against peer encryption levels in real-time.',
+            title: 'Competitive Arena',
+            codename: 'Project Shadow',
+            description: 'Encrypted colosseum for anonymous algorithmic duels.',
             icon: Flame,
-            color: 'from-rose-500 to-orange-500',
-            glow: 'rgba(244, 63, 94, 0.4)',
+            color: 'text-rose-500',
+            gradient: 'from-rose-500/20 to-red-600/20',
+            border: 'hover:border-rose-500/50',
             route: '/ghost-mode/battle',
-            features: ['Matchmaking', 'Live Duel', 'Elo Persistence'],
-            status: 'Beta'
+            status: 'Beta',
+            span: 'md:col-span-1',
+            iconBg: 'bg-rose-500/10'
         },
         {
             id: 'skill-tree',
-            title: 'Node Map',
-            subtitle: 'Growth Visualizer',
-            description: 'Interactive topography mapping your cognitive expansion. Visualize skill nodes and trajectory paths.',
+            title: 'Skill Progression',
+            codename: 'Project Node Map',
+            description: 'Interactive topography mapping your cognitive expansion.',
             icon: Target,
-            color: 'from-emerald-400 to-teal-600',
-            glow: 'rgba(16, 185, 129, 0.4)',
+            color: 'text-emerald-500',
+            gradient: 'from-emerald-500/20 to-teal-500/20',
+            border: 'hover:border-emerald-500/50',
             route: '/ghost-mode/skill-tree',
-            features: ['Visual Path', 'Gaps Finder', 'Node Progress'],
-            status: 'Dev'
+            status: 'Dev',
+            span: 'md:col-span-1',
+            iconBg: 'bg-emerald-500/10'
         }
     ];
 
-    const currentMode = ghostModes[activeModeIndex];
-
-    const handleInitialize = () => {
-        router.push(currentMode.route);
-    };
-
-    // Immersive GSAP Animations
     useGSAP(() => {
         const tl = gsap.timeline();
 
-        // Initial Layout Fade In
-        tl.fromTo(".dash-panel",
-            { opacity: 0, x: -20 },
-            { opacity: 1, x: 0, duration: 0.6, stagger: 0.1, ease: "power2.out" }
+        tl.fromTo(".header-element",
+            { opacity: 0, y: -20 },
+            { opacity: 1, y: 0, duration: 0.6, stagger: 0.1, ease: "power3.out" }
         );
 
-        // Header and Footer
-        gsap.fromTo(".animate-header", { y: -20, opacity: 0 }, { y: 0, opacity: 1, duration: 0.5 });
-        gsap.fromTo(".animate-footer", { y: 20, opacity: 0 }, { y: 0, opacity: 1, duration: 0.5 });
-
+        tl.fromTo(".bento-card",
+            { opacity: 0, y: 30, scale: 0.95 },
+            { opacity: 1, y: 0, scale: 1, duration: 0.5, stagger: 0.08, ease: "power2.out" },
+            "-=0.4"
+        );
     }, { scope: containerRef });
 
-    // Transition effect when switching modes
-    useEffect(() => {
-        if (!stageRef.current) return;
-
-        gsap.fromTo(".stage-content",
-            { opacity: 0, scale: 0.98, y: 10 },
-            { opacity: 1, scale: 1, y: 0, duration: 0.4, ease: "power3.out" }
-        );
-
-        gsap.fromTo(".feature-tag",
-            { opacity: 0, x: -10 },
-            { opacity: 1, x: 0, duration: 0.3, stagger: 0.05, ease: "power2.out", delay: 0.1 }
-        );
-
-        gsap.fromTo(".stage-icon",
-            { rotateY: 90, opacity: 0 },
-            { rotateY: 0, opacity: 1, duration: 0.6, ease: "back.out(1.7)" }
-        );
-    }, [activeModeIndex]);
-
     return (
-        <div ref={containerRef} className="h-screen w-full bg-[#030303] text-slate-200 overflow-hidden font-sans selection:bg-violet-500/40 flex flex-col">
-            {/* Immersive Background */}
-            <div className="fixed inset-0 pointer-events-none z-0">
-                <div
-                    className="absolute inset-0 opacity-[0.03]"
-                    style={{
-                        backgroundImage: `radial-gradient(#ffffff 1px, transparent 1px)`,
-                        backgroundSize: '32px 32px'
-                    }}
-                />
-                <div
-                    className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[1000px] h-[1000px] rounded-full blur-[150px] pointer-events-none opacity-[0.02] transition-colors duration-1000"
-                    style={{ backgroundColor: currentMode.glow }}
-                />
+        <div ref={containerRef} className="min-h-screen w-full bg-background text-foreground flex flex-col transition-colors duration-500 selection:bg-primary/20">
+            {/* Dynamic Background Pattern */}
+            <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
+                <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:24px_24px]"></div>
+                <div className="absolute left-0 right-0 top-0 -z-10 m-auto h-[310px] w-[310px] rounded-full bg-primary/20 opacity-20 blur-[100px]"></div>
             </div>
 
-            {/* Tactical Header */}
-            <header className="animate-header z-50 w-full border-b border-white/5 bg-black/60 backdrop-blur-md h-10 flex items-center shrink-0">
-                <div className="w-full px-4 flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                        <div className="flex items-center gap-2">
-                            <div className="w-5 h-5 rounded bg-violet-500/10 border border-violet-500/20 flex items-center justify-center text-violet-400">
-                                <Ghost className="w-3 h-3" />
-                            </div>
-                            <span className="text-[9px] font-black tracking-[0.2em] uppercase text-white/90">GHOST_PROTOCOL</span>
+            {/* Modern Header */}
+            <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/80 backdrop-blur-xl supports-[backdrop-filter]:bg-background/60">
+                <div className="container mx-auto px-6 h-16 flex items-center justify-between">
+                    <div className="flex items-center gap-2 header-element">
+                        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground font-bold">
+                            <Ghost className="h-4 w-4" />
                         </div>
-                        <div className="hidden sm:flex items-center gap-2 border-l border-white/10 pl-3 ml-1">
-                            <span className="w-1 h-1 rounded-full bg-emerald-500 animate-pulse" />
-                            <span className="text-[8px] text-white/40 font-mono">SYS_STATUS: OPTIMAL</span>
-                        </div>
+                        <span className="font-bold tracking-tight text-lg">Sysrank<span className="opacity-40 font-normal">.Ghost</span></span>
                     </div>
 
-                    <div className="flex items-center gap-4">
-                        <div className="hidden md:flex flex-col items-end">
-                            <span className="text-[8px] font-bold text-white/60 tracking-tight leading-none mb-0.5">{ghostSession?.nickname}</span>
-                            <span className="text-[7px] text-white/20 font-mono tracking-tighter uppercase leading-none">{ghostSession?.sessionId}</span>
+                    <div className="flex items-center gap-3 header-element">
+                        <div className="hidden md:flex items-center gap-2 px-3 py-1 rounded-full bg-muted/50 border border-border/50">
+                            <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                            <span className="text-[10px] font-mono uppercase text-muted-foreground tracking-wider">
+                                {ghostSession?.sessionId}
+                            </span>
                         </div>
+                        <ThemeToggle />
                         <Button
-                            onClick={() => setShowExitWarning(true)}
                             variant="ghost"
                             size="sm"
-                            className="h-6 px-2 text-[9px] font-bold bg-white/5 hover:bg-red-500/10 text-white/60 hover:text-red-400 border border-white/5 rounded transition-all"
+                            onClick={() => setShowExitWarning(true)}
+                            className="text-xs font-medium text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
                         >
-                            <ArrowLeft className="w-2.5 h-2.5 mr-1" />
-                            ESCAPE
+                            Exit
                         </Button>
                     </div>
                 </div>
             </header>
 
-            {/* Dashboard Workspace */}
-            <main className="flex-1 flex overflow-hidden relative z-10">
-                {/* 1. Protocol Sidebar */}
-                <aside className="dash-panel w-64 lg:w-72 border-r border-white/5 flex flex-col bg-black/20 backdrop-blur-sm shrink-0">
-                    <div className="p-3 border-b border-white/5 flex items-center justify-between">
-                        <h2 className="text-[9px] font-black text-white/30 tracking-[0.2em] uppercase">Protocol Index</h2>
-                        <SearchCode className="w-2.5 h-2.5 text-white/20" />
+            {/* Main Content */}
+            <main className="flex-1 container mx-auto px-6 py-12 relative z-10">
+                {/* Hero Section */}
+                <div className="max-w-4xl mx-auto text-center mb-16 space-y-6">
+                    <div className="header-element inline-flex items-center gap-2 px-3 py-1 rounded-full border border-primary/20 bg-primary/5 text-primary text-xs font-bold tracking-widest uppercase">
+                        <Sparkles className="w-3 h-3" />
+                        Ghost Protocol v4.0
                     </div>
 
-                    <div className="flex-1 overflow-y-auto p-1.5 space-y-0.5 scrollbar-hide">
-                        {ghostModes.map((mode, idx) => {
-                            const Icon = mode.icon;
-                            const isActive = activeModeIndex === idx;
-                            return (
-                                <button
-                                    key={mode.id}
-                                    onClick={() => setActiveModeIndex(idx)}
-                                    className={`w-full group text-left p-2 rounded-md border transition-all duration-200 ${isActive
-                                        ? 'bg-white/5 border-white/10 ring-1 ring-white/5 shadow-sm'
-                                        : 'bg-transparent border-transparent hover:bg-white/[0.02] hover:border-white/5'
-                                        }`}
-                                >
-                                    <div className="flex items-center gap-2.5">
-                                        <div className={`p-1.5 rounded transition-all duration-300 ${isActive
-                                            ? `bg-gradient-to-br ${mode.color} shadow-lg shadow-black/40`
-                                            : 'bg-white/5 text-slate-400 group-hover:text-white'
-                                            }`}>
-                                            <Icon className={`w-3.5 h-3.5 ${isActive ? 'text-white' : ''}`} />
-                                        </div>
-                                        <div className="flex-1 min-w-0">
-                                            <div className="flex items-center justify-between gap-1">
-                                                <p className={`text-[10px] font-black tracking-tight truncate ${isActive ? 'text-white' : 'text-slate-400 group-hover:text-slate-200'}`}>
-                                                    {mode.title}
-                                                </p>
-                                                <Badge variant="outline" className="h-3 px-1 text-[6px] font-mono border-white/5 text-white/20">
-                                                    {mode.status}
-                                                </Badge>
-                                            </div>
-                                            <p className="text-[8px] text-slate-500 font-medium truncate uppercase tracking-wider">{mode.subtitle}</p>
-                                        </div>
-                                    </div>
-                                </button>
-                            );
-                        })}
-                    </div>
-                </aside>
+                    <h1 className="header-element text-5xl md:text-7xl font-black tracking-tighter bg-clip-text text-transparent bg-gradient-to-b from-foreground to-foreground/60 leading-[1.1]">
+                        Select Your Interface
+                    </h1>
 
-                {/* 2. Visual Stage */}
-                <section ref={stageRef} className="dash-panel flex-1 flex flex-col bg-black/40 relative overflow-hidden">
-                    <div className="flex-1 p-4 lg:p-12 flex flex-col items-center justify-center text-center max-w-3xl mx-auto w-full stage-content">
-                        {/* Protocol Schematic Head */}
-                        <div className="mb-8 relative group">
+                    <p className="header-element text-lg text-muted-foreground max-w-2xl mx-auto leading-relaxed">
+                        Access advanced neural tools for deep learning, architectural modeling, and competitive diagnostics.
+                    </p>
+                </div>
+
+                {/* Bento Grid Layout */}
+                <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4 auto-rows-[minmax(180px,auto)]">
+                    {ghostModes.map((mode) => {
+                        const Icon = mode.icon;
+                        return (
                             <div
-                                className="absolute -inset-10 opacity-20 blur-[60px] rounded-full transition-all duration-1000 group-hover:opacity-40"
-                                style={{ backgroundColor: currentMode.glow }}
-                            />
-                            <div className={`stage-icon w-24 h-24 lg:w-32 lg:h-32 rounded-2xl bg-gradient-to-br ${currentMode.color} shadow-2xl shadow-black/60 flex items-center justify-center relative z-10 border border-white/10 group-hover:scale-105 transition-transform duration-500`}>
-                                <currentMode.icon className="w-12 h-12 lg:w-16 lg:h-16 text-white" />
-                                <div className="absolute top-3 right-3 animate-ping">
-                                    <span className="flex h-2 w-2 rounded-full bg-white opacity-40"></span>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className="space-y-4 max-w-xl mb-8">
-                            <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full border border-white/5 bg-white/[0.03]">
-                                <Activity className="w-3 h-3 text-violet-400" />
-                                <span className="text-[9px] font-black text-violet-300 tracking-[0.2em] uppercase">{currentMode.subtitle}</span>
-                            </div>
-
-                            <h1 className="text-3xl lg:text-5xl font-black tracking-tighter text-white leading-none uppercase">
-                                {currentMode.title}
-                            </h1>
-
-                            <p className="text-xs lg:text-sm text-slate-400 leading-relaxed font-medium">
-                                {currentMode.description}
-                            </p>
-                        </div>
-
-                        <div className="flex flex-wrap items-center justify-center gap-2 mb-8">
-                            {currentMode.features.map((feature, idx) => (
-                                <span
-                                    key={idx}
-                                    className="feature-tag inline-flex items-center text-[10px] font-bold text-white/40 bg-white/5 border border-white/10 px-3 py-1.5 rounded-md backdrop-blur-md"
-                                >
-                                    <ChevronRight className="w-2.5 h-2.5 mr-1.5 text-violet-500" />
-                                    {feature}
-                                </span>
-                            ))}
-                        </div>
-
-                        <div className="pt-2 w-full max-w-[280px]">
-                            <Button
-                                onClick={handleInitialize}
-                                className="w-full h-11 bg-white text-black hover:bg-slate-200 text-[11px] font-black tracking-widest transition-all duration-300 shadow-xl shadow-white/5 flex items-center justify-between px-6 group"
+                                key={mode.id}
+                                onClick={() => router.push(mode.route)}
+                                className={cn(
+                                    "group relative overflow-hidden rounded-3xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/50 backdrop-blur-md cursor-pointer transition-all duration-500 hover:shadow-2xl hover:-translate-y-1 hover:border-zinc-300 dark:hover:border-zinc-700",
+                                    mode.span
+                                )}
                             >
-                                START PROTOCOL
-                                <Play className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform fill-current" />
-                            </Button>
-                        </div>
-                    </div>
-                </section>
+                                {/* 1. Hover Gradient Background */}
+                                <div className={`absolute inset-0 opacity-0 group-hover:opacity-20 transition-opacity duration-700 bg-gradient-to-br ${mode.gradient}`} />
 
-                {/* 3. Stats & Intel Sidebar */}
-                <aside className="dash-panel w-64 lg:w-72 border-l border-white/5 flex flex-col bg-black/20 backdrop-blur-sm shrink-0 hidden lg:flex">
-                    <div className="p-3 border-b border-white/5">
-                        <h2 className="text-[9px] font-black text-white/30 tracking-[0.2em] uppercase">Intelligence Hub</h2>
-                    </div>
+                                {/* 2. Large Watermark Icon (Decorative) */}
+                                <Icon className={`absolute -bottom-8 -right-8 w-48 h-48 opacity-[0.03] group-hover:opacity-[0.08] transition-opacity duration-500 -rotate-12 ${mode.color}`} />
 
-                    <div className="p-4 space-y-6 overflow-y-auto scrollbar-hide">
-                        <div className="space-y-3">
-                            <p className="text-[8px] font-black text-white/30 uppercase tracking-[0.1em]">Session Telemetry</p>
-                            <div className="grid grid-cols-2 gap-2">
-                                <MicroTechModule icon={EyeOff} label="MASKING" value="100%" color="text-emerald-400" />
-                                <MicroTechModule icon={Zap} label="LATENCY" value="8ms" color="text-amber-400" />
-                                <MicroTechModule icon={Cpu} label="COMPUTE" value="active" color="text-blue-400" />
-                                <MicroTechModule icon={Network} label="UPTIME" value="99.9%" color="text-violet-400" />
-                            </div>
-                        </div>
+                                <div className="relative z-10 h-full flex flex-col p-6">
+                                    {/* Header: Icon + Status */}
+                                    <div className="flex justify-between items-start mb-6">
+                                        <div className={`p-3.5 rounded-2xl ${mode.iconBg} ${mode.color} ring-1 ring-inset ring-black/5 dark:ring-white/10 transition-transform duration-500 group-hover:scale-110 group-hover:rotate-3`}>
+                                            <Icon className="w-7 h-7" />
+                                        </div>
 
-                        <div className="pt-4 border-t border-white/5 space-y-3">
-                            <p className="text-[8px] font-black text-white/30 uppercase tracking-[0.1em]">Protocol Analysis</p>
-                            <div className="p-3 rounded-lg bg-white/[0.02] border border-white/5 space-y-3">
-                                <div className="space-y-1.5">
-                                    <div className="flex justify-between items-center text-[9px]">
-                                        <span className="text-slate-500 uppercase font-bold">Enc Width</span>
-                                        <span className="text-white font-mono">1024_BIT</span>
+                                        <div className="flex items-center gap-2">
+                                            {mode.status === 'Beta' && (
+                                                <span className="px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 text-[10px] font-bold uppercase tracking-wider border border-amber-500/20">
+                                                    Beta
+                                                </span>
+                                            )}
+                                            <div className={`w-1.5 h-1.5 rounded-full ${mode.status === 'Operational' || mode.status === 'Active' || mode.status === 'Core' ? 'bg-emerald-500 animate-pulse' : 'bg-zinc-500'}`} />
+                                        </div>
                                     </div>
-                                    <div className="flex items-center gap-1">
-                                        {[1, 1, 1, 1, 1, 0, 0, 0].map((v, i) => (
-                                            <div key={i} className={`h-0.5 flex-1 rounded-sm ${v ? 'bg-violet-500/50' : 'bg-white/5'}`} />
-                                        ))}
+
+                                    {/* Content Body */}
+                                    <div className="flex-1">
+                                        <h3 className="text-xl md:text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100 mb-2 group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-r group-hover:from-zinc-900 group-hover:to-zinc-600 dark:group-hover:from-white dark:group-hover:to-zinc-400 transition-all">
+                                            {mode.title}
+                                        </h3>
+                                        <p className="text-sm text-zinc-500 dark:text-zinc-400 font-medium leading-relaxed max-w-[90%]">
+                                            {mode.description}
+                                        </p>
+                                    </div>
+
+                                    {/* Footer: Tech Pattern + Arrow */}
+                                    <div className="mt-8 flex items-end justify-between border-t border-zinc-100 dark:border-zinc-800 pt-4 opacity-80 group-hover:opacity-100 transition-opacity">
+                                        <div className="flex flex-col gap-0.5">
+                                            <span className="text-[9px] font-mono uppercase text-zinc-400 tracking-widest">
+                                                ID_Ref
+                                            </span>
+                                            <span className="text-[10px] font-mono font-bold text-zinc-600 dark:text-zinc-300">
+                                                {mode.codename.split(' ')[1] || 'MOD_01'}
+                                            </span>
+                                        </div>
+
+                                        <div className={`flex items-center gap-2 text-xs font-bold uppercase tracking-wider ${mode.color} opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-300`}>
+                                            Initialize
+                                            <ArrowRight className="w-3.5 h-3.5" />
+                                        </div>
                                     </div>
                                 </div>
-                                <div className="space-y-1.5">
-                                    <div className="flex justify-between items-center text-[9px]">
-                                        <span className="text-slate-500 uppercase font-bold">Sync Level</span>
-                                        <span className="text-white font-mono">OPTIMAL</span>
-                                    </div>
-                                    <div className="flex items-center gap-1">
-                                        {[1, 1, 1, 1, 1, 1, 1, 1].map((v, i) => (
-                                            <div key={i} className={`h-0.5 flex-1 rounded-sm ${v ? 'bg-emerald-500/50' : 'bg-white/5'}`} />
-                                        ))}
-                                    </div>
-                                </div>
                             </div>
-                        </div>
-
-                        <div className="pt-4 border-t border-white/5 text-center">
-                            <Network className="w-8 h-8 text-white/5 mx-auto mb-3 animate-pulse" />
-                            <p className="text-[7px] font-mono text-white/10 uppercase leading-relaxed tracking-wider">
-                                Encrypted node distribution active across 12 global regions.
-                            </p>
-                        </div>
-                    </div>
-                </aside>
+                        );
+                    })}
+                </div>
             </main>
 
-            {/* Bottom System Ticker */}
-            <footer className="shrink-0 h-5 bg-black border-t border-white/5 flex items-center z-50 overflow-hidden">
-                <div className="flex items-center gap-8 animate-scroll whitespace-nowrap px-4 w-full">
-                    {[1, 2, 3].map(i => (
-                        <div key={i} className="flex items-center gap-8">
-                            <span className="text-[7px] font-mono text-white/20 uppercase tracking-[0.2em] leading-none">STATUS_OK // NO_TRACE_ACTIVE</span>
-                            <span className="text-[7px] font-mono text-white/20 uppercase tracking-[0.2em] leading-none">ENCRYPTION: AES_256_GCM</span>
-                            <span className="text-[7px] font-mono text-white/20 uppercase tracking-[0.2em] leading-none">NODES: 12_DOMAINS_ACTIVE</span>
-                            <span className="text-[7px] font-mono text-violet-500/30 uppercase tracking-[0.2em] leading-none">GHOST_MODE_V4.2.1-RELEASE</span>
+            {/* Minimal Footer */}
+            <footer className="py-8 border-t border-border/40 mt-12 bg-background/50 backdrop-blur-md">
+                <div className="container mx-auto px-6 flex flex-col md:flex-row justify-between items-center gap-4 text-xs text-muted-foreground font-mono">
+                    <div className="flex items-center gap-6">
+                        <div className="flex items-center gap-2">
+                            <span className="relative flex h-2 w-2">
+                                <span className="animate-ping absolute inline-flex h-full w-2 rounded-full bg-emerald-400 opacity-75"></span>
+                                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                            </span>
+                            SYSTEM OPTIMAL
                         </div>
-                    ))}
+                        <div className="flex items-center gap-2">
+                            <Globe className="w-3 h-3" />
+                            US-EAST-1
+                        </div>
+                    </div>
+                    <div className="flex items-center gap-2 opacity-50">
+                        <Shield className="w-3 h-3" />
+                        <span>ENCRYPTED SESSION // {session?.name || 'GUEST'}</span>
+                    </div>
                 </div>
             </footer>
 
-            {/* Exit Warning */}
+            {/* Exit Warning Dialog */}
             <Dialog open={showExitWarning} onOpenChange={setShowExitWarning}>
-                <DialogContent className="sm:max-w-[320px] bg-[#0A0A0A] border-white/10 p-5 overflow-hidden">
-                    <div className="absolute top-0 inset-x-0 h-0.5 bg-gradient-to-r from-transparent via-red-500/40 to-transparent" />
-                    <DialogHeader className="space-y-2">
-                        <div className="w-10 h-10 rounded-lg bg-red-500/10 flex items-center justify-center mx-auto border border-red-500/20">
-                            <Shield className="w-5 h-5 text-red-500" />
-                        </div>
-                        <div className="space-y-1 text-center">
-                            <DialogTitle className="text-base font-black tracking-tight text-white uppercase leading-none">ABORT_SEQUENCE</DialogTitle>
-                            <DialogDescription className="text-slate-400 text-[10px] leading-relaxed">
-                                Termination will purge session logs and credentials. This action is irreversible.
-                            </DialogDescription>
-                        </div>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Disconnect from Interface?</DialogTitle>
+                        <DialogDescription>
+                            Your active neural session will be terminated. All local logs will be purged.
+                        </DialogDescription>
                     </DialogHeader>
-                    <div className="flex gap-3 pt-3">
-                        <Button
-                            variant="outline"
-                            onClick={() => setShowExitWarning(false)}
-                            className="flex-1 h-9 border-white/10 bg-white/5 text-white text-[10px] font-bold"
-                        >
-                            CANCEL
+                    <div className="flex justify-end gap-3 mt-4">
+                        <Button variant="outline" onClick={() => setShowExitWarning(false)}>
+                            Cancel
                         </Button>
-                        <Button
-                            variant="destructive"
-                            onClick={() => router.push('/attender')}
-                            className="flex-1 h-9 bg-red-600 hover:bg-red-700 text-[10px] font-bold"
-                        >
-                            TERMINATE
+                        <Button variant="destructive" onClick={() => router.push('/attender')}>
+                            Disconnect
                         </Button>
                     </div>
                 </DialogContent>
             </Dialog>
-
-            <style jsx global>{`
-                @keyframes scroll {
-                    from { transform: translateX(0); }
-                    to { transform: translateX(-33.33%); }
-                }
-                .animate-scroll {
-                    animation: scroll 30s linear infinite;
-                }
-                .scrollbar-hide::-webkit-scrollbar {
-                    display: none;
-                }
-                .scrollbar-hide {
-                    -ms-overflow-style: none;
-                    scrollbar-width: none;
-                }
-            `}</style>
         </div>
     );
 };
-
-const MicroTechModule = ({ icon: Icon, label, value, color }: any) => (
-    <div className="flex flex-col gap-1.5 p-2 rounded-lg bg-white/[0.02] border border-white/5 items-center text-center">
-        <div className={`p-1.5 rounded bg-white/5 ${color}`}>
-            <Icon className="w-2.5 h-2.5" />
-        </div>
-        <div>
-            <p className="text-[7px] font-bold text-white/20 uppercase leading-none mb-0.5">{label}</p>
-            <p className={`text-[9px] font-black tracking-tighter uppercase ${color} leading-none`}>{value}</p>
-        </div>
-    </div>
-);
 
 export default GhostModeLanding;

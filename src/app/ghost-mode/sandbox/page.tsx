@@ -2,20 +2,23 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { useTheme } from 'next-themes';
 import {
-    Ghost,
-    ArrowLeft,
+    ChevronLeft,
     Play,
     Terminal,
     Trash2,
-    Code as CodeIcon,
+    Code2,
     Cpu,
     Zap,
     Clock,
     AlertCircle,
     CheckCircle2,
     Maximize2,
-    Minimize2
+    Minimize2,
+    RotateCcw,
+    BarChart3,
+    PieChart as PieChartIcon
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -37,6 +40,7 @@ import gsap from 'gsap';
 import { useGSAP } from '@gsap/react';
 import { toast } from 'react-hot-toast';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import ThemeToggle from '@/components/ThemeToggle';
 
 import {
     BarChart,
@@ -56,12 +60,13 @@ import {
     Cell
 } from 'recharts';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { cn } from '@/lib/utils';
 
 // Available languages
 const LANGUAGES = [
-    { value: 'sql', label: 'SQL (Standard)', icon: '💾' },
+    { value: 'sql', label: 'SQL', icon: '💾' },
     { value: 'python', label: 'Python', icon: '🐍' },
-    { value: 'pyspark', label: 'PySpark (Databricks)', icon: '🔥' },
+    { value: 'pyspark', label: 'PySpark', icon: '🔥' },
     { value: 'snowflake', label: 'Snowflake', icon: '❄️' },
 ];
 
@@ -162,6 +167,7 @@ ORDER BY amount DESC;`
 
 const SandboxPage = () => {
     const router = useRouter();
+    const { resolvedTheme } = useTheme();
     const [language, setLanguage] = useState<string>('python');
     const [code, setCode] = useState<string>(DEFAULT_CODE.python);
     const [output, setOutput] = useState<string | null>(null);
@@ -171,6 +177,7 @@ const SandboxPage = () => {
     const [activeTab, setActiveTab] = useState("console");
     const [isRunning, setIsRunning] = useState(false);
     const [isFullscreen, setIsFullscreen] = useState(false);
+    const [sessionId] = useState(`DEV-${Math.random().toString(36).substring(2, 8).toUpperCase()}`);
 
     const containerRef = useRef<HTMLDivElement>(null);
     const editorRef = useRef<any>(null);
@@ -247,6 +254,11 @@ const SandboxPage = () => {
         setVisualization(null);
     };
 
+    const handleResetCode = () => {
+        // @ts-ignore
+        setCode(DEFAULT_CODE[language] || "");
+    };
+
     const toggleFullscreen = () => {
         if (!document.fullscreenElement) {
             containerRef.current?.requestFullscreen();
@@ -263,19 +275,25 @@ const SandboxPage = () => {
 
         const { type, data, xKey, yKey } = visualization;
         const commonProps = { data, margin: { top: 20, right: 30, left: 20, bottom: 5 } };
+        const isDark = resolvedTheme === 'dark';
+        const tooltipStyle = {
+            backgroundColor: isDark ? '#18181b' : '#ffffff',
+            borderColor: isDark ? '#27272a' : '#e4e4e7',
+            color: isDark ? '#f4f4f5' : '#09090b',
+            borderRadius: '8px',
+            boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'
+        };
 
         return (
             <ResponsiveContainer width="100%" height="100%">
                 {type === 'line' ? (
                     <LineChart {...commonProps}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#333" />
-                        <XAxis dataKey={xKey} stroke="#888" />
-                        <YAxis stroke="#888" />
-                        <RechartsTooltip
-                            contentStyle={{ backgroundColor: '#18181b', borderColor: '#27272a', color: '#f4f4f5' }}
-                        />
-                        <Legend />
-                        <Line type="monotone" dataKey={yKey} stroke="#8b5cf6" strokeWidth={2} activeDot={{ r: 8 }} />
+                        <CartesianGrid strokeDasharray="3 3" stroke={isDark ? "#333" : "#e5e5e5"} />
+                        <XAxis dataKey={xKey} stroke={isDark ? "#888" : "#666"} fontSize={12} tickLine={false} axisLine={false} />
+                        <YAxis stroke={isDark ? "#888" : "#666"} fontSize={12} tickLine={false} axisLine={false} />
+                        <RechartsTooltip contentStyle={tooltipStyle} cursor={{ stroke: 'var(--primary)', strokeWidth: 1 }} />
+                        <Legend wrapperStyle={{ paddingTop: '20px' }} />
+                        <Line type="monotone" dataKey={yKey} stroke="var(--primary)" strokeWidth={2} activeDot={{ r: 6, fill: 'var(--primary)' }} dot={{ r: 4, fill: 'var(--background)', strokeWidth: 2 }} />
                     </LineChart>
                 ) : type === 'pie' ? (
                     <PieChart>
@@ -283,37 +301,36 @@ const SandboxPage = () => {
                             data={data}
                             cx="50%"
                             cy="50%"
-                            labelLine={false}
-                            label={({ name, percent }) => `${name} ${(percent ? percent * 100 : 0).toFixed(0)}%`}
+                            innerRadius={60}
                             outerRadius={80}
-                            fill="#8884d8"
+                            paddingAngle={5}
                             dataKey={yKey}
                         >
                             {data.map((entry: any, index: number) => (
-                                <Cell key={`cell-${index}`} fill={['#8b5cf6', '#ec4899', '#10b981', '#f59e0b', '#3b82f6'][index % 5]} />
+                                <Cell key={`cell-${index}`} fill={['var(--primary)', '#ec4899', '#10b981', '#f59e0b', '#3b82f6'][index % 5]} />
                             ))}
                         </Pie>
-                        <RechartsTooltip contentStyle={{ backgroundColor: '#18181b', borderColor: '#27272a', color: '#f4f4f5' }} />
-                        <Legend />
+                        <RechartsTooltip contentStyle={tooltipStyle} />
+                        <Legend wrapperStyle={{ paddingTop: '20px' }} />
                     </PieChart>
                 ) : type === 'area' ? (
                     <AreaChart {...commonProps}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#333" />
-                        <XAxis dataKey={xKey} stroke="#888" />
-                        <YAxis stroke="#888" />
-                        <RechartsTooltip contentStyle={{ backgroundColor: '#18181b', borderColor: '#27272a', color: '#f4f4f5' }} />
-                        <Legend />
-                        <Area type="monotone" dataKey={yKey} stroke="#8b5cf6" fill="#8b5cf6" fillOpacity={0.3} />
+                        <CartesianGrid strokeDasharray="3 3" stroke={isDark ? "#333" : "#e5e5e5"} />
+                        <XAxis dataKey={xKey} stroke={isDark ? "#888" : "#666"} fontSize={12} tickLine={false} axisLine={false} />
+                        <YAxis stroke={isDark ? "#888" : "#666"} fontSize={12} tickLine={false} axisLine={false} />
+                        <RechartsTooltip contentStyle={tooltipStyle} />
+                        <Legend wrapperStyle={{ paddingTop: '20px' }} />
+                        <Area type="monotone" dataKey={yKey} stroke="var(--primary)" fill="var(--primary)" fillOpacity={0.2} />
                     </AreaChart>
                 ) : (
                     // Default to Bar Chart
                     <BarChart {...commonProps}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#333" />
-                        <XAxis dataKey={xKey} stroke="#888" />
-                        <YAxis stroke="#888" />
-                        <RechartsTooltip cursor={{ fill: '#27272a' }} contentStyle={{ backgroundColor: '#18181b', borderColor: '#27272a', color: '#f4f4f5' }} />
-                        <Legend />
-                        <Bar dataKey={yKey} fill="#8b5cf6" radius={[4, 4, 0, 0]} />
+                        <CartesianGrid strokeDasharray="3 3" stroke={isDark ? "#333" : "#e5e5e5"} />
+                        <XAxis dataKey={xKey} stroke={isDark ? "#888" : "#666"} fontSize={12} tickLine={false} axisLine={false} />
+                        <YAxis stroke={isDark ? "#888" : "#666"} fontSize={12} tickLine={false} axisLine={false} />
+                        <RechartsTooltip cursor={{ fill: isDark ? '#27272a' : '#f4f4f5' }} contentStyle={tooltipStyle} />
+                        <Legend wrapperStyle={{ paddingTop: '20px' }} />
+                        <Bar dataKey={yKey} fill="var(--primary)" radius={[4, 4, 0, 0]} />
                     </BarChart>
                 )}
             </ResponsiveContainer>
@@ -321,32 +338,38 @@ const SandboxPage = () => {
     };
 
     return (
-        <div ref={containerRef} className="h-screen bg-background flex flex-col overflow-hidden font-sans selection:bg-violet-500/30">
+        <div ref={containerRef} className="h-screen bg-background flex flex-col overflow-hidden font-sans selection:bg-primary/20">
+            {/* Background Effects */}
+            <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
+                <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808008_1px,transparent_1px),linear-gradient(to_bottom,#80808008_1px,transparent_1px)] bg-[size:24px_24px]"></div>
+            </div>
+
             {/* Header */}
-            <header className="flex-none h-14 border-b border-border/40 bg-background/80 backdrop-blur-md z-20 flex items-center justify-between px-4 sandbox-ui">
-                <div className="flex items-center gap-4">
-                    <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => router.push('/ghost-mode')}
-                        className="h-8 w-8 text-muted-foreground hover:text-foreground"
-                    >
-                        <ArrowLeft className="w-4 h-4" />
+            <header className="flex-none h-14 border-b border-border/40 bg-background/80 backdrop-blur-xl z-20 flex items-center justify-between px-4 sticky top-0">
+                <div className="flex items-center gap-4 sandbox-ui">
+                    <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full" onClick={() => router.push('/ghost-mode')}>
+                        <ChevronLeft className="w-5 h-5 text-muted-foreground" />
                     </Button>
                     <div className="flex items-center gap-2">
-                        <div className="p-1.5 rounded-md bg-blue-500/10 text-blue-500">
-                            <CodeIcon className="w-4 h-4" />
+                        <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-blue-500/10 text-blue-500 ring-1 ring-blue-500/20">
+                            <Code2 className="h-4 w-4" />
                         </div>
-                        <span className="font-semibold text-sm">Ghost Sandbox</span>
-                        <Badge variant="outline" className="text-[10px] h-5 px-1.5 border-blue-500/20 text-blue-500 bg-blue-500/5">
-                            Simulated Environment
-                        </Badge>
+                        <div className="flex flex-col">
+                            <span className="text-sm font-bold tracking-tight">Code Playground</span>
+                            <span className="text-[10px] text-muted-foreground font-mono leading-none">INTERACTIVE ENVIRONMENT</span>
+                        </div>
                     </div>
                 </div>
 
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 sandbox-ui">
+                    <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-muted/50 border border-border/50 mr-2">
+                        <Badge variant="secondary" className="text-[10px] h-5 bg-background border-border/60 text-muted-foreground shadow-sm">
+                            {sessionId}
+                        </Badge>
+                    </div>
+
                     <Select value={language} onValueChange={handleLanguageChange}>
-                        <SelectTrigger className="h-8 w-[140px] text-xs font-medium border-border/60 bg-muted/30">
+                        <SelectTrigger className="h-8 w-[140px] text-xs font-bold border-border/60 bg-muted/30 focus:ring-primary/20 transition-all">
                             <SelectValue placeholder="Select Language" />
                         </SelectTrigger>
                         <SelectContent>
@@ -365,17 +388,30 @@ const SandboxPage = () => {
                         onClick={handleRunCode}
                         disabled={isRunning}
                         size="sm"
-                        className="h-8 px-4 bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-900/20 transition-all active:scale-95"
+                        className="h-8 px-4 text-xs font-bold bg-primary text-primary-foreground hover:bg-primary/90 shadow-lg shadow-primary/20 transition-all active:scale-95"
                     >
                         {isRunning ? (
-                            <Cpu className="w-4 h-4 mr-2 animate-spin" />
+                            <Cpu className="w-3.5 h-3.5 mr-2 animate-spin" />
                         ) : (
-                            <Play className="w-4 h-4 mr-2 fill-current" />
+                            <Play className="w-3.5 h-3.5 mr-2 fill-current" />
                         )}
-                        {isRunning ? 'Executing...' : 'Run Code'}
+                        {isRunning ? 'Running...' : 'Run Code'}
                     </Button>
 
-                    <Button onClick={toggleFullscreen} variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground">
+                    <ThemeToggle />
+
+                    <TooltipProvider>
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <Button onClick={handleResetCode} variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground">
+                                    <RotateCcw className="w-4 h-4" />
+                                </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>Reset Code</TooltipContent>
+                        </Tooltip>
+                    </TooltipProvider>
+
+                    <Button onClick={toggleFullscreen} variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hidden sm:flex">
                         {isFullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
                     </Button>
                 </div>
@@ -387,14 +423,14 @@ const SandboxPage = () => {
 
                     {/* Editor Panel */}
                     <ResizablePanel defaultSize={60} minSize={30}>
-                        <div className="h-full flex flex-col bg-[#1e1e1e]">
+                        <div className="h-full flex flex-col bg-card/10 backdrop-blur-[2px]">
                             <Editor
                                 height="100%"
                                 language={getMonacoLanguage(language)}
                                 value={code}
                                 onChange={(value) => setCode(value || "")}
                                 onMount={handleEditorDidMount}
-                                theme="vs-dark"
+                                theme={resolvedTheme === 'dark' ? "vs-dark" : "light"}
                                 options={{
                                     minimap: { enabled: false },
                                     fontSize: 14,
@@ -406,84 +442,90 @@ const SandboxPage = () => {
                                     renderLineHighlight: 'all',
                                     smoothScrolling: true,
                                     cursorBlinking: 'smooth',
-                                    cursorSmoothCaretAnimation: 'on'
+                                    cursorSmoothCaretAnimation: 'on',
+                                    fontLigatures: true
                                 }}
                             />
                         </div>
                     </ResizablePanel>
 
-                    <ResizableHandle withHandle className="bg-border/40 hover:bg-violet-500/50 transition-colors w-1" />
+                    <ResizableHandle withHandle className="bg-border/40 hover:bg-primary/50 transition-colors w-1" />
 
                     {/* Output Panel */}
                     <ResizablePanel defaultSize={40} minSize={20}>
-                        <div className="h-full flex flex-col bg-zinc-950">
+                        <div className="h-full flex flex-col bg-muted/20 border-l border-border/40">
 
                             <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col h-full">
                                 {/* Output Header */}
-                                <div className="flex-none h-10 border-b border-white/5 flex items-center justify-between px-4 bg-zinc-900/50">
-                                    <TabsList className="h-7 bg-zinc-800/50 border border-white/5">
-                                        <TabsTrigger value="console" className="h-5 text-[10px] data-[state=active]:bg-zinc-700">
+                                <div className="flex-none h-10 border-b border-border/40 flex items-center justify-between px-4 bg-muted/40 backdrop-blur-sm">
+                                    <TabsList className="h-7 bg-muted border border-border/50">
+                                        <TabsTrigger value="console" className="h-5 text-[10px] font-bold uppercase tracking-wider">
                                             <Terminal className="w-3 h-3 mr-1.5" />
-                                            Output
+                                            Console
                                         </TabsTrigger>
-                                        <TabsTrigger value="visualize" disabled={!visualization} className="h-5 text-[10px] data-[state=active]:bg-violet-600 data-[state=active]:text-white">
-                                            <PieChart className="w-3 h-3 mr-1.5" />
-                                            Visualize
+                                        <TabsTrigger value="visualize" disabled={!visualization} className="h-5 text-[10px] font-bold uppercase tracking-wider">
+                                            <BarChart3 className="w-3 h-3 mr-1.5" />
+                                            Charts
                                         </TabsTrigger>
                                     </TabsList>
 
                                     <div className="flex items-center gap-2">
                                         {executionTime && (
-                                            <Badge variant="secondary" className="text-[10px] h-5 bg-zinc-800 text-zinc-400 border-zinc-700">
-                                                <Clock className="w-3 h-3 mr-1" />
+                                            <Badge variant="outline" className="text-[10px] h-5 bg-background border-border text-muted-foreground font-mono">
+                                                <Clock className="w-3 h-3 mr-1.5" />
                                                 {executionTime}
                                             </Badge>
                                         )}
                                         <TooltipProvider>
                                             <Tooltip>
                                                 <TooltipTrigger asChild>
-                                                    <Button onClick={handleClearConsole} variant="ghost" size="icon" className="h-6 w-6 text-zinc-500 hover:text-zinc-300 hover:bg-white/5">
+                                                    <Button onClick={handleClearConsole} variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-destructive">
                                                         <Trash2 className="w-3.5 h-3.5" />
                                                     </Button>
                                                 </TooltipTrigger>
-                                                <TooltipContent side="left" className="bg-zinc-800 text-zinc-300 border-zinc-700">Clear Console</TooltipContent>
+                                                <TooltipContent side="left">Clear Output</TooltipContent>
                                             </Tooltip>
                                         </TooltipProvider>
                                     </div>
                                 </div>
 
                                 {/* Console Content */}
-                                <TabsContent value="console" className="flex-1 min-h-0 mt-0 data-[state=active]:flex flex-col">
+                                <TabsContent value="console" className="flex-1 min-h-0 mt-0 data-[state=active]:flex flex-col relative">
                                     <ScrollArea className="flex-1 p-4 font-mono text-sm">
                                         {!output && !error && !isRunning && (
-                                            <div className="h-full flex flex-col items-center justify-center text-zinc-600 opacity-60 pointer-events-none select-none">
+                                            <div className="absolute inset-0 flex flex-col items-center justify-center text-muted-foreground/30 pointer-events-none select-none">
                                                 <Zap className="w-12 h-12 mb-3 opacity-20" />
-                                                <p>Ready to execute</p>
+                                                <p className="text-sm font-bold uppercase tracking-widest">Ready to Execute</p>
                                             </div>
                                         )}
 
                                         {isRunning && (
-                                            <div className="flex items-center gap-2 text-zinc-500 animate-pulse">
-                                                <span className="w-2 h-2 bg-yellow-500 rounded-full"></span>
-                                                <span>Compiling and executing...</span>
+                                            <div className="flex items-center gap-3 text-muted-foreground animate-pulse p-2">
+                                                <span className="relative flex h-2.5 w-2.5">
+                                                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
+                                                    <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-primary"></span>
+                                                </span>
+                                                <span>Running process...</span>
                                             </div>
                                         )}
 
                                         {output && (
-                                            <div className="whitespace-pre-wrap text-zinc-300 mb-4">
-                                                <div className="flex items-center gap-2 mb-2 text-emerald-500/80 text-xs uppercase tracking-wider">
-                                                    <CheckCircle2 className="w-3 h-3" /> STDOUT
+                                            <div className="whitespace-pre-wrap mb-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
+                                                <div className="flex items-center gap-2 mb-2 text-emerald-500/90 text-[10px] font-black uppercase tracking-widest border-b border-emerald-500/10 pb-1 w-fit">
+                                                    <CheckCircle2 className="w-3 h-3" /> Standard Output
                                                 </div>
-                                                {output}
+                                                <div className="text-foreground/90 leading-relaxed">{output}</div>
                                             </div>
                                         )}
 
                                         {error && (
-                                            <div className="whitespace-pre-wrap text-red-400 border-t border-red-500/20 pt-4 mt-2">
-                                                <div className="flex items-center gap-2 mb-2 text-red-500 text-xs uppercase tracking-wider">
-                                                    <AlertCircle className="w-3 h-3" /> STDERR
+                                            <div className="whitespace-pre-wrap text-destructive border-t border-destructive/20 pt-4 mt-2 animate-in fade-in slide-in-from-bottom-2 duration-300">
+                                                <div className="flex items-center gap-2 mb-2 text-destructive text-[10px] font-black uppercase tracking-widest border-b border-destructive/10 pb-1 w-fit">
+                                                    <AlertCircle className="w-3 h-3" /> Standard Error
                                                 </div>
-                                                {error}
+                                                <div className="bg-destructive/5 p-3 rounded-lg border border-destructive/10 text-sm">
+                                                    {error}
+                                                </div>
                                             </div>
                                         )}
                                     </ScrollArea>
@@ -492,19 +534,19 @@ const SandboxPage = () => {
                                 {/* Visualization Content */}
                                 <TabsContent value="visualize" className="flex-1 min-h-0 mt-0 p-4 data-[state=active]:flex flex-col">
                                     {visualization ? (
-                                        <div className="flex-1 flex flex-col">
+                                        <div className="flex-1 flex flex-col h-full animate-in fade-in zoom-in-95 duration-300">
                                             <div className="mb-4">
-                                                <h3 className="text-sm font-medium text-zinc-200">{visualization.title}</h3>
-                                                <p className="text-xs text-zinc-500">{visualization.description}</p>
+                                                <h3 className="text-sm font-bold">{visualization.title}</h3>
+                                                <p className="text-xs text-muted-foreground">{visualization.description}</p>
                                             </div>
-                                            <div className="flex-1 min-h-[200px] w-full bg-zinc-900/50 rounded-lg border border-white/5 p-4">
+                                            <div className="flex-1 w-full bg-card/50 rounded-xl border border-border/50 p-4 shadow-sm">
                                                 {renderChart()}
                                             </div>
                                         </div>
                                     ) : (
-                                        <div className="h-full flex flex-col items-center justify-center text-zinc-600 opacity-60">
-                                            <PieChart className="w-12 h-12 mb-3 opacity-20" />
-                                            <p>No visualization data generated</p>
+                                        <div className="h-full flex flex-col items-center justify-center text-muted-foreground/40">
+                                            <PieChartIcon className="w-12 h-12 mb-3 opacity-20" />
+                                            <p className="text-sm font-medium">No visualization data</p>
                                         </div>
                                     )}
                                 </TabsContent>

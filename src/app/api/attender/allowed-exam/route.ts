@@ -20,8 +20,8 @@ export async function GET(request: Request) {
             a.questions,  
             a.language,
             a."assignmentType",
-            abm."startTime"::TEXT, 
-            abm."endTime"::TEXT, 
+            to_char(abm."startTime" AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"') AS "startTime",
+            to_char(abm."endTime" AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"') AS "endTime", 
             b."Name" AS "BatchName", 
             b."EmployeeCount" AS participants,
             'batch' AS "assignedVia"
@@ -49,8 +49,8 @@ export async function GET(request: Request) {
             a.questions,  
             a.language,
             a."assignmentType",
-            NULL::TEXT AS "startTime", 
-            NULL::TEXT AS "endTime", 
+            to_char(aum.starttime AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"') AS "startTime",
+            to_char(aum.endtime AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"') AS "endTime", 
             NULL AS "BatchName", 
             (SELECT COUNT(*) FROM "AssessmentUserMapping" WHERE "assessmentId" = a.id) AS participants,
             'user' AS "assignedVia"

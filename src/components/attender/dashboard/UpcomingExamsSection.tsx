@@ -41,6 +41,8 @@ export const UpcomingExamsSection: React.FC<UpcomingExamsSectionProps> = ({
         return <LoadingState />;
     }
 
+    console.log(exams);
+
     // Sort exams by start time (soonest first)
     const sortedExams = [...exams].sort((a, b) => {
         const timeA = a.startTime ? new Date(a.startTime).getTime() : Infinity;
@@ -92,7 +94,15 @@ interface ExamCardProps {
 
 const ExamCard: React.FC<ExamCardProps> = ({ exam, onStart, onViewStrategy }) => {
     const startTime = exam.startTime ? new Date(exam.startTime) : null;
-    const isUrgent = startTime ? (startTime.getTime() - Date.now()) < 1000 * 60 * 60 * 2 : false; // < 2 hours
+    const endTime = exam.endTime ? new Date(exam.endTime) : null;
+    const now = new Date();
+
+    const isStarted = startTime ? now >= startTime : false;
+    const isEnded = endTime ? now > endTime : false;
+
+    const isUrgent = startTime
+        ? (!isStarted && (startTime.getTime() - now.getTime()) < 1000 * 60 * 60 * 2)
+        : false;
 
     return (
         <Card className={cn(
@@ -136,6 +146,15 @@ const ExamCard: React.FC<ExamCardProps> = ({ exam, onStart, onViewStrategy }) =>
                         <Timer className="w-3.5 h-3.5 opacity-70" />
                         <span>{exam.duration} mins</span>
                     </div>
+
+                    {/* Time Range */}
+                    <div className="col-span-2 flex items-center gap-2 bg-muted/40 p-2 rounded-md border border-border/40">
+                        <Clock className="w-3.5 h-3.5 text-primary/80" />
+                        <span className="font-medium text-[11px] text-foreground/90 truncate">
+                            {startTime ? format(startTime, 'MMM d h:mm a') : 'TBA'} - {exam.endTime ? format(new Date(exam.endTime), 'MMM d h:mm a') : 'TBA'}
+                        </span>
+                    </div>
+
                     <div className="flex items-center gap-2">
                         <div className="w-3.5 h-3.5 flex items-center justify-center">
                             <span className="block w-2 h-2 rounded-full border border-current opacity-70" />
@@ -152,14 +171,30 @@ const ExamCard: React.FC<ExamCardProps> = ({ exam, onStart, onViewStrategy }) =>
                 <div className="pt-2 flex items-center gap-2 mt-auto">
                     <Button
                         size="sm"
+                        disabled={!isStarted || isEnded}
                         className={cn(
                             "flex-1 font-semibold",
-                            isUrgent ? "bg-amber-500 hover:bg-amber-600 text-white" : "shadow-sm"
+                            isUrgent ? "bg-amber-500 hover:bg-amber-600 text-white" : "shadow-sm",
+                            (!isStarted || isEnded) && "opacity-50 cursor-not-allowed bg-muted text-muted-foreground hover:bg-muted"
                         )}
                         onClick={onStart}
                     >
-                        <Play className="w-3.5 h-3.5 mr-1.5 fill-current" />
-                        Start
+                        {!isStarted ? (
+                            <>
+                                <Clock className="w-3.5 h-3.5 mr-1.5" />
+                                Upcoming
+                            </>
+                        ) : isEnded ? (
+                            <>
+                                <AlertCircle className="w-3.5 h-3.5 mr-1.5" />
+                                Expired
+                            </>
+                        ) : (
+                            <>
+                                <Play className="w-3.5 h-3.5 mr-1.5 fill-current" />
+                                Start
+                            </>
+                        )}
                     </Button>
                     <Button
                         size="sm"
