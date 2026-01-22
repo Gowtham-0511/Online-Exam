@@ -29,7 +29,8 @@ import {
     AlertCircle,
     Sparkles,
     LayoutGrid,
-    List
+    List,
+    Share2
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -119,6 +120,14 @@ export default function ViewExamsPage() {
     const [selectedBatches, setSelectedBatches] = useState<string[]>([]);
     const [assignSearchQuery, setAssignSearchQuery] = useState('');
     const [loadingReassign, setLoadingReassign] = useState(false);
+
+    // Share Dialog State
+    const [shareDialogOpen, setShareDialogOpen] = useState(false);
+    const [sharingExam, setSharingExam] = useState<Exam | null>(null);
+    const [shareSearchQuery, setShareSearchQuery] = useState('');
+    const [selectedShareUsers, setSelectedShareUsers] = useState<string[]>([]);
+    const [alreadySharedUsers, setAlreadySharedUsers] = useState<any[]>([]);
+    const [loadingShare, setLoadingShare] = useState(false);
 
     // --- Data Fetching ---
     const { data: exams = [], error, isLoading } = useSWR(
@@ -288,6 +297,67 @@ export default function ViewExamsPage() {
         }
     };
 
+    const handleShare = async (exam: Exam) => {
+        setSharingExam(exam);
+        setSelectedShareUsers([]);
+        setShareSearchQuery('');
+        setLoadingShare(true);
+        setShareDialogOpen(true);
+
+        try {
+            const res = await fetch(`/api/organizer/assessment/share?assessmentId=${exam.id}`);
+            if (res.ok) {
+                const data = await res.json();
+                setAlreadySharedUsers(data);
+            }
+        } catch (e) {
+            console.error(e);
+        } finally {
+            setLoadingShare(false);
+        }
+    };
+
+    const saveShare = async () => {
+        if (!sharingExam || !selectedShareUsers.length) return;
+        setLoadingShare(true);
+        try {
+            await fetch('/api/organizer/assessment/share', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    assessmentId: sharingExam.id,
+                    emails: selectedShareUsers,
+                    sharedBy: session?.username
+                })
+            });
+            toast.success("Shared successfully");
+            setSelectedShareUsers([]);
+            // Refresh list
+            const res = await fetch(`/api/organizer/assessment/share?assessmentId=${sharingExam.id}`);
+            if (res.ok) {
+                const data = await res.json();
+                setAlreadySharedUsers(data);
+            }
+        } catch (e) {
+            toast.error("Share failed");
+        } finally {
+            setLoadingShare(false);
+        }
+    };
+
+    const removeShare = async (email: string) => {
+        if (!sharingExam) return;
+        try {
+            await fetch(`/api/organizer/assessment/share?assessmentId=${sharingExam.id}&email=${email}`, {
+                method: 'DELETE'
+            });
+            toast.success("Access removed");
+            setAlreadySharedUsers(prev => prev.filter(u => u.sharedWithEmail !== email));
+        } catch (e) {
+            toast.error("Failed to remove access");
+        }
+    };
+
     if (error) {
         return (
             <div className="flex flex-col items-center justify-center min-h-[60vh] text-center p-6">
@@ -394,6 +464,9 @@ export default function ViewExamsPage() {
                                                 </DropdownMenuItem>
                                                 <DropdownMenuItem onClick={() => handleReassign(exam)}>
                                                     <UserPlus className="w-4 h-4 mr-2" /> Reassign
+                                                </DropdownMenuItem>
+                                                <DropdownMenuItem onClick={() => handleShare(exam)}>
+                                                    <Share2 className="w-4 h-4 mr-2" /> Share
                                                 </DropdownMenuItem>
                                                 <DropdownMenuSeparator />
                                                 <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => handleDelete(exam.id)}>
@@ -597,6 +670,98 @@ export default function ViewExamsPage() {
                             Confirm Assignment
                         </Button>
                     </DialogFooter>
+                </DialogContent>
+            </Dialog>
+            {/* Share Dialog */}
+            <Dialog open={shareDialogOpen} onOpenChange={setShareDialogOpen}>
+                <DialogContent className="sm:max-w-lg">
+                    <DialogHeader>
+                        <DialogTitle>Share Assessment</DialogTitle>
+                        <DialogDescription>
+                            Share <span className="font-semibold text-primary">{sharingExam?.title}</span> with other organizers/admins.
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <div className="space-y-4">
+                        <div className="space-y-2">
+                            <Label>Add People</Label>
+                            <div className="relative">
+                                <Search className="absolute left-3 top-2.5 w-4 h-4 text-muted-foreground" />
+                                <Input
+                                    placeholder="Search by name or email..."
+                                    className="pl-9"
+                                    value={shareSearchQuery}
+                                    onChange={e => setShareSearchQuery(e.target.value)}
+                                />
+                            </div>
+                            <ScrollArea className="h-[200px] border rounded-md p-2">
+                                {users.filter(u =>
+                                    u.type === 'employee' &&
+                                    u.email !== session?.username &&
+                                    !alreadySharedUsers.some(s => s.sharedWithEmail === u.email) &&
+                                    (u.name.toLowerCase().includes(shareSearchQuery.toLowerCase()) || u.email.toLowerCase().includes(shareSearchQuery.toLowerCase()))
+                                ).length === 0 ? (
+                                    <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
+                                        <p className="text-sm">No eligible organizers found.</p>
+                                    </div>
+                                ) : (
+                                    users.filter(u =>
+                                        u.type === 'employee' &&
+                                        u.email !== session?.username &&
+                                        !alreadySharedUsers.some(s => s.sharedWithEmail === u.email) &&
+                                        (u.name.toLowerCase().includes(shareSearchQuery.toLowerCase()) || u.email.toLowerCase().includes(shareSearchQuery.toLowerCase()))
+                                    ).map(user => (
+                                        <div
+                                            key={user.email}
+                                            className={`flex items-center justify-between p-2 rounded cursor-pointer ${selectedShareUsers.includes(user.email) ? 'bg-primary/10' : 'hover:bg-muted'}`}
+                                            onClick={() => setSelectedShareUsers(prev => prev.includes(user.email) ? prev.filter(e => e !== user.email) : [...prev, user.email])}
+                                        >
+                                            <div className="flex flex-col">
+                                                <span className="text-sm font-medium">{user.name}</span>
+                                                <span className="text-xs text-muted-foreground">{user.email}</span>
+                                            </div>
+                                            {selectedShareUsers.includes(user.email) && <CheckCircle className="w-4 h-4 text-primary" />}
+                                        </div>
+                                    ))
+                                )}
+                            </ScrollArea>
+
+                            {selectedShareUsers.length > 0 && (
+                                <div className="flex justify-end">
+                                    <Button size="sm" onClick={saveShare} disabled={loadingShare}>
+                                        {loadingShare ? <Loader2 className="w-3 h-3 animate-spin mr-1" /> : <Plus className="w-3 h-3 mr-1" />}
+                                        Add Selected ({selectedShareUsers.length})
+                                    </Button>
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="space-y-2">
+                            <Label>Who has access</Label>
+                            <ScrollArea className="h-[200px] border rounded-md p-2">
+                                {alreadySharedUsers.length === 0 ? (
+                                    <p className="text-sm text-muted-foreground text-center py-4">Not shared with anyone yet.</p>
+                                ) : (
+                                    alreadySharedUsers.map((share, i) => (
+                                        <div key={i} className="flex items-center justify-between p-2 hover:bg-muted/50 rounded">
+                                            <div className="flex items-center gap-2">
+                                                <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 font-bold text-xs uppercase">
+                                                    {share.sharedWithEmail.substring(0, 2)}
+                                                </div>
+                                                <div className="flex flex-col">
+                                                    <span className="text-sm font-medium">{share.sharedWithEmail}</span>
+                                                    <span className="text-xs text-muted-foreground capitalize">{share.permission}</span>
+                                                </div>
+                                            </div>
+                                            <Button variant="ghost" size="sm" className="text-destructive hover:bg-destructive/10" onClick={() => removeShare(share.sharedWithEmail)}>
+                                                <Trash2 className="w-3 h-3" />
+                                            </Button>
+                                        </div>
+                                    ))
+                                )}
+                            </ScrollArea>
+                        </div>
+                    </div>
                 </DialogContent>
             </Dialog>
         </div>

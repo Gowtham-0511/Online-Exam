@@ -27,7 +27,8 @@ import {
     User,
     Briefcase,
     Globe,
-    AlertCircle
+    AlertCircle,
+    RefreshCcw
 } from "lucide-react";
 import useSWR from 'swr';
 import { cn } from "@/lib/utils";
@@ -59,6 +60,8 @@ export default function ScheduleExam() {
 
     const [isLoading, setIsLoading] = useState(false);
     const [showSuccess, setShowSuccess] = useState(false);
+    const [failedEmails, setFailedEmails] = useState<string[]>([]);
+    const [isRetrying, setIsRetrying] = useState(false);
 
     const [selectedBatches, setSelectedBatches] = useState<string[]>([]);
     const [batchTimes, setBatchTimes] = useState<{ [key: string]: { startTime: string, endTime: string } }>({});
@@ -202,17 +205,56 @@ export default function ScheduleExam() {
 
             if (!response.ok) throw new Error('Failed to schedule exam');
 
-            setShowSuccess(true);
-            setTimeout(() => {
-                setShowSuccess(false);
-                router.push('/organizer');
-            }, 2000);
+            const data = await response.json();
+
+            if (data.failedEmails && data.failedEmails.length > 0) {
+                setFailedEmails(data.failedEmails);
+                toast.error(`Scheduled, but failed to email ${data.failedEmails.length} users.`);
+            } else {
+                setShowSuccess(true);
+                setTimeout(() => {
+                    setShowSuccess(false);
+                    router.push('/organizer');
+                }, 2000);
+            }
 
         } catch (error) {
             console.error('Error scheduling exam:', error);
             toast.error('Failed to schedule exam');
         } finally {
             setIsLoading(false);
+        }
+    };
+
+    const handleRetry = async () => {
+        if (!selectedExamId || failedEmails.length === 0) return;
+        setIsRetrying(true);
+        try {
+            const res = await fetch('/api/organizer/assessment/retry-email', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    assessmentId: selectedExamId,
+                    emails: failedEmails
+                })
+            });
+            const data = await res.json();
+            if (data.failedEmails && data.failedEmails.length > 0) {
+                setFailedEmails(data.failedEmails);
+                toast.error(`Retry failed for ${data.failedEmails.length} users.`);
+            } else {
+                setFailedEmails([]);
+                toast.success("Emails sent successfully!");
+                setShowSuccess(true);
+                setTimeout(() => {
+                    setShowSuccess(false);
+                    router.push('/organizer');
+                }, 2000);
+            }
+        } catch (e) {
+            toast.error("Retry failed");
+        } finally {
+            setIsRetrying(false);
         }
     };
 
@@ -706,6 +748,50 @@ export default function ScheduleExam() {
                     </div>
                 </div>
             </div>
+
+            {/* Retry Dialog */}
+            {failedEmails.length > 0 && (
+                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in duration-200">
+                    <Card className="w-full max-w-md border-destructive/50 shadow-2xl animate-in zoom-in-95 duration-300">
+                        <CardHeader>
+                            <div className="mx-auto w-12 h-12 rounded-full bg-destructive/10 flex items-center justify-center mb-4">
+                                <AlertCircle className="w-6 h-6 text-destructive" />
+                            </div>
+                            <CardTitle className="text-center">Email Delivery Failed</CardTitle>
+                            <CardDescription className="text-center">
+                                The assessment was scheduled successfully, but we couldn't send emails to {failedEmails.length} candidates.
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <ScrollArea className="h-[150px] w-full border rounded-md p-2 bg-muted/50">
+                                {failedEmails.map(email => (
+                                    <div key={email} className="text-sm py-1 px-2 text-destructive font-medium border-b last:border-0 border-destructive/10">
+                                        {email}
+                                    </div>
+                                ))}
+                            </ScrollArea>
+                        </CardContent>
+                        <CardFooter className="flex gap-3 justify-end">
+                            <Button variant="outline" onClick={() => router.push('/organizer')}>
+                                Skip & Finish
+                            </Button>
+                            <Button onClick={handleRetry} disabled={isRetrying} className="bg-primary">
+                                {isRetrying ? (
+                                    <>
+                                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                        Retrying...
+                                    </>
+                                ) : (
+                                    <>
+                                        <RefreshCcw className="w-4 h-4 mr-2" />
+                                        Retry Emails
+                                    </>
+                                )}
+                            </Button>
+                        </CardFooter>
+                    </Card>
+                </div>
+            )}
 
             {/* Success Modal */}
             {showSuccess && (

@@ -2131,6 +2131,7 @@ export async function parseExamCreationIntent(promptText: string): Promise<{
   topics: string[];
   totalMarks: number;
   questionTypes: { coding: number; mcq: number };
+  questionCount?: number;
 }> {
   const isDeterministicModel = /(mini|instruct)/i.test(deploymentName);
 
@@ -2147,6 +2148,7 @@ export async function parseExamCreationIntent(promptText: string): Promise<{
       5. Topics: List of technical tags/topics mentioned or implied.
       6. Total Marks: Suggested total marks (default 100).
       7. Question Types: Percentage distribution for Coding vs MCQ (must sum to 100).
+      8. Question Count: Total number of questions requested (optional, default null if not specified).
 
       Return JSON:
       {
@@ -2156,7 +2158,8 @@ export async function parseExamCreationIntent(promptText: string): Promise<{
           "difficultyDistribution": { "easy": number, "medium": number, "hard": number },
           "topics": ["topic1", "topic2"],
           "totalMarks": number,
-          "questionTypes": { "coding": number, "mcq": number }
+          "questionTypes": { "coding": number, "mcq": number },
+          "questionCount": number | null
       }
   `;
 
@@ -2188,7 +2191,8 @@ export async function parseExamCreationIntent(promptText: string): Promise<{
       difficultyDistribution: { easy: 40, medium: 40, hard: 20 },
       topics: [],
       totalMarks: 100,
-      questionTypes: { coding: 70, mcq: 30 }
+      questionTypes: { coding: 70, mcq: 30 },
+      questionCount: undefined
     };
   }
 }
@@ -2198,7 +2202,8 @@ export async function generateExamQuestions(
   totalMarks: number,
   difficultyDistribution: { easy: number; medium: number; hard: number },
   questionTypes: { coding: number; mcq: number },
-  topics: string[]
+  topics: string[],
+  questionCount?: number
 ): Promise<any[]> {
   const isDeterministicModel = /(mini|instruct)/i.test(deploymentName);
 
@@ -2207,6 +2212,7 @@ export async function generateExamQuestions(
       
       Language: ${language}
       Total Marks: ${totalMarks}
+      ${questionCount ? `Target Question Count: Approximately ${questionCount} questions` : ''}
       Topics: ${topics.length > 0 ? topics.join(', ') : 'General ' + language + ' concepts'}
       
       Requirements:

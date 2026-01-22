@@ -502,6 +502,25 @@ export default function ExamAnalytics() {
         }
     };
 
+    const generateClusterAnalysis = async (examId: string) => {
+        setLoadingInsights(prev => ({ ...prev, [examId]: true }));
+        const examSubmissions = filteredSubmissions.filter((s: any) => s.examId === examId);
+
+        try {
+            const response = await fetch('/api/organizer/ai/cluster-students', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ submissions: examSubmissions })
+            });
+            const data = await response.json();
+            setAiInsights(prev => ({ ...prev, [examId]: data }));
+        } catch (error) {
+            console.error("Clustering failed:", error);
+        } finally {
+            setLoadingInsights(prev => ({ ...prev, [examId]: false }));
+        }
+    };
+
     const getDifficultyColor = (difficulty: string) => {
         switch (difficulty) {
             case 'Easy': return 'text-emerald-600 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-900/20';
@@ -738,89 +757,145 @@ export default function ExamAnalytics() {
                                         </div>
                                     </div>
 
-                                    {/* Expanded Details */}
+                                    {/* Expanded Details - AI Cluster & Skills Analysis */}
                                     {expandedQuestion === exam.examId && (
-                                        <div className="border-t border-border/50 bg-muted/10 p-6 space-y-6">
-                                            {/* Key Metrics Grid */}
-                                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                                                <Card className="bg-background border-border/50 shadow-none">
-                                                    <CardContent className="p-4 flex flex-col gap-1">
-                                                        <span className="text-xs font-medium text-muted-foreground uppercase flex items-center gap-1.5"><Target className="w-3 h-3" /> Score</span>
-                                                        <span className="text-xl font-bold">{exam.avgScore.toFixed(1)}%</span>
-                                                    </CardContent>
-                                                </Card>
-                                                <Card className="bg-background border-border/50 shadow-none">
-                                                    <CardContent className="p-4 flex flex-col gap-1">
-                                                        <span className="text-xs font-medium text-muted-foreground uppercase flex items-center gap-1.5"><Users className="w-3 h-3" /> Students</span>
-                                                        <span className="text-xl font-bold">{exam.totalStudents}</span>
-                                                    </CardContent>
-                                                </Card>
-                                                <Card className="bg-background border-border/50 shadow-none">
-                                                    <CardContent className="p-4 flex flex-col gap-1">
-                                                        <span className="text-xs font-medium text-muted-foreground uppercase flex items-center gap-1.5"><CheckCircle className="w-3 h-3" /> Success Rate</span>
-                                                        <span className={`text-xl font-bold ${getSuccessRateColor(exam.successRate)}`}>{exam.successRate.toFixed(1)}%</span>
-                                                    </CardContent>
-                                                </Card>
-                                                <Card className="bg-background border-border/50 shadow-none">
-                                                    <CardContent className="p-4 flex flex-col gap-1">
-                                                        <span className="text-xs font-medium text-muted-foreground uppercase flex items-center gap-1.5"><Activity className="w-3 h-3" /> Completion</span>
-                                                        <span className="text-xl font-bold">{exam.completionRate.toFixed(1)}%</span>
-                                                    </CardContent>
-                                                </Card>
+                                        <div className="border-t border-border/50 bg-muted/10 p-6 space-y-8">
+
+                                            <div className="flex items-center justify-between">
+                                                <h3 className="text-xl font-semibold flex items-center gap-2">
+                                                    <Brain className="w-6 h-6 text-primary" />
+                                                    AI Cohort Analysis
+                                                </h3>
+                                                <Button
+                                                    onClick={() => generateClusterAnalysis(exam.examId)}
+                                                    disabled={loadingInsights[exam.examId]}
+                                                >
+                                                    {loadingInsights[exam.examId] ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Sparkles className="w-4 h-4 mr-2" />}
+                                                    Run Architect Scan
+                                                </Button>
                                             </div>
 
-                                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                                                {/* Top Performers */}
-                                                {exam.topPerformers.length > 0 && (
-                                                    <Card className="border-border/50 shadow-none">
-                                                        <CardHeader className="py-3 px-4 border-b border-border/50 bg-muted/20">
-                                                            <CardTitle className="text-sm font-medium flex items-center gap-2"><Trophy className="w-4 h-4 text-primary" /> Top Performers</CardTitle>
+                                            {aiInsights[exam.examId] ? (
+                                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 animate-content">
+
+                                                    {/* Cluster Map Visualization */}
+                                                    <Card className="border-border/50 bg-background/50 shadow-sm col-span-1 lg:col-span-2">
+                                                        <CardHeader>
+                                                            <CardTitle className="flex items-center gap-2 text-lg">
+                                                                <Users className="w-5 h-5 text-blue-500" />
+                                                                Candidate Clusters
+                                                            </CardTitle>
+                                                            <CardDescription>AI-grouped profiles based on coding patterns and logic gaps.</CardDescription>
                                                         </CardHeader>
-                                                        <CardContent className="p-0">
-                                                            <div className="divide-y divide-border/50">
-                                                                {exam.topPerformers.map((performer: any, idx: number) => (
-                                                                    <div key={idx} className="flex items-center justify-between p-3 px-4 hover:bg-muted/30">
-                                                                        <div className="flex items-center gap-3">
-                                                                            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${idx === 0 ? 'bg-amber-100 text-amber-700' :
-                                                                                idx === 1 ? 'bg-slate-200 text-slate-700' :
-                                                                                    'bg-orange-100 text-orange-700'
-                                                                                }`}>
-                                                                                #{idx + 1}
+                                                        <CardContent>
+                                                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                                                {aiInsights[exam.examId].clusters
+                                                                    .filter((c: any) => c.students && c.students.length > 0)
+                                                                    .map((cluster: any, idx: number) => (
+                                                                        <div key={idx} className="p-4 rounded-xl border bg-card/50 hover:bg-card transition-colors space-y-3">
+                                                                            <div className="flex justify-between items-start">
+                                                                                <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20">{cluster.name}</Badge>
+                                                                                <span className="text-xs font-bold text-muted-foreground">{cluster.avgScore.toFixed(0)}% Avg</span>
                                                                             </div>
-                                                                            <span className="font-medium text-sm">{performer.name}</span>
+                                                                            <p className="text-sm text-muted-foreground leading-relaxed">
+                                                                                {cluster.description}
+                                                                            </p>
+                                                                            <div className="flex -space-x-2 pt-2">
+                                                                                {cluster.students.slice(0, 5).map((s: string, i: number) => (
+                                                                                    <div key={i} className="w-8 h-8 rounded-full bg-muted border-2 border-background flex items-center justify-center text-[10px] font-bold" title={s}>
+                                                                                        {s.charAt(0)}
+                                                                                    </div>
+                                                                                ))}
+                                                                                {cluster.students.length > 5 && (
+                                                                                    <div className="w-8 h-8 rounded-full bg-muted border-2 border-background flex items-center justify-center text-[10px] font-bold">
+                                                                                        +{cluster.students.length - 5}
+                                                                                    </div>
+                                                                                )}
+                                                                            </div>
                                                                         </div>
-                                                                        <span className="font-bold text-sm text-primary">{performer.score.toFixed(1)}%</span>
-                                                                    </div>
-                                                                ))}
+                                                                    ))}
                                                             </div>
                                                         </CardContent>
                                                     </Card>
-                                                )}
 
-                                                {/* Students List */}
-                                                <Card className="border-border/50 shadow-none">
-                                                    <CardHeader className="py-3 px-4 border-b border-border/50 bg-muted/20">
-                                                        <CardTitle className="text-sm font-medium flex items-center gap-2"><Users className="w-4 h-4 text-primary" /> Participants</CardTitle>
-                                                    </CardHeader>
-                                                    <CardContent className="p-0 max-h-[200px] overflow-y-auto custom-scrollbar">
-                                                        <div className="divide-y divide-border/50">
-                                                            {getStudentsForExam(exam.examId).map((student: any, idx: number) => (
-                                                                <div key={idx} className="flex items-center justify-between p-3 px-4 hover:bg-muted/30">
-                                                                    <div className="flex items-center gap-3">
-                                                                        <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center font-bold text-xs text-primary">
-                                                                            {student.userName.charAt(0).toUpperCase()}
-                                                                        </div>
-                                                                        <div className="flex flex-col">
-                                                                            <span className="font-medium text-sm">{student.userName}</span>
-                                                                            <span className="text-[10px] text-muted-foreground">{student.email}</span>
-                                                                        </div>
+                                                    {/* Skill Gap Heatmap */}
+                                                    <Card className="border-border/50 bg-background/50 shadow-sm">
+                                                        <CardHeader>
+                                                            <CardTitle className="flex items-center gap-2 text-lg">
+                                                                <Activity className="w-5 h-5 text-rose-500" />
+                                                                Skill Gap Heatmap
+                                                            </CardTitle>
+                                                            <CardDescription>Topics with the highest failure rates across the batch.</CardDescription>
+                                                        </CardHeader>
+                                                        <CardContent className="space-y-4">
+                                                            {Object.entries(aiInsights[exam.examId].skillGapMap).map(([skill, gap]: [string, any], i) => (
+                                                                <div key={i} className="space-y-1">
+                                                                    <div className="flex justify-between text-sm">
+                                                                        <span className="font-medium">{skill}</span>
+                                                                        <span className="text-rose-500 font-bold">{gap}% Fail Rate</span>
                                                                     </div>
+                                                                    <Progress value={gap} className="h-2 bg-muted" indicatorClassName="bg-rose-500" />
                                                                 </div>
                                                             ))}
-                                                        </div>
-                                                    </CardContent>
-                                                </Card>
-                                            </div>
+                                                        </CardContent>
+                                                    </Card>
+
+                                                    {/* AI Insights List */}
+                                                    <Card className="border-border/50 bg-background/50 shadow-sm">
+                                                        <CardHeader>
+                                                            <CardTitle className="flex items-center gap-2 text-lg">
+                                                                <Sparkles className="w-5 h-5 text-amber-500" />
+                                                                Architect Insights
+                                                            </CardTitle>
+                                                        </CardHeader>
+                                                        <CardContent>
+                                                            <ul className="space-y-3">
+                                                                {aiInsights[exam.examId].insights.map((insight: string, i: number) => (
+                                                                    <li key={i} className="flex gap-3 text-sm text-muted-foreground p-3 rounded-lg bg-muted/30">
+                                                                        <Brain className="w-4 h-4 text-primary shrink-0 mt-0.5" />
+                                                                        {insight}
+                                                                    </li>
+                                                                ))}
+                                                            </ul>
+                                                        </CardContent>
+                                                    </Card>
+                                                </div>
+                                            ) : (
+                                                <div className="flex flex-col items-center justify-center py-12 text-center text-muted-foreground bg-card/30 rounded-xl border border-dashed border-border/50">
+                                                    <Brain className="w-12 h-12 mb-4 opacity-20" />
+                                                    <h4 className="text-lg font-medium text-foreground">Ready to Scan</h4>
+                                                    <p className="max-w-md mt-2 mb-6">
+                                                        The AI Architect can scan all submissions to detect student clusters and skill gaps.
+                                                    </p>
+                                                    <Button variant="outline" onClick={() => generateClusterAnalysis(exam.examId)}>
+                                                        Start Analysis
+                                                    </Button>
+                                                </div>
+                                            )}
+
+                                            {/* Participants List */}
+                                            <Card className="border-border/50 shadow-none">
+                                                <CardHeader className="py-3 px-4 border-b border-border/50 bg-muted/20">
+                                                    <CardTitle className="text-sm font-medium flex items-center gap-2"><Users className="w-4 h-4 text-primary" /> Participants</CardTitle>
+                                                </CardHeader>
+                                                <CardContent className="p-0 max-h-[200px] overflow-y-auto custom-scrollbar">
+                                                    <div className="divide-y divide-border/50">
+                                                        {getStudentsForExam(exam.examId).map((student: any, idx: number) => (
+                                                            <div key={idx} className="flex items-center justify-between p-3 px-4 hover:bg-muted/30">
+                                                                <div className="flex items-center gap-3">
+                                                                    <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center font-bold text-xs text-primary">
+                                                                        {student.userName.charAt(0).toUpperCase()}
+                                                                    </div>
+                                                                    <div className="flex flex-col">
+                                                                        <span className="font-medium text-sm">{student.userName}</span>
+                                                                        <span className="text-[10px] text-muted-foreground">{student.email}</span>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                </CardContent>
+                                            </Card>
 
                                             {/* AI Insights Panel */}
                                             <Card className="border-purple-200 dark:border-purple-900 bg-gradient-to-br from-purple-50 to-purple-100/50 dark:from-purple-950/20 dark:to-purple-900/10">
@@ -1072,9 +1147,9 @@ export default function ExamAnalytics() {
                                 </div>
                             )}
                         </TabsContent>
-                    </Tabs>
-                </div>
-            </div>
-        </div>
+                    </Tabs >
+                </div >
+            </div >
+        </div >
     );
 }

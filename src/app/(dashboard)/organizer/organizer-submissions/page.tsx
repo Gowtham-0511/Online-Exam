@@ -96,6 +96,8 @@ export default function ExaminerSubmissionsPage() {
         }
     );
 
+    console.log("Submissions: %o", submissions);
+
     // Animations
     useGSAP(() => {
         if (loading || submissions.length === 0) return;

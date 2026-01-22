@@ -1370,3 +1370,137 @@
 {"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-21 21:15:57"}
 {"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-21 21:15:57"}
 {"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-21 21:15:57"}
+{"level":"info","message":"Admin accessed user list","service":"sysrank-service","timestamp":"2026-01-21 22:56:25"}
+{"level":"info","message":"Admin accessed user list","service":"sysrank-service","timestamp":"2026-01-21 22:56:28"}
+{"level":"info","message":"Exam Titles: [\n  'python_fresher_v1',\n  'fresher_sql_rdbms_ddl_v1',\n  'python-lists-and-dictionaries-assessment-for-junior-developers',\n  'fresher_sql_basic_int_v1',\n  [length]: 4\n]","service":"sysrank-service","timestamp":"2026-01-21 22:56:28"}
+{"level":"info","message":"Fetching submissions for exam IDs: [ 65, 69, 70, 68, [length]: 4 ]","service":"sysrank-service","timestamp":"2026-01-21 22:56:28"}
+{"level":"info","message":"Submissions found: 2","service":"sysrank-service","timestamp":"2026-01-21 22:56:28"}
+{"level":"info","message":"Exam Titles: [\n  'python_fresher_v1',\n  'fresher_sql_rdbms_ddl_v1',\n  'python-lists-and-dictionaries-assessment-for-junior-developers',\n  'fresher_sql_basic_int_v1',\n  [length]: 4\n]","service":"sysrank-service","timestamp":"2026-01-21 22:56:54"}
+{"level":"info","message":"Fetching submissions for exam IDs: [ 65, 69, 70, 68, [length]: 4 ]","service":"sysrank-service","timestamp":"2026-01-21 22:56:54"}
+{"level":"info","message":"Submissions found: 2","service":"sysrank-service","timestamp":"2026-01-21 22:56:54"}
+{"level":"info","message":"Exam Titles: [\n  'python_fresher_v1',\n  'fresher_sql_rdbms_ddl_v1',\n  'python-lists-and-dictionaries-assessment-for-junior-developers',\n  'fresher_sql_basic_int_v1',\n  [length]: 4\n]","service":"sysrank-service","timestamp":"2026-01-21 23:21:58"}
+{"level":"info","message":"Fetching submissions for exam IDs: [ 65, 69, 70, 68, [length]: 4 ]","service":"sysrank-service","timestamp":"2026-01-21 23:21:59"}
+{"level":"info","message":"Submissions found: 2","service":"sysrank-service","timestamp":"2026-01-21 23:21:59"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-21 23:23:37"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-21 23:23:37"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-21 23:23:37"}
+{"level":"info","message":"Exam Titles: [\n  'python_fresher_v1',\n  'fresher_sql_rdbms_ddl_v1',\n  'python-lists-and-dictionaries-assessment-for-junior-developers',\n  'fresher_sql_basic_int_v1',\n  [length]: 4\n]","service":"sysrank-service","timestamp":"2026-01-21 23:30:19"}
+{"level":"info","message":"Fetching submissions for exam IDs: [ 65, 69, 70, 68, [length]: 4 ]","service":"sysrank-service","timestamp":"2026-01-21 23:30:19"}
+{"level":"info","message":"Submissions found: 2","service":"sysrank-service","timestamp":"2026-01-21 23:30:19"}
+{"level":"info","message":"Assessment created via Organizer: database-and-sql-fundamentals-assessment by gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-22 00:00:20"}
+{"level":"info","message":"Exam Titles: [\n  'python_fresher_v1',\n  'fresher_sql_rdbms_ddl_v1',\n  'python-lists-and-dictionaries-assessment-for-junior-developers',\n  'database-and-sql-fundamentals-assessment',\n  'fresher_sql_basic_int_v1',\n  [length]: 5\n]","service":"sysrank-service","timestamp":"2026-01-22 00:09:17"}
+{"level":"info","message":"Fetching submissions for exam IDs: [ 65, 69, 70, 71, 68, [length]: 5 ]","service":"sysrank-service","timestamp":"2026-01-22 00:09:17"}
+{"level":"info","message":"Submissions found: 2","service":"sysrank-service","timestamp":"2026-01-22 00:09:17"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-22 00:13:32"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-22 00:13:34"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-22 00:13:35"}
+{"level":"info","message":"Email sent to gowthamr@systechusa.com: <7f6a54ba-c601-8322-2792-04e56b92dc75@systechusa.com>","service":"sysrank-service","timestamp":"2026-01-22 00:14:09"}
+{"level":"info","message":"Exam Titles: [\n  'python_fresher_v1',\n  'fresher_sql_rdbms_ddl_v1',\n  'python-lists-and-dictionaries-assessment-for-junior-developers',\n  'database-and-sql-fundamentals-assessment',\n  'fresher_sql_basic_int_v1',\n  [length]: 5\n]","service":"sysrank-service","timestamp":"2026-01-22 00:14:14"}
+{"level":"info","message":"Fetching submissions for exam IDs: [ 65, 69, 70, 71, 68, [length]: 5 ]","service":"sysrank-service","timestamp":"2026-01-22 00:14:14"}
+{"level":"info","message":"Submissions found: 2","service":"sysrank-service","timestamp":"2026-01-22 00:14:15"}
+{"level":"info","message":"Exam Titles: [\n  'python_fresher_v1',\n  'fresher_sql_rdbms_ddl_v1',\n  'python-lists-and-dictionaries-assessment-for-junior-developers',\n  'database-and-sql-fundamentals-assessment',\n  'fresher_sql_basic_int_v1',\n  [length]: 5\n]","service":"sysrank-service","timestamp":"2026-01-22 00:16:30"}
+{"level":"info","message":"Fetching submissions for exam IDs: [ 65, 69, 70, 71, 68, [length]: 5 ]","service":"sysrank-service","timestamp":"2026-01-22 00:16:30"}
+{"level":"info","message":"Submissions found: 2","service":"sysrank-service","timestamp":"2026-01-22 00:16:30"}
+{"level":"info","message":"Email sent to gowthamr@systechusa.com: <334f3d02-af2b-055c-51b4-75e33cce8486@systechusa.com>","service":"sysrank-service","timestamp":"2026-01-22 00:17:09"}
+{"level":"info","message":"Exam Titles: [\n  'python_fresher_v1',\n  'fresher_sql_rdbms_ddl_v1',\n  'python-lists-and-dictionaries-assessment-for-junior-developers',\n  'database-and-sql-fundamentals-assessment',\n  'fresher_sql_basic_int_v1',\n  [length]: 5\n]","service":"sysrank-service","timestamp":"2026-01-22 00:17:48"}
+{"level":"info","message":"Fetching submissions for exam IDs: [ 65, 69, 70, 71, 68, [length]: 5 ]","service":"sysrank-service","timestamp":"2026-01-22 00:17:48"}
+{"level":"info","message":"Submissions found: 2","service":"sysrank-service","timestamp":"2026-01-22 00:17:49"}
+{"level":"info","message":"Exam Titles: [\n  'python_fresher_v1',\n  'fresher_sql_rdbms_ddl_v1',\n  'python-lists-and-dictionaries-assessment-for-junior-developers',\n  'database-and-sql-fundamentals-assessment',\n  'fresher_sql_basic_int_v1',\n  [length]: 5\n]","service":"sysrank-service","timestamp":"2026-01-22 00:19:08"}
+{"level":"info","message":"Fetching submissions for exam IDs: [ 65, 69, 70, 71, 68, [length]: 5 ]","service":"sysrank-service","timestamp":"2026-01-22 00:19:08"}
+{"level":"info","message":"Submissions found: 2","service":"sysrank-service","timestamp":"2026-01-22 00:19:09"}
+{"level":"info","message":"Exam Titles: [\n  'python_fresher_v1',\n  'fresher_sql_rdbms_ddl_v1',\n  'python-lists-and-dictionaries-assessment-for-junior-developers',\n  'database-and-sql-fundamentals-assessment',\n  'fresher_sql_basic_int_v1',\n  [length]: 5\n]","service":"sysrank-service","timestamp":"2026-01-22 00:21:48"}
+{"level":"info","message":"Fetching submissions for exam IDs: [ 65, 69, 70, 71, 68, [length]: 5 ]","service":"sysrank-service","timestamp":"2026-01-22 00:21:48"}
+{"level":"info","message":"Submissions found: 2","service":"sysrank-service","timestamp":"2026-01-22 00:21:48"}
+{"level":"info","message":"Exam Titles: [\n  'python_fresher_v1',\n  'fresher_sql_rdbms_ddl_v1',\n  'python-lists-and-dictionaries-assessment-for-junior-developers',\n  'database-and-sql-fundamentals-assessment',\n  'fresher_sql_basic_int_v1',\n  [length]: 5\n]","service":"sysrank-service","timestamp":"2026-01-22 00:22:21"}
+{"level":"info","message":"Fetching submissions for exam IDs: [ 65, 69, 70, 71, 68, [length]: 5 ]","service":"sysrank-service","timestamp":"2026-01-22 00:22:21"}
+{"level":"info","message":"Submissions found: 2","service":"sysrank-service","timestamp":"2026-01-22 00:22:22"}
+{"level":"info","message":"Email sent to gowthamr@systechusa.com: <2a3e11fe-eab4-acd9-3188-0eb5380669fb@systechusa.com>","service":"sysrank-service","timestamp":"2026-01-22 00:22:57"}
+{"level":"info","message":"Exam Titles: [\n  'python_fresher_v1',\n  'fresher_sql_rdbms_ddl_v1',\n  'python-lists-and-dictionaries-assessment-for-junior-developers',\n  'database-and-sql-fundamentals-assessment',\n  'fresher_sql_basic_int_v1',\n  [length]: 5\n]","service":"sysrank-service","timestamp":"2026-01-22 00:23:01"}
+{"level":"info","message":"Fetching submissions for exam IDs: [ 65, 69, 70, 71, 68, [length]: 5 ]","service":"sysrank-service","timestamp":"2026-01-22 00:23:01"}
+{"level":"info","message":"Submissions found: 2","service":"sysrank-service","timestamp":"2026-01-22 00:23:01"}
+{"level":"info","message":"Exam Titles: [\n  'python_fresher_v1',\n  'fresher_sql_rdbms_ddl_v1',\n  'python-lists-and-dictionaries-assessment-for-junior-developers',\n  'database-and-sql-fundamentals-assessment',\n  'fresher_sql_basic_int_v1',\n  [length]: 5\n]","service":"sysrank-service","timestamp":"2026-01-22 00:23:36"}
+{"level":"info","message":"Fetching submissions for exam IDs: [ 65, 69, 70, 71, 68, [length]: 5 ]","service":"sysrank-service","timestamp":"2026-01-22 00:23:36"}
+{"level":"info","message":"Submissions found: 2","service":"sysrank-service","timestamp":"2026-01-22 00:23:36"}
+{"level":"info","message":"Exam Titles: [\n  'python_fresher_v1',\n  'fresher_sql_rdbms_ddl_v1',\n  'python-lists-and-dictionaries-assessment-for-junior-developers',\n  'database-and-sql-fundamentals-assessment',\n  'fresher_sql_basic_int_v1',\n  [length]: 5\n]","service":"sysrank-service","timestamp":"2026-01-22 00:23:44"}
+{"level":"info","message":"Fetching submissions for exam IDs: [ 65, 69, 70, 71, 68, [length]: 5 ]","service":"sysrank-service","timestamp":"2026-01-22 00:23:44"}
+{"level":"info","message":"Submissions found: 2","service":"sysrank-service","timestamp":"2026-01-22 00:23:44"}
+{"level":"info","message":"Exam Titles: [\n  'python_fresher_v1',\n  'fresher_sql_rdbms_ddl_v1',\n  'python-lists-and-dictionaries-assessment-for-junior-developers',\n  'database-and-sql-fundamentals-assessment',\n  'fresher_sql_basic_int_v1',\n  [length]: 5\n]","service":"sysrank-service","timestamp":"2026-01-22 00:25:25"}
+{"level":"info","message":"Fetching submissions for exam IDs: [ 65, 69, 70, 71, 68, [length]: 5 ]","service":"sysrank-service","timestamp":"2026-01-22 00:25:25"}
+{"level":"info","message":"Submissions found: 2","service":"sysrank-service","timestamp":"2026-01-22 00:25:26"}
+{"level":"info","message":"Email sent to gowthamr@systechusa.com: <c7004798-b000-dfac-24e5-9554ce53ab09@systechusa.com>","service":"sysrank-service","timestamp":"2026-01-22 00:26:00"}
+{"level":"info","message":"Exam Titles: [\n  'python_fresher_v1',\n  'fresher_sql_rdbms_ddl_v1',\n  'python-lists-and-dictionaries-assessment-for-junior-developers',\n  'database-and-sql-fundamentals-assessment',\n  'fresher_sql_basic_int_v1',\n  [length]: 5\n]","service":"sysrank-service","timestamp":"2026-01-22 00:26:41"}
+{"level":"info","message":"Fetching submissions for exam IDs: [ 65, 69, 70, 71, 68, [length]: 5 ]","service":"sysrank-service","timestamp":"2026-01-22 00:26:41"}
+{"level":"info","message":"Submissions found: 2","service":"sysrank-service","timestamp":"2026-01-22 00:26:41"}
+{"level":"info","message":"Exam Titles: [\n  'python_fresher_v1',\n  'fresher_sql_rdbms_ddl_v1',\n  'python-lists-and-dictionaries-assessment-for-junior-developers',\n  'database-and-sql-fundamentals-assessment',\n  'fresher_sql_basic_int_v1',\n  [length]: 5\n]","service":"sysrank-service","timestamp":"2026-01-22 00:28:01"}
+{"level":"info","message":"Fetching submissions for exam IDs: [ 65, 69, 70, 71, 68, [length]: 5 ]","service":"sysrank-service","timestamp":"2026-01-22 00:28:01"}
+{"level":"info","message":"Submissions found: 2","service":"sysrank-service","timestamp":"2026-01-22 00:28:02"}
+{"level":"info","message":"Email sent to madhand@systechusa.com: <b16be95c-34ca-128f-c17e-5f9533cdd75f@systechusa.com>","service":"sysrank-service","timestamp":"2026-01-22 00:30:10"}
+{"code":"EMESSAGE","command":"DATA","level":"error","message":"Error sending email to arjunk@systechusa.com:","response":"432 4.3.2 Concurrent connections limit exceeded. Visit https://aka.ms/concurrent_sending for more information. [Hostname=BN8PR07MB6882.namprd07.prod.outlook.com]","responseCode":432,"service":"sysrank-service","timestamp":"2026-01-22 00:30:10"}
+{"code":"EMESSAGE","command":"DATA","level":"error","message":"Error sending email to mohithkannanm@systechusa.com:","response":"432 4.3.2 Concurrent connections limit exceeded. Visit https://aka.ms/concurrent_sending for more information. [Hostname=BN8PR07MB6882.namprd07.prod.outlook.com]","responseCode":432,"service":"sysrank-service","timestamp":"2026-01-22 00:30:10"}
+{"code":"EMESSAGE","command":"DATA","level":"error","message":"Error sending email to kishores@systechusa.com:","response":"432 4.3.2 Concurrent connections limit exceeded. Visit https://aka.ms/concurrent_sending for more information. [Hostname=BN8PR07MB6882.namprd07.prod.outlook.com]","responseCode":432,"service":"sysrank-service","timestamp":"2026-01-22 00:30:10"}
+{"code":"EMESSAGE","command":"DATA","level":"error","message":"Error sending email to govardhans@systechusa.com:","response":"432 4.3.2 Concurrent connections limit exceeded. Visit https://aka.ms/concurrent_sending for more information. [Hostname=BN8PR07MB6882.namprd07.prod.outlook.com]","responseCode":432,"service":"sysrank-service","timestamp":"2026-01-22 00:30:11"}
+{"code":"EMESSAGE","command":"DATA","level":"error","message":"Error sending email to matheshv@systechusa.com:","response":"432 4.3.2 Concurrent connections limit exceeded. Visit https://aka.ms/concurrent_sending for more information. [Hostname=BN8PR07MB6882.namprd07.prod.outlook.com]","responseCode":432,"service":"sysrank-service","timestamp":"2026-01-22 00:30:11"}
+{"code":"EMESSAGE","command":"DATA","level":"error","message":"Error sending email to christophers@systechusa.com:","response":"432 4.3.2 Concurrent connections limit exceeded. Visit https://aka.ms/concurrent_sending for more information. [Hostname=BN8PR07MB6882.namprd07.prod.outlook.com]","responseCode":432,"service":"sysrank-service","timestamp":"2026-01-22 00:30:11"}
+{"code":"EMESSAGE","command":"DATA","level":"error","message":"Error sending email to manibharathiv@systechusa.com:","response":"432 4.3.2 Concurrent connections limit exceeded. Visit https://aka.ms/concurrent_sending for more information. [Hostname=BN8PR07MB6882.namprd07.prod.outlook.com]","responseCode":432,"service":"sysrank-service","timestamp":"2026-01-22 00:30:11"}
+{"level":"info","message":"Email sent to gowthama1@systechusa.com: <cb6989cb-ed84-b8d5-7b02-683db32e154d@systechusa.com>","service":"sysrank-service","timestamp":"2026-01-22 00:30:11"}
+{"level":"info","message":"Email sent to manojb@systechusa.com: <2d1b7d87-3a22-b561-2d3f-bc1c8aaabd51@systechusa.com>","service":"sysrank-service","timestamp":"2026-01-22 00:30:11"}
+{"level":"info","message":"Email sent to mohamedm@systechusa.com: <593e22c4-44d5-37b3-35f5-fd97b3ea105b@systechusa.com>","service":"sysrank-service","timestamp":"2026-01-22 00:30:11"}
+{"level":"info","message":"Email sent to harinis@systechusa.com: <f494f480-9f56-2668-b17b-97e042ae3eaa@systechusa.com>","service":"sysrank-service","timestamp":"2026-01-22 00:30:11"}
+{"level":"info","message":"Email sent to abdurs@systechusa.com: <5eb8fa2c-3fc8-8e1e-434d-5af44d6b847d@systechusa.com>","service":"sysrank-service","timestamp":"2026-01-22 00:30:11"}
+{"level":"info","message":"Email sent to amirtharaja@systechusa.com: <19d582e1-2aa5-4d76-6ae8-38535cd9be53@systechusa.com>","service":"sysrank-service","timestamp":"2026-01-22 00:30:12"}
+{"level":"info","message":"Email sent to kaviramp@systechusa.com: <ebd81e78-23f2-ffba-42ee-2793a38bbf68@systechusa.com>","service":"sysrank-service","timestamp":"2026-01-22 00:30:12"}
+{"level":"info","message":"Email sent to jananir1@systechusa.com: <0d267092-bf03-8034-ce3e-0f0129da8662@systechusa.com>","service":"sysrank-service","timestamp":"2026-01-22 00:30:14"}
+{"level":"info","message":"Email sent to aakashd@systechusa.com: <5ac9d2ac-4199-6734-1018-b33e861eacbd@systechusa.com>","service":"sysrank-service","timestamp":"2026-01-22 00:30:14"}
+{"level":"info","message":"Email sent to amuthanilavanr@systechusa.com: <9b070e54-12d3-82cb-6de2-d64d28d40299@systechusa.com>","service":"sysrank-service","timestamp":"2026-01-22 00:30:15"}
+{"level":"info","message":"Email sent to padmapriyaa@systechusa.com: <689c1ab3-c004-1629-385f-814c2c09ba18@systechusa.com>","service":"sysrank-service","timestamp":"2026-01-22 00:30:18"}
+{"level":"info","message":"Email sent to pavithraa@systechusa.com: <bb1be4b2-9a3c-8298-ae63-ff8d9d170358@systechusa.com>","service":"sysrank-service","timestamp":"2026-01-22 00:30:18"}
+{"level":"info","message":"Email sent to monisht@systechusa.com: <4e450b66-62cf-0b0c-cdd0-6bfa8c869dc1@systechusa.com>","service":"sysrank-service","timestamp":"2026-01-22 00:30:18"}
+{"level":"info","message":"Email sent to meenap1@systechusa.com: <6e1f7787-34cc-0797-583c-c0a29525947e@systechusa.com>","service":"sysrank-service","timestamp":"2026-01-22 00:30:20"}
+{"code":"EMESSAGE","command":"DATA","level":"error","message":"Error sending email to sridashvins@systechusa.com:","response":"432 4.3.2 Concurrent connections limit exceeded. Visit https://aka.ms/concurrent_sending for more information. [Hostname=BN8PR07MB6882.namprd07.prod.outlook.com]","responseCode":432,"service":"sysrank-service","timestamp":"2026-01-22 00:30:23"}
+{"level":"info","message":"Email sent to shrudhit@systechusa.com: <b8059edf-c708-87ac-6b8a-7d6cd6238344@systechusa.com>","service":"sysrank-service","timestamp":"2026-01-22 00:30:24"}
+{"level":"info","message":"Email sent to pugazenthid@systechusa.com: <12f81dd8-86b9-94b0-cd17-e643c74635bc@systechusa.com>","service":"sysrank-service","timestamp":"2026-01-22 00:30:24"}
+{"level":"info","message":"Email sent to ratheeshwarr@systechusa.com: <340c6023-c267-ae2a-7cc5-bca49b0a32fc@systechusa.com>","service":"sysrank-service","timestamp":"2026-01-22 00:30:24"}
+{"level":"info","message":"Email sent to saranm@systechusa.com: <dd7ea643-df31-07af-023e-02a9b17b159f@systechusa.com>","service":"sysrank-service","timestamp":"2026-01-22 00:30:24"}
+{"address":"40.104.135.66","code":"ESOCKET","command":"CONN","errno":-4039,"level":"error","message":"Error sending email to swethap@systechusa.com:","port":587,"service":"sysrank-service","syscall":"connect","timestamp":"2026-01-22 00:30:25"}
+{"level":"info","message":"Email sent to syeds@systechusa.com: <c526b36e-0455-3f27-8be8-31987127fb01@systechusa.com>","service":"sysrank-service","timestamp":"2026-01-22 00:30:25"}
+{"level":"info","message":"Email sent to vaishnavim@systechusa.com: <f1020854-4507-945d-5f34-6e2947370646@systechusa.com>","service":"sysrank-service","timestamp":"2026-01-22 00:30:28"}
+{"level":"info","message":"Email sent to arjunk@systechusa.com: <df80585b-23ae-20e7-224a-fe8d1671f79d@systechusa.com>","service":"sysrank-service","timestamp":"2026-01-22 00:45:33"}
+{"level":"info","message":"Email sent to mohithkannanm@systechusa.com: <cd79d879-b884-db8d-7ce3-dc53639a1c0c@systechusa.com>","service":"sysrank-service","timestamp":"2026-01-22 00:45:40"}
+{"level":"info","message":"Email sent to kishores@systechusa.com: <73736ed9-687e-ac71-24a3-f8b4dc7c01b4@systechusa.com>","service":"sysrank-service","timestamp":"2026-01-22 00:45:55"}
+{"level":"info","message":"Email sent to govardhans@systechusa.com: <dc4632b6-51df-041f-6b8d-dd97634ab8a6@systechusa.com>","service":"sysrank-service","timestamp":"2026-01-22 00:46:04"}
+{"level":"info","message":"Email sent to matheshv@systechusa.com: <a2f75d7a-d9d5-a6ce-1c0a-e3f98574252c@systechusa.com>","service":"sysrank-service","timestamp":"2026-01-22 00:46:11"}
+{"level":"info","message":"Email sent to christophers@systechusa.com: <238a2f4d-880d-baaa-8fd1-eefc7a4f9f81@systechusa.com>","service":"sysrank-service","timestamp":"2026-01-22 00:46:19"}
+{"level":"info","message":"Email sent to manibharathiv@systechusa.com: <d2c6019e-bb6d-de5b-18f0-0c66b94aaa20@systechusa.com>","service":"sysrank-service","timestamp":"2026-01-22 00:46:25"}
+{"level":"info","message":"Email sent to sridashvins@systechusa.com: <1767a491-836e-cf16-0d89-c969ed03874d@systechusa.com>","service":"sysrank-service","timestamp":"2026-01-22 00:46:32"}
+{"address":"40.104.135.194","code":"ESOCKET","command":"CONN","errno":-4039,"level":"error","message":"Error sending email to swethap@systechusa.com:","port":587,"service":"sysrank-service","syscall":"connect","timestamp":"2026-01-22 00:46:55"}
+{"level":"info","message":"Email sent to swethap@systechusa.com: <47db9c75-ae62-5063-1781-33e804345dc1@systechusa.com>","service":"sysrank-service","timestamp":"2026-01-22 00:47:19"}
+{"level":"info","message":"Exam Titles: [\n  'python_fresher_v1',\n  'fresher_sql_rdbms_ddl_v1',\n  'python-lists-and-dictionaries-assessment-for-junior-developers',\n  'database-and-sql-fundamentals-assessment',\n  'fresher_sql_basic_int_v1',\n  [length]: 5\n]","service":"sysrank-service","timestamp":"2026-01-22 00:49:07"}
+{"level":"info","message":"Fetching submissions for exam IDs: [ 65, 69, 70, 71, 68, [length]: 5 ]","service":"sysrank-service","timestamp":"2026-01-22 00:49:07"}
+{"level":"info","message":"Submissions found: 2","service":"sysrank-service","timestamp":"2026-01-22 00:49:08"}
+{"level":"info","message":"Exam Titles: [\n  'python_fresher_v1',\n  'fresher_sql_rdbms_ddl_v1',\n  'python-lists-and-dictionaries-assessment-for-junior-developers',\n  'database-and-sql-fundamentals-assessment',\n  'fresher_sql_basic_int_v1',\n  [length]: 5\n]","service":"sysrank-service","timestamp":"2026-01-22 00:49:31"}
+{"level":"info","message":"Fetching submissions for exam IDs: [ 65, 69, 70, 71, 68, [length]: 5 ]","service":"sysrank-service","timestamp":"2026-01-22 00:49:31"}
+{"level":"info","message":"Submissions found: 2","service":"sysrank-service","timestamp":"2026-01-22 00:49:31"}
+{"level":"info","message":"Exam Titles: [\n  'python_fresher_v1',\n  'fresher_sql_rdbms_ddl_v1',\n  'python-lists-and-dictionaries-assessment-for-junior-developers',\n  'database-and-sql-fundamentals-assessment',\n  'fresher_sql_basic_int_v1',\n  [length]: 5\n]","service":"sysrank-service","timestamp":"2026-01-22 00:52:22"}
+{"level":"info","message":"Fetching submissions for exam IDs: [ 65, 69, 70, 71, 68, [length]: 5 ]","service":"sysrank-service","timestamp":"2026-01-22 00:52:22"}
+{"level":"info","message":"Submissions found: 2","service":"sysrank-service","timestamp":"2026-01-22 00:52:22"}
+{"level":"info","message":"Exam Titles: [\n  'python_fresher_v1',\n  'fresher_sql_rdbms_ddl_v1',\n  'python-lists-and-dictionaries-assessment-for-junior-developers',\n  'database-and-sql-fundamentals-assessment',\n  'fresher_sql_basic_int_v1',\n  [length]: 5\n]","service":"sysrank-service","timestamp":"2026-01-22 07:19:40"}
+{"level":"info","message":"Fetching submissions for exam IDs: [ 65, 69, 70, 71, 68, [length]: 5 ]","service":"sysrank-service","timestamp":"2026-01-22 07:19:40"}
+{"level":"info","message":"Submissions found: 2","service":"sysrank-service","timestamp":"2026-01-22 07:19:40"}
+{"level":"info","message":"Exam Titles: [\n  'python_fresher_v1',\n  'fresher_sql_rdbms_ddl_v1',\n  'python-lists-and-dictionaries-assessment-for-junior-developers',\n  'database-and-sql-fundamentals-assessment',\n  'fresher_sql_basic_int_v1',\n  [length]: 5\n]","service":"sysrank-service","timestamp":"2026-01-22 07:24:53"}
+{"level":"info","message":"Fetching submissions for exam IDs: [ 65, 69, 70, 71, 68, [length]: 5 ]","service":"sysrank-service","timestamp":"2026-01-22 07:24:53"}
+{"level":"info","message":"Submissions found: 2","service":"sysrank-service","timestamp":"2026-01-22 07:24:53"}
+{"level":"info","message":"Exam Titles: [\n  'python_fresher_v1',\n  'fresher_sql_rdbms_ddl_v1',\n  'python-lists-and-dictionaries-assessment-for-junior-developers',\n  'database-and-sql-fundamentals-assessment',\n  'fresher_sql_basic_int_v1',\n  [length]: 5\n]","service":"sysrank-service","timestamp":"2026-01-22 07:26:32"}
+{"level":"info","message":"Fetching submissions for exam IDs: [ 65, 69, 70, 71, 68, [length]: 5 ]","service":"sysrank-service","timestamp":"2026-01-22 07:26:32"}
+{"level":"info","message":"Submissions found: 2","service":"sysrank-service","timestamp":"2026-01-22 07:26:32"}
+{"level":"info","message":"Exam Titles: [\n  'python_fresher_v1',\n  'fresher_sql_rdbms_ddl_v1',\n  'python-lists-and-dictionaries-assessment-for-junior-developers',\n  'database-and-sql-fundamentals-assessment',\n  'fresher_sql_basic_int_v1',\n  [length]: 5\n]","service":"sysrank-service","timestamp":"2026-01-22 07:45:31"}
+{"level":"info","message":"Fetching submissions for exam IDs: [ 65, 69, 70, 71, 68, [length]: 5 ]","service":"sysrank-service","timestamp":"2026-01-22 07:45:31"}
+{"level":"info","message":"Submissions found: 2","service":"sysrank-service","timestamp":"2026-01-22 07:45:31"}
+{"level":"info","message":"Exam Titles: [\n  'python_fresher_v1',\n  'fresher_sql_rdbms_ddl_v1',\n  'python-lists-and-dictionaries-assessment-for-junior-developers',\n  'database-and-sql-fundamentals-assessment',\n  'fresher_sql_basic_int_v1',\n  [length]: 5\n]","service":"sysrank-service","timestamp":"2026-01-22 07:49:22"}
+{"level":"info","message":"Fetching submissions for exam IDs: [ 65, 69, 70, 71, 68, [length]: 5 ]","service":"sysrank-service","timestamp":"2026-01-22 07:49:22"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-22 07:49:22"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-22 07:49:22"}
+{"level":"info","message":"Submissions found: 2","service":"sysrank-service","timestamp":"2026-01-22 07:49:23"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-22 07:49:23"}
+{"level":"info","message":"Exam Titles: [\n  'python_fresher_v1',\n  'fresher_sql_rdbms_ddl_v1',\n  'python-lists-and-dictionaries-assessment-for-junior-developers',\n  'database-and-sql-fundamentals-assessment',\n  'fresher_sql_basic_int_v1',\n  [length]: 5\n]","service":"sysrank-service","timestamp":"2026-01-22 07:50:08"}
+{"level":"info","message":"Fetching submissions for exam IDs: [ 65, 69, 70, 71, 68, [length]: 5 ]","service":"sysrank-service","timestamp":"2026-01-22 07:50:08"}
+{"level":"info","message":"Submissions found: 2","service":"sysrank-service","timestamp":"2026-01-22 07:50:08"}

@@ -38,7 +38,7 @@ export async function POST(request: Request) {
         ? assessmentRes.rows[0].title
         : "Assessment";
 
-    const emailSet = new Set<string>();
+    const emailMap = new Map<string, { name: string; start: any; end: any }>();
 
     if (batchSchedules && batchSchedules.length > 0) {
       await pool.query(
@@ -75,7 +75,11 @@ export async function POST(request: Request) {
               employees.forEach((emp: any) => {
                 const email = emp.Email || emp.email;
                 if (email) {
-                  emailSet.add(email);
+                  emailMap.set(email, {
+                    name: emp.Name || emp.name || "Candidate",
+                    start: schedule.startTime,
+                    end: schedule.endTime,
+                  });
                 }
               });
             }
@@ -114,13 +118,18 @@ export async function POST(request: Request) {
           new Date().toISOString(),
         ]);
         if (schedule.userEmail) {
-          emailSet.add(schedule.userEmail);
+          const existing = emailMap.get(schedule.userEmail);
+          emailMap.set(schedule.userEmail, {
+            name: existing?.name || "Candidate",
+            start: schedule.startTime,
+            end: schedule.endTime,
+          });
         }
       }
     }
 
     // Send emails
-    if (emailSet.size > 0) {
+    if (emailMap.size > 0) {
       const logoPath = path.join(process.cwd(), "public", "syslogo.png");
       const attachments = [
         {
@@ -129,115 +138,134 @@ export async function POST(request: Request) {
           cid: "syslogo", // same cid value as in the html img src
         },
       ];
+      const failedEmails: string[] = [];
+      const emails = Array.from(emailMap.entries());
 
-      const emailPromises = Array.from(emailSet).map((email) => {
-        return sendEmail(
-          email,
-          `New Assessment Scheduled: ${assessmentTitle}`,
-          `
-<!DOCTYPE html>
-<html lang="en" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="color-scheme" content="light dark">
-    <meta name="supported-color-schemes" content="light dark">
-    <title>Assessment Scheduled</title>
-    <style>
-        /* Base Reset */
-        body { margin: 0; padding: 0; width: 100% !important; -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-        img { border: 0; height: auto; line-height: 100%; outline: none; text-decoration: none; -ms-interpolation-mode: bicubic; }
-        
-        /* Light Mode Variables (Default inline) */
-        /* Dark Mode Overrides */
-        @media (prefers-color-scheme: dark) {
-            .body-bg { background-color: #18181B !important; }
-            .container-bg { background-color: #0f172a !important; border-color: #27272A !important; }
-            .header-bg { background-color: #0f172a !important; } /* Keep dark header in dark mode */
-            .text-primary { color: #f1f5f9 !important; }
-            .text-secondary { color: #94a3b8 !important; }
-            .card-bg { background-color: #1e293b !important; border-color: #334155 !important; }
-            .card-label { color: #94a3b8 !important; }
-            .card-value { color: #f1f5f9 !important; }
-            .btn-bg { background-color: #3b82f6 !important; }
-            .footer-bg { background-color: #0f172a !important; border-top-color: #334155 !important; }
+      // Send emails in parallel with retry mechanism
+      const sendEmailWithRetry = async (to: string, subject: string, html: string, attachments: any[]) => {
+        for (let i = 0; i < 4; i++) {
+          try {
+            await sendEmail(to, subject, html, attachments);
+            return;
+          } catch (error) {
+            if (i === 3) throw error;
+            await new Promise((resolve) => setTimeout(resolve, 1000));
+          }
         }
+      };
 
-        /* Outlook-specific Dark Mode */
-        [data-ogsc] .body-bg { background-color: #18181B !important; }
-        [data-ogsc] .container-bg { background-color: #0f172a !important; border-color: #27272A !important; }
-        [data-ogsc] .text-primary { color: #f1f5f9 !important; }
-        [data-ogsc] .text-secondary { color: #94a3b8 !important; }
-        [data-ogsc] .card-bg { background-color: #1e293b !important; border-color: #334155 !important; }
-        [data-ogsc] .card-value { color: #f1f5f9 !important; }
-    </style>
-</head>
-<body class="body-bg" style="background-color: #f4f4f7; margin: 0; padding: 0;">
-    <div style="padding: 40px 20px;">
-        <!-- Container -->
-        <div class="container-bg" style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.05); border: 1px solid #e1e1e1;">
-            
-            <!-- Header -->
-            <div class="header-bg" style="background-color: #0f172a; padding: 40px 20px; text-align: center;">
-                 <img src="cid:syslogo" alt="SysRank" style="height: 60px; width: auto; display: block; margin: 0 auto; max-width: 200px;" />
-            </div>
+      await Promise.all(emails.map(async ([email, details]) => {
+        const startDateStr = details.start
+          ? new Date(details.start).toLocaleString('en-US', {
+            weekday: 'short',
+            month: 'short',
+            day: 'numeric',
+            hour: 'numeric',
+            minute: '2-digit'
+          })
+          : 'Available now';
 
-            <!-- Content -->
-            <div style="padding: 40px 30px;">
-                <h1 class="text-primary" style="font-size: 24px; font-weight: 700; color: #0f172a; margin: 0 0 20px 0; text-align: center;">You've been scheduled for an assessment</h1>
-                
-                <p class="text-secondary" style="font-size: 16px; line-height: 1.6; color: #334155; margin-bottom: 24px;">
-                    Hello,
-                    <br><br>
-                    A new assessment has been assigned to you by your organization. Please find the details below:
-                </p>
-                
-                <!-- Card -->
-                <div class="card-bg" style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 25px; margin-bottom: 30px; text-align: center;">
-                    <span class="card-label" style="font-size: 12px; text-transform: uppercase; color: #64748b; font-weight: 600; letter-spacing: 0.5px; display: block; margin-bottom: 8px;">Assessment Title</span>
-                    <span class="card-value" style="font-size: 20px; color: #0f172a; font-weight: 600; display: block;">${assessmentTitle}</span>
-                </div>
+        const endDateStr = details.end
+          ? new Date(details.end).toLocaleString('en-US', {
+            weekday: 'short',
+            month: 'short',
+            day: 'numeric',
+            hour: 'numeric',
+            minute: '2-digit'
+          })
+          : 'No deadline';
 
-                <p class="text-secondary" style="font-size: 16px; line-height: 1.6; color: #334155; margin-bottom: 30px;">
-                    The assessment is now available on your dashboard. Please log in to view the scheduled time and instructions.
-                </p>
-
-                <!-- Button -->
-                <div style="text-align: center; margin-bottom: 30px;">
-                    <a href="https://sysrank.systechusa.com/" class="btn-bg" style="display: inline-block; background-color: #2563eb; color: #ffffff; text-decoration: none; padding: 16px 36px; border-radius: 8px; font-weight: 600; font-size: 16px; box-shadow: 0 2px 4px rgba(37, 99, 235, 0.2);">
-                        View Dashboard
-                    </a>
-                </div>
-                
-                <p class="text-secondary" style="font-size: 16px; color: #334155; margin: 0; text-align: center;">
-                    Good luck!<br>
-                    <strong>The SysRank Team</strong>
-                </p>
-            </div>
-
-            <!-- Footer -->
-            <div class="footer-bg" style="background-color: #f8fafc; padding: 20px; text-align: center; border-top: 1px solid #e2e8f0;">
-                <p style="font-size: 12px; color: #94a3b8; margin: 0;">
-                    &copy; ${new Date().getFullYear()} SysRank. All rights reserved.<br>
-                    This is an automated message, please do not reply.
-                </p>
-            </div>
-        </div>
-    </div>
-</body>
-</html>
-          `,
-          attachments
-        );
-      });
-
-      // We process emails in background or wait?
-      // Given it's an API route, better to wait or fire and forget.
-      // Promise.allSettled avoids one failure stopping others.
-      await Promise.allSettled(emailPromises);
+        try {
+          await sendEmailWithRetry(
+            email,
+            `New Assessment Scheduled: ${assessmentTitle}`,
+            `
+            <!DOCTYPE html>
+            <html lang="en">
+            <head>
+                <meta charset="utf-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <title>Assessment Invitation</title>
+            </head>
+            <body style="margin: 0; padding: 0; background-color: #f6f9fc; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
+                <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #f6f9fc;">
+                    <tr>
+                        <td align="center" style="padding: 40px 0;">
+                            <table width="600" cellpadding="0" cellspacing="0" border="0" style="background-color: #ffffff; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); overflow: hidden;">
+                                <!-- Minimal Header -->
+                                <tr>
+                                    <td style="padding: 40px 40px 0 40px; text-align: left;">
+                                        <img src="cid:syslogo" alt="SysRank" style="height: 32px; width: auto; display: block;" />
+                                    </td>
+                                </tr>
+                                
+                                <!-- Main Content -->
+                                <tr>
+                                    <td style="padding: 30px 40px;">
+                                        <h1 style="margin: 0 0 24px 0; color: #1a1a1a; font-size: 24px; font-weight: 600; letter-spacing: -0.5px;">Assessment Assignment</h1>
+                                        
+                                        <p style="margin: 0 0 24px 0; color: #4a5568; font-size: 16px; line-height: 1.6;">
+                                            Hello ${details.name},<br><br>
+                                            You have been scheduled for a new technical assessment on SysRank.
+                                        </p>
+                                        
+                                        <!-- Detail Card -->
+                                        <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; margin-bottom: 30px;">
+                                            <tr>
+                                                <td style="padding: 20px;">
+                                                    <div style="font-size: 12px; font-weight: 600; color: #718096; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px;">Assessment</div>
+                                                    <div style="font-size: 18px; font-weight: 600; color: #2d3748;">${assessmentTitle}</div>
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td style="padding: 0 20px 10px 20px;">
+                                                    <div style="font-size: 12px; font-weight: 600; color: #718096; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px;">Start Time</div>
+                                                    <div style="font-size: 16px; color: #2d3748;">${startDateStr}</div>
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td style="padding: 0 20px 20px 20px;">
+                                                    <div style="font-size: 12px; font-weight: 600; color: #718096; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px;">End Time</div>
+                                                    <div style="font-size: 16px; color: #2d3748;">${endDateStr}</div>
+                                                </td>
+                                            </tr>
+                                        </table>
+                                        
+                                        <!-- Action Button -->
+                                        <a href="https://sysrank.systechusa.com/" style="display: inline-block; background-color: #0f172a; color: #ffffff; text-decoration: none; padding: 14px 28px; border-radius: 6px; font-weight: 500; font-size: 15px;">Start Assessment &rarr;</a>
+                                        
+                                        <p style="margin: 30px 0 0 0; color: #718096; font-size: 14px;">
+                                            Please complete this before the deadline visible on your dashboard.
+                                        </p>
+                                    </td>
+                                </tr>
+                                
+                                <!-- Footer -->
+                                <tr>
+                                    <td style="background-color: #f8fafc; padding: 24px 40px; border-top: 1px solid #e2e8f0;">
+                                        <p style="margin: 0; color: #a0aec0; font-size: 12px; text-align: center;">
+                                            &copy; ${new Date().getFullYear()} SysRank Team. Automated notification.
+                                        </p>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+                </table>
+            </body>
+            </html>
+            `,
+            attachments
+          );
+        } catch (error) {
+          logger.error(`Failed to send email to ${email}`, error);
+          failedEmails.push(email);
+        }
+      }));
     }
 
-    return NextResponse.json({ status: 201 });
+    // @ts-ignore
+    return NextResponse.json({ status: 201, failedEmails: typeof failedEmails !== 'undefined' ? failedEmails : [] });
 
   } catch (error) {
     logger.error("Error scheduling assessment %s:", assessmentId, error);

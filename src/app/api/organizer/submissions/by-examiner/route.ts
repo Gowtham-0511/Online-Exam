@@ -7,7 +7,11 @@ export async function GET(request: Request) {
   const email = searchParams.get("email");
   try {
     const examsResult = await pool.query(
-      `SELECT id, title FROM "Assessment" WHERE "createdBy" = $1`,
+      `SELECT id, title FROM "Assessment" 
+       WHERE "createdBy" = $1 
+       OR "id" IN (
+           SELECT "assessmentId" FROM "AssessmentShares" WHERE "sharedWithEmail" = $1
+       )`,
       [email]
     );
 

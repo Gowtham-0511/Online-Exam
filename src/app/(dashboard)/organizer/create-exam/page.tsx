@@ -30,7 +30,8 @@ import {
     Plus,
     Database,
     Snowflake,
-    Terminal
+    Terminal,
+    Download
 } from "lucide-react";
 import useSWR from 'swr';
 import { useRouter } from "next/navigation";
@@ -126,7 +127,7 @@ export default function CreateExam() {
 
     const [selectedTags, setSelectedTags] = useState<string[]>([]);
 
-    const [useMarksBasedGeneration, setUseMarksBasedGeneration] = useState(false);
+    const [useMarksBasedGeneration, setUseMarksBasedGeneration] = useState(true);
     const [totalMarks, setTotalMarks] = useState(0);
     const [marksDistribution, setMarksDistribution] = useState({
         coding: 70,
@@ -138,6 +139,105 @@ export default function CreateExam() {
         hard: 20
     });
     const [isAnalyzingIntent, setIsAnalyzingIntent] = useState(false);
+    const [isMagicSetup, setIsMagicSetup] = useState(false);
+    const [targetQuestionCount, setTargetQuestionCount] = useState<number | undefined>(undefined);
+
+    // Manual Question & Download State
+    const [isAddingQuestion, setIsAddingQuestion] = useState(false);
+    const [manualQuestion, setManualQuestion] = useState({
+        question: '',
+        type: 'mcq',
+        difficulty: 'medium',
+        marks: 5,
+        options: [
+            { id: '1', text: '', isCorrect: false },
+            { id: '2', text: '', isCorrect: false },
+            { id: '3', text: '', isCorrect: false },
+            { id: '4', text: '', isCorrect: false }
+        ],
+        expectedOutput: ''
+    });
+
+    const handleDownloadQuestions = () => {
+        if (questions.length === 0) {
+            toast.error("No questions to download");
+            return;
+        }
+
+        const headers = ["Type", "Difficulty", "Marks", "Question", "Options/Output"];
+        const rows = questions.map(q => [
+            q.type,
+            q.difficulty,
+            q.marks,
+            `"${q.question.replace(/"/g, '""')}"`,
+            q.type === 'mcq'
+                ? `"${q.options?.map(o => o.text + (o.isCorrect ? ' (Correct)' : '')).join('; ')}"`
+                : `"Expected: ${q.expectedOutput}"`
+        ]);
+
+        const csvContent = [
+            headers.join(','),
+            ...rows.map(r => r.join(','))
+        ].join('\n');
+
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.setAttribute('download', `exam_questions_${Date.now()}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
+
+    const saveManualQuestion = () => {
+        if (!manualQuestion.question) {
+            toast.error("Question text is required");
+            return;
+        }
+
+        const newQ: any = {
+            id: `manual-${Date.now()}`,
+            question: manualQuestion.question,
+            type: manualQuestion.type,
+            difficulty: manualQuestion.difficulty,
+            marks: manualQuestion.marks,
+            language: language // inherit from exam language
+        };
+
+        if (manualQuestion.type === 'mcq') {
+            const validOptions = manualQuestion.options.filter(o => o.text.trim());
+            if (validOptions.length < 2) {
+                toast.error("At least 2 options are required for MCQ");
+                return;
+            }
+            if (!validOptions.some(o => o.isCorrect)) {
+                toast.error("Select at least one correct option");
+                return;
+            }
+            newQ.options = validOptions;
+        } else {
+            // Coding
+            newQ.expectedOutput = manualQuestion.expectedOutput;
+        }
+
+        setQuestions([newQ, ...questions]);
+        setIsAddingQuestion(false);
+        setManualQuestion({
+            question: '',
+            type: 'mcq',
+            difficulty: 'medium',
+            marks: 5,
+            options: [
+                { id: '1', text: '', isCorrect: false },
+                { id: '2', text: '', isCorrect: false },
+                { id: '3', text: '', isCorrect: false },
+                { id: '4', text: '', isCorrect: false }
+            ],
+            expectedOutput: ''
+        });
+        toast.success("Question added manually");
+    };
 
     const handleAIIntent = async (prompt: string) => {
         setIsAnalyzingIntent(true);
@@ -151,6 +251,7 @@ export default function CreateExam() {
             if (!res.ok) throw new Error("Failed to parse intent");
 
             const data = await res.json();
+            console.log(data);
             const config = data.config;
 
             if (config) {
@@ -169,24 +270,28 @@ export default function CreateExam() {
                     setDifficultyDistribution(config.difficultyDistribution);
                 }
 
-                if (config.questionTypes) {
-                    setMarksDistribution(prev => ({
-                        ...prev,
-                        coding: config.questionTypes.coding || 70,
-                        mcq: config.questionTypes.mcq || 30
-                    }));
-                }
-
-                if (config.topics && Array.isArray(config.topics)) {
-                    // Filter valid tags if we want to be strict, or just set them
-                    // For now, we'll set them directly, but typically you'd want to match against 'availableTags'
-                    // Since 'availableTags' comes from SWR, we might just add them.
-                    setSelectedTags(config.topics);
-                }
-
-                toast.success("Exam configuration auto-filled!");
+                setMarksDistribution(prev => ({
+                    ...prev,
+                    coding: config.questionTypes.coding ?? 70,
+                    mcq: config.questionTypes.mcq ?? 30
+                }));
             }
 
+            if (config.questionCount) {
+                setTargetQuestionCount(config.questionCount);
+            } else {
+                setTargetQuestionCount(undefined);
+            }
+
+            if (config.topics && Array.isArray(config.topics)) {
+                // Filter valid tags if we want to be strict, or just set them
+                // For now, we'll set them directly, but typically you'd want to match against 'availableTags'
+                // Since 'availableTags' comes from SWR, we might just add them.
+                setSelectedTags(config.topics);
+            }
+
+            toast.success("Exam configuration auto-filled!");
+            setIsMagicSetup(true);
         } catch (error) {
             console.error("AI Intent Error:", error);
             toast.error("Could not auto-configure. Please try again or set manually.");
@@ -547,7 +652,8 @@ export default function CreateExam() {
                     totalMarks,
                     difficultyDistribution,
                     questionTypes: marksDistribution,
-                    topics: selectedTags
+                    topics: selectedTags,
+                    questionCount: targetQuestionCount
                 })
             });
 
@@ -686,6 +792,7 @@ export default function CreateExam() {
         setMcqIntermediateCount(0);
         setMcqExpertCount(0);
         setSelectedTags([]);
+        setIsMagicSetup(false);
         setError('');
     };
 
@@ -1223,78 +1330,96 @@ export default function CreateExam() {
                                     </CardContent>
                                 </Card>
 
-                                {/* Tags Filter - Show for both methods */}
-                                <Card className="border-indigo-200 dark:border-indigo-800">
-                                    <CardHeader>
-                                        <div className="flex items-center justify-between">
-                                            <CardTitle className="text-sm text-indigo-700 dark:text-indigo-400 flex items-center gap-2">
-                                                <Settings className="w-4 h-4" />
-                                                Filter by Tags (Optional)
-                                            </CardTitle>
-                                            <Button
-                                                variant="outline"
-                                                size="sm"
-                                                onClick={() => mutateTags()}
-                                                disabled={loadingTags}
-                                            >
-                                                {loadingTags ? (
-                                                    <>
-                                                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                                                        Loading...
-                                                    </>
-                                                ) : (
-                                                    'Load Tags'
+                                {/* Tags Filter or Topics Display */}
+                                {(!useMarksBasedGeneration || (useMarksBasedGeneration && isMagicSetup && selectedTags.length > 0)) && (
+                                    <Card className="border-indigo-200 dark:border-indigo-800">
+                                        <CardHeader>
+                                            <div className="flex items-center justify-between">
+                                                <CardTitle className="text-sm text-indigo-700 dark:text-indigo-400 flex items-center gap-2">
+                                                    <Settings className="w-4 h-4" />
+                                                    {useMarksBasedGeneration ? 'Selected Topics (Magic Setup)' : 'Filter by Tags (Optional)'}
+                                                </CardTitle>
+                                                {!useMarksBasedGeneration && (
+                                                    <Button
+                                                        variant="outline"
+                                                        size="sm"
+                                                        onClick={() => mutateTags()}
+                                                        disabled={loadingTags}
+                                                    >
+                                                        {loadingTags ? (
+                                                            <>
+                                                                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                                                Loading...
+                                                            </>
+                                                        ) : (
+                                                            'Load Tags'
+                                                        )}
+                                                    </Button>
                                                 )}
-                                            </Button>
-                                        </div>
-                                    </CardHeader>
-                                    <CardContent>
-                                        {availableTags.length > 0 ? (
-                                            <div className="space-y-3">
+                                            </div>
+                                        </CardHeader>
+                                        <CardContent>
+                                            {useMarksBasedGeneration ? (
                                                 <div className="flex flex-wrap gap-2">
-                                                    {availableTags.map((tag: string) => (
+                                                    {selectedTags.map((tag) => (
                                                         <Badge
                                                             key={tag}
-                                                            variant={selectedTags.includes(tag) ? "default" : "outline"}
-                                                            className="cursor-pointer hover:bg-primary/80 transition-colors"
-                                                            onClick={() => {
-                                                                setSelectedTags(prev =>
-                                                                    prev.includes(tag)
-                                                                        ? prev.filter(t => t !== tag)
-                                                                        : [...prev, tag]
-                                                                );
-                                                            }}
+                                                            variant="default"
+                                                            className="bg-indigo-100 text-indigo-700 border-indigo-200 hover:bg-indigo-200 dark:bg-indigo-900/50 dark:text-indigo-300 dark:border-indigo-800"
                                                         >
                                                             #{tag}
-                                                            {selectedTags.includes(tag) && (
-                                                                <CheckCircle className="w-3 h-3 ml-1" />
-                                                            )}
                                                         </Badge>
                                                     ))}
                                                 </div>
-                                                {selectedTags.length > 0 && (
-                                                    <div className="flex items-center justify-between pt-2 border-t">
-                                                        <p className="text-xs text-muted-foreground">
-                                                            {selectedTags.length} tag(s) selected
-                                                        </p>
-                                                        <Button
-                                                            variant="ghost"
-                                                            size="sm"
-                                                            onClick={() => setSelectedTags([])}
-                                                            className="h-7 text-xs"
-                                                        >
-                                                            Clear All
-                                                        </Button>
+                                            ) : (
+                                                availableTags.length > 0 ? (
+                                                    <div className="space-y-3">
+                                                        <div className="flex flex-wrap gap-2">
+                                                            {availableTags.map((tag: string) => (
+                                                                <Badge
+                                                                    key={tag}
+                                                                    variant={selectedTags.includes(tag) ? "default" : "outline"}
+                                                                    className="cursor-pointer hover:bg-primary/80 transition-colors"
+                                                                    onClick={() => {
+                                                                        setSelectedTags(prev =>
+                                                                            prev.includes(tag)
+                                                                                ? prev.filter(t => t !== tag)
+                                                                                : [...prev, tag]
+                                                                        );
+                                                                    }}
+                                                                >
+                                                                    #{tag}
+                                                                    {selectedTags.includes(tag) && (
+                                                                        <CheckCircle className="w-3 h-3 ml-1" />
+                                                                    )}
+                                                                </Badge>
+                                                            ))}
+                                                        </div>
+                                                        {selectedTags.length > 0 && (
+                                                            <div className="flex items-center justify-between pt-2 border-t">
+                                                                <p className="text-xs text-muted-foreground">
+                                                                    {selectedTags.length} tag(s) selected
+                                                                </p>
+                                                                <Button
+                                                                    variant="ghost"
+                                                                    size="sm"
+                                                                    onClick={() => setSelectedTags([])}
+                                                                    className="h-7 text-xs"
+                                                                >
+                                                                    Clear All
+                                                                </Button>
+                                                            </div>
+                                                        )}
                                                     </div>
-                                                )}
-                                            </div>
-                                        ) : (
-                                            <p className="text-sm text-muted-foreground text-center py-4">
-                                                Click "Load Tags" to see available tags for filtering
-                                            </p>
-                                        )}
-                                    </CardContent>
-                                </Card>
+                                                ) : (
+                                                    <p className="text-sm text-muted-foreground text-center py-4">
+                                                        Click "Load Tags" to see available tags for filtering
+                                                    </p>
+                                                )
+                                            )}
+                                        </CardContent>
+                                    </Card>
+                                )}
 
                                 {/* Manual Selection Mode */}
                                 {!useMarksBasedGeneration && (
@@ -1657,6 +1782,128 @@ export default function CreateExam() {
                                     </div>
                                 )}
 
+                                {/* Manual Action Toolbar */}
+                                <div className="flex items-center justify-between mb-4 mt-6">
+                                    <div className="flex gap-2">
+                                        <Button
+                                            onClick={() => setIsAddingQuestion(!isAddingQuestion)}
+                                            variant={isAddingQuestion ? "secondary" : "outline"}
+                                            className="gap-2"
+                                        >
+                                            <Plus className="w-4 h-4" />
+                                            Add Question Manually
+                                        </Button>
+                                    </div>
+                                    {questions.length > 0 && (
+                                        <Button onClick={() => handleDownloadQuestions()} variant="outline" className="gap-2">
+                                            <Download className="w-4 h-4" />
+                                            Download CSV
+                                        </Button>
+                                    )}
+                                </div>
+
+                                {/* Manual Question Add Form */}
+                                {isAddingQuestion && (
+                                    <Card className="mb-6 border-dashed border-2">
+                                        <CardHeader>
+                                            <CardTitle className="text-sm">New Manual Question</CardTitle>
+                                        </CardHeader>
+                                        <CardContent className="space-y-4">
+                                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                                <div className="space-y-2">
+                                                    <Label>Type</Label>
+                                                    <Select
+                                                        value={manualQuestion.type}
+                                                        onValueChange={(val) => setManualQuestion({ ...manualQuestion, type: val })}
+                                                    >
+                                                        <SelectTrigger><SelectValue /></SelectTrigger>
+                                                        <SelectContent>
+                                                            <SelectItem value="mcq">MCQ</SelectItem>
+                                                            <SelectItem value="coding">Coding</SelectItem>
+                                                        </SelectContent>
+                                                    </Select>
+                                                </div>
+                                                <div className="space-y-2">
+                                                    <Label>Difficulty</Label>
+                                                    <Select
+                                                        value={manualQuestion.difficulty}
+                                                        onValueChange={(val) => setManualQuestion({ ...manualQuestion, difficulty: val })}
+                                                    >
+                                                        <SelectTrigger><SelectValue /></SelectTrigger>
+                                                        <SelectContent>
+                                                            <SelectItem value="easy">Easy</SelectItem>
+                                                            <SelectItem value="medium">Medium</SelectItem>
+                                                            <SelectItem value="hard">Hard</SelectItem>
+                                                        </SelectContent>
+                                                    </Select>
+                                                </div>
+                                                <div className="space-y-2">
+                                                    <Label>Marks</Label>
+                                                    <Input
+                                                        type="number"
+                                                        value={manualQuestion.marks}
+                                                        onChange={(e) => setManualQuestion({ ...manualQuestion, marks: Number(e.target.value) })}
+                                                    />
+                                                </div>
+                                            </div>
+
+                                            <div className="space-y-2">
+                                                <Label>Question Text</Label>
+                                                <Input
+                                                    value={manualQuestion.question}
+                                                    onChange={(e) => setManualQuestion({ ...manualQuestion, question: e.target.value })}
+                                                    placeholder="Enter question here..."
+                                                />
+                                            </div>
+
+                                            {manualQuestion.type === 'mcq' ? (
+                                                <div className="space-y-2">
+                                                    <Label>Options (Check correct answer)</Label>
+                                                    {manualQuestion.options.map((opt, idx) => (
+                                                        <div key={opt.id} className="flex items-center gap-2">
+                                                            <span className="text-sm font-mono w-6">{String.fromCharCode(65 + idx)}.</span>
+                                                            <Input
+                                                                value={opt.text}
+                                                                onChange={(e) => {
+                                                                    const newOpts = [...manualQuestion.options];
+                                                                    newOpts[idx].text = e.target.value;
+                                                                    setManualQuestion({ ...manualQuestion, options: newOpts });
+                                                                }}
+                                                                placeholder={`Option ${String.fromCharCode(65 + idx)}`}
+                                                            />
+                                                            <input
+                                                                type="checkbox"
+                                                                checked={opt.isCorrect}
+                                                                onChange={(e) => {
+                                                                    const newOpts = [...manualQuestion.options];
+                                                                    newOpts.forEach(o => o.isCorrect = false);
+                                                                    newOpts[idx].isCorrect = e.target.checked;
+                                                                    setManualQuestion({ ...manualQuestion, options: newOpts });
+                                                                }}
+                                                                className="w-5 h-5 accent-emerald-500"
+                                                            />
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            ) : (
+                                                <div className="space-y-2">
+                                                    <Label>Expected Output / Test Case Hidden</Label>
+                                                    <Input
+                                                        value={manualQuestion.expectedOutput}
+                                                        onChange={(e) => setManualQuestion({ ...manualQuestion, expectedOutput: e.target.value })}
+                                                        placeholder="Expected output string..."
+                                                    />
+                                                </div>
+                                            )}
+
+                                            <div className="flex justify-end gap-2 pt-2">
+                                                <Button variant="ghost" onClick={() => setIsAddingQuestion(false)}>Cancel</Button>
+                                                <Button onClick={saveManualQuestion}>Save Question</Button>
+                                            </div>
+                                        </CardContent>
+                                    </Card>
+                                )}
+
                                 {/* Rest of the existing code (error display, questions display, etc.) */}
                                 {error && (
                                     <Alert variant="destructive">
@@ -1699,27 +1946,29 @@ export default function CreateExam() {
                                                                     </>
                                                                 )}
                                                             </div>
-                                                            <Button
-                                                                variant="ghost"
-                                                                size="sm"
-                                                                onClick={() => handleRegenerateQuestion(q.id, index)}
-                                                                className="text-muted-foreground hover:text-primary mr-1"
-                                                                disabled={regeneratingId === q.id}
-                                                            >
-                                                                {regeneratingId === q.id ? (
-                                                                    <Loader2 className="w-4 h-4 animate-spin" />
-                                                                ) : (
-                                                                    <RefreshCw className="w-4 h-4" />
-                                                                )}
-                                                            </Button>
-                                                            <Button
-                                                                variant="ghost"
-                                                                size="sm"
-                                                                onClick={() => deleteQuestion(q.id)}
-                                                                className="text-destructive hover:text-destructive"
-                                                            >
-                                                                <Trash2 className="w-4 h-4" />
-                                                            </Button>
+                                                            <div className="flex items-center gap-1">
+                                                                <Button
+                                                                    variant="ghost"
+                                                                    size="sm"
+                                                                    onClick={() => handleRegenerateQuestion(q.id, index)}
+                                                                    className="text-muted-foreground hover:text-primary"
+                                                                    disabled={regeneratingId === q.id}
+                                                                >
+                                                                    {regeneratingId === q.id ? (
+                                                                        <Loader2 className="w-4 h-4 animate-spin" />
+                                                                    ) : (
+                                                                        <RefreshCw className="w-4 h-4" />
+                                                                    )}
+                                                                </Button>
+                                                                <Button
+                                                                    variant="ghost"
+                                                                    size="sm"
+                                                                    onClick={() => deleteQuestion(q.id)}
+                                                                    className="text-destructive hover:text-destructive"
+                                                                >
+                                                                    <Trash2 className="w-4 h-4" />
+                                                                </Button>
+                                                            </div>
                                                         </div>
                                                     </CardHeader>
                                                     <CardContent className="space-y-3">
