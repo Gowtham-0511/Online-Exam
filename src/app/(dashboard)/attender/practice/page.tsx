@@ -128,11 +128,19 @@ const PracticePage = () => {
         setIsGenerating(true);
 
         try {
+            const userEmail = session?.username || (session as any)?.idTokenClaims?.preferred_username || (session as any)?.idTokenClaims?.email;
+
+            if (!userEmail) {
+                console.error('User email not found in session');
+                setIsGenerating(false);
+                return;
+            }
+
             const response = await fetch('/api/attender/practice/generate-questions', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    email: session?.username,
+                    email: userEmail,
                     topic: topic,
                     difficulty: customExam.difficulty,
                     count: parseInt(customExam.questionCount),
