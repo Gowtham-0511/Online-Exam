@@ -154,7 +154,7 @@ const ExamCard: React.FC<ExamCardProps> = ({ exam, onStart, onViewStrategy }) =>
                     <div className="col-span-2 flex items-center gap-2 bg-muted/40 p-2 rounded-md border border-border/40">
                         <Clock className="w-3.5 h-3.5 text-primary/80" />
                         <span className="font-medium text-[11px] text-foreground/90 truncate">
-                            {startTime ? format(startTime, 'MMM d h:mm a') : 'TBA'} - {exam.endTime ? format(new Date(exam.endTime), 'MMM d h:mm a') : 'TBA'}
+                            {startTime ? format(startTime, 'MMM d h:mm a') : 'TBA'} - {endTime ? format(endTime, 'MMM d h:mm a') : 'TBA'}
                         </span>
                     </div>
 

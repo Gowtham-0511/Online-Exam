@@ -1866,3 +1866,6 @@
 {"level":"info","message":"Fetching allowed exams for: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-23 10:51:10"}
 {"level":"info","message":"Fetching stats for user: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-23 10:51:50"}
 {"level":"info","message":"Fetching allowed exams for: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-23 10:51:50"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-23 10:51:51"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-23 10:51:51"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-23 10:51:51"}
