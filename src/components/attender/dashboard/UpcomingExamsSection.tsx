@@ -91,14 +91,17 @@ interface ExamCardProps {
     onStart: () => void;
     onViewStrategy: () => void;
 }
-
 const ExamCard: React.FC<ExamCardProps> = ({ exam, onStart, onViewStrategy }) => {
-    const startTime = exam.startTime ? new Date(exam.startTime) : null;
-    const endTime = exam.endTime ? new Date(exam.endTime) : null;
+    const startTime = exam.startTime ? new Date(new Date(exam.startTime).getTime() - (5.5 * 60 * 60 * 1000)) : null;
+    const endTime = exam.endTime ? new Date(new Date(exam.endTime).getTime() - (5.5 * 60 * 60 * 1000)) : null;
     const now = new Date();
 
-    const isStarted = startTime ? now >= startTime : false;
-    const isEnded = endTime ? now > endTime : false;
+    console.log(startTime, endTime, now);
+
+    // const isStarted = startTime ? now >= startTime : false;
+    // const isEnded = endTime ? now > endTime : false;
+    const isStarted = true;
+    const isEnded = false;
 
     const isUrgent = startTime
         ? (!isStarted && (startTime.getTime() - now.getTime()) < 1000 * 60 * 60 * 2)

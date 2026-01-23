@@ -1819,3 +1819,50 @@
 {"level":"info","message":"Exam Titles: [ 'python_fresher_v1', 'fresher_sql_basic_int_v1', [length]: 2 ]","service":"sysrank-service","timestamp":"2026-01-22 16:14:34"}
 {"level":"info","message":"Fetching submissions for exam IDs: [ 65, 68, [length]: 2 ]","service":"sysrank-service","timestamp":"2026-01-22 16:14:34"}
 {"level":"info","message":"Submissions found: 0","service":"sysrank-service","timestamp":"2026-01-22 16:14:34"}
+{"level":"info","message":"Fetching stats for user: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-22 18:34:53"}
+{"level":"info","message":"Fetching allowed exams for: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-22 18:34:54"}
+{"level":"info","message":"Fetching allowed exams for: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-22 18:39:29"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-22 18:39:31"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-22 18:39:31"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-22 18:39:31"}
+{"level":"info","message":"Fetching stats for user: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-22 18:39:31"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-22 18:39:31"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-23 10:18:53"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-23 10:18:57"}
+{"level":"info","message":"Admin dashboard stats requested","service":"sysrank-service","timestamp":"2026-01-23 10:18:57"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-23 10:18:58"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-23 10:18:58"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-23 10:18:58"}
+{"level":"info","message":"Fetching stats for user: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-23 10:19:06"}
+{"level":"info","message":"Fetching allowed exams for: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-23 10:19:06"}
+{"level":"info","message":"Exam Titles: [ 'python_fresher_v1', 'fresher_sql_basic_int_v1', [length]: 2 ]","service":"sysrank-service","timestamp":"2026-01-23 10:19:30"}
+{"level":"info","message":"Fetching submissions for exam IDs: [ 65, 68, [length]: 2 ]","service":"sysrank-service","timestamp":"2026-01-23 10:19:30"}
+{"level":"info","message":"Submissions found: 0","service":"sysrank-service","timestamp":"2026-01-23 10:19:30"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-23 10:35:12"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-23 10:35:12"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-23 10:35:12"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-23 10:37:42"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-23 10:37:42"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-23 10:37:42"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-23 10:38:01"}
+{"level":"info","message":"Admin dashboard stats requested","service":"sysrank-service","timestamp":"2026-01-23 10:38:01"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-23 10:38:02"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-23 10:38:02"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-23 10:38:02"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-23 10:38:02"}
+{"level":"info","message":"Exam Titles: [ 'python_fresher_v1', 'fresher_sql_basic_int_v1', [length]: 2 ]","service":"sysrank-service","timestamp":"2026-01-23 10:38:05"}
+{"level":"info","message":"Fetching submissions for exam IDs: [ 65, 68, [length]: 2 ]","service":"sysrank-service","timestamp":"2026-01-23 10:38:05"}
+{"level":"info","message":"Submissions found: 0","service":"sysrank-service","timestamp":"2026-01-23 10:38:05"}
+{"level":"info","message":"Exam Titles: [ 'python_fresher_v1', 'fresher_sql_basic_int_v1', [length]: 2 ]","service":"sysrank-service","timestamp":"2026-01-23 10:38:21"}
+{"level":"info","message":"Fetching submissions for exam IDs: [ 65, 68, [length]: 2 ]","service":"sysrank-service","timestamp":"2026-01-23 10:38:21"}
+{"level":"info","message":"Submissions found: 0","service":"sysrank-service","timestamp":"2026-01-23 10:38:21"}
+{"level":"info","message":"Exam Titles: [ 'python_fresher_v1', 'fresher_sql_basic_int_v1', [length]: 2 ]","service":"sysrank-service","timestamp":"2026-01-23 10:38:26"}
+{"level":"info","message":"Fetching submissions for exam IDs: [ 65, 68, [length]: 2 ]","service":"sysrank-service","timestamp":"2026-01-23 10:38:26"}
+{"level":"info","message":"Submissions found: 0","service":"sysrank-service","timestamp":"2026-01-23 10:38:26"}
+{"level":"info","message":"Exam Titles: [ 'python_fresher_v1', 'fresher_sql_basic_int_v1', [length]: 2 ]","service":"sysrank-service","timestamp":"2026-01-23 10:40:21"}
+{"level":"info","message":"Fetching submissions for exam IDs: [ 65, 68, [length]: 2 ]","service":"sysrank-service","timestamp":"2026-01-23 10:40:21"}
+{"level":"info","message":"Submissions found: 0","service":"sysrank-service","timestamp":"2026-01-23 10:40:22"}
+{"level":"info","message":"Fetching stats for user: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-23 10:51:10"}
+{"level":"info","message":"Fetching allowed exams for: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-23 10:51:10"}
+{"level":"info","message":"Fetching stats for user: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-23 10:51:50"}
+{"level":"info","message":"Fetching allowed exams for: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-23 10:51:50"}
