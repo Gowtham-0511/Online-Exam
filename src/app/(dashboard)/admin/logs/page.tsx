@@ -38,11 +38,6 @@ export default function SystemLogsPage() {
 
     useEffect(() => {
         fetchLogs(activeTab);
-        const interval = setInterval(() => {
-            fetchLogs(activeTab);
-        }, 10000); // Auto-refresh every 10s
-
-        return () => clearInterval(interval);
     }, [activeTab]);
 
     const getLevelColor = (level: string) => {

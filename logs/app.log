@@ -1869,3 +1869,15 @@
 {"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-23 10:51:51"}
 {"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-23 10:51:51"}
 {"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-23 10:51:51"}
+{"level":"info","message":"Admin dashboard stats requested","service":"sysrank-service","timestamp":"2026-01-25 12:49:25"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-25 12:49:26"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-25 12:49:26"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-25 12:49:26"}
+{"level":"info","message":"Admin accessed user list","service":"sysrank-service","timestamp":"2026-01-25 12:49:31"}
+{"level":"info","message":"Admin accessed user list","service":"sysrank-service","timestamp":"2026-01-25 12:49:31"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-25 12:50:04"}
+{"level":"info","message":"Admin dashboard stats requested","service":"sysrank-service","timestamp":"2026-01-25 12:50:04"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-25 12:50:06"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-25 12:50:06"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-25 12:50:06"}
+{"level":"info","message":"User get-or-create success: gowthamr@systechusa.com","service":"sysrank-service","timestamp":"2026-01-25 12:50:06"}
