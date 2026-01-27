@@ -190,7 +190,9 @@ export default function ExamPage() {
         questionTimeSpent,
         codeRunCounts,
         session,
-        code
+        code,
+        showErDiagram,
+        showSubmitSummary
     });
 
     // Update stateRef whenever state changes
@@ -206,9 +208,11 @@ export default function ExamPage() {
             questionTimeSpent,
             codeRunCounts,
             session,
-            code
+            code,
+            showErDiagram,
+            showSubmitSummary
         };
-    }, [examId, exam, answers, mcqAnswers, activeQuestionIndex, timeLeft, flaggedQuestions, questionTimeSpent, codeRunCounts, session, code]);
+    }, [examId, exam, answers, mcqAnswers, activeQuestionIndex, timeLeft, flaggedQuestions, questionTimeSpent, codeRunCounts, session, code, showErDiagram, showSubmitSummary]);
 
 
     const formatTime = (seconds: number) => {
@@ -1097,6 +1101,11 @@ export default function ExamPage() {
 
         const handleBlur = (e: FocusEvent) => {
             if (e.relatedTarget && document.contains(e.relatedTarget as Node)) {
+                return;
+            }
+
+            // Don't trigger if schema modal or submit summary is open
+            if (stateRef.current.showErDiagram || stateRef.current.showSubmitSummary) {
                 return;
             }
 

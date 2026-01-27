@@ -35,6 +35,7 @@ export async function GET(request: Request) {
             SELECT 1 FROM submissions s   
             WHERE "examId" = a.title
             AND "email" = $1
+            AND s."submittedAt" >= abm."startTime"
         )
         UNION
         SELECT DISTINCT 
@@ -61,6 +62,7 @@ export async function GET(request: Request) {
             SELECT 1 FROM submissions s   
             WHERE "examId" = a.title
             AND "email" = $1
+            AND s."submittedAt" >= aum.starttime
         )
         ORDER BY "createdAt" DESC;
     `;
