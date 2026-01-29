@@ -1,49 +1,57 @@
 import winston from 'winston';
 import path from 'path';
 
-// Define log directory
-const logDir = 'logs';
+// Interface for our logger to ensure consistency
+interface Logger {
+    info: (message: string, ...meta: any[]) => void;
+    error: (message: string, ...meta: any[]) => void;
+    warn: (message: string, ...meta: any[]) => void;
+    debug: (message: string, ...meta: any[]) => void;
+}
 
-const logger = winston.createLogger({
-    level: 'info',
-    format: winston.format.combine(
-        winston.format.timestamp({
-            format: 'YYYY-MM-DD HH:mm:ss',
-        }),
-        winston.format.errors({ stack: true }),
-        winston.format.splat(),
-        winston.format.json()
-    ),
-    defaultMeta: { service: 'sysrank-service' },
-    transports: [
-        //
-        // - Write all logs with importance level of `error` or less to `error.log`
-        // - Write all logs with importance level of `info` or less to `app.log`
-        //
-        new winston.transports.File({ filename: path.join(logDir, 'error.log'), level: 'error' }),
-        new winston.transports.File({ filename: path.join(logDir, 'app.log') }),
-    ],
-});
+let logger: Logger;
 
-//
-// If we're not in production then log to the `console` with the format:
-// `${info.level}: ${info.message} JSON.stringify({ ...rest }) `
-//
-if (process.env.NODE_ENV !== 'production') {
-    logger.add(new winston.transports.Console({
+// Check if we are on the server side
+const isServer = typeof window === 'undefined';
+
+if (isServer) {
+    // Server-side: Use Winston
+    const logDir = 'logs';
+
+    const winstonLogger = winston.createLogger({
+        level: 'info',
+        format: winston.format.combine(
+            winston.format.timestamp({
+                format: 'YYYY-MM-DD HH:mm:ss',
+            }),
+            winston.format.errors({ stack: true }),
+            winston.format.splat(),
+            winston.format.json()
+        ),
+        defaultMeta: { service: 'sysrank-service' },
+        transports: [
+            new winston.transports.File({ filename: path.join(logDir, 'error.log'), level: 'error' }),
+            new winston.transports.File({ filename: path.join(logDir, 'app.log') }),
+        ],
+    });
+
+    // Always add console transport
+    winstonLogger.add(new winston.transports.Console({
         format: winston.format.combine(
             winston.format.colorize(),
             winston.format.simple()
         ),
     }));
+
+    logger = winstonLogger;
 } else {
-    // In production, we also want console logs for Docker awareness
-    logger.add(new winston.transports.Console({
-        format: winston.format.combine(
-            winston.format.colorize(),
-            winston.format.simple()
-        )
-    }));
+    // Client-side: Use console
+    logger = {
+        info: (message: string, ...meta: any[]) => console.log(`[INFO] ${message}`, ...meta),
+        error: (message: string, ...meta: any[]) => console.error(`[ERROR] ${message}`, ...meta),
+        warn: (message: string, ...meta: any[]) => console.warn(`[WARN] ${message}`, ...meta),
+        debug: (message: string, ...meta: any[]) => console.debug(`[DEBUG] ${message}`, ...meta),
+    };
 }
 
 export default logger;
