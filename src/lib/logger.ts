@@ -1,12 +1,11 @@
-import winston from 'winston';
-import path from 'path';
-
 // Interface for our logger to ensure consistency
 interface Logger {
     info: (message: string, ...meta: any[]) => void;
     error: (message: string, ...meta: any[]) => void;
     warn: (message: string, ...meta: any[]) => void;
     debug: (message: string, ...meta: any[]) => void;
+    // Winston specific methods that might be called (optional)
+    add?: (transport: any) => void;
 }
 
 let logger: Logger;
@@ -15,7 +14,12 @@ let logger: Logger;
 const isServer = typeof window === 'undefined';
 
 if (isServer) {
-    // Server-side: Use Winston
+    // Server-side: Use Winston dynamically to avoid build errors in client bundles
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const winston = require('winston');
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const path = require('path');
+
     const logDir = 'logs';
 
     const winstonLogger = winston.createLogger({
