@@ -109,7 +109,7 @@ export default function ViewExamsPage() {
     // Edit Dialog State
     const [editingExam, setEditingExam] = useState<Exam | null>(null);
     const [editDialogOpen, setEditDialogOpen] = useState(false);
-    const [editForm, setEditForm] = useState({ duration: 0, isExamProctored: false });
+    const [editForm, setEditForm] = useState({ title: '', duration: 0, isExamProctored: false });
     const [loadingEdit, setLoadingEdit] = useState(false);
 
     // Reassign Dialog State
@@ -238,7 +238,7 @@ export default function ViewExamsPage() {
 
     const handleEdit = (exam: Exam) => {
         setEditingExam(exam);
-        setEditForm({ duration: exam.duration, isExamProctored: exam.isExamProctored });
+        setEditForm({ title: exam.title, duration: exam.duration, isExamProctored: exam.isExamProctored });
         setEditDialogOpen(true);
     };
 
@@ -530,6 +530,13 @@ export default function ViewExamsPage() {
                         <DialogDescription>Modify settings for {editingExam?.title}</DialogDescription>
                     </DialogHeader>
                     <div className="space-y-4 py-2">
+                        <div className="space-y-2">
+                            <Label>Title</Label>
+                            <Input
+                                value={editForm.title}
+                                onChange={e => setEditForm(prev => ({ ...prev, title: e.target.value }))}
+                            />
+                        </div>
                         <div className="space-y-2">
                             <Label>Duration (minutes)</Label>
                             <Input

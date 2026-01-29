@@ -2345,3 +2345,117 @@ export async function regenerateSingleQuestion(
     return null;
   }
 }
+
+export async function verifyExamSubmission(
+  submissionData: Array<{
+    questionText: string;
+    studentAnswer: string;
+    originalScore?: number;
+    maxMarks?: number;
+    originalFeedback?: string;
+  }>
+): Promise<{
+  verifiedAnswers: Array<{
+    index: number;
+    questionText: string;
+    originalScore?: number;
+    suggestedScore: number;
+    gradingAccuracy: number; // 0-100
+    comment: string;
+  }>;
+  averageGradingAccuracy: number;
+  gradingQualitySummary: string;
+}> {
+  const isDeterministicModel = /(mini|instruct)/i.test(deploymentName);
+
+  // Limit to avoid token limits
+  const answersToVerify = submissionData.slice(0, 50);
+
+  const prompt = `
+    You are a Quality Assurance Auditor for Exam Grading. 
+    Your task is to DOUBLE CHECK the grading of an exam submission.
+
+    Submission Data:
+    ${JSON.stringify(
+    answersToVerify.map((a, i) => ({
+      index: i,
+      question: a.questionText,
+      userAnswer: a.studentAnswer,
+      originalScore: a.originalScore ?? "N/A",
+      maxMarks: a.maxMarks ?? "N/A",
+      originalFeedback: a.originalFeedback ?? "N/A",
+    })),
+    null,
+    2
+  )}
+
+    Task:
+    1. For each question, INDEPENDENTLY evaluate the Student's Answer against the Question.
+    2. Determine the score YOU would give (Suggested Score).
+    3. Compare your evaluation with the Original Score (if provided).
+    4. Provide "gradingAccuracy" (0-100%):
+       - 100% = You agree completely with the original score/feedback.
+       - 0% = The original grading is completely wrong (e.g. marked correct answer as wrong).
+       - If Original Score is "N/A", set gradingAccuracy to 100 (benefit of doubt) or just evaluate the answer.
+    5. Provide a "comment" explaining your verification.
+
+    Return JSON:
+    {
+      "verifiedAnswers": [
+        {
+          "index": number,
+          "questionText": "string (brief)",
+          "originalScore": number (or null),
+          "suggestedScore": number,
+          "gradingAccuracy": number,
+          "comment": "Verification explanation"
+        }
+      ],
+      "averageGradingAccuracy": number,
+      "gradingQualitySummary": "Overall summary of the grading quality (e.g. 'Grading was strictly accurate', 'Found 1 discrepancy')"
+    }
+  `;
+
+  const params: any = {
+    model: deploymentName,
+    messages: [
+      {
+        role: "system",
+        content:
+          "You are an expert exam auditor. You are fair, technical, and precise. Return only valid JSON.",
+      },
+      { role: "user", content: prompt },
+      {
+        role: "system",
+        content:
+          "Return the JSON object strictly adhering to the schema. Ensure 'verifiedAnswers' is an array.",
+      },
+    ],
+    response_format: { type: "json_object" },
+  };
+
+  if (!isDeterministicModel) {
+    params.temperature = 0.3; // Low temperature for consistency
+  }
+
+  try {
+    const result = await getClient().chat.completions.create(params);
+    const content = result.choices[0]?.message?.content?.trim() || "{}";
+    const data = JSON.parse(content);
+
+    return {
+      verifiedAnswers: data.verifiedAnswers || [],
+      averageGradingAccuracy: data.averageGradingAccuracy || 0,
+      gradingQualitySummary:
+        data.gradingQualitySummary || "Verification completed.",
+    };
+  } catch (error: any) {
+    logger.error("Exam verification error:", error.message);
+    return {
+      verifiedAnswers: [],
+      averageGradingAccuracy: 0,
+      gradingQualitySummary: "Failed to verify submission.",
+    };
+  }
+}
+

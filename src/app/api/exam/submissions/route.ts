@@ -1,6 +1,7 @@
 import pool from "@/lib/db/db";
 import { NextResponse } from "next/server";
 import logger from "@/lib/logger";
+import { verifyExamSubmission } from "@/lib/ai/azureOpenAI";
 
 const submissionQueue: Array<() => Promise<void>> = [];
 let activeSubmissions = 0;
@@ -38,6 +39,7 @@ export async function POST(req: Request) {
     answers,
     answersWithQuestionIds,
     disqualified = false,
+    disqualificationReason,
     code,
   } = body;
 
@@ -66,16 +68,18 @@ export async function POST(req: Request) {
             "answers", 
             "answersWithQuestionIds", 
             "code", 
-            "disqualified", 
+    "disqualified", 
+            "disqualification_reason",
             "submittedAt"
         )
-        VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW())
         ON CONFLICT ("email", "examId") 
         DO UPDATE SET
             "answers" = EXCLUDED."answers",
             "answersWithQuestionIds" = EXCLUDED."answersWithQuestionIds",
             "code" = EXCLUDED."code",
             "disqualified" = EXCLUDED."disqualified",
+            "disqualification_reason" = EXCLUDED."disqualification_reason",
             "submittedAt" = NOW()
         RETURNING "id";
     `;
@@ -88,6 +92,7 @@ export async function POST(req: Request) {
         JSON.stringify(answersWithQuestionIds ?? []),
         code || null,
         disqualified ? true : false,
+        disqualificationReason || null,
       ];
 
       const result = await client.query(query, values);
@@ -96,6 +101,41 @@ export async function POST(req: Request) {
       await client.query("COMMIT");
 
       logger.info(`Submission saved: ${submissionId} for ${email}`);
+
+
+
+      // Auto-Verify Submission
+      // try {
+      //   if (answersWithQuestionIds && Array.isArray(answersWithQuestionIds)) {
+      //     logger.info(`Auto-verifying submission ${submissionId}...`);
+      //     const verificationResult = await verifyExamSubmission(
+      //       answersWithQuestionIds.map((a: any) => ({
+      //         questionText: a.question || "Not provided",
+      //         studentAnswer: a.answer || "Not provided",
+      //         maxMarks: a.marks,
+      //       }))
+      //     );
+
+      //     console.log(verificationResult);
+
+      //     const updatedAnswers = answersWithQuestionIds.map(
+      //       (a: any, i: number) => ({
+      //         ...a,
+      //         verification:
+      //           verificationResult.verifiedAnswers.find((v) => v.index === i) ||
+      //           null,
+      //       })
+      //     );
+
+      //     await client.query(
+      //       `UPDATE "submissions" SET "answersWithQuestionIds" = $1 WHERE "id" = $2`,
+      //       [JSON.stringify(updatedAnswers), submissionId]
+      //     );
+      //     logger.info(`Auto-verification completed for ${submissionId}`);
+      //   }
+      // } catch (verifyErr) {
+      //   logger.error("Auto-verification failed:", verifyErr);
+      // }
 
       if (submissionId && answersWithQuestionIds) {
         fetch("https://wizard-aiautomate.dopplr.ai/webhook/feedback", {

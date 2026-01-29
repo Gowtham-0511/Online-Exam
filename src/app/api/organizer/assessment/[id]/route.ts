@@ -54,13 +54,15 @@ export async function PUT(
 ) {
   const { id } = await params;
   const body = await request.json();
-  const { duration, isExamProctored, assignmentType } = body;
+  console.log(body);
+  const { duration, isExamProctored, assignmentType, title } = body;
 
   // Validate input
   if (
     duration === undefined ||
     isExamProctored === undefined ||
-    !assignmentType
+    !assignmentType ||
+    !title
   ) {
     return NextResponse.json(
       { error: "Missing required fields" },
@@ -69,13 +71,32 @@ export async function PUT(
   }
 
   try {
+
+
+    const originalAssessmentNamequery = `
+      SELECT "title"
+      FROM "Assessment"
+      WHERE "id" = $1
+    `;
+
+    const originalAssessmentNameResult = await pool.query(originalAssessmentNamequery, [id]);
+
+    if (originalAssessmentNameResult.rowCount === 0) {
+      return NextResponse.json({ error: "Exam not found" }, { status: 404 });
+    }
+
+    const originalAssessmentName = originalAssessmentNameResult.rows[0].title;
+
+    console.log(originalAssessmentName);
+
     const updateQuery = `
       UPDATE "Assessment"
       SET 
         "duration" = $1,
         "isExamProctored" = $2,
-        "assignmentType" = $3
-      WHERE "id" = $4
+        "assignmentType" = $3,
+        "title" = $4
+      WHERE "id" = $5
       RETURNING *
     `;
 
@@ -83,6 +104,7 @@ export async function PUT(
       duration,
       isExamProctored,
       assignmentType,
+      title,
       id,
     ]);
 
@@ -102,6 +124,20 @@ export async function PUT(
         : {};
     } catch {
       // If parsing fails, just return as is
+    }
+
+    const checkSubmissionQuery = `
+      SELECT *
+      FROM "Submission"
+      WHERE "examId" = $1
+    `;
+
+    const checkSubmissionResult = await pool.query(checkSubmissionQuery, [originalAssessmentName]);
+
+    console.log(checkSubmissionResult.rows);
+
+    if (checkSubmissionResult.rows.length > 0) {
+      return NextResponse.json({ error: "Cannot update exam as it has submissions" }, { status: 400 });
     }
 
     return NextResponse.json(updatedExam, { status: 200 });

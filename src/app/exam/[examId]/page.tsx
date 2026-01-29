@@ -60,6 +60,7 @@ import { shuffleArrayWithSeed, fetcher } from "@/utils/examHelpers";
 
 // Types
 import type { Question, AnswerWithQuestionId } from "@/types/exam.types";
+import logger from "@/lib/logger";
 
 const ERDiagramModal = dynamic(() => import("@/components/exam/ERDiagramModal"));
 
@@ -179,6 +180,7 @@ export default function ExamPage() {
 
     // Refs for accessing state in intervals/callbacks without dependencies
     const fsGraceTimer = useRef<NodeJS.Timeout | null>(null);
+    const notifiedThresholds = useRef<Set<number>>(new Set());
     const stateRef = useRef({
         examId,
         exam,
@@ -395,8 +397,15 @@ export default function ExamPage() {
 
     // Computed values
     const answeredCount = useMemo(() => {
-        return answers.filter(answer => answer && answer.trim() !== "").length;
-    }, [answers]);
+        if (!exam || !exam.questions) return 0;
+
+        return exam.questions.reduce((count: number, question: any, index: number) => {
+            if (question.type === "mcq") {
+                return count + (mcqAnswers[index] !== undefined ? 1 : 0);
+            }
+            return count + (answers[index] && answers[index].trim() !== "" ? 1 : 0);
+        }, 0);
+    }, [answers, mcqAnswers, exam]);
 
     // Code execution handlers
     const handleRun = async () => {
@@ -573,19 +582,19 @@ export default function ExamPage() {
         setIsTabVisible(true);
     };
 
-    const handleSubmitWithDisqualification = useCallback(async (disqualifiedFlag: boolean) => {
+    const handleSubmitWithDisqualification = useCallback(async (disqualifiedFlag: boolean, reason?: string) => {
         if (hasSubmittedRef.current) return;
 
         hasSubmittedRef.current = true;
 
         const current = stateRef.current;
-        if (!current.exam || !current.session) return;
 
-        console.log(disqualifiedFlag, "disqualifiedFlag");
+        // Ensure we have robust fallbacks
+        const email = current.session?.username || "unknown_user";
+        const userName = current.session?.name || "Anonymous";
+        const examIdStr = current.examId?.toString() || "unknown_exam";
 
-        const email = current.session.username || "unknown";
-        const userName = current.session.name || "Anonymous";
-        const examIdStr = current.examId?.toString() || "unknown";
+        console.log("Submitting disqualification:", { disqualifiedFlag, reason, email, examIdStr });
 
         const answersWithQuestionIds = current.answers.map((answer, index) => ({
             questionId: current.exam?.questions[index]?.id || index,
@@ -594,24 +603,27 @@ export default function ExamPage() {
             originalIndex: index
         }));
 
-        await fetch("/api/exam/submissions", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-                examId: examIdStr,
-                email,
-                userName,
-                answers: current.answers,
-                answersWithQuestionIds,
-                disqualified: disqualifiedFlag,
-                code: current.answers[current.activeQuestionIndex], // Assuming code is part of answers or tracked separately? logic in hooks says 'code' state exists.
-                // Wait, code state is separate in hooks. I should use stateRef.code if I added it?
-                // I didn't add 'code' to stateRef.
-                // I'll add 'code' to stateRef in the next step or jus use current.answers?
-                // In hook: const { code, setCode } = examState.
-                // It seems 'code' is just the current editor content.
-            }),
-        });
+        try {
+            await fetch("/api/exam/submissions", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    examId: examIdStr,
+                    email,
+                    userName,
+                    answers: current.answers,
+                    answersWithQuestionIds,
+                    disqualified: disqualifiedFlag,
+                    disqualificationReason: reason,
+                    code: current.answers[current.activeQuestionIndex],
+                }),
+            });
+            console.log("Disqualification submitted successfully");
+        } catch (error) {
+            console.error("Failed to submit disqualification:", error);
+            toast.error("Failed to record disqualification. Please contact proctor.");
+        }
+
         await cleanupExamEnvironment();
         router.push("/attender");
     }, []);
@@ -748,7 +760,7 @@ export default function ExamPage() {
             }),
         });
 
-        handleSubmitWithDisqualification(true);
+        handleSubmitWithDisqualification(true, reason);
     }, [handleSubmitWithDisqualification]);
 
     // Save exam progress
@@ -1018,7 +1030,7 @@ export default function ExamPage() {
                         if (violationsRef.current >= 3) {
                             console.log("3 violations reached - disqualifying");
                             setDisqualified(true);
-                            handleSubmitWithDisqualification(true);
+                            handleSubmitWithDisqualification(true, "Fullscreen violations limit reached");
                         } else {
                             toast.error(`⚠️ Warning: Fullscreen exit detected! Violation ${violationsRef.current}/3`);
 
@@ -1223,11 +1235,29 @@ export default function ExamPage() {
         };
     }, [examStarted]);
 
-    // Timer countdown
+    // Timer countdown with warnings
     useEffect(() => {
         if (timeLeft <= 0 && exam) {
             handleSubmit();
             return;
+        }
+
+        // Time warnings (5m, 2m, 1m)
+        const warningTimes = [300, 120, 60];
+        if (warningTimes.includes(timeLeft) && !notifiedThresholds.current.has(timeLeft)) {
+            notifiedThresholds.current.add(timeLeft);
+            const mins = Math.floor(timeLeft / 60);
+
+            toast(`⏳ ${mins} Minute${mins !== 1 ? 's' : ''} Remaining!`, {
+                icon: '⏰',
+                duration: 5000,
+                style: {
+                    border: '2px solid #f59e0b',
+                    background: '#fffbeb',
+                    color: '#92400e',
+                    fontWeight: 600,
+                },
+            });
         }
 
         const timer = setInterval(() => setTimeLeft((t) => t - 1), 1000);
@@ -1235,11 +1265,7 @@ export default function ExamPage() {
     }, [timeLeft]);
 
     // Load answer for active question
-    useEffect(() => {
-        if (exam?.questions && answers[activeQuestionIndex] !== undefined) {
-            setCode(answers[activeQuestionIndex] || "");
-        }
-    }, [activeQuestionIndex, answers]);
+
 
     // Auto-start exam
     useEffect(() => {
@@ -1250,18 +1276,7 @@ export default function ExamPage() {
     }, [exam, answers, examStarted]);
 
     // Load starter code for Python exams
-    useEffect(() => {
-        if (exam?.questions && answers[activeQuestionIndex] !== undefined) {
-            const currentAnswer = answers[activeQuestionIndex] || "";
 
-            if (!currentAnswer && exam.language === 'python' && examFiles.length > 0) {
-                const starterCode = `import pandas as pd\nimport numpy as np\n\n# Available files: ${examFiles.map(f => f.file_name).join(', ')}\n\n# Your code here:\n`;
-                setCode(starterCode);
-            } else {
-                setCode(currentAnswer);
-            }
-        }
-    }, [activeQuestionIndex, answers, exam, examFiles]);
 
     // Online/offline handling
     useEffect(() => {
@@ -1386,6 +1401,52 @@ export default function ExamPage() {
         return () => clearInterval(interval);
     }, [lastSaved]);
 
+    // Screen Wake Lock API
+    useEffect(() => {
+        if (!examStarted || hasSubmittedRef.current) return;
+
+        let wakeLock: any = null;
+
+        const requestWakeLock = async () => {
+            try {
+                if ('wakeLock' in navigator) {
+                    // @ts-ignore
+                    wakeLock = await navigator.wakeLock.request('screen');
+                    logger.info('Screen Wake Lock acquired');
+
+                    wakeLock.addEventListener('release', () => {
+                        logger.info('Screen Wake Lock released');
+                    });
+                }
+            } catch (err: any) {
+                console.error(`${err.name}, ${err.message}`);
+            }
+        };
+
+        // Request lock immediately
+        requestWakeLock();
+
+        // Re-request lock when returning to the tab
+        const handleVisibilityChange = () => {
+            if (wakeLock !== null && document.visibilityState === 'visible') {
+                requestWakeLock();
+            }
+        };
+
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+
+        return () => {
+            document.removeEventListener('visibilitychange', handleVisibilityChange);
+            if (wakeLock) {
+                wakeLock.release()
+                    .then(() => {
+                        wakeLock = null;
+                    })
+                    .catch((err: any) => console.error('Failed to release wake lock:', err));
+            }
+        };
+    }, [examStarted]);
+
     // Tutorial completed check
     useEffect(() => {
         if (examId && session?.username) {
@@ -1423,13 +1484,41 @@ export default function ExamPage() {
     }, [activeQuestionIndex, examStarted]);
 
     // Load code for current question
-    useEffect(() => {
-        if (!exam || !currentQuestion) return;
 
-        // Get saved code for this question
-        const savedCode = answers[activeQuestionIndex] || currentQuestion?.starterCode || "";
-        setCode(savedCode);
-    }, [activeQuestionIndex, currentQuestion]);
+    // Unified Code Synchronization Effect
+    // This replaces multiple conflicting useEffects to handle code loading and starter code initialization
+    useEffect(() => {
+        if (!exam) return;
+
+        const currentAnswer = answers[activeQuestionIndex];
+
+        // Case 1: Answer exists in state (user has typed something)
+        if (currentAnswer !== undefined && currentAnswer !== "") {
+            // Only update if different to avoid cursor jumps
+            setCode(prev => prev !== currentAnswer ? currentAnswer : prev);
+        }
+        // Case 2: No answer yet - Load Starter Code
+        else {
+            let starter = "";
+
+            // Use simple starter code if available
+            if (currentQuestion?.starterCode) {
+                starter = currentQuestion.starterCode;
+            }
+
+            // Special handling for Python with files (if no specific starter code or to augment it)
+            // Note: The original logic preferred the dynamic Python starter if no answer existed
+            if (exam.language === 'python' && examFiles.length > 0 && !currentAnswer) {
+                starter = `import pandas as pd\nimport numpy as np\n\n# Available files: ${examFiles.map(f => f.file_name).join(', ')}\n\n# Your code here:\n`;
+            }
+
+            setCode(prev => prev !== starter ? starter : prev);
+
+            // IMPORTANT: If we set a non-empty starter code, we should conceptually NOT mark it as "answered" 
+            // in the answers array yet, until the user modifies it. 
+            // So we do NOT call setAnswers here. 
+        }
+    }, [activeQuestionIndex, answers, exam, examFiles, currentQuestion]);
 
     // When exam loads, initialize answers array
     useEffect(() => {
@@ -1494,13 +1583,21 @@ export default function ExamPage() {
 
     // Add to handleCodeChange
     const handleCodeChange = (newCode: string) => {
-        console.log('Code changed for question', activeQuestionIndex + 1, 'Length:', newCode.length);
-        setCode(newCode);
+        // Capture the index from the closure (the question this code belongs to)
+        const questionIndexToUpdate = activeQuestionIndex;
+
+        // Check if we are still viewing this question using the ref (latest state)
+        const isCurrentQuestion = questionIndexToUpdate === stateRef.current.activeQuestionIndex;
+
+        // console.log(`Code update for Q${questionIndexToUpdate + 1}. Visible: ${isCurrentQuestion}`);
+
+        if (isCurrentQuestion) {
+            setCode(newCode);
+        }
 
         setAnswers(prev => {
             const updated = [...prev];
-            updated[activeQuestionIndex] = newCode;
-            console.log('Updated answers array:', updated.map((a, i) => `Q${i + 1}: ${a?.length || 0} chars`));
+            updated[questionIndexToUpdate] = newCode;
             return updated;
         });
     };
@@ -1796,73 +1893,77 @@ export default function ExamPage() {
                                 {/* CONSOLE */}
                                 <ResizablePanel id="console-output-panel" order={2} defaultSize={40} minSize={20}>
                                     <div className="h-full flex flex-col bg-card border-t border-border">
-                                        <div className="h-12 px-4 border-b border-border flex items-center bg-muted/30">
+                                        <div className="h-12 px-4 border-b border-border flex items-center bg-muted/30 flex-shrink-0">
                                             <Terminal className="w-4 h-4 text-muted-foreground mr-2" />
                                             <span className="text-sm font-medium">Console Output</span>
                                         </div>
 
-                                        <ScrollArea className="flex-1">
-                                            <div className="p-4">
-                                                {exam?.language === "sql" ? (
-                                                    sqlResult ? (
-                                                        <div className="space-y-4">
-                                                            <span className="text-sm font-medium">
-                                                                {sqlResult.rows.length} row
-                                                                {sqlResult.rows.length !== 1 ? "s" : ""}
-                                                            </span>
-                                                            <div className="border border-border rounded-lg overflow-hidden">
-                                                                <table className="w-full text-sm">
-                                                                    <thead className="bg-muted">
-                                                                        <tr>
-                                                                            {sqlResult.columns.map((col, idx) => (
-                                                                                <th
-                                                                                    key={idx}
-                                                                                    className="px-4 py-2 text-left font-semibold border-b border-border"
-                                                                                >
-                                                                                    {col}
-                                                                                </th>
-                                                                            ))}
-                                                                        </tr>
-                                                                    </thead>
-                                                                    <tbody>
-                                                                        {sqlResult.rows.map((row, rowIdx) => (
-                                                                            <tr key={rowIdx} className="hover:bg-muted/50">
-                                                                                {sqlResult.columns.map((col, colIdx) => (
-                                                                                    <td
-                                                                                        key={colIdx}
-                                                                                        className="px-4 py-2 border-b border-border/50 font-mono text-xs"
-                                                                                    >
-                                                                                        {row[col] ?? "NULL"}
-                                                                                    </td>
+                                        <div className="flex-1 min-h-0 relative">
+                                            <ScrollArea className="h-full w-full absolute inset-0">
+                                                <div className="p-4">
+                                                    {exam?.language === "sql" ? (
+                                                        sqlResult ? (
+                                                            <div className="space-y-4">
+                                                                <span className="text-sm font-medium">
+                                                                    {sqlResult.rows.length} row
+                                                                    {sqlResult.rows.length !== 1 ? "s" : ""}
+                                                                </span>
+                                                                <div className="border border-border rounded-lg overflow-hidden">
+                                                                    <div className="overflow-x-auto max-w-full">
+                                                                        <table className="w-full text-sm">
+                                                                            <thead className="bg-muted">
+                                                                                <tr>
+                                                                                    {sqlResult.columns.map((col, idx) => (
+                                                                                        <th
+                                                                                            key={idx}
+                                                                                            className="px-4 py-2 text-left font-semibold border-b border-border whitespace-nowrap"
+                                                                                        >
+                                                                                            {col}
+                                                                                        </th>
+                                                                                    ))}
+                                                                                </tr>
+                                                                            </thead>
+                                                                            <tbody>
+                                                                                {sqlResult.rows.map((row, rowIdx) => (
+                                                                                    <tr key={rowIdx} className="hover:bg-muted/50">
+                                                                                        {sqlResult.columns.map((col, colIdx) => (
+                                                                                            <td
+                                                                                                key={colIdx}
+                                                                                                className="px-4 py-2 border-b border-border/50 font-mono text-xs whitespace-nowrap"
+                                                                                            >
+                                                                                                {row[col] ?? "NULL"}
+                                                                                            </td>
+                                                                                        ))}
+                                                                                    </tr>
                                                                                 ))}
-                                                                            </tr>
-                                                                        ))}
-                                                                    </tbody>
-                                                                </table>
+                                                                            </tbody>
+                                                                        </table>
+                                                                    </div>
+                                                                </div>
                                                             </div>
-                                                        </div>
+                                                        ) : output ? (
+                                                            <pre className="text-sm text-destructive font-mono whitespace-pre-wrap">
+                                                                {output}
+                                                            </pre>
+                                                        ) : (
+                                                            <div className="flex flex-col items-center justify-center h-full text-muted-foreground min-h-[100px]">
+                                                                <Database className="w-12 h-12 mb-2 opacity-50" />
+                                                                <p className="text-sm">Run your query to see results</p>
+                                                            </div>
+                                                        )
                                                     ) : output ? (
-                                                        <pre className="text-sm text-destructive font-mono whitespace-pre-wrap">
+                                                        <pre className="text-sm text-foreground font-mono whitespace-pre-wrap">
                                                             {output}
                                                         </pre>
                                                     ) : (
-                                                        <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
-                                                            <Database className="w-12 h-12 mb-2 opacity-50" />
-                                                            <p className="text-sm">Run your query to see results</p>
+                                                        <div className="flex flex-col items-center justify-center h-full text-muted-foreground min-h-[100px]">
+                                                            <Terminal className="w-12 h-12 mb-2 opacity-50" />
+                                                            <p className="text-sm">Run your code to see output</p>
                                                         </div>
-                                                    )
-                                                ) : output ? (
-                                                    <pre className="text-sm text-foreground font-mono whitespace-pre-wrap">
-                                                        {output}
-                                                    </pre>
-                                                ) : (
-                                                    <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
-                                                        <Terminal className="w-12 h-12 mb-2 opacity-50" />
-                                                        <p className="text-sm">Run your code to see output</p>
-                                                    </div>
-                                                )}
-                                            </div>
-                                        </ScrollArea>
+                                                    )}
+                                                </div>
+                                            </ScrollArea>
+                                        </div>
                                     </div>
                                 </ResizablePanel>
                             </ResizablePanelGroup>

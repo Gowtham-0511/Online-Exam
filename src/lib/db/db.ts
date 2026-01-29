@@ -8,13 +8,13 @@ const pool = new Pool({
     password: process.env.PGPASSWORD,
     port: 5432,
 
-    max: 10, // Reduced from 20 to prevent excessive resource usage
+    max: 20, // Increased to handle concurrent requests (dashboard polling)
     min: 0, // Allow pool to scale down to 0 connections when idle
     idleTimeoutMillis: 10000, // Close idle connections after 10 seconds
     connectionTimeoutMillis: 10000, // Wait up to 10s for a new connection
     maxUses: 7500,
     keepAlive: true,
-    keepAliveInitialDelayMillis: 0,
+    keepAliveInitialDelayMillis: 60000, // Send keepalive after 60s to prevent Azure/Firewall drops (4 min limit)
 
     // ssl: { rejectUnauthorized: false } // Uncomment if needed
 });
