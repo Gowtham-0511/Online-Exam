@@ -23,83 +23,48 @@ export async function GET(request: Request) {
 
     logger.info("Admin dashboard stats requested (Cache miss/expired)");
 
-    // Run queries in parallel
-    const [
-      usersResult,
-      lastMonthUsersResult,
-      activeExamsResult,
-      lastMonthExamsResult,
-      questionsResult,
-      lastMonthQuestionsResult,
-      completionResult,
-      lastMonthCompletionResult,
-      recentExamsResult,
-    ] = await Promise.all([
-      // 1. Total users
-      pool.query(`SELECT COUNT(*) as count FROM users`),
-
-      // 2. Last month users
+    // Run queries (Optimized to 2 round-trips instead of 9)
+    const [statsResult, recentExamsResult] = await Promise.all([
+      // Query 1: All scalar stats in one go
       pool.query(`
-        SELECT COUNT(*) as count 
-        FROM users u  
-        WHERE u.created_at  >= NOW() - INTERVAL '2 months' 
-        AND u.created_at < NOW() - INTERVAL '1 month'
+        SELECT
+          -- Users
+          (SELECT COUNT(*) FROM users) as "totalUsers",
+          (SELECT COUNT(*) FROM users WHERE created_at >= NOW() - INTERVAL '2 months' AND created_at < NOW() - INTERVAL '1 month') as "lastMonthUsers",
+          
+          -- Active Exams
+          (SELECT COUNT(DISTINCT "assessmentId") FROM (
+              SELECT "assessmentId" FROM "AssessmentBatchMapping" WHERE "startTime" <= NOW() AND "endTime" >= NOW()
+              UNION
+              SELECT "assessmentId" FROM "AssessmentUserMapping" WHERE starttime <= NOW() AND endtime >= NOW()
+          ) as active) as "activeExams",
+          
+          -- Last Month Active Exams
+          (SELECT COUNT(DISTINCT "assessmentId") FROM (
+              SELECT "assessmentId" FROM "AssessmentBatchMapping" 
+              WHERE "startTime" >= NOW() - INTERVAL '2 months' AND "startTime" < NOW() - INTERVAL '1 month'
+              UNION
+              SELECT "assessmentId" FROM "AssessmentUserMapping" 
+              WHERE starttime >= NOW() - INTERVAL '2 months' AND starttime < NOW() - INTERVAL '1 month'
+          ) as prev_active) as "lastMonthExams",
+
+          -- Questions
+          (SELECT COUNT(*) FROM "Questions") as "totalQuestions",
+          (SELECT COUNT(*) FROM "Questions" WHERE "createdAt" >= NOW() - INTERVAL '2 months' AND "createdAt" < NOW() - INTERVAL '1 month') as "lastMonthQuestions",
+
+          -- Completion Rate
+          (SELECT 
+              COUNT(CASE WHEN "submittedAt" IS NOT NULL THEN 1 END)::float / NULLIF(COUNT(*)::float, 0) * 100 
+           FROM submissions) as "avgCompletion",
+          
+          -- Last Month Completion Rate
+          (SELECT 
+              COUNT(CASE WHEN "submittedAt" IS NOT NULL THEN 1 END)::float / NULLIF(COUNT(*)::float, 0) * 100 
+           FROM submissions
+           WHERE "submittedAt" >= NOW() - INTERVAL '2 months' AND "submittedAt" < NOW() - INTERVAL '1 month') as "lastMonthCompletion"
       `),
 
-      // 3. Active exams (Optimized: Query mapping tables directly)
-      pool.query(`
-        SELECT COUNT(DISTINCT "assessmentId") as count FROM (
-            SELECT "assessmentId" FROM "AssessmentBatchMapping" 
-            WHERE "startTime" <= NOW() AND "endTime" >= NOW()
-            UNION
-            SELECT "assessmentId" FROM "AssessmentUserMapping" 
-            WHERE starttime <= NOW() AND endtime >= NOW()
-        ) as active
-      `),
-
-      // 4. Last month active exams (Optimized)
-      pool.query(`
-        SELECT COUNT(DISTINCT "assessmentId") as count FROM (
-            SELECT "assessmentId" FROM "AssessmentBatchMapping" 
-            WHERE "startTime" >= NOW() - INTERVAL '2 months' 
-            AND "startTime" < NOW() - INTERVAL '1 month'
-            UNION
-            SELECT "assessmentId" FROM "AssessmentUserMapping" 
-            WHERE starttime >= NOW() - INTERVAL '2 months' 
-            AND starttime < NOW() - INTERVAL '1 month'
-        ) as previous_active
-      `),
-
-      // 5. Total questions
-      pool.query(`SELECT COUNT(*) as count FROM "Questions"`),
-
-      // 6. Last month questions
-      pool.query(`
-        SELECT COUNT(*) as count 
-        FROM "Questions" 
-        WHERE "createdAt" >= NOW() - INTERVAL '2 months' 
-        AND "createdAt" < NOW() - INTERVAL '1 month'
-      `),
-
-      // 7. Completion rate
-      pool.query(`
-        SELECT 
-            COUNT(CASE WHEN "submittedAt" IS NOT NULL THEN 1 END)::float / 
-            NULLIF(COUNT(*)::float, 0) * 100 as completion_rate
-        FROM submissions
-      `),
-
-      // 8. Last month completion rate
-      pool.query(`
-        SELECT 
-            COUNT(CASE WHEN "submittedAt" IS NOT NULL THEN 1 END)::float / 
-            NULLIF(COUNT(*)::float, 0) * 100 as completion_rate
-        FROM submissions
-        WHERE "submittedAt" >= NOW() - INTERVAL '2 months' 
-        AND "submittedAt" < NOW() - INTERVAL '1 month'
-      `),
-
-      // 9. Recent exams
+      // Query 2: Recent exams list
       pool.query(`
         SELECT 
             a.id,
@@ -128,25 +93,23 @@ export async function GET(request: Request) {
         GROUP BY a.id, a.title, a.language, a."createdAt"
         ORDER BY a."createdAt" DESC
         LIMIT 4
-      `),
+      `)
     ]);
 
+    const statsRow = statsResult.rows[0];
+
     // Parse results
-    const totalUsers = parseInt(usersResult.rows[0].count);
-    const lastMonthUsers = parseInt(lastMonthUsersResult.rows[0].count);
+    const totalUsers = parseInt(statsRow.totalUsers);
+    const lastMonthUsers = parseInt(statsRow.lastMonthUsers);
 
-    const activeExams = parseInt(activeExamsResult.rows[0].count);
-    const lastMonthExams = parseInt(lastMonthExamsResult.rows[0].count);
+    const activeExams = parseInt(statsRow.activeExams);
+    const lastMonthExams = parseInt(statsRow.lastMonthExams);
 
-    const totalQuestions = parseInt(questionsResult.rows[0].count);
-    const lastMonthQuestions = parseInt(lastMonthQuestionsResult.rows[0].count);
+    const totalQuestions = parseInt(statsRow.totalQuestions);
+    const lastMonthQuestions = parseInt(statsRow.lastMonthQuestions);
 
-    const avgCompletion = parseFloat(
-      completionResult.rows[0].completion_rate || 0
-    );
-    const lastMonthCompletion = parseFloat(
-      lastMonthCompletionResult.rows[0].completion_rate || 0
-    );
+    const avgCompletion = parseFloat(statsRow.avgCompletion || 0);
+    const lastMonthCompletion = parseFloat(statsRow.lastMonthCompletion || 0);
 
     // Calculate percentage changes
     // Helper to calculate change
