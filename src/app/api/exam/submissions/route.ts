@@ -55,6 +55,11 @@ export async function POST(req: Request) {
   }
 
   const submissionTask = async () => {
+    // Phase 1: Database Transaction (Fast)
+    let submissionId: number | null = null;
+    let dbSuccess = false;
+
+    // We use a dedicated client for transaction
     const client = await pool.connect();
 
     try {
@@ -68,7 +73,7 @@ export async function POST(req: Request) {
             "answers", 
             "answersWithQuestionIds", 
             "code", 
-    "disqualified", 
+            "disqualified", 
             "disqualification_reason",
             "submittedAt"
         )
@@ -82,7 +87,7 @@ export async function POST(req: Request) {
             "disqualification_reason" = EXCLUDED."disqualification_reason",
             "submittedAt" = NOW()
         RETURNING "id";
-    `;
+      `;
 
       const values = [
         email,
@@ -96,61 +101,17 @@ export async function POST(req: Request) {
       ];
 
       const result = await client.query(query, values);
-      const submissionId = result.rows[0]?.id;
+      submissionId = result.rows[0]?.id;
 
       await client.query("COMMIT");
-
+      dbSuccess = true;
       logger.info(`Submission saved: ${submissionId} for ${email}`);
 
-
-
-      // Auto-Verify Submission
-      // try {
-      //   if (answersWithQuestionIds && Array.isArray(answersWithQuestionIds)) {
-      //     logger.info(`Auto-verifying submission ${submissionId}...`);
-      //     const verificationResult = await verifyExamSubmission(
-      //       answersWithQuestionIds.map((a: any) => ({
-      //         questionText: a.question || "Not provided",
-      //         studentAnswer: a.answer || "Not provided",
-      //         maxMarks: a.marks,
-      //       }))
-      //     );
-
-      //     console.log(verificationResult);
-
-      //     const updatedAnswers = answersWithQuestionIds.map(
-      //       (a: any, i: number) => ({
-      //         ...a,
-      //         verification:
-      //           verificationResult.verifiedAnswers.find((v) => v.index === i) ||
-      //           null,
-      //       })
-      //     );
-
-      //     await client.query(
-      //       `UPDATE "submissions" SET "answersWithQuestionIds" = $1 WHERE "id" = $2`,
-      //       [JSON.stringify(updatedAnswers), submissionId]
-      //     );
-      //     logger.info(`Auto-verification completed for ${submissionId}`);
-      //   }
-      // } catch (verifyErr) {
-      //   logger.error("Auto-verification failed:", verifyErr);
-      // }
-
-      if (submissionId && answersWithQuestionIds) {
-        fetch("https://wizard-aiautomate.dopplr.ai/webhook/feedback", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            output: answersWithQuestionIds,
-            id: submissionId,
-          }),
-        }).catch((err) => logger.error("Webhook failed:", err));
-      }
     } catch (error: any) {
       await client.query("ROLLBACK");
       logger.error(`Submission failed for ${email}:`, error);
 
+      // Attempt to log failure to DB (using same client before release)
       try {
         await client.query(
           `
@@ -164,7 +125,26 @@ export async function POST(req: Request) {
         logger.error("Failed to log submission error:", logError);
       }
     } finally {
+      // CRITICAL: Release DB connection immediately
       client.release();
+    }
+
+    // Phase 2: external Integrations (Slow) - No DB connection held here
+    if (dbSuccess && submissionId && answersWithQuestionIds) {
+      try {
+        // Fire and forget webhook
+        fetch("https://wizard-aiautomate.dopplr.ai/webhook/feedback", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            output: answersWithQuestionIds,
+            id: submissionId,
+          }),
+        }).catch((err) => logger.error("Webhook failed:", err));
+
+      } catch (externalError) {
+        console.error("External integration error", externalError);
+      }
     }
   };
 
