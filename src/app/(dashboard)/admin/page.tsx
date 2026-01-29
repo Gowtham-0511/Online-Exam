@@ -63,8 +63,8 @@ export default function AdminDashboard() {
         '/api/admin/dashboard-stats',
         fetcher,
         {
-            refreshInterval: 30000, // Refresh every 30 seconds
-            revalidateOnFocus: true,
+            revalidateOnFocus: false,
+            revalidateOnReconnect: false,
         }
     );
 
