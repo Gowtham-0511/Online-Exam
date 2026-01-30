@@ -8,15 +8,17 @@ const pool = new Pool({
     password: process.env.PGPASSWORD,
     port: 5432,
 
-    max: 20, // Increased to handle concurrent requests (dashboard polling)
-    min: 0, // Allow pool to scale down to 0 connections when idle
-    idleTimeoutMillis: 10000, // Close idle connections after 10 seconds
-    connectionTimeoutMillis: 10000, // Wait up to 10s for a new connection
+    max: 20,
+    min: 2, // Keep at least 2 connections alive to prevent "cold start" latency
+    idleTimeoutMillis: 30000,
+    connectionTimeoutMillis: 5000, // Fail fast if we can't get a connection (5s)
     maxUses: 7500,
     keepAlive: true,
-    keepAliveInitialDelayMillis: 60000, // Send keepalive after 60s to prevent Azure/Firewall drops (4 min limit)
+    keepAliveInitialDelayMillis: 10000, // Faster keepalive (10s) for aggressive firewalls
 
-    // ssl: { rejectUnauthorized: false } // Uncomment if needed
+    // Timeouts to prevent 504s
+    statement_timeout: 30000, // Terminate any query taking > 30s
+    query_timeout: 30000,     // Node.js side timeout for queries
 });
 
 // Handle pool errors to prevent crashes

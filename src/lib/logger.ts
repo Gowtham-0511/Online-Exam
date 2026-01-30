@@ -34,8 +34,17 @@ if (isServer) {
         ),
         defaultMeta: { service: 'sysrank-service' },
         transports: [
-            new winston.transports.File({ filename: path.join(logDir, 'error.log'), level: 'error' }),
-            new winston.transports.File({ filename: path.join(logDir, 'app.log') }),
+            new winston.transports.File({
+                filename: path.join(logDir, 'error.log'),
+                level: 'error',
+                maxsize: 10485760, // 10MB
+                maxFiles: 5
+            }),
+            new winston.transports.File({
+                filename: path.join(logDir, 'app.log'),
+                maxsize: 10485760, // 10MB
+                maxFiles: 5
+            }),
         ],
     });
 
