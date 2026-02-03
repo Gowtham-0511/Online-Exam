@@ -1,5 +1,15 @@
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
+## Codebase Documentation
+
+To help collaborators understand the different modules of the system, we have detailed README files in the following key directories:
+
+- **[Attender Dashboard](<./src/app/(dashboard)/attender/README.md>)**: Information about the candidate interface, AI insights, and practice zone.
+- **[Organizer Dashboard](<./src/app/(dashboard)/organizer/README.md>)**: Guide to assessment management, candidate tracking, and analytics.
+- **[Exam Interface](./src/app/exam/README.md)**: Deep dive into the proctoring engine, code editors, and exam security.
+
+---
+
 ## Getting Started
 
 First, run the development server:
