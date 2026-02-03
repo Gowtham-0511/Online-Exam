@@ -20,7 +20,9 @@ import {
     Filter,
     AlertCircle,
     ChevronRight,
-    Award
+    ChevronDown,
+    Award,
+    Shield
 } from "lucide-react";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
@@ -52,10 +54,12 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import jsPDF from "jspdf";
 import toast from "react-hot-toast";
+import JSZip from "jszip";
 
 const fetcher = (url: string) => fetch(url).then(res => res.json());
 
@@ -66,9 +70,11 @@ interface Submission {
     email: string;
     submittedAt: string;
     disqualified: boolean;
-    answersWithQuestionIds?: any[];
+    answersWithQuestionIds?: any[] | string;
     answers?: any[];
     answer?: any;
+    violation_logs?: any[] | string;
+    disqualification_reason?: string;
 }
 
 export default function ExaminerSubmissionsPage() {
@@ -82,6 +88,8 @@ export default function ExaminerSubmissionsPage() {
     const [selectedExam, setSelectedExam] = useState("all");
     const [selectedSubmission, setSelectedSubmission] = useState<Submission | null>(null);
     const [downloadingId, setDownloadingId] = useState<string | null>(null);
+    const [isExporting, setIsExporting] = useState<string | null>(null);
+    const [expandedExams, setExpandedExams] = useState<string[]>([]);
 
     // Data Fetching
     const { data: submissions = [], error: submissionsError, isLoading: loading } = useSWR(
@@ -96,13 +104,16 @@ export default function ExaminerSubmissionsPage() {
         }
     );
 
-    console.log("Submissions: %o", submissions);
 
-    // Animations
+
+    // --- Animations ---
+    // Initial page load animations (headers, stats, toolbar)
     useGSAP(() => {
+        if (loading) return;
 
         const tl = gsap.timeline({ defaults: { ease: "power3.out" } });
 
+        // Only animate headers if they haven't been animated yet
         tl.fromTo(".animate-header",
             { y: -20, opacity: 0 },
             { y: 0, opacity: 1, duration: 0.5, stagger: 0.1 }
@@ -113,14 +124,17 @@ export default function ExaminerSubmissionsPage() {
             { scale: 1, opacity: 1, duration: 0.4, stagger: 0.1 },
             "-=0.3"
         );
+    }, { scope: containerRef, dependencies: [loading] });
 
-        tl.fromTo(".animate-row",
+    // Dynamic row animations when accordions expand
+    useGSAP(() => {
+        if (expandedExams.length === 0) return;
+
+        gsap.fromTo(".animate-row",
             { x: -10, opacity: 0 },
-            { x: 0, opacity: 1, duration: 0.3, stagger: 0.05 },
-            "-=0.2"
+            { x: 0, opacity: 1, duration: 0.3, stagger: 0.03, overwrite: true }
         );
-
-    }, { scope: containerRef, dependencies: [loading, submissions] });
+    }, { scope: containerRef, dependencies: [expandedExams] });
 
     // --- Logic Helpers (Preserved) ---
     const parseFeedback = (feedbackString: string | null | any) => {
@@ -182,6 +196,23 @@ export default function ExaminerSubmissionsPage() {
         return filtered;
     }, [submissions, filterStatus, selectedExam, searchQuery]);
 
+    const groupedFilteredSubmissions = useMemo(() => {
+        const groups: { [examId: string]: Submission[] } = {};
+        filteredSubmissions.forEach((sub: Submission) => {
+            if (!groups[sub.examId]) groups[sub.examId] = [];
+            groups[sub.examId].push(sub);
+        });
+        return groups;
+    }, [filteredSubmissions]);
+
+    const toggleExam = (examId: string) => {
+        setExpandedExams(prev =>
+            prev.includes(examId)
+                ? prev.filter(id => id !== examId)
+                : [...prev, examId]
+        );
+    };
+
     const stats = useMemo(() => {
         const total = submissions.length;
         const qualified = submissions.filter((s: Submission) => !s.disqualified).length;
@@ -205,198 +236,230 @@ export default function ExaminerSubmissionsPage() {
         return "bg-rose-500";
     };
 
-    // --- PDF Generator (Preserved Logic) ---
-    const downloadAsPDF = async (submission: Submission) => {
+    // --- PDF Generator (Core Logic) ---
+    const generateSubmissionPDF = async (submission: Submission): Promise<jsPDF> => {
+        const doc = new jsPDF();
+        const pageWidth = doc.internal.pageSize.width;
+        const pageHeight = doc.internal.pageSize.height;
+        const margin = 14;
+        const contentWidth = pageWidth - (margin * 2);
+
+        const addWatermark = () => {
+            const totalPages = doc.getNumberOfPages();
+            for (let i = 1; i <= totalPages; i++) {
+                doc.setPage(i);
+                doc.saveGraphicsState();
+                doc.setTextColor(200, 200, 200);
+                doc.setFontSize(60);
+                doc.setFont("helvetica", "bold");
+                try {
+                    // @ts-ignore
+                    if (doc.setGState) doc.setGState(new doc.GState({ opacity: 0.1 }));
+                } catch (e) { }
+                doc.text("SysRank", pageWidth / 2, pageHeight / 2, { align: "center", angle: 45 });
+                doc.restoreGraphicsState();
+            }
+        };
+
         try {
-            setDownloadingId(submission.examId + submission.email);
-            const doc = new jsPDF();
+            const img = new Image();
+            img.src = "/syslogo.png";
+            await new Promise((resolve, reject) => {
+                img.onload = resolve;
+                img.onerror = reject;
+            });
+            doc.addImage(img, "PNG", margin, 14, 12, 12);
+        } catch (e) { }
 
-            // Helper constants
-            const pageWidth = doc.internal.pageSize.width;
-            const pageHeight = doc.internal.pageSize.height;
-            const margin = 14;
-            const contentWidth = pageWidth - (margin * 2);
+        doc.setFontSize(22);
+        doc.setFont("helvetica", "bold");
+        doc.setTextColor(33, 33, 33);
+        doc.text("SysRank", margin + 16, 22);
 
-            // --- Helper Functions ---
-            const addWatermark = () => {
-                const totalPages = doc.getNumberOfPages();
-                for (let i = 1; i <= totalPages; i++) {
-                    doc.setPage(i);
-                    doc.saveGraphicsState();
-                    doc.setTextColor(200, 200, 200);
-                    doc.setFontSize(60);
-                    doc.setFont("helvetica", "bold");
-                    try {
-                        // Attempt to set opacity (requires specific jsPDF versions/plugins, silent fail if not present)
-                        // @ts-ignore
-                        if (doc.setGState) doc.setGState(new doc.GState({ opacity: 0.1 }));
-                    } catch (e) { /* ignore */ }
+        doc.setFontSize(16);
+        doc.setFont("helvetica", "normal");
+        doc.text("Performance Report", margin, 38);
 
-                    doc.text("SysRank", pageWidth / 2, pageHeight / 2, { align: "center", angle: 45 });
-                    doc.restoreGraphicsState();
-                }
-            };
+        doc.setLineWidth(0.5);
+        doc.setDrawColor(0, 0, 0);
+        doc.line(margin, 42, pageWidth - margin, 42);
 
-            // --- Header Generation ---
-            try {
-                const img = new Image();
-                img.src = "/syslogo.png";
-                await new Promise((resolve, reject) => {
-                    img.onload = resolve;
-                    img.onerror = reject;
-                });
-                doc.addImage(img, "PNG", margin, 14, 12, 12);
-            } catch (e) {
-                console.error("Failed to load logo", e);
+        const percentage = calculatePercentage(submission);
+        const scoreColor = percentage >= 60 ? [16, 185, 129] : [239, 68, 68];
+
+        doc.setFontSize(10);
+        doc.setTextColor(100, 100, 100);
+        let metaY = 52;
+        doc.text(`Exam: ${submission.examId}`, margin, metaY);
+        doc.text(`User: ${submission.userName}`, margin, metaY + 6);
+        doc.text(`Email: ${submission.email}`, margin, metaY + 12);
+        doc.text(`Date: ${new Date(submission.submittedAt).toLocaleDateString()}`, margin, metaY + 18);
+
+        const boxWidth = 60;
+        const boxHeight = 28;
+        const boxX = pageWidth - margin - boxWidth;
+        const boxY = 46;
+
+        doc.setFillColor(243, 244, 246);
+        doc.roundedRect(boxX, boxY, boxWidth, boxHeight, 3, 3, "F");
+
+        doc.setFontSize(10);
+        doc.setTextColor(50, 50, 50);
+        doc.text("Score Obtained", boxX + (boxWidth / 2), boxY + 10, { align: "center" });
+
+        doc.setFontSize(18);
+        doc.setFont("helvetica", "bold");
+        doc.setTextColor(scoreColor[0], scoreColor[1], scoreColor[2]);
+        doc.text(`${percentage.toFixed(1)}%`, boxX + (boxWidth / 2), boxY + 20, { align: "center" });
+
+        let y = 85;
+        const col1X = margin;
+        const col1W = 15;
+        const col3W = 25;
+        const col2X = margin + col1W;
+        const col2W = contentWidth - col1W - col3W;
+        const col3X = col2X + col2W;
+
+        const tableHeaderHeight = 10;
+        doc.setFillColor(139, 92, 246);
+        doc.rect(margin, y, contentWidth, tableHeaderHeight, "F");
+
+        doc.setFontSize(10);
+        doc.setTextColor(255, 255, 255);
+        doc.setFont("helvetica", "bold");
+        doc.text("#", col1X + (col1W / 2), y + 6.5, { align: "center" });
+        doc.text("Analysis", col2X + 2, y + 6.5);
+        doc.text("Marks", col3X + (col3W / 2), y + 6.5, { align: "center" });
+
+        y += tableHeaderHeight;
+
+        const answersData = typeof submission.answersWithQuestionIds === 'string'
+            ? JSON.parse(submission.answersWithQuestionIds)
+            : (submission.answersWithQuestionIds || []);
+        const feedbackData = parseFeedback(submission.ai_feedback);
+
+        doc.setFont("helvetica", "normal");
+        doc.setTextColor(0, 0, 0);
+
+        answersData.forEach((ans: any, idx: number) => {
+            const fb = feedbackData.find((f: any) => f.questionId === ans.questionId);
+            const marks = fb?.marks || 0;
+            const questionText = `Question: ${ans.question ? ans.question.replace(/<[^>]*>?/gm, '').trim() : 'N/A'}`;
+            const answerText = `Your Answer: ${ans.answer || 'N/A'}`;
+            const analysisText = `Analysis: ${fb?.feedback || 'No feedback provided.'}`;
+
+            doc.setFontSize(9);
+            const questionLines = doc.splitTextToSize(questionText, col2W - 4);
+            const answerLines = doc.splitTextToSize(answerText, col2W - 4);
+            const analysisLines = doc.splitTextToSize(analysisText, col2W - 4);
+
+            const lineHeight = 4.5;
+            const buffer = 6;
+            const blockHeight = (questionLines.length + answerLines.length + analysisLines.length) * lineHeight + (buffer * 2);
+
+            if (y + blockHeight > pageHeight - 20) {
+                doc.addPage();
+                y = 20;
+                doc.setDrawColor(200, 200, 200);
+                doc.line(margin, y, pageWidth - margin, y);
+                y += 1;
             }
 
-            doc.setFontSize(22);
+            doc.setDrawColor(229, 231, 235);
+            doc.rect(margin, y, contentWidth, blockHeight);
+            doc.line(col2X, y, col2X, y + blockHeight);
+            doc.line(col3X, y, col3X, y + blockHeight);
+
+            doc.setTextColor(80, 80, 80);
             doc.setFont("helvetica", "bold");
-            doc.setTextColor(33, 33, 33);
-            doc.text("SysRank", margin + 16, 22);
+            doc.text(`Q${idx + 1}`, col1X + (col1W / 2), y + 10, { align: "center" });
 
-            doc.setFontSize(16);
+            let currentTextY = y + buffer;
+            doc.setTextColor(107, 114, 128);
             doc.setFont("helvetica", "normal");
-            doc.text("Performance Report", margin, 38);
+            doc.text(questionLines, col2X + 2, currentTextY);
+            currentTextY += questionLines.length * lineHeight + 2;
+            doc.text(answerLines, col2X + 2, currentTextY);
+            currentTextY += answerLines.length * lineHeight + 2;
+            doc.setTextColor(30, 30, 30);
+            doc.text(analysisLines, col2X + 2, currentTextY);
 
-            // Underline
+            doc.setFont("helvetica", "bold");
+            const markColor = marks > 0 ? [34, 197, 94] : [100, 100, 100];
+            doc.setTextColor(markColor[0], markColor[1], markColor[2]);
+            doc.text(`${marks}`, col3X + (col3W / 2), y + 10, { align: "center" });
+
+            y += blockHeight;
+        });
+
+        // --- Proctoring & Integrity Section ---
+        const violationsData = parseFeedback(submission.violation_logs);
+        if (violationsData.length > 0 || submission.disqualified) {
+            y += 10;
+            if (y > pageHeight - 40) {
+                doc.addPage();
+                y = 20;
+            }
+
+            doc.setFontSize(14);
+            doc.setFont("helvetica", "bold");
+            doc.setTextColor(239, 68, 68); // Rose 500
+            doc.text("Proctoring & Integrity Report", margin, y);
+            y += 6;
+
+            doc.setDrawColor(239, 68, 68);
             doc.setLineWidth(0.5);
-            doc.setDrawColor(0, 0, 0);
-            doc.line(margin, 42, pageWidth - margin, 42);
+            doc.line(margin, y, pageWidth - margin, y);
+            y += 8;
 
-            // --- Metadata & Score Card ---
-            const percentage = calculatePercentage(submission);
-            const scoreColor = percentage >= 60 ? [16, 185, 129] : [239, 68, 68]; // Green or Red
-
-            // Left Side: Meta
-            doc.setFontSize(10);
-            doc.setTextColor(100, 100, 100);
-            let metaY = 52;
-            doc.text(`Exam: ${submission.examId}`, margin, metaY);
-            doc.text(`User: ${submission.userName}`, margin, metaY + 6);
-            doc.text(`Email: ${submission.email}`, margin, metaY + 12);
-            doc.text(`Date: ${new Date(submission.submittedAt).toLocaleDateString()}`, margin, metaY + 18);
-
-            // Right Side: Score Card
-            const boxWidth = 60;
-            const boxHeight = 28;
-            const boxX = pageWidth - margin - boxWidth;
-            const boxY = 46;
-
-            doc.setFillColor(243, 244, 246); // Light gray bg
-            doc.roundedRect(boxX, boxY, boxWidth, boxHeight, 3, 3, "F");
+            if (submission.disqualified) {
+                doc.setFillColor(254, 242, 242);
+                doc.roundedRect(margin, y, contentWidth, 15, 2, 2, "F");
+                doc.setFontSize(10);
+                doc.setTextColor(153, 27, 27);
+                doc.setFont("helvetica", "bold");
+                doc.text("DISQUALIFICATION VERDICT", margin + 4, y + 6);
+                doc.setFont("helvetica", "normal");
+                doc.text(`Reason: ${submission.disqualification_reason || "Policy Violation"}`, margin + 4, y + 11);
+                y += 20;
+            }
 
             doc.setFontSize(10);
             doc.setTextColor(50, 50, 50);
-            doc.text("Score Obtained", boxX + (boxWidth / 2), boxY + 10, { align: "center" });
+            doc.text(`Total Recorded Incidents: ${violationsData.length}`, margin, y);
+            y += 8;
 
-            doc.setFontSize(18);
-            doc.setFont("helvetica", "bold");
-            doc.setTextColor(scoreColor[0], scoreColor[1], scoreColor[2]);
-            doc.text(`${percentage.toFixed(1)}%`, boxX + (boxWidth / 2), boxY + 20, { align: "center" });
+            for (const [vIdx, v] of violationsData.entries()) {
+                const type = typeof v === 'string' ? v : (v.type || v.reason || "Incident");
+                const time = typeof v === 'object' ? (v.readableTime || (v.timestamp ? new Date(v.timestamp).toLocaleString() : "N/A")) : "N/A";
+                const explanation = typeof v === 'object' ? (v.explanation || "No explanation provided.") : "No explanation provided.";
 
-            // --- Table Header ---
-            let y = 85;
-            const col1X = margin;
-            const col1W = 15; // Width for "#"
-            const col3W = 25; // Width for "Marks"
-            const col2X = margin + col1W;
-            const col2W = contentWidth - col1W - col3W;
-            const col3X = col2X + col2W;
+                doc.setFont("helvetica", "bold");
+                doc.setTextColor(185, 28, 28);
+                doc.text(`${vIdx + 1}. ${type} at ${time}`, margin, y);
+                y += 5;
 
-            const tableHeaderHeight = 10;
-            doc.setFillColor(139, 92, 246); // Purple #8b5cf6
-            doc.rect(margin, y, contentWidth, tableHeaderHeight, "F");
-
-            doc.setFontSize(10);
-            doc.setTextColor(255, 255, 255);
-            doc.setFont("helvetica", "bold");
-            doc.text("#", col1X + (col1W / 2), y + 6.5, { align: "center" });
-            doc.text("Analysis", col2X + 2, y + 6.5);
-            doc.text("Marks", col3X + (col3W / 2), y + 6.5, { align: "center" });
-
-            y += tableHeaderHeight;
-
-            // --- Table Content ---
-            const answersData = typeof submission.answersWithQuestionIds === 'string'
-                ? JSON.parse(submission.answersWithQuestionIds)
-                : (submission.answersWithQuestionIds || []);
-            const feedbackData = parseFeedback(submission.ai_feedback);
-
-            doc.setFont("helvetica", "normal");
-            doc.setTextColor(0, 0, 0); // Reset text color
-
-            answersData.forEach((ans: any, idx: number) => {
-                const fb = feedbackData.find((f: any) => f.questionId === ans.questionId);
-                const marks = fb?.marks || 0;
-
-                // Content Preparation
-                const questionText = `Question: ${ans.question ? ans.question.replace(/<[^>]*>?/gm, '').trim() : 'N/A'}`;
-                const answerText = `Your Answer: ${ans.answer || 'N/A'}`;
-                const analysisText = `Analysis: ${fb?.feedback || 'No feedback provided.'}`;
-
-                // Calculate Heights
-                doc.setFontSize(9);
                 doc.setFont("helvetica", "normal");
+                doc.setTextColor(100, 100, 100);
+                const explLines = doc.splitTextToSize(`Explanation: ${explanation}`, contentWidth - 10);
+                doc.text(explLines, margin + 4, y);
+                y += (explLines.length * 5) + 5;
 
-                const questionLines = doc.splitTextToSize(questionText, col2W - 4);
-                const answerLines = doc.splitTextToSize(answerText, col2W - 4);
-                const analysisLines = doc.splitTextToSize(analysisText, col2W - 4);
-
-                const lineHeight = 4.5;
-                const buffer = 6; // Padding top/bottom
-                const blockHeight = (questionLines.length + answerLines.length + analysisLines.length) * lineHeight + (buffer * 2);
-
-                // Page Break Check
-                if (y + blockHeight > pageHeight - 20) {
+                if (y > pageHeight - 20) {
                     doc.addPage();
                     y = 20;
-                    // Re-draw table header on new page? (Optional, let's keep it simple for now)
-                    // Or just a line separator
-                    doc.setDrawColor(200, 200, 200);
-                    doc.line(margin, y, pageWidth - margin, y);
-                    y += 1;
                 }
+            }
+        }
 
-                // Draw Row Background (Alternating optional, keeping white for now) and Borders
-                doc.setDrawColor(229, 231, 235); // Light grey border
-                doc.rect(margin, y, contentWidth, blockHeight); // Outer border
-                doc.line(col2X, y, col2X, y + blockHeight); // Vertical line 1
-                doc.line(col3X, y, col3X, y + blockHeight); // Vertical line 2
+        addWatermark();
+        return doc;
+    };
 
-                // Col 1: Index
-                doc.setTextColor(80, 80, 80);
-                doc.setFont("helvetica", "bold");
-                doc.text(`Q${idx + 1}`, col1X + (col1W / 2), y + 10, { align: "center" });
-
-                // Col 2: Content
-                let currentTextY = y + buffer;
-
-                // Question (Grayish)
-                doc.setTextColor(107, 114, 128);
-                doc.setFont("helvetica", "normal");
-                doc.text(questionLines, col2X + 2, currentTextY);
-                currentTextY += questionLines.length * lineHeight + 2;
-
-                // Answer (Grayish)
-                doc.text(answerLines, col2X + 2, currentTextY);
-                currentTextY += answerLines.length * lineHeight + 2;
-
-                // Analysis (Darker)
-                doc.setTextColor(30, 30, 30);
-                doc.text(analysisLines, col2X + 2, currentTextY);
-
-                // Col 3: Marks
-                doc.setFont("helvetica", "bold");
-                const markColor = marks > 0 ? [34, 197, 94] : [100, 100, 100];
-                doc.setTextColor(markColor[0], markColor[1], markColor[2]);
-                doc.text(`${marks}`, col3X + (col3W / 2), y + 10, { align: "center" });
-
-                y += blockHeight;
-            });
-
-            addWatermark();
-
+    const downloadAsPDF = async (submission: Submission) => {
+        try {
+            setDownloadingId(submission.examId + submission.email);
+            const doc = await generateSubmissionPDF(submission);
             const filename = `SysRank-Report-${submission.userName.replace(/\s+/g, '-')}-${Date.now()}.pdf`;
             doc.save(filename);
             toast.success("Detailed Report Downloaded");
@@ -405,6 +468,36 @@ export default function ExaminerSubmissionsPage() {
             toast.error("Download failed");
         } finally {
             setDownloadingId(null);
+        }
+    };
+
+    const downloadBatchZip = async (examId: string, subs: Submission[]) => {
+        try {
+            setIsExporting(examId);
+            const zip = new JSZip();
+            const folder = zip.folder(`Assessments-${examId}`);
+
+            toast.loading(`Preparing ${subs.length} reports...`, { id: 'zip-progress' });
+
+            for (const [idx, sub] of subs.entries()) {
+                const doc = await generateSubmissionPDF(sub);
+                const pdfBlob = doc.output('blob');
+                const safeName = (sub.userName || sub.email).replace(/[^a-z0-9]/gi, '_').toLowerCase();
+                folder?.file(`${idx + 1}-${safeName}.pdf`, pdfBlob);
+            }
+
+            const content = await zip.generateAsync({ type: "blob" });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(content);
+            link.download = `SysRank-Assessments-${examId}-${new Date().toISOString().split('T')[0]}.zip`;
+            link.click();
+
+            toast.success(`Zip file downloaded with ${subs.length} reports`, { id: 'zip-progress' });
+        } catch (error) {
+            console.error(error);
+            toast.error("Bulk download failed", { id: 'zip-progress' });
+        } finally {
+            setIsExporting(null);
         }
     };
 
@@ -515,130 +608,190 @@ export default function ExaminerSubmissionsPage() {
                 </Card>
 
                 {/* Table */}
-                <Card className="animate-header opacity-0 border-border/50 bg-card/40 backdrop-blur-sm overflow-hidden min-h-[400px]">
-                    <Table>
-                        <TableHeader className="bg-muted/30">
-                            <TableRow className="border-border/50 hover:bg-transparent">
-                                <TableHead className="w-[30%]">Candidate</TableHead>
-                                <TableHead className="w-[15%]">Exam ID</TableHead>
-                                <TableHead className="w-[15%]">Submitted</TableHead>
-                                <TableHead className="w-[25%]">Performance</TableHead>
-                                <TableHead className="w-[10%] text-center">Status</TableHead>
-                                <TableHead className="w-[5%] text-right">Actions</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {filteredSubmissions.length === 0 ? (
-                                <TableRow>
-                                    <TableCell colSpan={6} className="h-[400px] text-center">
-                                        {submissions.length === 0 ? (
-                                            <div className="flex flex-col items-center justify-center p-8 text-muted-foreground animate-in fade-in zoom-in duration-500">
-                                                <div className="w-20 h-20 bg-muted/30 rounded-full flex items-center justify-center mb-6">
-                                                    <FileText className="w-10 h-10 opacity-40" />
-                                                </div>
-                                                <h3 className="text-xl font-bold text-foreground mb-2">No Records Found</h3>
-                                                <p className="text-sm opacity-70 max-w-sm leading-relaxed">
-                                                    There are no exam submissions to display yet. Once students complete their exams, the results will appear here.
+                {/* Grouped Submissions (Accordion style) */}
+                <div className="space-y-4">
+                    {Object.keys(groupedFilteredSubmissions).length === 0 ? (
+                        <Card className="animate-header opacity-0 border-border/50 bg-card/40 backdrop-blur-sm p-12 text-center">
+                            {submissions.length === 0 ? (
+                                <div className="flex flex-col items-center justify-center text-muted-foreground">
+                                    <div className="w-20 h-20 bg-muted/30 rounded-full flex items-center justify-center mb-6">
+                                        <FileText className="w-10 h-10 opacity-40" />
+                                    </div>
+                                    <h3 className="text-xl font-bold text-foreground mb-2">No Records Found</h3>
+                                    <p className="text-sm opacity-70 max-w-sm leading-relaxed">
+                                        There are no exam submissions to display yet. Once students complete their exams, the results will appear here.
+                                    </p>
+                                </div>
+                            ) : (
+                                <div className="flex flex-col items-center justify-center text-muted-foreground">
+                                    <div className="w-16 h-16 bg-muted/20 rounded-full flex items-center justify-center mb-4">
+                                        <Search className="w-8 h-8 opacity-50" />
+                                    </div>
+                                    <p className="text-lg font-medium">No matches found</p>
+                                    <p className="text-sm opacity-70">We couldn't find any submissions matching your filters.</p>
+                                    <Button
+                                        variant="link"
+                                        onClick={() => { setSearchQuery(""); setFilterStatus("all"); setSelectedExam("all"); }}
+                                        className="mt-2 text-primary"
+                                    >
+                                        Clear Filters
+                                    </Button>
+                                </div>
+                            )}
+                        </Card>
+                    ) : (
+                        Object.entries(groupedFilteredSubmissions).map(([examId, examSubmissions]) => {
+                            const isExpanded = expandedExams.includes(examId);
+                            const avgExamScore = Math.round(examSubmissions.reduce((sum, s) => sum + calculatePercentage(s), 0) / examSubmissions.length);
+
+                            return (
+                                <Card key={examId} className="animate-header opacity-0 border-border/50 bg-card/40 backdrop-blur-sm overflow-hidden transition-all duration-300">
+                                    <div
+                                        className="p-4 flex items-center justify-between cursor-pointer hover:bg-muted/30 transition-colors"
+                                        onClick={() => toggleExam(examId)}
+                                    >
+                                        <div className="flex items-center gap-4">
+                                            <div className={`p-2 rounded-lg bg-primary/10 transition-transform duration-300 ${isExpanded ? 'rotate-90' : ''}`}>
+                                                <ChevronRight className="w-5 h-5 text-primary" />
+                                            </div>
+                                            <div>
+                                                <h3 className="text-lg font-bold flex items-center gap-2">
+                                                    Exam: <span className="text-primary">{examId}</span>
+                                                </h3>
+                                                <p className="text-sm text-muted-foreground">
+                                                    {examSubmissions.length} submission{examSubmissions.length !== 1 ? 's' : ''} • Avg. Score: {avgExamScore}%
                                                 </p>
                                             </div>
-                                        ) : (
-                                            <div className="flex flex-col items-center justify-center p-8 text-muted-foreground animate-in fade-in zoom-in duration-500">
-                                                <div className="w-16 h-16 bg-muted/20 rounded-full flex items-center justify-center mb-4">
-                                                    <Search className="w-8 h-8 opacity-50" />
-                                                </div>
-                                                <p className="text-lg font-medium">No matches found</p>
-                                                <p className="text-sm opacity-70">We couldn't find any submissions matching your filters.</p>
-                                                <Button
-                                                    variant="link"
-                                                    onClick={() => { setSearchQuery(""); setFilterStatus("all"); setSelectedExam("all"); }}
-                                                    className="mt-2 text-primary"
-                                                >
-                                                    Clear Filters
-                                                </Button>
+                                        </div>
+                                        <div className="flex items-center gap-3">
+                                            <div className="hidden sm:flex gap-1.5">
+                                                <Badge variant="outline" className="bg-emerald-500/5 text-emerald-600 border-emerald-200/50">
+                                                    {examSubmissions.filter(s => !s.disqualified).length} Qualified
+                                                </Badge>
+                                                <Badge variant="outline" className="bg-rose-500/5 text-rose-600 border-rose-200/50">
+                                                    {examSubmissions.filter(s => s.disqualified).length} Disqualified
+                                                </Badge>
                                             </div>
-                                        )}
-                                    </TableCell>
-                                </TableRow>
-                            ) : (
-                                filteredSubmissions.map((sub: Submission, idx: number) => {
-                                    const percentage = calculatePercentage(sub);
-                                    const totalMarks = calculateTotalPossibleMarks(sub);
-                                    const score = calculateTotalMarks(parseFeedback(sub.ai_feedback));
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                className="h-8 gap-2 border-primary/20 hover:bg-primary/10 hover:text-primary transition-all font-semibold"
+                                                onClick={(e) => { e.stopPropagation(); downloadBatchZip(examId, examSubmissions); }}
+                                                disabled={isExporting === examId}
+                                            >
+                                                {isExporting === examId ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
+                                                Zip
+                                            </Button>
+                                            <Button variant="ghost" size="icon" className="h-8 w-8">
+                                                {isExpanded ? <ChevronDown className="w-5 h-5" /> : <ChevronRight className="w-5 h-5" />}
+                                            </Button>
+                                        </div>
+                                    </div>
 
-                                    return (
-                                        <TableRow key={`${sub.examId}-${sub.email}-${idx}`} className="animate-row opacity-0 group border-border/50 hover:bg-muted/40 transition-colors">
-                                            <TableCell>
-                                                <div className="flex items-center gap-3">
-                                                    <div className="w-9 h-9 rounded-md bg-gradient-to-br from-primary/20 to-primary/5 border border-primary/10 flex items-center justify-center text-primary font-bold shadow-sm">
-                                                        {(sub.userName || sub.email).charAt(0).toUpperCase()}
-                                                    </div>
-                                                    <div>
-                                                        <div className="font-semibold text-foreground">{sub.userName || "Unknown User"}</div>
-                                                        <div className="text-xs text-muted-foreground">{sub.email}</div>
-                                                    </div>
-                                                </div>
-                                            </TableCell>
-                                            <TableCell>
-                                                <Badge variant="outline" className="font-mono text-[10px] tracking-wider bg-background/50">
-                                                    {sub.examId}
-                                                </Badge>
-                                            </TableCell>
-                                            <TableCell>
-                                                <div className="flex items-center text-xs text-muted-foreground">
-                                                    <Clock className="w-3 h-3 mr-1.5" />
-                                                    {new Date(sub.submittedAt).toLocaleDateString()}
-                                                </div>
-                                            </TableCell>
-                                            <TableCell>
-                                                <div className="space-y-1.5 w-[90%]">
-                                                    <div className="flex justify-between text-xs font-medium">
-                                                        <span className={getScoreColor(percentage)}>{percentage}%</span>
-                                                        <span className="text-muted-foreground">{score}/{totalMarks}</span>
-                                                    </div>
-                                                    <div className="h-1.5 w-full bg-muted/50 rounded-full overflow-hidden">
-                                                        <div
-                                                            className={`h-full ${getProgressColor(percentage)} transition-all duration-500`}
-                                                            style={{ width: `${percentage}%` }}
-                                                        />
-                                                    </div>
-                                                </div>
-                                            </TableCell>
-                                            <TableCell className="text-center">
-                                                <Badge
-                                                    variant={sub.disqualified ? "destructive" : "default"}
-                                                    className={`
-                                                        ${sub.disqualified
-                                                            ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400 hover:bg-rose-500/20 border-rose-200/50'
-                                                            : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20 border-emerald-200/50'}
-                                                        border shadow-none font-medium capitalize
-                                                    `}
-                                                >
-                                                    {sub.disqualified ? 'Disqualified' : 'Qualified'}
-                                                </Badge>
-                                            </TableCell>
-                                            <TableCell className="text-right">
-                                                <div className="flex justify-end gap-1 opacity-100 sm:opacity-0 group-hover:opacity-100 transition-opacity">
-                                                    <Button size="icon" variant="ghost" className="h-8 w-8 hover:text-primary" onClick={() => setSelectedSubmission(sub)}>
-                                                        <Eye className="w-4 h-4" />
-                                                    </Button>
-                                                    <Button
-                                                        size="icon"
-                                                        variant="ghost"
-                                                        className="h-8 w-8 hover:text-primary"
-                                                        onClick={() => downloadAsPDF(sub)}
-                                                        disabled={downloadingId === sub.examId + sub.email}
-                                                    >
-                                                        {downloadingId === sub.examId + sub.email ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
-                                                    </Button>
-                                                </div>
-                                            </TableCell>
-                                        </TableRow>
-                                    );
-                                })
-                            )}
-                        </TableBody>
-                    </Table>
-                </Card>
+                                    {isExpanded && (
+                                        <div className="border-t border-border/50 overflow-hidden animate-in slide-in-from-top-2 duration-300">
+                                            <Table>
+                                                <TableHeader className="bg-muted/30">
+                                                    <TableRow className="border-border/50 hover:bg-transparent">
+                                                        <TableHead className="w-[30%]">Candidate</TableHead>
+                                                        <TableHead className="w-[20%]">Submitted</TableHead>
+                                                        <TableHead className="w-[30%]">Performance</TableHead>
+                                                        <TableHead className="w-[10%] text-center">Status</TableHead>
+                                                        <TableHead className="w-[10%] text-right">Actions</TableHead>
+                                                    </TableRow>
+                                                </TableHeader>
+                                                <TableBody>
+                                                    {examSubmissions.map((sub: Submission, idx: number) => {
+                                                        const percentage = calculatePercentage(sub);
+                                                        const totalMarks = calculateTotalPossibleMarks(sub);
+                                                        const score = calculateTotalMarks(parseFeedback(sub.ai_feedback));
+
+                                                        return (
+                                                            <TableRow key={`${sub.examId}-${sub.email}-${idx}`} className="animate-row opacity-0 group border-border/50 hover:bg-muted/40 transition-colors">
+                                                                <TableCell>
+                                                                    <div className="flex items-center gap-3">
+                                                                        <div className="w-9 h-9 rounded-md bg-gradient-to-br from-primary/20 to-primary/5 border border-primary/10 flex items-center justify-center text-primary font-bold shadow-sm relative">
+                                                                            {(sub.userName || sub.email).charAt(0).toUpperCase()}
+                                                                            {parseFeedback(sub.violation_logs).length > 0 && (
+                                                                                <div className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-rose-500 rounded-full border-2 border-background flex items-center justify-center">
+                                                                                    <Shield className="w-2 h-2 text-white fill-white" />
+                                                                                </div>
+                                                                            )}
+                                                                        </div>
+                                                                        <div>
+                                                                            <div className="font-semibold text-foreground flex items-center gap-2">
+                                                                                {sub.userName || "Unknown User"}
+                                                                                {parseFeedback(sub.violation_logs).length > 0 && (
+                                                                                    <Badge variant="outline" className="text-[9px] h-3.5 px-1 bg-rose-50 border-rose-200 text-rose-600 font-bold uppercase">
+                                                                                        Proctored ({parseFeedback(sub.violation_logs).length})
+                                                                                    </Badge>
+                                                                                )}
+                                                                            </div>
+                                                                            <div className="text-xs text-muted-foreground">{sub.email}</div>
+                                                                        </div>
+                                                                    </div>
+                                                                </TableCell>
+                                                                <TableCell>
+                                                                    <div className="flex items-center text-xs text-muted-foreground">
+                                                                        <Clock className="w-3 h-3 mr-1.5" />
+                                                                        {new Date(sub.submittedAt).toLocaleDateString()}
+                                                                    </div>
+                                                                </TableCell>
+                                                                <TableCell>
+                                                                    <div className="space-y-1.5 w-[90%]">
+                                                                        <div className="flex justify-between text-xs font-medium">
+                                                                            <span className={getScoreColor(percentage)}>{percentage}%</span>
+                                                                            <span className="text-muted-foreground">{score}/{totalMarks}</span>
+                                                                        </div>
+                                                                        <div className="h-1.5 w-full bg-muted/50 rounded-full overflow-hidden">
+                                                                            <div
+                                                                                className={`h-full ${getProgressColor(percentage)} transition-all duration-500`}
+                                                                                style={{ width: `${percentage}%` }}
+                                                                            />
+                                                                        </div>
+                                                                    </div>
+                                                                </TableCell>
+                                                                <TableCell className="text-center">
+                                                                    <Badge
+                                                                        variant={sub.disqualified ? "destructive" : "default"}
+                                                                        className={`
+                                                                            ${sub.disqualified
+                                                                                ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400 hover:bg-rose-500/20 border-rose-200/50'
+                                                                                : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20 border-emerald-200/50'}
+                                                                            border shadow-none font-medium capitalize
+                                                                        `}
+                                                                    >
+                                                                        {sub.disqualified ? 'Disqualified' : 'Qualified'}
+                                                                    </Badge>
+                                                                </TableCell>
+                                                                <TableCell className="text-right">
+                                                                    <div className="flex justify-end gap-1 opacity-100 sm:opacity-0 group-hover:opacity-100 transition-opacity">
+                                                                        <Button size="icon" variant="ghost" className="h-8 w-8 hover:text-primary" onClick={() => setSelectedSubmission(sub)}>
+                                                                            <Eye className="w-4 h-4" />
+                                                                        </Button>
+                                                                        <Button
+                                                                            size="icon"
+                                                                            variant="ghost"
+                                                                            className="h-8 w-8 hover:text-primary"
+                                                                            onClick={() => downloadAsPDF(sub)}
+                                                                            disabled={downloadingId === sub.examId + sub.email}
+                                                                        >
+                                                                            {downloadingId === sub.examId + sub.email ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+                                                                        </Button>
+                                                                    </div>
+                                                                </TableCell>
+                                                            </TableRow>
+                                                        );
+                                                    })}
+                                                </TableBody>
+                                            </Table>
+                                        </div>
+                                    )}
+                                </Card>
+                            );
+                        })
+                    )}
+                </div>
             </div>
 
             {/* Details Dialog */}
@@ -680,11 +833,23 @@ export default function ExaminerSubmissionsPage() {
                             const totalMarks = calculateTotalPossibleMarks(selectedSubmission);
                             const score = calculateTotalMarks(parseFeedback(selectedSubmission.ai_feedback));
                             const feedbackList = parseFeedback(selectedSubmission.ai_feedback);
+                            const violations = parseFeedback(selectedSubmission.violation_logs);
 
                             return (
                                 <div className="space-y-8">
+                                    {/* Disqualification Banner */}
+                                    {selectedSubmission.disqualified && (
+                                        <Alert variant="destructive" className="bg-rose-50 border-rose-200 text-rose-800">
+                                            <AlertCircle className="h-4 w-4 text-rose-600" />
+                                            <AlertDescription>
+                                                <span className="font-bold">Candidate Disqualified:</span>{" "}
+                                                {selectedSubmission.disqualification_reason || "Violation of exam rules."}
+                                            </AlertDescription>
+                                        </Alert>
+                                    )}
+
                                     {/* Score Grid */}
-                                    <div className="grid grid-cols-3 gap-4">
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                         <div className="p-4 rounded-xl border bg-card text-center space-y-1">
                                             <div className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Total Score</div>
                                             <div className={`text-3xl font-bold ${getScoreColor(percentage)}`}>{score}<span className="text-muted-foreground text-lg">/{totalMarks}</span></div>
@@ -693,11 +858,66 @@ export default function ExaminerSubmissionsPage() {
                                             <div className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Accuracy</div>
                                             <div className={`text-3xl font-bold ${getScoreColor(percentage)}`}>{percentage}%</div>
                                         </div>
-                                        <div className="p-4 rounded-xl border bg-card text-center space-y-1">
-                                            <div className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Attempted</div>
-                                            <div className="text-3xl font-bold text-foreground">{getQuestionsAttempted(selectedSubmission)}</div>
+                                        <div className="p-4 rounded-xl border bg-card text-center space-y-1 relative overflow-hidden">
+                                            <div className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Violations</div>
+                                            <div className={`text-3xl font-bold ${violations.length > 0 ? 'text-rose-500' : 'text-emerald-500'}`}>
+                                                {violations.length}
+                                            </div>
+                                            {violations.length > 0 && (
+                                                <div className="absolute top-1 right-1 opacity-20">
+                                                    <Shield className="w-8 h-8 text-rose-500" />
+                                                </div>
+                                            )}
                                         </div>
                                     </div>
+
+                                    {/* Proctoring Section */}
+                                    {violations.length > 0 && (
+                                        <div className="space-y-4">
+                                            <h3 className="text-lg font-semibold flex items-center gap-2 text-rose-500">
+                                                <Shield className="w-5 h-5" />
+                                                Proctoring Violations
+                                            </h3>
+                                            <div className="space-y-3">
+                                                {violations.map((v: any, i: number) => {
+                                                    const vType = typeof v === 'string' ? v : (v.type || v.reason || "Incident");
+                                                    const vTime = typeof v === 'object' ? (v.readableTime || (v.timestamp ? new Date(v.timestamp).toLocaleTimeString() : "N/A")) : "N/A";
+                                                    const vExplanation = typeof v === 'object' ? (v.explanation || "No explanation provided.") : "No explanation provided.";
+                                                    const vSnapshot = typeof v === 'object' ? v.snapshotUrl : null;
+
+                                                    return (
+                                                        <div key={i} className="p-4 rounded-lg border border-rose-100 bg-rose-50/30 flex flex-col gap-2">
+                                                            <div className="flex justify-between items-start">
+                                                                <div className="flex items-center gap-2">
+                                                                    <Badge variant="outline" className="text-[10px] uppercase font-bold border-rose-200 text-rose-600 bg-white">
+                                                                        Incident {i + 1}
+                                                                    </Badge>
+                                                                    <span className="font-semibold text-rose-700">{vType}</span>
+                                                                </div>
+                                                                <span className="text-xs text-rose-400 font-mono">{vTime}</span>
+                                                            </div>
+                                                            <div className="text-sm">
+                                                                <span className="font-semibold text-muted-foreground mr-2">Candidate Explanation:</span>
+                                                                <span className="italic text-foreground">
+                                                                    {vExplanation}
+                                                                </span>
+                                                            </div>
+                                                            {vSnapshot && (
+                                                                <div className="mt-2 rounded-lg overflow-hidden border bg-black/5 flex items-center justify-center min-h-[100px]">
+                                                                    <img
+                                                                        src={vSnapshot}
+                                                                        alt={`Violation Snapshot ${i + 1}`}
+                                                                        className="max-h-64 object-contain shadow-sm"
+                                                                        onError={(e) => (e.currentTarget.style.display = 'none')}
+                                                                    />
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        </div>
+                                    )}
 
                                     {/* Questions */}
                                     <div className="space-y-4">

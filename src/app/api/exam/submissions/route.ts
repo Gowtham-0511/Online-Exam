@@ -40,6 +40,7 @@ export async function POST(req: Request) {
     answersWithQuestionIds,
     disqualified = false,
     disqualificationReason,
+    violationLogs, // New: Candidate explanations for violations
     code,
   } = body;
 
@@ -75,9 +76,10 @@ export async function POST(req: Request) {
             "code", 
             "disqualified", 
             "disqualification_reason",
+            "violation_logs",
             "submittedAt"
         )
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW())
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW())
         ON CONFLICT ("email", "examId") 
         DO UPDATE SET
             "answers" = EXCLUDED."answers",
@@ -85,6 +87,7 @@ export async function POST(req: Request) {
             "code" = EXCLUDED."code",
             "disqualified" = EXCLUDED."disqualified",
             "disqualification_reason" = EXCLUDED."disqualification_reason",
+            "violation_logs" = EXCLUDED."violation_logs",
             "submittedAt" = NOW()
         RETURNING "id";
       `;
@@ -98,6 +101,7 @@ export async function POST(req: Request) {
         code || null,
         disqualified ? true : false,
         disqualificationReason || null,
+        JSON.stringify(violationLogs ?? []),
       ];
 
       const result = await client.query(query, values);

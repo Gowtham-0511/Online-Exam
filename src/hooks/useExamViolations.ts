@@ -19,6 +19,7 @@ export function useExamViolations() {
     const keyViolationsRef = useRef(0);
     const tabSwitchViolationsRef = useRef(0);
     const screenChangeViolationsRef = useRef(0);
+    const clipboardViolationsRef = useRef(0);
     const lastVisibilityChangeRef = useRef(Date.now());
     const visibilityTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -58,6 +59,7 @@ export function useExamViolations() {
         keyViolationsRef,
         tabSwitchViolationsRef,
         screenChangeViolationsRef,
+        clipboardViolationsRef,
         lastVisibilityChangeRef,
         visibilityTimeoutRef,
 

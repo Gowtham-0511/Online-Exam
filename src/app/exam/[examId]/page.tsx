@@ -12,6 +12,15 @@ import {
     ResizableHandle,
 } from "@/components/ui/resizable";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Textarea } from "@/components/ui/textarea";
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+    DialogDescription,
+    DialogFooter,
+} from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
@@ -69,17 +78,29 @@ export default function ExamPage() {
     const params = useParams();
     const { examId } = params;
 
-    console.log(examId);
     const { instance, accounts } = useMsal();
     const session = accounts[0];
 
     const [showRestoreDialog, setShowRestoreDialog] = useState(false);
+    const [showViolationModal, setShowViolationModal] = useState(false);
+    const [pendingViolation, setPendingViolation] = useState<{ reason: string; timestamp: string } | null>(null);
+    const [violationLogs, setViolationLogs] = useState<any[]>([]);
+    const [violationExplanation, setViolationExplanation] = useState("");
     const [pendingProgress, setPendingProgress] = useState<any>(null);
     const [isFullscreen, setIsFullscreen] = useState(true);
+    const [showWarningBanner, setShowWarningBanner] = useState(false);
+    const [currentViolationReason, setCurrentViolationReason] = useState("");
+    const warningTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+    const triggerWarning = useCallback((reason: string) => {
+        setCurrentViolationReason(reason);
+        setShowWarningBanner(true);
+        if (warningTimeoutRef.current) clearTimeout(warningTimeoutRef.current);
+        warningTimeoutRef.current = setTimeout(() => setShowWarningBanner(false), 5000);
+    }, []);
 
     // State management hooks
     const examState = useExamState();
-    // const violations = useExamViolations();
 
     // Destructure for easier access
     const {
@@ -146,7 +167,7 @@ export default function ExamPage() {
         schemaData,
         setSchemaData,
         showErDiagram,
-        setShowErDiagram
+        setShowErDiagram,
     } = examState;
 
     const {
@@ -168,6 +189,7 @@ export default function ExamPage() {
         keyViolationsRef,
         tabSwitchViolationsRef,
         screenChangeViolationsRef,
+        clipboardViolationsRef,
         lastVisibilityChangeRef,
         visibilityTimeoutRef,
         handleContextMenuRef,
@@ -177,6 +199,20 @@ export default function ExamPage() {
         handleVisibilityChangeRef,
         hasSubmittedRef,
     } = useExamViolations();
+
+    const [showIntegrityFlag, setShowIntegrityFlag] = useState(false);
+    const integrityTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+    // Auto-hide Integrity Flag Banner after 5 seconds
+    useEffect(() => {
+        if (violations >= 3 && !showIntegrityFlag) {
+            setShowIntegrityFlag(true);
+            if (integrityTimeoutRef.current) clearTimeout(integrityTimeoutRef.current);
+            integrityTimeoutRef.current = setTimeout(() => {
+                setShowIntegrityFlag(false);
+            }, 5000);
+        }
+    }, [violations]);
 
     // Refs for accessing state in intervals/callbacks without dependencies
     const fsGraceTimer = useRef<NodeJS.Timeout | null>(null);
@@ -594,7 +630,7 @@ export default function ExamPage() {
         const userName = current.session?.name || "Anonymous";
         const examIdStr = current.examId?.toString() || "unknown_exam";
 
-        console.log("Submitting disqualification:", { disqualifiedFlag, reason, email, examIdStr });
+        console.log("Submitting with violation logs:", { disqualifiedFlag, reason, email, examIdStr });
 
         const answersWithQuestionIds = current.answers.map((answer, index) => ({
             questionId: current.exam?.questions[index]?.id || index,
@@ -615,18 +651,19 @@ export default function ExamPage() {
                     answersWithQuestionIds,
                     disqualified: disqualifiedFlag,
                     disqualificationReason: reason,
+                    violationLogs: violationLogs, // Include the explanations
                     code: current.answers[current.activeQuestionIndex],
                 }),
             });
-            console.log("Disqualification submitted successfully");
+            console.log("Submission successful with violations");
         } catch (error) {
-            console.error("Failed to submit disqualification:", error);
-            toast.error("Failed to record disqualification. Please contact proctor.");
+            console.error("Failed to submit:", error);
+            toast.error("Failed to record submission. Please contact proctor.");
         }
 
         await cleanupExamEnvironment();
         router.push("/attender");
-    }, []);
+    }, [violationLogs]);
 
     const handleSubmit = async () => {
         if (hasSubmittedRef.current) return;
@@ -676,6 +713,7 @@ export default function ExamPage() {
                     answers,
                     answersWithQuestionIds,
                     disqualified: isDisqualified,
+                    violationLogs: violationLogs,
                     code,
                 }),
             });
@@ -714,6 +752,7 @@ export default function ExamPage() {
                             answers,
                             answersWithQuestionIds,
                             disqualified: isDisqualified,
+                            violationLogs: violationLogs,
                             code,
                         }),
                     });
@@ -740,28 +779,78 @@ export default function ExamPage() {
     };
 
     const handleDisqualification = useCallback(async (reason: string) => {
-        setDisqualified(true);
-        toast.error(`🚫 Disqualified: ${reason}`);
+        // NEW CANDIDATE FRIENDLY BEHAVIOR
+        // Instead of disqualifying immediately, we show a modal to ask for an explanation
+        const timestamp = new Date().toISOString();
+        const timestampReadable = new Date().toLocaleTimeString();
 
-        const current = stateRef.current;
-        const examIdStr = current.examId?.toString() || "unknown";
+        setPendingViolation({ reason, timestamp });
+        setViolationLogs(prev => [...prev, {
+            type: reason,
+            timestamp: timestamp,
+            readableTime: timestampReadable,
+            explanation: "" // To be filled by the user
+        }]);
 
-        let imageBase64 = "";
+        setShowViolationModal(true);
+        toast.error(`⚠️ Proctoring Alert: ${reason}`);
 
-        await fetch("/api/exam/store-violation-image", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-                image: imageBase64,
-                examId: examIdStr,
-                email: current.session?.username || "unknown",
-                reason,
-                time: new Date().toISOString(),
-            }),
+        const state = stateRef.current;
+        const examIdStr = state.examId?.toString() || examId?.toString() || "pending";
+        const emailStr = state.session?.username || session?.username || "anonymous";
+
+        // Still capture the incident for evidence
+        try {
+            await fetch("/api/exam/store-violation-image", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    image: "placeholder_for_context_loss", // Backend requires an image string
+                    email: emailStr,
+                    examId: examIdStr,
+                    reason,
+                    time: timestamp,
+                }),
+            });
+        } catch (e) {
+            console.error("Evidence capture failed", e);
+        }
+
+        // We don't call handleSubmitWithDisqualification(true, reason) anymore
+        // unless we reach a hard threshold, but for now we let them continue.
+    }, []);
+
+    const handleViolationExplanationSubmit = () => {
+        if (!violationExplanation.trim()) {
+            toast.error("Please provide an explanation to continue.");
+            return;
+        }
+
+        // Update ALL logs that are missing an explanation with this justification
+        setViolationLogs((prev: any[]) => {
+            const updated = prev.map((log: any) => {
+                if (!log.explanation || log.explanation === "") {
+                    return {
+                        ...log,
+                        explanation: violationExplanation,
+                        submittedAt: new Date().toISOString()
+                    };
+                }
+                return log;
+            });
+            return updated;
         });
 
-        handleSubmitWithDisqualification(true, reason);
-    }, [handleSubmitWithDisqualification]);
+        toast.success("Explanation recorded. Please stay focused.");
+        setViolationExplanation("");
+        setShowViolationModal(false);
+        setPendingViolation(null);
+
+        // If it was a fullscreen exit, attempt to request it again
+        if (pendingViolation?.reason.toLowerCase().includes("fullscreen")) {
+            document.documentElement.requestFullscreen().catch(() => { });
+        }
+    };
 
     // Save exam progress
     const saveExamProgress = useCallback(async () => {
@@ -1023,20 +1112,16 @@ export default function ExamPage() {
                         violationsRef.current += 1;
                         setViolations(violationsRef.current);
 
-                        toast.error(`⚠️ Fullscreen exit violation recorded. (${newCount}/3)`);
+                        const reason = `Fullscreen exit recorded. (${newCount}/3)`;
+                        toast.error(`⚠️ ${reason}`);
 
                         console.log(`Fullscreen exited. Violation ${violationsRef.current}/3 at ${timestamp}`);
 
                         if (violationsRef.current >= 3) {
-                            console.log("3 violations reached - disqualifying");
-                            setDisqualified(true);
-                            handleSubmitWithDisqualification(true, "Fullscreen violations limit reached");
+                            console.log("3 violations reached - showing warning/explanation modal");
+                            handleDisqualification("Repeated fullscreen exit violations");
                         } else {
-                            toast.error(`⚠️ Warning: Fullscreen exit detected! Violation ${violationsRef.current}/3`);
-
-                            if (violationsRef.current === 2) {
-                                alert('⚠️ FINAL WARNING: One more violation will disqualify you from the exam!');
-                            }
+                            triggerWarning("You exited fullscreen mode. Please stay in fullscreen.");
                         }
                     }
                 }, 10000);
@@ -1086,18 +1171,22 @@ export default function ExamPage() {
                 visibilityTimeoutRef.current = setTimeout(() => {
                     if (document.hidden && !hasSubmittedRef.current) {
                         tabSwitchViolationsRef.current += 1;
+                        violationsRef.current += 1;
+
                         const newCount = tabSwitchViolationsRef.current;
+                        const totalCount = violationsRef.current;
                         const timestamp = new Date().toLocaleTimeString();
 
                         setTabSwitchViolations(newCount);
+                        setViolations(totalCount);
                         setLastTabSwitchTime(timestamp);
 
-                        console.log(`Tab switch violation detected. Count: ${newCount}/3 at ${timestamp}`);
+                        console.log(`Tab switch violation detected. Total: ${totalCount}/3 at ${timestamp}`);
 
-                        if (newCount >= 3) {
+                        if (totalCount >= 3) {
                             handleDisqualification(`Tab switching violations - switched tabs ${newCount} times`);
                         } else {
-                            toast.error(`⚠️ Tab switching detected. Warning ${newCount}/3`);
+                            triggerWarning("Tab switch detected. Please stay focused on the exam.");
                         }
                     }
                 }, 1000);
@@ -1121,20 +1210,59 @@ export default function ExamPage() {
                 return;
             }
 
+            // Deduplicate with visibilitychange (which usually follows blur)
+            const now = Date.now();
+            if (now - lastVisibilityChangeRef.current < 500) return;
+            lastVisibilityChangeRef.current = now;
+
             if (examStarted && !hasSubmittedRef.current) {
                 tabSwitchViolationsRef.current += 1;
+                violationsRef.current += 1;
+
                 const newCount = tabSwitchViolationsRef.current;
+                const totalCount = violationsRef.current;
                 const timestamp = new Date().toLocaleTimeString();
 
                 setTabSwitchViolations(newCount);
+                setViolations(totalCount);
                 setLastTabSwitchTime(timestamp);
 
-                console.log(`Window blur detected. Count: ${newCount}/3 at ${timestamp}`);
+                console.log(`Window blur detected. Total: ${totalCount}/3 at ${timestamp}`);
 
-                if (newCount >= 3) {
+                if (totalCount >= 3) {
                     handleDisqualification(`Focus lost - left exam window ${newCount} times`);
                 } else {
-                    toast.error(`⚠️ Window focus lost. Warning ${newCount}/3`);
+                    triggerWarning("Window focus lost. Please do not click outside the exam.");
+                }
+            }
+        };
+
+        const handleCopy = (e: ClipboardEvent) => {
+            if (examStarted && !hasSubmittedRef.current) {
+                clipboardViolationsRef.current += 1;
+                violationsRef.current += 1;
+                const newCount = violationsRef.current;
+                setViolations(newCount);
+
+                if (newCount >= 3) {
+                    handleDisqualification(`Content Copying detected - violation ${newCount}/3`);
+                } else {
+                    triggerWarning("Copying is restricted during the exam.");
+                }
+            }
+        };
+
+        const handlePaste = (e: ClipboardEvent) => {
+            if (examStarted && !hasSubmittedRef.current) {
+                clipboardViolationsRef.current += 1;
+                violationsRef.current += 1;
+                const newCount = violationsRef.current;
+                setViolations(newCount);
+
+                if (newCount >= 3) {
+                    handleDisqualification(`Content Pasting detected - violation ${newCount}/3`);
+                } else {
+                    triggerWarning("Pasting is restricted during the exam.");
                 }
             }
         };
@@ -1156,14 +1284,18 @@ export default function ExamPage() {
             if (isForbiddenKey && examStarted && !hasSubmittedRef.current) {
                 e.preventDefault();
                 keyViolationsRef.current += 1;
+                violationsRef.current += 1;
+
                 const newCount = keyViolationsRef.current;
+                const totalCount = violationsRef.current;
 
                 setKeyViolations(newCount);
+                setViolations(totalCount);
 
-                if (newCount >= 3) {
-                    handleDisqualification(`Developer tools access attempts - ${newCount} times`);
+                if (totalCount >= 3) {
+                    handleDisqualification(`Developer tools access attempts - total violations ${totalCount}/3`);
                 } else {
-                    toast.error(`🚫 Invalid key combination. Warning ${newCount}/3`);
+                    triggerWarning("Unauthorized key combination detected.");
                 }
             }
         };
@@ -1192,14 +1324,14 @@ export default function ExamPage() {
             if (examStarted && !hasSubmittedRef.current) {
                 e.preventDefault();
                 violationsRef.current += 1;
-                const newCount = violationsRef.current;
+                const totalCount = violationsRef.current;
 
-                setViolations(newCount);
+                setViolations(totalCount);
 
-                if (newCount >= 3) {
-                    handleDisqualification(`Right-click violations - ${newCount} times`);
+                if (totalCount >= 3) {
+                    handleDisqualification(`Right-click violations - ${totalCount} times`);
                 } else {
-                    toast.error(`⚠️ Right-click is disabled. Warning ${newCount}/3`);
+                    triggerWarning("Right-click is disabled for security.");
                 }
             }
         };
@@ -1211,6 +1343,8 @@ export default function ExamPage() {
         document.addEventListener('keydown', handleKeyDown);
         window.addEventListener('resize', handleResize);
         document.addEventListener('contextmenu', handleContextMenu);
+        document.addEventListener('copy', handleCopy);
+        document.addEventListener('paste', handlePaste);
 
         if (screen.orientation) {
             screen.orientation.addEventListener('change', handleResize);
@@ -1224,6 +1358,8 @@ export default function ExamPage() {
             document.removeEventListener('keydown', handleKeyDown);
             window.removeEventListener('resize', handleResize);
             document.removeEventListener('contextmenu', handleContextMenu);
+            document.removeEventListener('copy', handleCopy);
+            document.removeEventListener('paste', handlePaste);
 
             if (screen.orientation) {
                 screen.orientation.removeEventListener('change', handleResize);
@@ -1241,6 +1377,9 @@ export default function ExamPage() {
             handleSubmit();
             return;
         }
+
+        // Pause timer if violation explanation modal is open
+        if (showViolationModal) return;
 
         // Time warnings (5m, 2m, 1m)
         const warningTimes = [300, 120, 60];
@@ -1262,7 +1401,7 @@ export default function ExamPage() {
 
         const timer = setInterval(() => setTimeLeft((t) => t - 1), 1000);
         return () => clearInterval(timer);
-    }, [timeLeft]);
+    }, [timeLeft, showViolationModal]);
 
     // Load answer for active question
 
@@ -2074,25 +2213,31 @@ export default function ExamPage() {
             )}
 
             {/* Violation Warning Banner */}
-            {violations > 0 && violations < 3 && !isDisqualified && (
-                <div className={`px-6 py-3 flex items-center justify-between ${violations === 1
-                    ? 'bg-amber-500'
-                    : 'bg-red-500'
+            {showWarningBanner && violations > 0 && violations < 3 && !isDisqualified && (
+                <div className={`fixed bottom-0 left-0 right-0 px-6 py-4 flex items-center justify-between z-[120] animate-in slide-in-from-bottom duration-300 ${violations === 1
+                    ? 'bg-amber-500 shadow-[0_-4px_20px_rgba(245,158,11,0.3)]'
+                    : 'bg-rose-500 shadow-[0_-4px_20px_rgba(244,63,94,0.3)]'
                     } text-white`}>
-                    <div className="flex items-center gap-3">
-                        <AlertCircle className="w-5 h-5" />
+                    <div className="flex items-center gap-4">
+                        <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center animate-pulse">
+                            <AlertCircle className="w-6 h-6" />
+                        </div>
                         <div>
-                            <p className="font-semibold">
-                                {violations === 1 && "⚠️ Warning: Violation Detected!"}
-                                {violations === 2 && "🚨 FINAL WARNING: One More Violation = Disqualification!"}
+                            <p className="font-bold text-lg leading-tight">
+                                {violations === 1 ? "⚠️ Violation Warning" : "🚨 FINAL WARNING"}
                             </p>
-                            <p className="text-sm">
-                                {violations === 1 && "You've exited fullscreen or switched tabs. Please stay focused on the exam."}
-                                {violations === 2 && "Do NOT exit fullscreen, switch tabs, or use forbidden keys again!"}
+                            <p className="text-sm opacity-90 font-medium">
+                                {currentViolationReason || "Please stay focused on the exam window to avoid disqualification."}
                             </p>
                         </div>
                     </div>
-                    <div className="text-3xl font-bold">{violations}/3</div>
+                    <div className="flex items-center gap-4">
+                        <div className="h-10 w-[1px] bg-white/20" />
+                        <div className="text-right">
+                            <div className="text-2xl font-black tracking-tighter leading-none">{violations}/3</div>
+                            <div className="text-[10px] font-bold uppercase tracking-widest opacity-70">Attempts</div>
+                        </div>
+                    </div>
                 </div>
             )}
 
@@ -2105,7 +2250,7 @@ export default function ExamPage() {
             )}
 
             {/* Warn Overlay for Fullscreen Escape */}
-            {examStarted && !isFullscreen && !isDisqualified && !hasSubmittedRef.current && (
+            {examStarted && !isFullscreen && !isDisqualified && !hasSubmittedRef.current && !showViolationModal && !showRestoreDialog && !showSubmitSummary && !showErDiagram && (
                 <div className="fixed inset-0 bg-background/95 backdrop-blur-md z-[110] flex items-center justify-center p-4 animate-in fade-in duration-200">
                     <div className="max-w-md w-full bg-card border-2 border-amber-500 rounded-xl shadow-2xl p-8 text-center space-y-6">
                         <div className="w-20 h-20 bg-amber-100 dark:bg-amber-900/30 rounded-full flex items-center justify-center mx-auto animate-pulse">
@@ -2133,27 +2278,74 @@ export default function ExamPage() {
                 </div>
             )}
 
-            {isDisqualified && (
-                <div className="fixed inset-0 bg-black/90 backdrop-blur-sm z-[100] flex items-center justify-center">
-                    <div className="bg-card border-2 border-destructive rounded-2xl p-8 max-w-md text-center">
-                        <div className="w-16 h-16 bg-destructive/10 rounded-full flex items-center justify-center mx-auto mb-4">
-                            <AlertCircle className="w-10 h-10 text-destructive" />
+            {/* VIOLATION EXPLANATION MODAL */}
+            <Dialog open={showViolationModal} onOpenChange={(open) => {
+                if (!open && !violationExplanation) return; // Prevent closing without explanation
+                setShowViolationModal(open);
+            }}>
+                <DialogContent className="sm:max-w-md">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2 text-amber-600">
+                            <AlertCircle className="w-5 h-5" />
+                            Proctoring Alert
+                        </DialogTitle>
+                        <DialogDescription className="py-2" asChild>
+                            <div>
+                                A focus loss or window change was detected:
+                                <div className="mt-2 p-3 bg-muted rounded-lg font-mono text-xs font-bold text-foreground">
+                                    {pendingViolation?.reason}
+                                </div>
+                            </div>
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <div className="space-y-4 py-2">
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium leading-none">
+                                Please explain what happened:
+                            </label>
+                            <Textarea
+                                placeholder="e.g., Accidental notification click, System update popup, etc."
+                                value={violationExplanation}
+                                onChange={(e) => setViolationExplanation(e.target.value)}
+                                className="min-h-[100px] resize-none"
+                            />
+                            <p className="text-[10px] text-muted-foreground">
+                                This explanation will be reviewed by the hiring team to evaluate your session integrity.
+                            </p>
                         </div>
-                        <h2 className="text-2xl font-bold text-foreground mb-2">Disqualified</h2>
-                        <p className="text-muted-foreground mb-6">
-                            You have been disqualified from this exam due to multiple violations.
-                            Your exam has been automatically submitted.
-                        </p>
-                        <div className="space-y-2 text-sm bg-muted p-4 rounded-lg text-left">
-                            <p className="font-semibold text-foreground mb-2">Violation Summary:</p>
-                            <p className="text-muted-foreground">• Total violations: <span className="text-destructive font-bold">{violations}/3</span></p>
-                            <p className="text-muted-foreground">• Tab switches: {tabSwitchViolations}</p>
-                            <p className="text-muted-foreground">• Fullscreen exits: {screenChangeViolations}</p>
-                            <p className="text-muted-foreground">• Forbidden keys: {keyViolations}</p>
-                            {lastScreenChangeTime && (
-                                <p className="text-muted-foreground text-xs mt-2">Last violation: {lastScreenChangeTime}</p>
-                            )}
+                    </div>
+
+                    <DialogFooter className="sm:justify-start">
+                        <Button
+                            type="button"
+                            className="w-full bg-amber-600 hover:bg-amber-700 text-white font-bold"
+                            onClick={handleViolationExplanationSubmit}
+                        >
+                            Submit & Resume Exam
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* INTEGRITY FLAG BANNER (Replaces Disqualified UI) */}
+            {showIntegrityFlag && violations >= 3 && (
+                <div className="fixed top-16 left-1/2 -translate-x-1/2 z-[100] w-full max-w-2xl px-4 animate-in slide-in-from-top duration-500">
+                    <div className="bg-amber-600/90 backdrop-blur-md border border-amber-500 text-white p-4 rounded-xl shadow-2xl flex items-center justify-between gap-4">
+                        <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center flex-shrink-0">
+                                <Shield className="w-6 h-6" />
+                            </div>
+                            <div>
+                                <h3 className="font-bold">Session Integrity Flagged</h3>
+                                <p className="text-xs text-amber-50 opacity-90">
+                                    Multiple violations detected. Your responses and explanations are being recorded for manual review.
+                                </p>
+                            </div>
                         </div>
+                        <Badge variant="outline" className="bg-white/10 text-white border-white/20 h-8 font-bold">
+                            REVIEW REQUIRED
+                        </Badge>
                     </div>
                 </div>
             )}

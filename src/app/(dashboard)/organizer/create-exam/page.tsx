@@ -9,10 +9,30 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { RichTextEditor } from "@/components/ui/rich-text-editor";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Progress } from "@/components/ui/progress";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from "@/components/ui/dialog";
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+    AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import {
     FileText,
     Settings,
@@ -31,7 +51,8 @@ import {
     Database,
     Snowflake,
     Terminal,
-    Download
+    Download,
+    Pencil
 } from "lucide-react";
 import useSWR from 'swr';
 import { useRouter } from "next/navigation";
@@ -157,6 +178,40 @@ export default function CreateExam() {
         ],
         expectedOutput: ''
     });
+
+    // Edit Question State
+    const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+    const [editingQuestion, setEditingQuestion] = useState<Question | null>(null);
+
+    const startEditing = (question: Question) => {
+        setEditingQuestion({ ...question });
+        setIsEditDialogOpen(true);
+    };
+
+    const updateQuestion = () => {
+        if (!editingQuestion || !editingQuestion.question) {
+            toast.error("Question text is required");
+            return;
+        }
+
+        if (editingQuestion.type === 'mcq') {
+            const validOptions = editingQuestion.options?.filter(o => o.text.trim());
+            if (!validOptions || validOptions.length < 2) {
+                toast.error("At least 2 options are required for MCQ");
+                return;
+            }
+            if (!validOptions.some(o => o.isCorrect)) {
+                toast.error("Select at least one correct option");
+                return;
+            }
+            editingQuestion.options = validOptions;
+        }
+
+        setQuestions(prev => prev.map(q => q.id === editingQuestion.id ? editingQuestion : q));
+        setIsEditDialogOpen(false);
+        setEditingQuestion(null);
+        toast.success("Question updated");
+    };
 
     const handleDownloadQuestions = () => {
         if (questions.length === 0) {
@@ -1849,9 +1904,9 @@ export default function CreateExam() {
 
                                             <div className="space-y-2">
                                                 <Label>Question Text</Label>
-                                                <Input
+                                                <RichTextEditor
                                                     value={manualQuestion.question}
-                                                    onChange={(e) => setManualQuestion({ ...manualQuestion, question: e.target.value })}
+                                                    onChange={(content) => setManualQuestion({ ...manualQuestion, question: content })}
                                                     placeholder="Enter question here..."
                                                 />
                                             </div>
@@ -1963,11 +2018,40 @@ export default function CreateExam() {
                                                                 <Button
                                                                     variant="ghost"
                                                                     size="sm"
-                                                                    onClick={() => deleteQuestion(q.id)}
-                                                                    className="text-destructive hover:text-destructive"
+                                                                    onClick={() => startEditing(q)}
+                                                                    className="text-muted-foreground hover:text-primary"
                                                                 >
-                                                                    <Trash2 className="w-4 h-4" />
+                                                                    <Pencil className="w-4 h-4" />
                                                                 </Button>
+                                                                <AlertDialog>
+                                                                    <AlertDialogTrigger asChild>
+                                                                        <Button
+                                                                            variant="ghost"
+                                                                            size="sm"
+                                                                            className="text-destructive hover:text-destructive"
+                                                                        >
+                                                                            <Trash2 className="w-4 h-4" />
+                                                                        </Button>
+                                                                    </AlertDialogTrigger>
+                                                                    <AlertDialogContent>
+                                                                        <AlertDialogHeader>
+                                                                            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                                                                            <AlertDialogDescription>
+                                                                                This action cannot be undone. This will permanently delete the question
+                                                                                from your exam list.
+                                                                            </AlertDialogDescription>
+                                                                        </AlertDialogHeader>
+                                                                        <AlertDialogFooter>
+                                                                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                                            <AlertDialogAction
+                                                                                onClick={() => deleteQuestion(q.id)}
+                                                                                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                                                            >
+                                                                                Delete
+                                                                            </AlertDialogAction>
+                                                                        </AlertDialogFooter>
+                                                                    </AlertDialogContent>
+                                                                </AlertDialog>
                                                             </div>
                                                         </div>
                                                     </CardHeader>
@@ -2162,6 +2246,128 @@ export default function CreateExam() {
                 </Card>
             </div>
 
+            {/* Edit Question Dialog */}
+            <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+                <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+                    <DialogHeader>
+                        <DialogTitle>Edit Question</DialogTitle>
+                        <DialogDescription>Modify the question details below.</DialogDescription>
+                    </DialogHeader>
+                    {editingQuestion && (
+                        <div className="space-y-4 py-4">
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                    <Label>Type</Label>
+                                    <Select
+                                        value={editingQuestion.type}
+                                        onValueChange={(val) => setEditingQuestion({ ...editingQuestion, type: val })}
+                                    >
+                                        <SelectTrigger><SelectValue /></SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="mcq">MCQ</SelectItem>
+                                            <SelectItem value="coding">Coding</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                                <div className="space-y-2">
+                                    <Label>Difficulty</Label>
+                                    <Select
+                                        value={editingQuestion.difficulty}
+                                        onValueChange={(val) => setEditingQuestion({ ...editingQuestion, difficulty: val })}
+                                    >
+                                        <SelectTrigger><SelectValue /></SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="easy">Easy</SelectItem>
+                                            <SelectItem value="medium">Medium</SelectItem>
+                                            <SelectItem value="hard">Hard</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                                <div className="space-y-2">
+                                    <Label>Marks</Label>
+                                    <Input
+                                        type="number"
+                                        value={editingQuestion.marks}
+                                        onChange={(e) => setEditingQuestion({ ...editingQuestion, marks: Number(e.target.value) })}
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="space-y-2">
+                                <Label>Question Text</Label>
+                                <RichTextEditor
+                                    value={editingQuestion.question}
+                                    onChange={(content) => setEditingQuestion({ ...editingQuestion, question: content })}
+                                    placeholder="Enter question here..."
+                                />
+                            </div>
+
+                            {editingQuestion.type === 'mcq' ? (
+                                <div className="space-y-2">
+                                    <Label>Options (Check correct answer)</Label>
+                                    {editingQuestion.options?.map((opt, idx) => (
+                                        <div key={opt.id || idx} className="flex items-center gap-2">
+                                            <span className="text-sm font-mono w-6">{String.fromCharCode(65 + idx)}.</span>
+                                            <Input
+                                                value={opt.text}
+                                                onChange={(e) => {
+                                                    const newOpts = [...(editingQuestion.options || [])];
+                                                    newOpts[idx] = { ...newOpts[idx], text: e.target.value };
+                                                    setEditingQuestion({ ...editingQuestion, options: newOpts });
+                                                }}
+                                                placeholder={`Option ${String.fromCharCode(65 + idx)}`}
+                                            />
+                                            <input
+                                                type="checkbox"
+                                                checked={opt.isCorrect}
+                                                onChange={(e) => {
+                                                    const newOpts = [...(editingQuestion.options || [])];
+                                                    newOpts.forEach(o => o.isCorrect = false);
+                                                    newOpts[idx] = { ...newOpts[idx], isCorrect: e.target.checked };
+                                                    setEditingQuestion({ ...editingQuestion, options: newOpts });
+                                                }}
+                                                className="w-5 h-5 accent-emerald-500"
+                                            />
+                                        </div>
+                                    ))}
+                                    {(!editingQuestion.options || editingQuestion.options.length === 0) && (
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => {
+                                                setEditingQuestion({
+                                                    ...editingQuestion,
+                                                    options: [
+                                                        { id: Date.now() + 1, text: '', isCorrect: false },
+                                                        { id: Date.now() + 2, text: '', isCorrect: false },
+                                                        { id: Date.now() + 3, text: '', isCorrect: false },
+                                                        { id: Date.now() + 4, text: '', isCorrect: false }
+                                                    ]
+                                                });
+                                            }}
+                                        >
+                                            Add Options
+                                        </Button>
+                                    )}
+                                </div>
+                            ) : (
+                                <div className="space-y-2">
+                                    <Label>Expected Output</Label>
+                                    <Input
+                                        value={editingQuestion.expectedOutput || ''}
+                                        onChange={(e) => setEditingQuestion({ ...editingQuestion, expectedOutput: e.target.value })}
+                                        placeholder="Expected output string..."
+                                    />
+                                </div>
+                            )}
+                        </div>
+                    )}
+                    <DialogFooter>
+                        <Button variant="ghost" onClick={() => setIsEditDialogOpen(false)}>Cancel</Button>
+                        <Button onClick={updateQuestion}>Save Changes</Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
             {/* Success Modal */}
             {showSuccess && (
                 <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
